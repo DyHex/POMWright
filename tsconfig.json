@@ -6,11 +6,12 @@
       "target": "es2022",
       "verbatimModuleSyntax": true,
       "allowJs": true,
+      "checkJs": true,
       "resolveJsonModule": true,
       "moduleDetection": "force",
       /* Strictness */
       "strict": true,
-      "noUncheckedIndexedAccess": false,
+      "noUncheckedIndexedAccess": true,
       /* If NOT transpiling with TypeScript: */
       "moduleResolution": "Bundler",
       "module": "ESNext",

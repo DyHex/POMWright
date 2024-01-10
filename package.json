@@ -1,10 +1,13 @@
 {
   "name": "pomwright",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "POMWright is a complementary test framework for Playwright written in TypeScript.",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsup index.ts --format cjs,esm --dts",
+    "lint": "tsc",
     "install-browsers": "playwright install --with-deps"
   },
   "keywords": [
@@ -17,6 +20,7 @@
   "license": "Apache 2.0",
   "devDependencies": {
     "@types/node": "^20.10.8",
+    "tsup": "^8.0.1",
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
