@@ -7,7 +7,12 @@ export class BaseApi {
   protected log: PlaywrightReportLogger;
   protected request: APIRequestContext;
 
-  constructor(baseUrl: string, apiName: string, context: APIRequestContext, pwrl: PlaywrightReportLogger) {
+  constructor(
+    baseUrl: string,
+    apiName: string,
+    context: APIRequestContext,
+    pwrl: PlaywrightReportLogger,
+  ) {
     this.baseUrl = baseUrl;
     this.apiName = apiName;
     this.log = pwrl.getNewChildLogger(apiName);

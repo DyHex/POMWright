@@ -1,16 +1,26 @@
 import { test, type Locator } from "@playwright/test";
 import { BasePage } from "../basePage";
-import { type LocatorSchema, type AriaRoleType, GetByMethod, getLocatorSchemaDummy } from "./locatorSchema.interface";
+import {
+  type LocatorSchema,
+  type AriaRoleType,
+  GetByMethod,
+  getLocatorSchemaDummy,
+} from "./locatorSchema.interface";
 import { PlaywrightReportLogger } from "./playwrightReportLogger";
 import { GetBy } from "./getBy.locator";
 export { GetByMethod };
 
 // Defines properties that can be updated in a LocatorSchema
-export type UpdatableLocatorSchemaProperties = Omit<LocatorSchema, "locatorSchemaPath">;
+export type UpdatableLocatorSchemaProperties = Omit<
+  LocatorSchema,
+  "locatorSchemaPath"
+>;
 
 // Interface for additional methods provided to LocatorSchema
 interface WithUpdateMethod {
-  update(updates: Partial<UpdatableLocatorSchemaProperties>): LocatorSchemaWithMethods;
+  update(
+    updates: Partial<UpdatableLocatorSchemaProperties>,
+  ): LocatorSchemaWithMethods;
 }
 
 interface WithUpdatesMethod {
@@ -20,7 +30,9 @@ interface WithUpdatesMethod {
 }
 
 interface WithGetNestedLocatorMethod {
-  getNestedLocator(indices?: { [key: number]: number | null } | null): Promise<Locator>;
+  getNestedLocator(
+    indices?: { [key: number]: number | null } | null,
+  ): Promise<Locator>;
 }
 
 interface WithGetLocatorMethod {
@@ -37,7 +49,8 @@ export type LocatorSchemaWithMethods = LocatorSchema &
   };
 
 // ModifiedLocatorSchema omits the locatorSchemaPath from LocatorSchema
-export interface ModifiedLocatorSchema extends UpdatableLocatorSchemaProperties {}
+export interface ModifiedLocatorSchema
+  extends UpdatableLocatorSchemaProperties {}
 
 type PathIndexPairs = { path: string; index?: number }[];
 
@@ -66,10 +79,13 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
    */
   constructor(
     protected pageObjectClass: BasePage<LocatorSchemaPathType>,
-    protected log: PlaywrightReportLogger
+    protected log: PlaywrightReportLogger,
   ) {
     this.locatorSchemas = new Map<LocatorSchemaPathType, () => LocatorSchema>();
-    this.getBy = new GetBy(this.pageObjectClass.page, this.log.getNewChildLogger("GetBy"));
+    this.getBy = new GetBy(
+      this.pageObjectClass.page,
+      this.log.getNewChildLogger("GetBy"),
+    );
   }
 
   /**
@@ -77,10 +93,17 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
    * @param locatorSchemaPath
    * @returns
    */
-  public getLocatorSchema(locatorSchemaPath: LocatorSchemaPathType): LocatorSchemaWithMethods {
+  public getLocatorSchema(
+    locatorSchemaPath: LocatorSchemaPathType,
+  ): LocatorSchemaWithMethods {
     const pathIndexPairs = this.extractPathsFromSchema(locatorSchemaPath);
-    const schemasMap = this.collectDeepCopies(locatorSchemaPath, pathIndexPairs);
-    const locatorSchemaCopy = schemasMap.get(locatorSchemaPath) as LocatorSchemaWithMethods;
+    const schemasMap = this.collectDeepCopies(
+      locatorSchemaPath,
+      pathIndexPairs,
+    );
+    const locatorSchemaCopy = schemasMap.get(
+      locatorSchemaPath,
+    ) as LocatorSchemaWithMethods;
     locatorSchemaCopy.schemasMap = schemasMap;
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -88,7 +111,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 
     locatorSchemaCopy.update = function (
       this: LocatorSchemaWithMethods,
-      updates: Partial<UpdatableLocatorSchemaProperties>
+      updates: Partial<UpdatableLocatorSchemaProperties>,
     ) {
       self.applyUpdate(schemasMap, locatorSchemaPath, updates);
       return this;
@@ -96,14 +119,22 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 
     locatorSchemaCopy.updates = function (
       this: LocatorSchemaWithMethods,
-      indexedUpdates: { [index: number]: Partial<UpdatableLocatorSchemaProperties> }
+      indexedUpdates: {
+        [index: number]: Partial<UpdatableLocatorSchemaProperties>;
+      },
     ) {
       self.applyUpdates(schemasMap, pathIndexPairs, indexedUpdates);
       return this;
     };
 
-    locatorSchemaCopy.getNestedLocator = async (indices?: { [key: number]: number | null }) => {
-      return await this.buildNestedLocator(locatorSchemaPath, indices, schemasMap);
+    locatorSchemaCopy.getNestedLocator = async (indices?: {
+      [key: number]: number | null;
+    }) => {
+      return await this.buildNestedLocator(
+        locatorSchemaPath,
+        indices,
+        schemasMap,
+      );
     };
 
     locatorSchemaCopy.getLocator = async () => {
@@ -115,7 +146,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 
   private collectDeepCopies(
     locatorSchemaPath: LocatorSchemaPathType,
-    pathIndexPairs: PathIndexPairs
+    pathIndexPairs: PathIndexPairs,
   ): Map<string, LocatorSchema> {
     const schemasMap = new Map<string, LocatorSchema>();
 
@@ -146,7 +177,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
   private applyUpdate(
     schemasMap: Map<string, LocatorSchema>,
     locatorSchemaPath: LocatorSchemaPathType,
-    updateData: Partial<LocatorSchema>
+    updateData: Partial<LocatorSchema>,
   ): void {
     const schema = schemasMap.get(locatorSchemaPath);
     if (schema) {
@@ -157,7 +188,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
   private applyUpdates(
     schemasMap: Map<string, LocatorSchema>,
     pathIndexPairs: PathIndexPairs,
-    updatesData: { [index: number]: Partial<LocatorSchema> }
+    updatesData: { [index: number]: Partial<LocatorSchema> },
   ): void {
     Object.entries(updatesData).forEach(([index, updateAtIndex]) => {
       const path = pathIndexPairs[parseInt(index)]?.path;
@@ -170,14 +201,23 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
     });
   }
 
-  private createLocatorSchema(schemaDetails: ModifiedLocatorSchema, locatorSchemaPath: LocatorSchemaPathType) {
+  private createLocatorSchema(
+    schemaDetails: ModifiedLocatorSchema,
+    locatorSchemaPath: LocatorSchemaPathType,
+  ) {
     const schema: LocatorSchema = { ...schemaDetails, locatorSchemaPath };
     return schema;
   }
 
-  public addSchema(locatorSchemaPath: LocatorSchemaPathType, schemaDetails: ModifiedLocatorSchema): void {
+  public addSchema(
+    locatorSchemaPath: LocatorSchemaPathType,
+    schemaDetails: ModifiedLocatorSchema,
+  ): void {
     // Create the new schema
-    const newLocatorSchema = this.createLocatorSchema(schemaDetails, locatorSchemaPath);
+    const newLocatorSchema = this.createLocatorSchema(
+      schemaDetails,
+      locatorSchemaPath,
+    );
 
     // Check if the locatorSchemaPath already exists in the map, it should not
     const existingSchemaFunc = this.safeGetLocatorSchema(locatorSchemaPath);
@@ -186,8 +226,16 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
       const existingLocatorSchema = existingSchemaFunc();
       throw new Error(
         `[${this.pageObjectClass.pocName}] A LocatorSchema with the path '${locatorSchemaPath}' already exists. \n` +
-          `Existing Schema: ${JSON.stringify(existingLocatorSchema, null, 2)} \n` +
-          `Attempted to Add Schema: ${JSON.stringify(newLocatorSchema, null, 2)}`
+          `Existing Schema: ${JSON.stringify(
+            existingLocatorSchema,
+            null,
+            2,
+          )} \n` +
+          `Attempted to Add Schema: ${JSON.stringify(
+            newLocatorSchema,
+            null,
+            2,
+          )}`,
       );
     }
 
@@ -195,11 +243,16 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
     this.locatorSchemas.set(locatorSchemaPath, () => newLocatorSchema);
   }
 
-  private safeGetLocatorSchema(path: string): (() => LocatorSchema) | undefined {
+  private safeGetLocatorSchema(
+    path: string,
+  ): (() => LocatorSchema) | undefined {
     return this.locatorSchemas.get(path as LocatorSchemaPathType);
   }
 
-  private extractPathsFromSchema = (paths: string, indices: { [key: number]: number | null } = {}): PathIndexPairs => {
+  private extractPathsFromSchema = (
+    paths: string,
+    indices: { [key: number]: number | null } = {},
+  ): PathIndexPairs => {
     const schemaParts = paths.split(".");
     let cumulativePath = "";
 
@@ -207,7 +260,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
       cumulativePath = cumulativePath ? `${cumulativePath}.${part}` : part;
       return {
         path: cumulativePath,
-        index: indices[index] ?? undefined
+        index: indices[index] ?? undefined,
       };
     });
   };
@@ -225,7 +278,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
     nestedLocatorResults?: {
       LocatorSchema: any;
       NestingSteps: any[];
-    }
+    },
   ) => {
     const errorDetails = {
       error: error.message,
@@ -235,30 +288,33 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
       currentLocatorDetails: currentLocator
         ? {
             locatorString: currentLocator,
-            isNotNull: true
+            isNotNull: true,
           }
         : { isNotNull: false },
-      nestedLocatorResults: nestedLocatorResults
+      nestedLocatorResults: nestedLocatorResults,
     };
 
     this.log.error(
       "An error occurred during nested locator construction.\n",
       "Error details:\n",
-      JSON.stringify(errorDetails, null, 2)
+      JSON.stringify(errorDetails, null, 2),
     );
 
     throw error; // Re-throw the caught error to ensure the test fails.
   };
 
   // Merges 'source' into 'target', combining their properties into a new isolated object.
-  private deepMerge<TargetType, SourceType>(target: TargetType, source: SourceType): TargetType {
+  private deepMerge<TargetType, SourceType>(
+    target: TargetType,
+    source: SourceType,
+  ): TargetType {
     // Create a new merged object to ensure immutability
     const merged = { ...target };
     const dummySchema = getLocatorSchemaDummy();
 
     if (typeof source === "object" && source !== null) {
       Object.keys(source)
-        .filter(key => key !== "locatorSchemaPath") // Filter out 'locatorSchemaPath' property
+        .filter((key) => key !== "locatorSchemaPath") // Filter out 'locatorSchemaPath' property
         .forEach((key: any) => {
           // const locatorKey = key as keyof LocatorSchema;
           const targetKey = key as keyof TargetType;
@@ -266,7 +322,9 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 
           // Check if the key exists in the dummy schema for validation
           if (!(key in dummySchema)) {
-            throw new Error(`Invalid property: '${key}' is not a valid property of LocatorSchema`);
+            throw new Error(
+              `Invalid property: '${key}' is not a valid property of LocatorSchema`,
+            );
           }
 
           const targetValue = merged[targetKey];
@@ -276,18 +334,30 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
           if (sourceValue !== undefined) {
             if (Array.isArray(targetValue) && Array.isArray(sourceValue)) {
               // Concatenate arrays
-              merged[targetKey] = [...targetValue, ...sourceValue] as TargetType[keyof TargetType];
+              merged[targetKey] = [
+                ...targetValue,
+                ...sourceValue,
+              ] as TargetType[keyof TargetType];
             } else if (sourceValue instanceof RegExp) {
               // Clone RegExp
-              merged[targetKey] = new RegExp(sourceValue.source, sourceValue.flags) as TargetType[keyof TargetType];
-            } else if (typeof sourceValue === "object" && sourceValue !== null) {
+              merged[targetKey] = new RegExp(
+                sourceValue.source,
+                sourceValue.flags,
+              ) as TargetType[keyof TargetType];
+            } else if (
+              typeof sourceValue === "object" &&
+              sourceValue !== null
+            ) {
               // Recursive merge for nested objects
               merged[targetKey] = targetValue
                 ? this.deepMerge(targetValue, sourceValue)
-                : (structuredClone(sourceValue) as TargetType[keyof TargetType]);
+                : (structuredClone(
+                    sourceValue,
+                  ) as TargetType[keyof TargetType]);
             } else {
               // Direct assignment for non-object values or nulls
-              merged[targetKey] = sourceValue as unknown as TargetType[keyof TargetType];
+              merged[targetKey] =
+                sourceValue as unknown as TargetType[keyof TargetType];
             }
           }
         });
@@ -299,15 +369,21 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
   protected buildNestedLocator = async (
     locatorSchemaPath: LocatorSchemaPathType,
     indices: { [key: number]: number | null } = {},
-    schemasMap: Map<string, LocatorSchema>
+    schemasMap: Map<string, LocatorSchema>,
   ): Promise<Locator> => {
     return await test.step(`${this.pageObjectClass.pocName}: Build Nested Locator`, async () => {
-      const pathIndexPairs = this.extractPathsFromSchema(locatorSchemaPath, indices);
+      const pathIndexPairs = this.extractPathsFromSchema(
+        locatorSchemaPath,
+        indices,
+      );
       let currentLocator: Locator | undefined | null = null;
       let currentIFrame: string | undefined | null = null;
-      const nestedLocatorResults: { LocatorSchema: LocatorSchema | null; NestingSteps: any[] } = {
+      const nestedLocatorResults: {
+        LocatorSchema: LocatorSchema | null;
+        NestingSteps: any[];
+      } = {
         LocatorSchema: null, // Initialize as an empty object
-        NestingSteps: []
+        NestingSteps: [],
       };
 
       for (const { path, index } of pathIndexPairs) {
@@ -331,7 +407,8 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 
           if (this.log.isLogLevelEnabled("debug")) {
             if (!nestedLocatorResults.LocatorSchema) {
-              const safeGetLocatorSchema = this.safeGetLocatorSchema(locatorSchemaPath);
+              const safeGetLocatorSchema =
+                this.safeGetLocatorSchema(locatorSchemaPath);
               if (safeGetLocatorSchema !== undefined) {
                 nestedLocatorResults.LocatorSchema = safeGetLocatorSchema();
               }
@@ -350,29 +427,49 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
             }
 
             if (currentIFrame !== undefined) {
-              await this.evaluateCurrentLocator(currentLocator, nestedLocatorResults.NestingSteps, currentIFrame);
+              await this.evaluateCurrentLocator(
+                currentLocator,
+                nestedLocatorResults.NestingSteps,
+                currentIFrame,
+              );
             } else {
-              await this.evaluateCurrentLocator(currentLocator, nestedLocatorResults.NestingSteps, null);
+              await this.evaluateCurrentLocator(
+                currentLocator,
+                nestedLocatorResults.NestingSteps,
+                null,
+              );
             }
           }
         } catch (error) {
-          this.logError(error as Error, locatorSchemaPath, currentLocator, path, pathIndexPairs, nestedLocatorResults);
+          this.logError(
+            error as Error,
+            locatorSchemaPath,
+            currentLocator,
+            path,
+            pathIndexPairs,
+            nestedLocatorResults,
+          );
           break;
         }
       }
 
       if (!currentLocator) {
         this.logError(
-          new Error(`Failed to build nested locator for path: ${locatorSchemaPath}`),
+          new Error(
+            `Failed to build nested locator for path: ${locatorSchemaPath}`,
+          ),
           locatorSchemaPath,
           currentLocator,
           locatorSchemaPath,
-          pathIndexPairs
+          pathIndexPairs,
         );
       }
 
       if (this.log.isLogLevelEnabled("debug")) {
-        this.log.debug("Nested locator evaluation results:", JSON.stringify(nestedLocatorResults, null, 2));
+        this.log.debug(
+          "Nested locator evaluation results:",
+          JSON.stringify(nestedLocatorResults, null, 2),
+        );
       }
 
       if (currentLocator != null) {
@@ -380,7 +477,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
         return currentLocator;
       } else {
         throw new Error(
-          `"currentLocator" is null or undefined. Failed to build nested locator for path: ${locatorSchemaPath}`
+          `"currentLocator" is null or undefined. Failed to build nested locator for path: ${locatorSchemaPath}`,
         );
       }
     });
@@ -389,13 +486,13 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
   private evaluateCurrentLocator = async (
     currentLocator: Locator,
     resultsArray: any[],
-    currentIFrame: string | null
+    currentIFrame: string | null,
   ): Promise<void> => {
     if (currentIFrame) {
       resultsArray.push({
         currentLocatorString: currentLocator,
         currentIFrame: currentIFrame,
-        Note: "iFrame locators evaluation not implemented"
+        Note: "iFrame locators evaluation not implemented",
       });
     } else {
       const elementsData = await this.evaluateAndGetAttributes(currentLocator);
@@ -404,7 +501,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
         currentLocatorString: currentLocator,
         resolved: elementsData.length > 0,
         elementCount: elementsData.length,
-        elementsResolvedTo: elementsData
+        elementsResolvedTo: elementsData,
       });
     }
   };
@@ -415,14 +512,18 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
    * @param pwLocator - The Playwright locator to evaluate.
    * @returns - A promise that resolves to an object containing the Playwright locator and an array of element attributes for each element located, or null if no elements are found.
    */
-  private evaluateAndGetAttributes = async (pwLocator: Locator): Promise<any[]> => {
-    return await pwLocator.evaluateAll(objects =>
-      objects.map(el => {
+  private evaluateAndGetAttributes = async (
+    pwLocator: Locator,
+  ): Promise<any[]> => {
+    return await pwLocator.evaluateAll((objects) =>
+      objects.map((el) => {
         const elementAttributes = el.hasAttributes()
-          ? Object.fromEntries(Array.from(el.attributes).map(({ name, value }) => [name, value]))
+          ? Object.fromEntries(
+              Array.from(el.attributes).map(({ name, value }) => [name, value]),
+            )
           : {};
         return { tagName: el.tagName, attributes: elementAttributes };
-      })
+      }),
     );
   };
 }

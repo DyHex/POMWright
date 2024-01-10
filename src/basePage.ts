@@ -1,4 +1,10 @@
-import { type Page, type TestInfo, selectors, type Selectors, type Locator } from "@playwright/test";
+import {
+  type Page,
+  type TestInfo,
+  selectors,
+  type Selectors,
+  type Locator,
+} from "@playwright/test";
 import { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 import { SessionStorage } from "./helpers/sessionStorage.actions";
 import { createCypressIdEngine } from "./utils/selectorEngines";
@@ -42,7 +48,7 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
     baseUrl: string,
     urlPath: string,
     pocName: string,
-    pwrl: PlaywrightReportLogger
+    pwrl: PlaywrightReportLogger,
   ) {
     this.page = page;
     this.testInfo = testInfo;
@@ -54,7 +60,10 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
     this.pocName = pocName;
 
     this.log = pwrl.getNewChildLogger(pocName);
-    this.locators = new GetLocatorBase<LocatorSchemaPathType>(this, this.log.getNewChildLogger("GetLocator"));
+    this.locators = new GetLocatorBase<LocatorSchemaPathType>(
+      this,
+      this.log.getNewChildLogger("GetLocator"),
+    );
     this.initLocatorSchemas();
 
     this.sessionStorage = new SessionStorage(this.page, this.pocName);
@@ -78,9 +87,11 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
    */
   public getNestedLocator = async (
     locatorSchemaPath: LocatorSchemaPathType,
-    indices?: { [key: number]: number | null } | null
+    indices?: { [key: number]: number | null } | null,
   ): Promise<Locator> => {
-    return await this.getLocatorSchema(locatorSchemaPath).getNestedLocator(indices);
+    return await this.getLocatorSchema(locatorSchemaPath).getNestedLocator(
+      indices,
+    );
   };
 
   /**
@@ -92,7 +103,9 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
    * @param LocatorSchemaPathType locatorSchemaPath - The unique path identifier for the locator schema.
    * @returns Promise<Locator> - A promise that resolves to the nested locator.
    */
-  public getLocator = async (locatorSchemaPath: LocatorSchemaPathType): Promise<Locator> => {
+  public getLocator = async (
+    locatorSchemaPath: LocatorSchemaPathType,
+  ): Promise<Locator> => {
     return await this.getLocatorSchema(locatorSchemaPath).getLocator();
   };
 

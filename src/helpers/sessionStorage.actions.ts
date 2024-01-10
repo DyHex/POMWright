@@ -12,7 +12,7 @@ export class SessionStorage {
 
   constructor(
     private page: Page,
-    private pocName: string
+    private pocName: string,
   ) {}
 
   /**
@@ -21,7 +21,7 @@ export class SessionStorage {
    * @param states An object representing the states (key/value pairs) to set.
    */
   private async writeToSessionStorage(states: { [key: string]: any }) {
-    await this.page.evaluate(storage => {
+    await this.page.evaluate((storage) => {
       for (const [key, value] of Object.entries(storage)) {
         window.sessionStorage.setItem(key, JSON.stringify(value));
       }
@@ -96,7 +96,9 @@ export class SessionStorage {
 
     try {
       contextExists = await this.page.evaluate(() => {
-        return typeof window !== "undefined" && window.sessionStorage !== undefined;
+        return (
+          typeof window !== "undefined" && window.sessionStorage !== undefined
+        );
       });
     } catch (e) {
       // Execution context was destroyed; navigate event likely occurred

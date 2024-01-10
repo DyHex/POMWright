@@ -15,7 +15,7 @@ export enum GetByMethod {
   frameLocator = "frameLocator",
   testId = "testId",
   dataCy = "dataCy",
-  id = "id"
+  id = "id",
 }
 
 /**
@@ -132,41 +132,41 @@ const locatorSchemaDummy: Partial<LocatorSchema> = {
     level: undefined as unknown as number,
     name: undefined as unknown as string | RegExp,
     pressed: undefined as unknown as boolean,
-    selected: undefined as unknown as boolean
+    selected: undefined as unknown as boolean,
   },
   text: undefined as unknown as string | RegExp,
   textOptions: {
-    exact: undefined as unknown as boolean
+    exact: undefined as unknown as boolean,
   },
   label: undefined as unknown as string | RegExp,
   labelOptions: {
-    exact: undefined as unknown as boolean
+    exact: undefined as unknown as boolean,
   },
   placeholder: undefined as unknown as string | RegExp,
   placeholderOptions: {
-    exact: undefined as unknown as boolean
+    exact: undefined as unknown as boolean,
   },
   altText: undefined as unknown as string | RegExp,
   altTextOptions: {
-    exact: undefined as unknown as boolean
+    exact: undefined as unknown as boolean,
   },
   title: undefined as unknown as string | RegExp,
   titleOptions: {
-    exact: undefined as unknown as boolean
+    exact: undefined as unknown as boolean,
   },
   locator: undefined as unknown as string | Locator,
   locatorOptions: {
     has: undefined as unknown as Locator,
     hasNot: undefined as unknown as Locator,
     hasNotText: undefined as unknown as string | RegExp,
-    hasText: undefined as unknown as string | RegExp
+    hasText: undefined as unknown as string | RegExp,
   },
   frameLocator: undefined as unknown as string,
   testId: undefined as unknown as string | RegExp,
   dataCy: undefined as unknown as string,
   id: undefined as unknown as string | RegExp,
   locatorMethod: undefined as unknown as GetByMethod,
-  locatorSchemaPath: undefined as unknown as string
+  locatorSchemaPath: undefined as unknown as string,
 };
 
 /**

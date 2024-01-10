@@ -6,10 +6,17 @@ export function createCypressIdEngine() {
       return el;
     },
 
-    queryAll(document: { querySelectorAll: (arg0: string) => Iterable<unknown> | ArrayLike<unknown> }, selector: any) {
+    queryAll(
+      document: {
+        querySelectorAll: (
+          arg0: string,
+        ) => Iterable<unknown> | ArrayLike<unknown>;
+      },
+      selector: any,
+    ) {
       const attr = `[data-cy="${selector}"]`;
       const els = Array.from(document.querySelectorAll(attr));
       return els;
-    }
+    },
   };
 }
