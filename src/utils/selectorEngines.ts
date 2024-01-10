@@ -1,5 +1,6 @@
 export function createCypressIdEngine() {
   return {
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     query(document: { querySelector: (arg0: string) => any }, selector: any) {
       const attr = `[data-cy="${selector}"]`;
       const el = document.querySelector(attr);
@@ -12,6 +13,7 @@ export function createCypressIdEngine() {
           arg0: string,
         ) => Iterable<unknown> | ArrayLike<unknown>;
       },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       selector: any,
     ) {
       const attr = `[data-cy="${selector}"]`;

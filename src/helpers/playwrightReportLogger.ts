@@ -74,6 +74,8 @@ export class PlaywrightReportLogger {
    * @param message - The log message.
    * @param args - Additional arguments to log.
    */
+
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   private log(level: LogLevel, message: string, ...args: any[]) {
     const logLevelIndex = this.logLevels.indexOf(level);
 
@@ -95,6 +97,8 @@ export class PlaywrightReportLogger {
    * @param message - The log message.
    * @param args - Additional arguments to log.
    */
+
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   debug(message: string, ...args: any[]) {
     this.log("debug", message, ...args);
   }
@@ -105,6 +109,8 @@ export class PlaywrightReportLogger {
    * @param message - The log message.
    * @param args - Additional arguments to log.
    */
+
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   info(message: string, ...args: any[]) {
     this.log("info", message, ...args);
   }
@@ -115,6 +121,8 @@ export class PlaywrightReportLogger {
    * @param message - The log message.
    * @param args - Additional arguments to log.
    */
+
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   warn(message: string, ...args: any[]) {
     this.log("warn", message, ...args);
   }
@@ -125,6 +133,8 @@ export class PlaywrightReportLogger {
    * @param message - The log message.
    * @param args - Additional arguments to log.
    */
+
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   error(message: string, ...args: any[]) {
     this.log("error", message, ...args);
   }
@@ -209,8 +219,8 @@ export class PlaywrightReportLogger {
       const printLogLevel = `${log.logLevel.toUpperCase()}`;
       const printPrefix = log.prefix ? `: [${log.prefix}]` : "";
 
-      let messageBody;
-      let messageContentType;
+      let messageBody = "";
+      let messageContentType = "";
       try {
         const parsedMessage = JSON.parse(log.message);
         messageContentType = "application/json";

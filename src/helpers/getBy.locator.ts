@@ -1,6 +1,5 @@
-import { type Page, type Locator } from "@playwright/test";
-import { type LocatorSchema } from "./locatorSchema.interface";
-import { GetByMethod } from "./locatorSchema.interface";
+import { type Locator, type Page } from "@playwright/test";
+import { GetByMethod, type LocatorSchema } from "./locatorSchema.interface";
 import { PlaywrightReportLogger } from "./playwrightReportLogger";
 
 type GetByMethodSubset = Exclude<
@@ -13,6 +12,7 @@ type GetByMethodSubset = Exclude<
 
 type GetByMethodFunction = {
   (selector: string | RegExp | Locator | undefined): Locator;
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   (selector: string | RegExp | Locator | undefined, options: any): Locator;
 };
 
@@ -28,6 +28,7 @@ type GetByMethodFunction = {
 export class GetBy {
   private log: PlaywrightReportLogger;
   private methodMap: Record<GetByMethod, (locator: LocatorSchema) => Locator>;
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   private subMethodMap: Record<GetByMethodSubset, (options?: any) => Locator>;
 
   constructor(

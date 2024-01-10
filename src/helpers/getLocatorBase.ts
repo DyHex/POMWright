@@ -1,13 +1,12 @@
-import { test, type Locator } from "@playwright/test";
+import { type Locator, test } from "@playwright/test";
 import { BasePage } from "../basePage";
+import { GetBy } from "./getBy.locator";
 import {
-  type LocatorSchema,
-  type AriaRoleType,
   GetByMethod,
+  type LocatorSchema,
   getLocatorSchemaDummy,
 } from "./locatorSchema.interface";
 import { PlaywrightReportLogger } from "./playwrightReportLogger";
-import { GetBy } from "./getBy.locator";
 export { GetByMethod };
 
 // Defines properties that can be updated in a LocatorSchema
@@ -276,7 +275,9 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
     currentPath: string,
     pathIndexPairs: PathIndexPairs,
     nestedLocatorResults?: {
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       LocatorSchema: any;
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       NestingSteps: any[];
     },
   ) => {
@@ -315,6 +316,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
     if (typeof source === "object" && source !== null) {
       Object.keys(source)
         .filter((key) => key !== "locatorSchemaPath") // Filter out 'locatorSchemaPath' property
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
         .forEach((key: any) => {
           // const locatorKey = key as keyof LocatorSchema;
           const targetKey = key as keyof TargetType;
@@ -368,10 +370,11 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 
   protected buildNestedLocator = async (
     locatorSchemaPath: LocatorSchemaPathType,
+    // biome-ignore lint/style/useDefaultParameterLast: <explanation>
     indices: { [key: number]: number | null } = {},
     schemasMap: Map<string, LocatorSchema>,
   ): Promise<Locator> => {
-    return await test.step(`${this.pageObjectClass.pocName}: Build Nested Locator`, async () => {
+    return (await test.step(`${this.pageObjectClass.pocName}: Build Nested Locator`, async () => {
       const pathIndexPairs = this.extractPathsFromSchema(
         locatorSchemaPath,
         indices,
@@ -380,6 +383,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
       let currentIFrame: string | undefined | null = null;
       const nestedLocatorResults: {
         LocatorSchema: LocatorSchema | null;
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
         NestingSteps: any[];
       } = {
         LocatorSchema: null, // Initialize as an empty object
@@ -475,16 +479,13 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
       if (currentLocator != null) {
         currentLocator.scrollIntoViewIfNeeded().catch(() => {});
         return currentLocator;
-      } else {
-        throw new Error(
-          `"currentLocator" is null or undefined. Failed to build nested locator for path: ${locatorSchemaPath}`,
-        );
       }
-    });
+    })) as Locator;
   };
 
   private evaluateCurrentLocator = async (
     currentLocator: Locator,
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     resultsArray: any[],
     currentIFrame: string | null,
   ): Promise<void> => {
@@ -514,6 +515,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
    */
   private evaluateAndGetAttributes = async (
     pwLocator: Locator,
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   ): Promise<any[]> => {
     return await pwLocator.evaluateAll((objects) =>
       objects.map((el) => {

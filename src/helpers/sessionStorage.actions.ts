@@ -7,8 +7,9 @@ import { type Page, test } from "@playwright/test";
  * @property {Page} page - The Playwright page object.
  */
 export class SessionStorage {
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   private queuedStates: { [key: string]: any } = {};
-  private isInitiated: boolean = false;
+  private isInitiated = false;
 
   constructor(
     private page: Page,
@@ -20,6 +21,8 @@ export class SessionStorage {
    *
    * @param states An object representing the states (key/value pairs) to set.
    */
+
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   private async writeToSessionStorage(states: { [key: string]: any }) {
     await this.page.evaluate((storage) => {
       for (const [key, value] of Object.entries(storage)) {
@@ -33,8 +36,10 @@ export class SessionStorage {
    *
    * @returns An object containing all states from the sessionStorage.
    */
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   private async readFromSessionStorage(): Promise<{ [key: string]: any }> {
     return await this.page.evaluate(() => {
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       const storage: { [key: string]: any } = {};
       for (let i = 0; i < sessionStorage.length; i++) {
         const key = sessionStorage.key(i);
@@ -60,6 +65,7 @@ export class SessionStorage {
    * Usage:
    * await set({ user: 'John Doe', token: 'abc123' }, true);
    */
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   public async set(states: { [key: string]: any }, reload: boolean) {
     await test.step(`${this.pocName}: setSessionStorage`, async () => {
       await this.writeToSessionStorage(states);
@@ -82,6 +88,7 @@ export class SessionStorage {
    * Usage:
    * await setOnNextNavigation({ key: 'value' });
    */
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   public async setOnNextNavigation(states: { [key: string]: any }) {
     this.queuedStates = { ...this.queuedStates, ...states };
 
@@ -128,7 +135,9 @@ export class SessionStorage {
    * 1. To fetch all states: await get();
    * 2. To fetch selected states: await get(['key1', 'key2']);
    */
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   public async get(keys?: string[]): Promise<{ [key: string]: any }> {
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     let result: { [key: string]: any } = {};
     await test.step(`${this.pocName}: getSessionStorage`, async () => {
       const allData = await this.readFromSessionStorage();

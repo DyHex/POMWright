@@ -1,9 +1,8 @@
-/* eslint-disable no-empty-pattern */
 import { test as base } from "@playwright/test";
 import {
-  PlaywrightReportLogger,
   type LogEntry,
   type LogLevel,
+  PlaywrightReportLogger,
 } from "../helpers/playwrightReportLogger";
 
 type baseFixtures = {
@@ -11,10 +10,12 @@ type baseFixtures = {
 };
 
 export const test = base.extend<baseFixtures>({
+  // biome-ignore lint/correctness/noEmptyPattern: <explanation>
   log: async ({}, use, testInfo) => {
     const contextName = "TestCase";
     const sharedLogEntry: LogEntry[] = [];
-    // eslint-disable-next-line prefer-const
+
+    // biome-ignore lint/style/useConst: <explanation>
     let sharedLogLevel: { current: LogLevel; initial: LogLevel } =
       testInfo.retry === 0
         ? { current: "warn", initial: "warn" }
