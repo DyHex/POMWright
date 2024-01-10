@@ -1,5 +1,11 @@
 # pomwright
 
+## 0.0.4
+
+### Patch Changes
+
+- f2fea3b: add codeowners
+
 ## 0.0.3
 
 ### Patch Changes
