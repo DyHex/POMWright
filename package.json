@@ -8,7 +8,8 @@
   "scripts": {
     "build": "tsup index.ts --format cjs,esm --dts",
     "release": "pnpm run build && changeset publish",
-    "lint": "tsc",
+    "lint": "biome check ./src",
+    "format": "biome format ./src --write",
     "install-browsers": "playwright install --with-deps"
   },
   "keywords": [
@@ -20,6 +21,7 @@
   "author": "Magnus Blütecher Dysthe",
   "license": "Apache 2.0",
   "devDependencies": {
+    "@biomejs/biome": "^1.5.1",
     "@changesets/cli": "^2.27.1",
     "@types/node": "^20.10.8",
     "tsup": "^8.0.1",
