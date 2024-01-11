@@ -2,7 +2,7 @@
 
 POMWright is a TypeScript-based framework that implements the Page Object Model Design Pattern, designed specifically to augment Playwright's testing capabilities.
 
-POMWright provides a way of abstracting the implementation details of a web page and encapsulating them into a reusable page object. This approach makes the tests easier to read and maintain, and helps reduce duplicated code by breaking down the code into smaller, reusable components, making the code more maintainable and organized.
+POMWright provides a way of abstracting the implementation details of a web page and encapsulating them into a reusable page object. This approach makes the tests easier to read, write and maintain, and helps reduce duplicated code by breaking down the code into smaller, reusable components, making the code more maintainable and organized.
 
 ## Features
 
