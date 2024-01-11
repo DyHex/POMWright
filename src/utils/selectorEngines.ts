@@ -1,15 +1,23 @@
-export function createCypressIdEngine() {
-  return {
-    query(document: { querySelector: (arg0: string) => any }, selector: any) {
-      const attr = `[data-cy="${selector}"]`;
-      const el = document.querySelector(attr);
-      return el;
-    },
+type QuerySelectorType = typeof document.querySelector;
+type QuerySelectorAllType = typeof document.querySelectorAll;
 
-    queryAll(document: { querySelectorAll: (arg0: string) => Iterable<unknown> | ArrayLike<unknown> }, selector: any) {
-      const attr = `[data-cy="${selector}"]`;
-      const els = Array.from(document.querySelectorAll(attr));
-      return els;
-    }
-  };
+export function createCypressIdEngine() {
+	return {
+		query(document: { querySelector: QuerySelectorType }, selector: string) {
+			const attr = `[data-cy="${selector}"]`;
+			const el = document.querySelector(attr);
+			return el;
+		},
+
+		queryAll(
+			document: {
+				querySelectorAll: QuerySelectorAllType;
+			},
+			selector: string,
+		) {
+			const attr = `[data-cy="${selector}"]`;
+			const els = Array.from(document.querySelectorAll(attr));
+			return els;
+		},
+	};
 }
