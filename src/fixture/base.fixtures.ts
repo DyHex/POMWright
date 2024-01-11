@@ -10,7 +10,8 @@ type baseFixtures = {
 };
 
 export const test = base.extend<baseFixtures>({
-	log: async (_, use, testInfo) => {
+	// biome-ignore lint/correctness/noEmptyPattern: <explanation>
+	log: async ({}, use, testInfo) => {
 		const contextName = "TestCase";
 		const sharedLogEntry: LogEntry[] = [];
 
