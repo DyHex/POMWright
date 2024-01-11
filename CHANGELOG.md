@@ -1,5 +1,11 @@
 # pomwright
 
+## 0.0.6
+
+### Patch Changes
+
+- 8c2af7d: fix: ensure base fixture log follows playwright's api
+
 ## 0.0.5
 
 ### Patch Changes
