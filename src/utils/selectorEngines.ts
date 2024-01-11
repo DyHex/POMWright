@@ -11,7 +11,7 @@ export function createCypressIdEngine() {
 
 		queryAll(
 			document: {
-        querySelectorAll: QuerySelectorAllType
+				querySelectorAll: QuerySelectorAllType
 			},
 			selector: string,
 		) {
