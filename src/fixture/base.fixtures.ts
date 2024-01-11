@@ -10,7 +10,7 @@ type baseFixtures = {
 };
 
 export const test = base.extend<baseFixtures>({
-	// biome-ignore lint/correctness/noEmptyPattern: <explanation>
+	// biome-ignore lint/correctness/noEmptyPattern: <Playwright does not support the use of _, thus we must provide an empty object {}>
 	log: async ({}, use, testInfo) => {
 		const contextName = "TestCase";
 		const sharedLogEntry: LogEntry[] = [];
