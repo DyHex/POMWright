@@ -1,5 +1,11 @@
 # pomwright
 
+## 0.0.7
+
+### Patch Changes
+
+- 5b7ed8a: Update README
+
 ## 0.0.6
 
 ### Patch Changes
