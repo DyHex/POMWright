@@ -189,7 +189,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
     pathIndexPairs: PathIndexPairs,
     updatesData: { [index: number]: Partial<LocatorSchema> },
   ): void {
-    Object.entries(updatesData).forEach(([index, updateAtIndex]) => {
+    for (const [index, updateAtIndex] of Object.entries(updatesData)) {
       const path = pathIndexPairs[parseInt(index)]?.path;
       if (path && updateAtIndex) {
         const schema = schemasMap.get(path);
@@ -197,7 +197,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
           schemasMap.set(path, this.deepMerge(schema, updateAtIndex));
         }
       }
-    });
+    }
   }
 
   private createLocatorSchema(
@@ -314,55 +314,50 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
     const dummySchema = getLocatorSchemaDummy();
 
     if (typeof source === "object" && source !== null) {
-      Object.keys(source)
-        .filter((key) => key !== "locatorSchemaPath") // Filter out 'locatorSchemaPath' property
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-        .forEach((key: any) => {
-          // const locatorKey = key as keyof LocatorSchema;
-          const targetKey = key as keyof TargetType;
-          const sourceKey = key as keyof SourceType;
+      const filteredKeys = Object.keys(source).filter(
+        (key) => key !== "locatorSchemaPath",
+      );
 
-          // Check if the key exists in the dummy schema for validation
-          if (!(key in dummySchema)) {
-            throw new Error(
-              `Invalid property: '${key}' is not a valid property of LocatorSchema`,
-            );
+      for (const key of filteredKeys) {
+        const targetKey = key as keyof TargetType;
+        const sourceKey = key as keyof SourceType;
+
+        // Check if the key exists in the dummy schema for validation
+        if (!(key in dummySchema)) {
+          throw new Error(
+            `Invalid property: '${key}' is not a valid property of LocatorSchema`,
+          );
+        }
+
+        const targetValue = merged[targetKey];
+        const sourceValue = source[sourceKey];
+
+        // Merge logic based on the type of the source value
+        if (sourceValue !== undefined) {
+          if (Array.isArray(targetValue) && Array.isArray(sourceValue)) {
+            // Concatenate arrays
+            merged[targetKey] = [
+              ...targetValue,
+              ...sourceValue,
+            ] as TargetType[keyof TargetType];
+          } else if (sourceValue instanceof RegExp) {
+            // Clone RegExp
+            merged[targetKey] = new RegExp(
+              sourceValue.source,
+              sourceValue.flags,
+            ) as TargetType[keyof TargetType];
+          } else if (typeof sourceValue === "object" && sourceValue !== null) {
+            // Recursive merge for nested objects
+            merged[targetKey] = targetValue
+              ? this.deepMerge(targetValue, sourceValue)
+              : (structuredClone(sourceValue) as TargetType[keyof TargetType]);
+          } else {
+            // Direct assignment for non-object values or nulls
+            merged[targetKey] =
+              sourceValue as unknown as TargetType[keyof TargetType];
           }
-
-          const targetValue = merged[targetKey];
-          const sourceValue = source[sourceKey];
-
-          // Merge logic based on the type of the source value
-          if (sourceValue !== undefined) {
-            if (Array.isArray(targetValue) && Array.isArray(sourceValue)) {
-              // Concatenate arrays
-              merged[targetKey] = [
-                ...targetValue,
-                ...sourceValue,
-              ] as TargetType[keyof TargetType];
-            } else if (sourceValue instanceof RegExp) {
-              // Clone RegExp
-              merged[targetKey] = new RegExp(
-                sourceValue.source,
-                sourceValue.flags,
-              ) as TargetType[keyof TargetType];
-            } else if (
-              typeof sourceValue === "object" &&
-              sourceValue !== null
-            ) {
-              // Recursive merge for nested objects
-              merged[targetKey] = targetValue
-                ? this.deepMerge(targetValue, sourceValue)
-                : (structuredClone(
-                    sourceValue,
-                  ) as TargetType[keyof TargetType]);
-            } else {
-              // Direct assignment for non-object values or nulls
-              merged[targetKey] =
-                sourceValue as unknown as TargetType[keyof TargetType];
-            }
-          }
-        });
+        }
+      }
     }
 
     return merged;
