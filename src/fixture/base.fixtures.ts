@@ -10,13 +10,11 @@ type baseFixtures = {
 };
 
 export const test = base.extend<baseFixtures>({
-	// biome-ignore lint/correctness/noEmptyPattern: <explanation>
-	log: async ({}, use, testInfo) => {
+	log: async (_, use, testInfo) => {
 		const contextName = "TestCase";
 		const sharedLogEntry: LogEntry[] = [];
 
-		// biome-ignore lint/style/useConst: <explanation>
-		let sharedLogLevel: { current: LogLevel; initial: LogLevel } =
+		const sharedLogLevel: { current: LogLevel; initial: LogLevel } =
 			testInfo.retry === 0
 				? { current: "warn", initial: "warn" }
 				: { current: "debug", initial: "debug" };
