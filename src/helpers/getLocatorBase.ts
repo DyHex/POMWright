@@ -126,13 +126,13 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
       return this;
     };
 
-    locatorSchemaCopy.getNestedLocator = async (indices?: {
-      [key: number]: number | null;
-    }) => {
+    locatorSchemaCopy.getNestedLocator = async (
+      indices?: Record<number, number>,
+    ) => {
       return await this.buildNestedLocator(
         locatorSchemaPath,
-        indices,
         schemasMap,
+        indices,
       );
     };
 
@@ -250,7 +250,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 
   private extractPathsFromSchema = (
     paths: string,
-    indices: { [key: number]: number | null } = {},
+    indices: Record<number, number> = {},
   ): PathIndexPairs => {
     const schemaParts = paths.split(".");
     let cumulativePath = "";
@@ -370,9 +370,8 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 
   protected buildNestedLocator = async (
     locatorSchemaPath: LocatorSchemaPathType,
-    // biome-ignore lint/style/useDefaultParameterLast: <explanation>
-    indices: { [key: number]: number | null } = {},
     schemasMap: Map<string, LocatorSchema>,
+    indices: Record<number, number> = {},
   ): Promise<Locator> => {
     return (await test.step(`${this.pageObjectClass.pocName}: Build Nested Locator`, async () => {
       const pathIndexPairs = this.extractPathsFromSchema(
