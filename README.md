@@ -182,9 +182,9 @@ test("update a locator before use", async ({ profile }) => {
    * content.region.details
    * content.region.details.button.edit (updated)
    */
-  const editBtn = await profile.getLocatorSchema()
+  const editBtn = await profile.getLocatorSchema("content.region.details.button.edit")
     .update({ roleOptions: { name: "Edit details" }})
-    .getNestedLocator("content.region.details.button.edit");
+    .getNestedLocator();
 
   await editBtn.click();
 
@@ -205,14 +205,14 @@ test("update a nested locator before use", async ({ profile }) => {
    * content.region.details (updated)
    * content.region.details.button.edit
    */
-  const editBtn = await profile.getLocatorSchema()
+  const editBtn = await profile.getLocatorSchema("content.region.details.button.edit")
     .updates({ 
       2: { // content.region.details
         locator: ".profile-details",
         locatorMethod: GetByMethod.locator
         } 
       })
-    .getNestedLocator("content.region.details.button.edit");
+    .getNestedLocator();
 
   await editBtn.click();
 
@@ -238,7 +238,7 @@ test("make multiple versions of a locator", async ({ profile }) => {
   await editBtnUpdated.click();
 
   /**
-   * Calling profile.getLocatorSchema(content.region.details.button.edit) again 
+   * Calling profile.getLocatorSchema("content.region.details.button.edit") again 
    * will return a new deepCopy of the original LocatorSchema
    */
 
