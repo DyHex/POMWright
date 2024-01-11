@@ -1,5 +1,12 @@
 # pomwright
 
+## 0.0.5
+
+### Patch Changes
+
+- 0c96ab7: Add Biome for linting and formatting
+- 0c96ab7: Move indices with default value to the end of arguments for buildNestedLocator
+
 ## 0.0.4
 
 ### Patch Changes
