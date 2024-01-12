@@ -2,6 +2,18 @@
   "name": "pomwright",
   "version": "0.0.7",
   "description": "POMWright is a complementary test framework for Playwright written in TypeScript.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DyHex/POMWright"
+  },
+  "homepage": "https://github.com/DyHex/POMWright#readme",
+  "bugs": {
+    "url": "https://github.com/DyHex/POMWright/issues"
+  },
+  "author": {
+    "name": "Magnus Blütecher Dysthe"
+  },
+  "license": "Apache 2.0",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -18,8 +30,6 @@
     "Page Object Model",
     "Test Framework"
   ],
-  "author": "Magnus Blütecher Dysthe",
-  "license": "Apache 2.0",
   "devDependencies": {
     "@biomejs/biome": "^1.5.1",
     "@changesets/cli": "^2.27.1",

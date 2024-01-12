@@ -1,5 +1,8 @@
 # POMWright
 
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/DyHex/POMWright/main.yaml?label=CI%20on%20main) ![NPM Version](https://img.shields.io/npm/v/pomwright?link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2Fpomwright) ![NPM Downloads](https://img.shields.io/npm/dt/pomwright) ![GitHub License](https://img.shields.io/github/license/DyHex/POMWright) ![NPM dev or peer Dependency Version](https://img.shields.io/npm/dependency-version/pomwright/peer/%40playwright%2Ftest) 
+
+
 POMWright is a TypeScript-based framework that implements the Page Object Model Design Pattern, designed specifically to augment Playwright's testing capabilities.
 
 POMWright provides a way of abstracting the implementation details of a web page and encapsulating them into a reusable page object. This approach makes the tests easier to read, write and maintain, and helps reduce duplicated code by breaking down the code into smaller, reusable components, making the code more maintainable and organized.
