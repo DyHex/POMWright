@@ -1,6 +1,6 @@
 {
   "name": "pomwright",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "POMWright is a complementary test framework for Playwright written in TypeScript.",
   "repository": {
     "type": "git",
