@@ -1,5 +1,11 @@
 # pomwright
 
+## 0.0.9
+
+### Patch Changes
+
+- 7e8b7d1: removes an abstract method from POMWright/BasePage which should have been removed previously
+
 ## 0.0.8
 
 ### Patch Changes
