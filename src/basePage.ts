@@ -109,8 +109,6 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
 		return await this.getLocatorSchema(locatorSchemaPath).getLocator();
 	};
 
-	protected abstract pageActionsToPerformAfterNavigation(): (() => Promise<void>)[];
-
 	/**
 	 * Abstract method to initialize locator schemas.
 	 *
