@@ -1,0 +1,82 @@
+{
+    "Playwright Import": {
+      "prefix": "pw-import",
+      "body": [
+        "import { test, expect } from \"@fixtures/$1\";"
+      ],
+      "description": "Import Playwright Test through our Fixtures"
+    },
+    "Playwright Describe": {
+      "prefix": "pw-describe",
+      "body": [
+        "test.describe(\"$1\", () => {",
+        "  $2",
+        "});"
+      ],
+      "description": "Playwright Test describe block"
+    },
+    "Playwright Test": {
+      "prefix": "pw-test",
+      "body": [
+        "test(\"$1\", async ({ $2 }) => {",
+        "  $3",
+        "});"
+      ],
+      "description": "Playwright Test test block"
+    },
+    "Playwright Step": {
+      "prefix": "pw-step",
+      "body": [
+        "await test.step(`${$1.pocName}: $2`, async () => {",
+        "  $3",
+        "});"
+      ],
+      "description": "Playwright Test step block"
+    },
+    "Playwright Use": {
+      "prefix": "pw-use",
+      "body": [
+        "test.use({",
+        "  $1",
+        "});"
+      ],
+      "description": "Playwright Test use block"
+    },
+    "Playwright beforeEach": {
+      "prefix": "pw-beforeEach",
+      "body": [
+        "test.beforeEach(async ({ $1 }) => {",
+        "  $2",
+        "});"
+      ],
+      "description": "Playwright Test beforeEach block"
+    },
+    "Playwright afterEach": {
+      "prefix": "pw-afterEach",
+      "body": [
+        "test.afterEach(async ({ $1 }) => {",
+        "  $2",
+        "});"
+      ],
+      "description": "Playwright Test afterEach block"
+    },
+    "Playwright beforeAll": {
+      "prefix": "pw-beforeAll",
+      "body": [
+        "test.beforeAll(async ({ $1 }) => {",
+        "  $2",
+        "});"
+      ],
+      "description": "Playwright Test beforeAll block"
+    },
+    "Playwright afterAll": {
+      "prefix": "pw-afterAll",
+      "body": [
+        "test.afterAll(async ({ $1 }) => {",
+        "  $2",
+        "});"
+      ],
+      "description": "Playwright Test afterAll block"
+    }
+  }
+  
