@@ -9,12 +9,12 @@ type fixtures = {
 
 export const test = base.extend<fixtures>({
   sdHome: async ({ page, log }, use, testInfo) => {
-    const profile = new Home(page, testInfo, log);
-    await use(profile);
+    const sdHome = new Home(page, testInfo, log);
+    await use(sdHome);
   },
 
   sdInventory: async ({ page, log }, use, testInfo) => {
-    const profile = new Inventory(page, testInfo, log);
-    await use(profile);
+    const sdInventory = new Inventory(page, testInfo, log);
+    await use(sdInventory);
   },
 });
