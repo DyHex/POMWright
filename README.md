@@ -61,7 +61,9 @@ The playwright.config.ts is set to run up-to 4 tests in parallell, either alter 
 ```bash
 # 1 will disable parallelism and run the tests serially
 pnpm playwright test --workers 2
-``` 
+```
+
+A Playwright HTML report will be created under ./example/playwright-report, open the index.html file in your prefered browser and have a look. 
 
 ## Usage
 
