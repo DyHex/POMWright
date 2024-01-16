@@ -34,6 +34,35 @@ Extend an abstract class with POMWright with a given BaseUrl, then create POCs f
 npm install pomwright --save-dev
 ```
 
+## Playwright Example Project
+
+Inside the "example" folder you'll find a simple Playwright project using POMWright with POCs, fixtures, LocatorSchema's and tests you can experiment with. To run them, clone the repository and cd into the "example" folder, then do the following:
+
+Install:
+
+```bash
+pnpm install
+```
+
+Install/download Playwright browsers:
+
+```bash
+pnpm playwright install --with-deps
+```
+
+Run each test with chromium, firefox and webkit: 
+
+```bash
+pnpm playwright test
+```
+
+The playwright.config.ts is set to run up-to 4 tests in parallell, either alter the config or override it through the commandline if needed, e.g.:
+
+```bash
+# 1 will disable parallelism and run the tests serially
+pnpm playwright test --workers 2
+``` 
+
 ## Usage
 
 **Simple example of creating a Page Object Class:**
