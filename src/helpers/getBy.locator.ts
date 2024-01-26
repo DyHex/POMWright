@@ -4,10 +4,7 @@ import { PlaywrightReportLogger } from "./playwrightReportLogger";
 
 type GetByMethodSubset = Exclude<
 	GetByMethod,
-	| GetByMethod.frameLocator
-	| GetByMethod.testId
-	| GetByMethod.dataCy
-	| GetByMethod.id
+	GetByMethod.frameLocator | GetByMethod.testId | GetByMethod.dataCy | GetByMethod.id
 >;
 
 type GetByMethodFunction = {
@@ -82,15 +79,11 @@ export class GetBy {
 		throw new Error(`Unsupported locator method: ${methodName}`);
 	};
 
-	private getBy = (
-		caller: GetByMethodSubset,
-		locator: LocatorSchema,
-	): Locator => {
+	private getBy = (caller: GetByMethodSubset, locator: LocatorSchema): Locator => {
 		const method: GetByMethodFunction = this.subMethodMap[caller];
 
 		if (!method) {
-			const errorText =
-				"Error: unknown caller of method getBy(caller, locator) in getBy.locators.ts";
+			const errorText = "Error: unknown caller of method getBy(caller, locator) in getBy.locators.ts";
 			this.log.error(errorText);
 			throw new Error(errorText);
 		}
@@ -203,15 +196,11 @@ export class GetBy {
 	 * @returns - A promise that resolves to the {@link Locator}.
 	 */
 	private testId = (locator: LocatorSchema): Locator => {
-		const initialPWLocator = locator.testId
-			? this.page.getByTestId(locator.testId)
-			: null;
+		const initialPWLocator = locator.testId ? this.page.getByTestId(locator.testId) : null;
 
 		if (!initialPWLocator) {
 			const errorText = `Locator "${locator.locatorSchemaPath}" .testId is not defined.`;
-			this.log.warn(
-				`Locator "${locator.locatorSchemaPath}" .testId is not defined.`,
-			);
+			this.log.warn(`Locator "${locator.locatorSchemaPath}" .testId is not defined.`);
 			throw new Error(errorText);
 		}
 

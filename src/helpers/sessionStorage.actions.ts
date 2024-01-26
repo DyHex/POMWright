@@ -103,9 +103,7 @@ export class SessionStorage {
 
 		try {
 			contextExists = await this.page.evaluate(() => {
-				return (
-					typeof window !== "undefined" && window.sessionStorage !== undefined
-				);
+				return typeof window !== "undefined" && window.sessionStorage !== undefined;
 			});
 		} catch (e) {
 			// Execution context was destroyed; navigate event likely occurred

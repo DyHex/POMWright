@@ -59,11 +59,7 @@ export class PlaywrightReportLogger {
 	 * @returns - A new logger instance with the updated prefix.
 	 */
 	getNewChildLogger(prefix: string): PlaywrightReportLogger {
-		return new PlaywrightReportLogger(
-			this.sharedLogLevel,
-			this.sharedLogEntry,
-			`${this.contextName} -> ${prefix}`,
-		);
+		return new PlaywrightReportLogger(this.sharedLogLevel, this.sharedLogEntry, `${this.contextName} -> ${prefix}`);
 	}
 
 	/**
@@ -201,9 +197,7 @@ export class PlaywrightReportLogger {
 	 * @param testInfo - The test information object from Playwright.
 	 */
 	attachLogsToTest(testInfo: TestInfo) {
-		this.sharedLogEntry.sort(
-			(a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
-		);
+		this.sharedLogEntry.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
 		for (const log of this.sharedLogEntry) {
 			const printTime = log.timestamp.toLocaleTimeString("nb-NO", {
@@ -230,13 +224,10 @@ export class PlaywrightReportLogger {
 				messageBody = log.message;
 			}
 
-			testInfo.attach(
-				`${printTime} ${printDate} - ${printLogLevel} ${printPrefix}`,
-				{
-					contentType: messageContentType,
-					body: Buffer.from(messageBody),
-				},
-			);
+			testInfo.attach(`${printTime} ${printDate} - ${printLogLevel} ${printPrefix}`, {
+				contentType: messageContentType,
+				body: Buffer.from(messageBody),
+			});
 		}
 	}
 }
