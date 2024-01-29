@@ -1,17 +1,17 @@
 import { BasePage } from "./src/basePage";
-export { BasePage as POMWright };
+export { BasePage };
 
 import { test } from "./src/fixture/base.fixtures";
-export { test as POMWrightTestFixture };
+export { test };
 
 import { PlaywrightReportLogger } from "./src/helpers/playwrightReportLogger";
-export { PlaywrightReportLogger as POMWrightLogger };
+export { PlaywrightReportLogger };
 
 import { GetByMethod, type LocatorSchema, type AriaRoleType } from "./src/helpers/locatorSchema.interface";
 export { GetByMethod, type LocatorSchema, type AriaRoleType };
 
 import { GetLocatorBase } from "./src/helpers/getLocatorBase";
-export { GetLocatorBase as POMWrightGetLocatorBase };
+export { GetLocatorBase };
 
 import { BaseApi } from "./src/api/baseApi";
-export { BaseApi as POMWrightApi };
+export { BaseApi };
