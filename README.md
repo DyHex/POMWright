@@ -14,7 +14,7 @@ Simply extend a class with BasePage to create a Page Object Class (POC).
 
 ### Support for Multiple Domains/BaseURLs
 
-Define different base URLs by extending an abstract class with BasePage and have your POCs extend it.
+Define different base URLs by extending an abstract class with BasePage per domain and have your POCs for each domain extend the abstract classes.
 
 ### Custom Playwright Fixture Integration
 
