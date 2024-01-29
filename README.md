@@ -8,31 +8,40 @@ POMWright provides a way of abstracting the implementation details of a web page
 
 ## Features
 
-**Easy Creation of Page Object Classes:**
+### Easy Creation of Page Object Classes
+
 Simply extend a class with BasePage to create a Page Object Class (POC).
 
-**Support for Multiple Domains/BaseURLs:**
+### Support for Multiple Domains/BaseURLs
+
 Define different base URLs by extending an abstract class with BasePage and have your POCs extend it.
 
-**Custom Playwright Fixture Integration:**
+### Custom Playwright Fixture Integration
+
 Seamlessly integrate custom Playwright Fixtures with your POMWright POCs.
 
-**LocatorSchema Interface:**
+### LocatorSchema Interface
+
 Define comprehensive locators for each POC and share common locators between them.
 
-**Advanced Locator Management:**
+### Advanced Locator Management
+
 Efficiently manage and chain locators through LocatorSchemaPaths.
 
-**Dynamic Locator Schema Updates:**
+### Dynamic Locator Schema Updates
+
 Modify single or multiple locators within a chained locator dynamically during tests.
 
-**Deep Copy of LocatorSchemas:**
+### Deep Copy of LocatorSchemas
+
 Ensure that original LocatorSchemas remain immutable and reusable across tests.
 
-**Custom HTML Logger:**
+### Custom HTML Logger
+
 Gain insights with detailed logs for nested locators, integrated with Playwright's HTML report. Or use the Log fixture throughout your own POCs and tests to easily attach them to the HTML report based on log levels.
 
-**SessionStorage Handling:**
+### SessionStorage Handling
+
 Enhance your tests with advanced sessionStorage handling capabilities.
 
 ## Installation
@@ -165,7 +174,7 @@ export const test = base.extend<fixtures>({
 
 ### Using the fixture in a Playwright tests
 
-#### click edit button with a single locator
+#### Click edit button with a single locator
 
 ```TS
 import { test } from ".../fixtures";
@@ -185,7 +194,7 @@ test("click edit button with a single locator", async ({ profile }) => {
 });
 ```
 
-#### click edit button with a nested locator
+#### Click edit button with a nested locator
 
 ```TS
 import { test } from ".../fixtures";
@@ -208,7 +217,7 @@ test("click edit button with a nested locator", async ({ profile }) => {
 });
 ```
 
-#### specify index for nested locator(s)
+#### Specify index for nested locator(s)
 
 ```TS
 import { test } from ".../fixtures";
@@ -233,7 +242,7 @@ test("specify index for nested locator(s)", async ({ profile }) => {
 });
 ```
 
-#### update a locator before use
+#### Update a locator before use
 
 ```TS
 import { test } from ".../fixtures";
@@ -258,7 +267,7 @@ test("update a locator before use", async ({ profile }) => {
 });
 ```
 
-#### update a nested locator before use
+#### Update a nested locator before use
 
 ```TS
 import { test } from ".../fixtures";
@@ -288,7 +297,7 @@ test("update a nested locator before use", async ({ profile }) => {
 });
 ```
 
-#### make multiple versions of a locator
+#### Make multiple versions of a locator
 
 ```TS
 import { test } from ".../fixtures";
