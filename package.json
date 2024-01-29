@@ -1,43 +1,39 @@
 {
-  "name": "pomwright",
-  "version": "1.0.0",
-  "description": "POMWright is a complementary test framework for Playwright written in TypeScript.",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/DyHex/POMWright"
-  },
-  "homepage": "https://github.com/DyHex/POMWright#readme",
-  "bugs": {
-    "url": "https://github.com/DyHex/POMWright/issues"
-  },
-  "author": {
-    "name": "Magnus Blütecher Dysthe"
-  },
-  "license": "Apache 2.0",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
-  "scripts": {
-    "build": "tsup index.ts --format cjs,esm --dts",
-    "release": "pnpm run build && changeset publish",
-    "lint": "biome check ./src",
-    "format": "biome format ./src --write",
-    "install-browsers": "playwright install --with-deps"
-  },
-  "keywords": [
-    "Playwright",
-    "POM",
-    "Page Object Model",
-    "Test Framework"
-  ],
-  "devDependencies": {
-    "@biomejs/biome": "^1.5.1",
-    "@changesets/cli": "^2.27.1",
-    "@types/node": "^20.10.8",
-    "tsup": "^8.0.1",
-    "typescript": "^5.3.3"
-  },
-  "peerDependencies": {
-    "@playwright/test": "^1.40.1"
-  }
+	"name": "pomwright",
+	"version": "1.0.0",
+	"description": "POMWright is a complementary test framework for Playwright written in TypeScript.",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/DyHex/POMWright"
+	},
+	"homepage": "https://github.com/DyHex/POMWright#readme",
+	"bugs": {
+		"url": "https://github.com/DyHex/POMWright/issues"
+	},
+	"author": {
+		"name": "Magnus Blütecher Dysthe"
+	},
+	"license": "Apache 2.0",
+	"main": "dist/index.js",
+	"module": "dist/index.mjs",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "tsup index.ts --format cjs,esm --dts",
+		"release": "pnpm run build && changeset publish",
+		"lint": "biome check ./src",
+		"format": "biome format ./src --write",
+		"install-browsers": "playwright install --with-deps"
+	},
+	"keywords": ["Playwright", "POM", "Page Object Model", "Test Framework"],
+	"devDependencies": {
+		"@biomejs/biome": "^1.5.1",
+		"@changesets/cli": "^2.27.1",
+		"@changesets/changelog-github": "^0.5.0",
+		"@types/node": "^20.10.8",
+		"tsup": "^8.0.1",
+		"typescript": "^5.3.3"
+	},
+	"peerDependencies": {
+		"@playwright/test": "^1.40.1"
+	}
 }
