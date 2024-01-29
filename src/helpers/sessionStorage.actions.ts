@@ -1,27 +1,23 @@
 import { type Page, test } from "@playwright/test";
 
 /**
- * The SessionStorage class provides methods for setting and getting session storage data in Playwright.
- *
- * @class
- * @property {Page} page - The Playwright page object.
+ * Defines the SessionStorage class to manage session storage in Playwright.
+ * It provides methods to set, get, and clear session storage data, and to handle data before page navigation.
  */
 export class SessionStorage {
+	// Defines an object to hold states to be set in session storage, allowing any value type.
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	private queuedStates: { [key: string]: any } = {};
+	// Indicates if the session storage manipulation has been initiated.
 	private isInitiated = false;
 
+	// Initializes the class with a Playwright Page object and a name for the Page Object Class.
 	constructor(
 		private page: Page,
 		private pocName: string,
 	) {}
 
-	/**
-	 * Writes states to the sessionStorage. Private utility function.
-	 *
-	 * @param states An object representing the states (key/value pairs) to set.
-	 */
-
+	/** Writes states to session storage. Accepts an object with key-value pairs representing the states. */
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	private async writeToSessionStorage(states: { [key: string]: any }) {
 		await this.page.evaluate((storage) => {
@@ -31,11 +27,7 @@ export class SessionStorage {
 		}, states);
 	}
 
-	/**
-	 * Reads all states from the sessionStorage. Private utility function.
-	 *
-	 * @returns An object containing all states from the sessionStorage.
-	 */
+	/** Reads all states from session storage and returns them as an object. */
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	private async readFromSessionStorage(): Promise<{ [key: string]: any }> {
 		return await this.page.evaluate(() => {
@@ -57,13 +49,12 @@ export class SessionStorage {
 	}
 
 	/**
-	 * Sets the specified states in the sessionStorage.
+	 * Sets the specified states in session storage.
+	 * Optionally reloads the page after setting the data to ensure the new session storage state is active.
 	 *
-	 * @param states An object representing the states (key/value pairs) to set in sessionStorage.
-	 * @param reload If true, reloads the page after setting the sessionStorage data.
-	 *
-	 * Usage:
-	 * await set({ user: 'John Doe', token: 'abc123' }, true);
+	 * Parameters:
+	 * states: Object representing the states to set in session storage.
+	 * reload: Boolean indicating whether to reload the page after setting the session storage data.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	public async set(states: { [key: string]: any }, reload: boolean) {
@@ -77,16 +68,14 @@ export class SessionStorage {
 
 	/**
 	 * Queues states to be set in the sessionStorage before the next navigation occurs.
-	 * This handles multiple scenarios:
+	 * Handles different scenarios based on whether the context exists or multiple calls are made.
 	 *
 	 * 1. No Context, Single Call: Queues and sets states upon the next navigation.
 	 * 2. No Context, Multiple Calls: Merges states from multiple calls and sets them upon the next navigation.
 	 * 3. With Context: Directly sets states in sessionStorage if the context already exists.
 	 *
-	 * @param states An object representing the states (key/value pairs) to set.
-	 *
-	 * Usage:
-	 * await setOnNextNavigation({ key: 'value' });
+	 * Parameters:
+	 * states: Object representing the states to queue for setting in session storage.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	public async setOnNextNavigation(states: { [key: string]: any }) {
@@ -124,14 +113,14 @@ export class SessionStorage {
 	}
 
 	/**
-	 * Fetches all or selected states from sessionStorage.
+	 * Fetches states from session storage.
+	 * If specific keys are provided, fetches only those states; otherwise, fetches all states.
 	 *
-	 * @param keys Optional array of keys to fetch from sessionStorage.
-	 * @returns An object containing the fetched states.
+	 * Parameters:
+	 * keys: Optional array of keys to specify which states to fetch from session storage.
 	 *
-	 * Usage:
-	 * 1. To fetch all states: await get();
-	 * 2. To fetch selected states: await get(['key1', 'key2']);
+	 * Returns:
+	 * Object containing the fetched states.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	public async get(keys?: string[]): Promise<{ [key: string]: any }> {
@@ -154,9 +143,6 @@ export class SessionStorage {
 
 	/**
 	 * Clears all states in sessionStorage.
-	 *
-	 * Usage:
-	 * await clear();
 	 */
 	public async clear() {
 		await test.step(`${this.pocName}: clear SessionStorage`, async () => {

@@ -1,7 +1,9 @@
 import type { TestInfo } from "@playwright/test";
 
+// Defines valid log levels as a union of string literal types.
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
+// Defines the structure of a log entry.
 export type LogEntry = {
 	timestamp: Date;
 	logLevel: LogLevel;
@@ -31,16 +33,12 @@ export type LogEntry = {
  * 20:49:51 05.05.2023 - ERROR : [TestCase -> MobilEier -> Axe]
  * 20:49:52 05.05.2023 - INFO : [TestCase -> MobilEier]
  * 20:49:52 05.05.2023 - DEBUG : [TestCase -> MobilEier -> GetBy]
- *
- * @property {LogLevel} sharedLogLevel - The current shared log level and its initial level.
- * @property {LogEntry[]} sharedLogEntry - Array of log entries.
- * @property {string} contextName - The contextual name of the logger instance, e.g. the name of the class it was initialized in.
- * @property {logLevel[]} logLevels - Valid log levels
  */
 export class PlaywrightReportLogger {
 	private readonly contextName: string;
 	private readonly logLevels: LogLevel[] = ["debug", "info", "warn", "error"];
 
+	// Initializes the logger with shared log level, log entries, and a context name.
 	constructor(
 		private sharedLogLevel: { current: LogLevel; initial: LogLevel },
 		private sharedLogEntry: LogEntry[],
@@ -50,27 +48,18 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Creates a new logger instance with a new contextual name which includes a reference to the parent logger.
+	 * Creates a child logger with a new contextual name, sharing the same log level and log entries with the parent logger.
 	 *
 	 * The root loggers log "level" is referenced by all child loggers and their child loggers and so on...
 	 * Changing the log "level" of one, will change it for all.
-	 *
-	 * @param prefix - The prefix to add to the new logger instance.
-	 * @returns - A new logger instance with the updated prefix.
 	 */
 	getNewChildLogger(prefix: string): PlaywrightReportLogger {
 		return new PlaywrightReportLogger(this.sharedLogLevel, this.sharedLogEntry, `${this.contextName} -> ${prefix}`);
 	}
 
 	/**
-	 * Logs a message with the specified log level, prefix, and arguments.
-	 * The message will only be recorded if the current log level allows it.
-	 *
-	 * @param level - The log level for the message.
-	 * @param message - The log message.
-	 * @param args - Additional arguments to log.
+	 * Logs a message with the specified log level, prefix, and additional arguments if the current log level permits.
 	 */
-
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	private log(level: LogLevel, message: string, ...args: any[]) {
 		const logLevelIndex = this.logLevels.indexOf(level);
@@ -89,11 +78,7 @@ export class PlaywrightReportLogger {
 
 	/**
 	 * Logs a debug-level message with the specified message and arguments.
-	 *
-	 * @param message - The log message.
-	 * @param args - Additional arguments to log.
 	 */
-
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	debug(message: string, ...args: any[]) {
 		this.log("debug", message, ...args);
@@ -101,11 +86,7 @@ export class PlaywrightReportLogger {
 
 	/**
 	 * Logs a info-level message with the specified message and arguments.
-	 *
-	 * @param message - The log message.
-	 * @param args - Additional arguments to log.
 	 */
-
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	info(message: string, ...args: any[]) {
 		this.log("info", message, ...args);
@@ -113,11 +94,7 @@ export class PlaywrightReportLogger {
 
 	/**
 	 * Logs a warn-level message with the specified message and arguments.
-	 *
-	 * @param message - The log message.
-	 * @param args - Additional arguments to log.
 	 */
-
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	warn(message: string, ...args: any[]) {
 		this.log("warn", message, ...args);
@@ -125,61 +102,49 @@ export class PlaywrightReportLogger {
 
 	/**
 	 * Logs a error-level message with the specified message and arguments.
-	 *
-	 * @param message - The log message.
-	 * @param args - Additional arguments to log.
 	 */
-
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	error(message: string, ...args: any[]) {
 		this.log("error", message, ...args);
 	}
 
 	/**
-	 * Set logLevel during runtime.
-	 *
-	 * @param level - The logLevel ("debug" | "info" | "warn" | "error").
+	 * Sets the current log level to the specified level during runTime.
 	 */
 	setLogLevel(level: LogLevel) {
 		this.sharedLogLevel.current = level;
 	}
 
 	/**
-	 * Returns the current logLevel during runtime.
-	 *
-	 * @returns LogLevel ("debug" | "info" | "warn" | "error")
+	 * Retrieves the current log level during runtime.
 	 */
 	getCurrentLogLevel(): LogLevel {
 		return this.sharedLogLevel.current;
 	}
 
 	/**
-	 * Returns the index of the current logLevel during runtime.
+	 * Retrieves the index of the current log level in the logLevels array during runtime.
 	 */
 	getCurrentLogLevelIndex(): number {
 		return this.logLevels.indexOf(this.sharedLogLevel.current);
 	}
 
 	/**
-	 * Sets logLevel back to the initial logLevel during runtime.
+	 * Resets the current log level to the initial level during runtime.
 	 */
 	resetLogLevel() {
 		this.sharedLogLevel.current = this.sharedLogLevel.initial;
 	}
 
 	/**
-	 * isCurrentLogLevel is a method that checks if the input log level is equal to the current log level of the PlaywrightReportLogger instance.
-	 * @param level The log level to check if it is equal to the current log level.
-	 * @returns A boolean indicating whether the input log level is equal to the current log level.
+	 * Checks if the input log level is equal to the current log level of the PlaywrightReportLogger instance.
 	 */
 	isCurrentLogLevel(level: LogLevel): boolean {
 		return this.sharedLogLevel.current === level;
 	}
 
 	/**
-	 * isLogLevelEnabled returns 'true' if the "level" parameter provided has an equal or greater index than the current logLevel.
-	 * @param level
-	 * @returns
+	 * Returns 'true' if the "level" parameter provided has an equal or greater index than the current logLevel.
 	 */
 	public isLogLevelEnabled(level: LogLevel): boolean {
 		const logLevelIndex = this.logLevels.indexOf(level);
@@ -192,9 +157,7 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Attaches the recorded logs to the Playwright HTML report.
-	 *
-	 * @param testInfo - The test information object from Playwright.
+	 * Attaches the recorded log entries to the Playwright HTML report in a sorted and formatted manner.
 	 */
 	attachLogsToTest(testInfo: TestInfo) {
 		this.sharedLogEntry.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());

@@ -5,29 +5,32 @@ import { GetByMethod, type LocatorSchema, getLocatorSchemaDummy } from "./locato
 import { PlaywrightReportLogger } from "./playwrightReportLogger";
 export { GetByMethod };
 
-// Defines properties that can be updated in a LocatorSchema
+// Type representing properties of a LocatorSchema that can be updated, excluding the locatorSchemaPath.
 export type UpdatableLocatorSchemaProperties = Omit<LocatorSchema, "locatorSchemaPath">;
 
-// Interface for additional methods provided to LocatorSchema
+// Interface defining a method to update parts of a locator schema.
 interface WithUpdateMethod {
 	update(updates: Partial<UpdatableLocatorSchemaProperties>): LocatorSchemaWithMethods;
 }
 
+// Interface defining a method to apply multiple updates to a locator schema based on index.
 interface WithUpdatesMethod {
 	updates(indexedUpdates: {
 		[index: number]: Partial<UpdatableLocatorSchemaProperties> | null;
 	}): LocatorSchemaWithMethods;
 }
 
+// Interface defining a method to get a nested locator based on provided indices.
 interface WithGetNestedLocatorMethod {
 	getNestedLocator(indices?: { [key: number]: number | null } | null): Promise<Locator>;
 }
 
+// Interface defining a method to get a locator from a schema.
 interface WithGetLocatorMethod {
 	getLocator(): Promise<Locator>;
 }
 
-// Extends LocatorSchema with additional methods and properties
+// Type extending LocatorSchema with additional methods and a map of related schemas.
 export type LocatorSchemaWithMethods = LocatorSchema &
 	WithUpdateMethod &
 	WithUpdatesMethod &
@@ -36,33 +39,24 @@ export type LocatorSchemaWithMethods = LocatorSchema &
 		schemasMap: Map<string, LocatorSchema>;
 	};
 
-// ModifiedLocatorSchema omits the locatorSchemaPath from LocatorSchema
+// Interface representing a modified locator schema, excluding the locatorSchemaPath.
 export interface ModifiedLocatorSchema extends UpdatableLocatorSchemaProperties {}
 
+// Type for representing pairs of path and index used in constructing nested locators.
 type PathIndexPairs = { path: string; index?: number }[];
 
 /**
- * GetLocatorBase
- *
- * The GetLocatorBase class is designed to provide the core functionality for dynamically generating
- * nested locators based on a defined structure. By nesting locators we narrow what we can resolve
- * to, providing a higher degree of certainty that the element(s) resolved to are correct and in
- * the expected location. These nested locators are used in Playwright tests to interact with elements
- * in a more contextual manner.
- *
- * @class
- * @public
- *
+ * Provides core functionality for dynamically generating nested locators.
+ * Nested locators help pinpoint elements with higher precision in Playwright tests.
+ * The class includes methods for adding, updating, and retrieving locator schemas,
+ * and for building nested locators based on these schemas.
  */
 export class GetLocatorBase<LocatorSchemaPathType extends string> {
 	private getBy: GetBy;
 
 	private locatorSchemas: Map<LocatorSchemaPathType, () => LocatorSchema>;
 	/**
-	 * Constructor for the GetLocatorBaseClass.
-	 *
-	 * @param {BasePage} pageObjectClass - The page object class to which the locator pertains.
-	 * @param {PlaywrightReportLogger} log - The PlaywrightReportLogger child of the page object class.
+	 * Initializes the GetLocatorBase class with a page object class and a logger.
 	 */
 	constructor(
 		protected pageObjectClass: BasePage<LocatorSchemaPathType>,
@@ -73,9 +67,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 	}
 
 	/**
-	 * test
-	 * @param locatorSchemaPath
-	 * @returns
+	 * Retrieves a locator schema with additional methods for manipulation and retrieval of locators.
 	 */
 	public getLocatorSchema(locatorSchemaPath: LocatorSchemaPathType): LocatorSchemaWithMethods {
 		const pathIndexPairs = this.extractPathsFromSchema(locatorSchemaPath);
@@ -86,6 +78,15 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const self = this; // the update and updates functions need locatorSchemaCopy 'this' context
 
+		/**
+		 * update(updates: Partial< UpdatableLocatorSchemaProperties >)
+		 * - Allows updating the properties of the LocatorSchema which the full LocatorSchemaPath resolves to.
+		 * - This method is used for modifying the current schema without affecting the original schema.
+		 * - Takes a "LocatorSchema" object which omits the locatorSchemaPath parameter as input, the parameters provided
+		 * will overwrite the corresponding property in the current schema.
+		 * - Returns the updated deep copy of the "LocatorSchema" with methods.
+		 * - Can be chained with the update and updates methods, and the getLocator or getNestedLocator method.
+		 */
 		locatorSchemaCopy.update = function (
 			this: LocatorSchemaWithMethods,
 			updates: Partial<UpdatableLocatorSchemaProperties>,
@@ -94,6 +95,18 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 			return this;
 		};
 
+		/**
+		 * updates(indexedUpdates: { [index: number]: Partial< UpdatableLocatorSchemaProperties > | null }):
+		 * - Similar to update, but allows updating any locator in the nested chain (all sub-paths of the LocatorSchemaPath).
+		 * - This method can modify the current deep copy of each LocatorSchema that each sub-path resolves to without
+		 * affecting the original schemas
+		 * - Takes an object where keys represent the index of the last "word" of a sub-path, where the value per key is a
+		 * "LocatorSchema" object which omits the locatorSchemaPath parameter as input, the parameters provided will overwrite
+		 * the corresponding property in the given schema.
+		 * - Returns the updated deep copy of the LocatorSchema object with methods and its own updated deep copies for all
+		 * LocatorSchema each sub-path resolved to.
+		 * - Can be chained with the update and updates methods, and the getLocator or getNestedLocator method.
+		 */
 		locatorSchemaCopy.updates = function (
 			this: LocatorSchemaWithMethods,
 			indexedUpdates: {
@@ -104,10 +117,25 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 			return this;
 		};
 
+		/**
+		 * getNestedLocator(indices?: { [key: number]: number | null } | null)
+		 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
+		 * - Can be chained after the update and updates methods, getNestedLocator will end the chain.
+		 * - The optional parameter of the method takes an object with 0-based indices "{0: 0, 3: 1}" for one or more locators
+		 * to be nested given by sub-paths (indices correspond to last "word" of a sub-path).
+		 * - Returns a promise that resolves to the nested locator.
+		 */
 		locatorSchemaCopy.getNestedLocator = async (indices?: Record<number, number>) => {
 			return await this.buildNestedLocator(locatorSchemaPath, schemasMap, indices);
 		};
 
+		/**
+		 * getLocator()
+		 * - Asynchronously retrieves a locator based on the current LocatorSchema. This method does not perform nesting,
+		 * and will return the locator for which the full LocatorSchemaPath resolves to, provided by getLocatorSchema("...")
+		 * - Can be chained after the update and updates methods, getLocator will end the chain.
+		 * - Returns a promise that resolves to the locator.
+		 */
 		locatorSchemaCopy.getLocator = async () => {
 			return this.getBy.getLocator(locatorSchemaCopy);
 		};
@@ -115,6 +143,10 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		return locatorSchemaCopy;
 	}
 
+	/**
+	 * Collects deep copies of locator schemas based on a given locator schema path and path-index pairs.
+	 * It ensures that each locator schema and its sub-schemas are properly cloned and stored.
+	 */
 	private collectDeepCopies(
 		locatorSchemaPath: LocatorSchemaPathType,
 		pathIndexPairs: PathIndexPairs,
@@ -145,6 +177,10 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		return schemasMap;
 	}
 
+	/**
+	 * Applies an update to a specific locator schema within the provided map of schemas.
+	 * This method ensures that the specified updates are merged into the targeted locator schema.
+	 */
 	private applyUpdate(
 		schemasMap: Map<string, LocatorSchema>,
 		locatorSchemaPath: LocatorSchemaPathType,
@@ -156,6 +192,10 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		}
 	}
 
+	/**
+	 * Applies multiple updates to locator schemas based on provided path-index pairs and update data.
+	 * This method facilitates batch updating of nested schemas within a complex locator structure.
+	 */
 	private applyUpdates(
 		schemasMap: Map<string, LocatorSchema>,
 		pathIndexPairs: PathIndexPairs,
@@ -172,11 +212,19 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		}
 	}
 
+	/**
+	 * Creates a new locator schema based on provided schema details and a schema path.
+	 * This method structures a new locator schema ready for inclusion in the locator management system.
+	 */
 	private createLocatorSchema(schemaDetails: ModifiedLocatorSchema, locatorSchemaPath: LocatorSchemaPathType) {
 		const schema: LocatorSchema = { ...schemaDetails, locatorSchemaPath };
 		return schema;
 	}
 
+	/**
+	 * Adds a new locator schema to the internal map of locator schemas.
+	 * This method ensures that the new schema is properly registered and can be referenced and used in locator generation.
+	 */
 	public addSchema(locatorSchemaPath: LocatorSchemaPathType, schemaDetails: ModifiedLocatorSchema): void {
 		// Create the new schema
 		const newLocatorSchema = this.createLocatorSchema(schemaDetails, locatorSchemaPath);
@@ -197,10 +245,19 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		this.locatorSchemas.set(locatorSchemaPath, () => newLocatorSchema);
 	}
 
+	/**
+	 * Safely retrieves a locator schema function based on a given path.
+	 * This method provides a secure way to access locator schemas, ensuring that only valid paths are used.
+	 */
 	private safeGetLocatorSchema(path: string): (() => LocatorSchema) | undefined {
 		return this.locatorSchemas.get(path as LocatorSchemaPathType);
 	}
 
+	/**
+	 * Extracts path-index pairs from a given schema path.
+	 * This utility function breaks down a complex path into manageable parts,
+	 * associating each part with its corresponding index when necessary.
+	 */
 	private extractPathsFromSchema = (paths: string, indices: Record<number, number> = {}): PathIndexPairs => {
 		const schemaParts = paths.split(".");
 		let cumulativePath = "";
@@ -254,7 +311,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		throw error; // Re-throw the caught error to ensure the test fails.
 	};
 
-	// Merges 'source' into 'target', combining their properties into a new isolated object.
+	/** Merges 'source' into 'target', combining their properties into a new isolated object. */
 	private deepMerge<TargetType, SourceType>(target: TargetType, source: SourceType): TargetType {
 		// Create a new merged object to ensure immutability
 		const merged = { ...target };
@@ -299,6 +356,11 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		return merged;
 	}
 
+	/**
+	 * Assembles nested locators based on a locator schema path and optional indices for locating specific elements.
+	 * This method orchestrates the process of building a locator that can resolve to a specific element or set of
+	 * elements in the DOM.
+	 */
 	protected buildNestedLocator = async (
 		locatorSchemaPath: LocatorSchemaPathType,
 		schemasMap: Map<string, LocatorSchema>,
@@ -389,6 +451,9 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		})) as Locator;
 	};
 
+	/**
+	 * Evaluates the current locator, capturing details about its resolution status and the elements it resolves to.
+	 */
 	private evaluateCurrentLocator = async (
 		currentLocator: Locator,
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -414,10 +479,8 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 	};
 
 	/**
-	 * Evaluates the Playwright locator, checking if it resolves to any elements, and retrieves element attributes.
-	 *
-	 * @param pwLocator - The Playwright locator to evaluate.
-	 * @returns - A promise that resolves to an object containing the Playwright locator and an array of element attributes for each element located, or null if no elements are found.
+	 * Retrieves and compiles attributes of elements resolved by a Playwright locator per nesting step.
+	 * This method provides insights into the elements targeted by the locator, aiding in debugging and verification.
 	 */
 	private evaluateAndGetAttributes = async (
 		pwLocator: Locator,

@@ -67,14 +67,12 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
 	}
 
 	/**
-	 * Asynchronously retrieves a nested locator based on the provided LocatorSchemaPath and optional indices per nested locator.
-	 * Useful for interacting with elements in a structured or hierarchical manner, reducing the number of possible elements we can resolve to.
-	 *
-	 * The update and updates methods cannot be used with this method. Use the getLocatorSchema method instead.
-	 *
-	 * @param LocatorSchemaPathType locatorSchemaPath - The unique path identifier for the locator schema.
-	 * @param indices - An optional object to specify the nth occurrence of each nested locator.
-	 * @returns Promise<Locator> - A promise that resolves to the nested locator.
+	 * getNestedLocator(indices?: { [key: number]: number | null } | null)
+	 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
+	 * - Can be chained after the update and updates methods, getNestedLocator will end the chain.
+	 * - The optional parameter of the method takes an object with 0-based indices "{0: 0, 3: 1}" for one or more locators
+	 * to be nested given by sub-paths (indices correspond to last "word" of a sub-path).
+	 * - Returns a promise that resolves to the nested locator.
 	 */
 	public getNestedLocator = async (
 		locatorSchemaPath: LocatorSchemaPathType,
@@ -84,13 +82,11 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
 	};
 
 	/**
-	 * Asynchronously retrieves the locator based on the current LocatorSchemaPath. This method does not perform nesting.
-	 * Useful for directly interacting with an element based on its LocatorSchema.
-	 *
-	 * The update and updates methods cannot be used with this method. Use the getLocatorSchema method instead.
-	 *
-	 * @param LocatorSchemaPathType locatorSchemaPath - The unique path identifier for the locator schema.
-	 * @returns Promise<Locator> - A promise that resolves to the nested locator.
+	 * getLocator()
+	 * - Asynchronously retrieves a locator based on the current LocatorSchema. This method does not perform nesting,
+	 * and will return the locator for which the full LocatorSchemaPath resolves to, provided by getLocatorSchema("...")
+	 * - Can be chained after the update and updates methods, getLocator will end the chain.
+	 * - Returns a promise that resolves to the locator.
 	 */
 	public getLocator = async (locatorSchemaPath: LocatorSchemaPathType): Promise<Locator> => {
 		return await this.getLocatorSchema(locatorSchemaPath).getLocator();
@@ -178,39 +174,65 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
 	protected abstract initLocatorSchemas(): void;
 
 	/**
-	 * The "getLocatorSchema" method is used to retrieve a deep copy of a locator schema defined in the GetLocatorBase class.
-	 * It enriches the returned schema with additional methods to handle updates and retrieval of deep copy locators.
+	 * The "getLocatorSchema" method is used to retrieve an updatable deep copy of a LocatorSchema defined in the
+	 * GetLocatorBase class. It enriches the returned schema with additional methods to handle updates and retrieval of
+	 * deep copy locators.
 	 *
-	 * @param LocatorSchemaPathType locatorSchemaPath - The unique path identifier for the locator schema.
-	 * @returns LocatorSchemaWithMethods - A deep copy of the locator schema with additional methods.
+	 * Providing a precise and powerful solution for interacting with elements through locators in a structured
+	 * or hierarchical manner:
+	 * - Effortless validation of any element's expected location in the DOM.
+	 * - Improved readability and maintainability of tests.
+	 * - Improved readability and maintainability of Page Object Classes (POCs), through the use of a single source of
+	 * truth and flat locator (LocatorSchema) structure.
+	 * - Improved rebustness of tests in the face of DOM changes.
+	 * - Simpler debugging and maintenance as a result of limitin/scoping the number of possible resolvable elements
+	 * - Highly veratile usage
 	 *
-	 * Methods added to the returned LocatorSchemaWithMethods object:
+	 * getLocatorSchema adds the following chainable methods to the returned LocatorSchemaWithMethods object:
 	 *
-	 * - update(updates: Partial<UpdatableLocatorSchemaProperties>):
-	 *      Allows updating properties of the locator schema.
-	 *      This method is used for modifying the current schema without affecting the original schema.
-	 *      @param updates - An object with properties to be updated in the locator schema, omits the locatorSchemaPath parameter.
-	 *      @returns LocatorSchemaWithMethods - The updated locator schema object.
+	 * update(updates: Partial< UpdatableLocatorSchemaProperties >)
+	 * - Allows updating the properties of the LocatorSchema which the full LocatorSchemaPath resolves to.
+	 * - This method is used for modifying the current schema without affecting the original schema.
+	 * - Takes a "LocatorSchema" object which omits the locatorSchemaPath parameter as input, the parameters provided
+	 * will overwrite the corresponding property in the current schema.
+	 * - Returns the updated deep copy of the "LocatorSchema" with methods.
+	 * - Can be chained with the update and updates methods, and the getLocator or getNestedLocator method.
 	 *
-	 * - updates(indexedUpdates: { [index: number]: Partial<UpdatableLocatorSchemaProperties> | null }):
-	 *      Similar to update, but allows for indexed updates of any locator to be nested within the path.
-	 *      This method is used for modifying the current schema without affecting the original schema
-	 *      @param indexedUpdates - An object where keys represent index levels, and values are the updates at each level.
-	 *      @returns LocatorSchemaWithMethods - The locator schema object with indexed updates.
+	 * updates(indexedUpdates: { [index: number]: Partial< UpdatableLocatorSchemaProperties > | null }):
+	 * - Similar to update, but allows updating any locator in the nested chain (all sub-paths of the LocatorSchemaPath).
+	 * - This method can modify the current deep copy of each LocatorSchema that each sub-path resolves to without
+	 * affecting the original schemas
+	 * - Takes an object where keys represent the index of the last "word" of a sub-path, where the value per key is a
+	 * "LocatorSchema" object which omits the locatorSchemaPath parameter as input, the parameters provided will overwrite
+	 * the corresponding property in the given schema.
+	 * - Returns the updated deep copy of the LocatorSchema object with methods and its own updated deep copies for all
+	 * LocatorSchema each sub-path resolved to.
+	 * - Can be chained with the update and updates methods, and the getLocator or getNestedLocator method.
 	 *
-	 * - getNestedLocator(indices?: { [key: number]: number | null }):
-	 *      Asynchronously retrieves a nested locator based on the current schema and optional indices per nested locator.
-	 *      Useful for interacting with elements in a structured or hierarchical manner.
-	 *      @param indices - An optional object to specify the nth occurrence of each nested locator.
-	 *      @returns Promise<Locator> - A promise that resolves to the nested locator.
+	 * getNestedLocator(indices?: { [key: number]: number | null } | null)
+	 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
+	 * - Can be chained after the update and updates methods, getNestedLocator will end the chain.
+	 * - The optional parameter of the method takes an object with 0-based indices "{0: 0, 3: 1}" for one or more locators
+	 * to be nested given by sub-paths (indices correspond to last "word" of a sub-path).
+	 * - Returns a promise that resolves to the nested locator.
 	 *
-	 * - getLocator():
-	 *      Asynchronously retrieves the locator based on the current schema. This method does not consider nesting.
-	 *      Useful for directly interacting with an element based on its schema.
-	 *      @returns Promise<Locator> - A promise that resolves to the locator.
+	 * getLocator()
+	 * - Asynchronously retrieves a locator based on the current LocatorSchema. This method does not perform nesting,
+	 * and will return the locator for which the full LocatorSchemaPath resolves to, provided by getLocatorSchema("...")
+	 * - Can be chained after the update and updates methods, getLocator will end the chain.
+	 * - Returns a promise that resolves to the locator.
+	 *
+	 * Note: Calling getLocator() and getNestedLocator() on the same LocatorSchemaPath will return a Locator for the same
+	 * element, but the Locator returned by getNestedLocator() will be a locator resolving to said same element through
+	 * a chain of locators. While the Locator returned by getLocator() will be a single locator which resolves directly
+	 * to said element. Thus getLocator() is rarely used, while getNestedLocator() is used extensively.
+	 *
+	 * That said, for certain use cases, getLocator() can be useful, and you could use it to manually chain locators
+	 * yourself if some edge case required it. Though, it would be likely be more prudent to expand your LocatorSchemaPath
+	 * type and initLocatorSchemas() method to include the additional locators you need for the given POC, and then use
+	 * getNestedLocator() instead.
 	 */
 	public getLocatorSchema(locatorSchemaPath: LocatorSchemaPathType) {
 		return this.locators.getLocatorSchema(locatorSchemaPath);
 	}
 }
-// export { Page, expect, TestInfo, selectors, request } from "@playwright/test";
