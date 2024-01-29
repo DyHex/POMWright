@@ -2,11 +2,13 @@ import { type Locator, type Page } from "@playwright/test";
 import { GetByMethod, type LocatorSchema } from "./locatorSchema.interface";
 import { PlaywrightReportLogger } from "./playwrightReportLogger";
 
+// Type definition for a subset of GetByMethod enum values, excluding specific values for manually implemented methods.
 type GetByMethodSubset = Exclude<
 	GetByMethod,
 	GetByMethod.frameLocator | GetByMethod.testId | GetByMethod.dataCy | GetByMethod.id
 >;
 
+// Type definition for a function that retrieves a Locator based on a selector and optional options.
 type GetByMethodFunction = {
 	(selector: string | RegExp | Locator | undefined): Locator;
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -14,13 +16,10 @@ type GetByMethodFunction = {
 };
 
 /**
- * The GetBy class provides methods for creating and evaluating {@link Locator}s derived from {@link LocatorSchema} objects.
- *
- * Toggle additional debug {@link log}ging by setting environment variable 'LOG_ENABLED=true' in './Playwright/.env'.
- *
- * @class
- * @property {Page} page - The Playwright page object.
- * @property {string} pocName - The name of the Page Object Class (POC).
+ * The GetBy class encapsulates methods for generating and obtaining Playwright Locators using LocatorSchema.
+ * It maps locator methods to corresponding Playwright page functions and provides a convenient interface to interact
+ * with these locators. It holds a reference to a Playwright Page object and a PlaywrightReportLogger for logging.
+ * The constructor initializes the logger and sets up method mappings for locator creation.
  */
 export class GetBy {
 	private log: PlaywrightReportLogger;
@@ -62,10 +61,9 @@ export class GetBy {
 	}
 
 	/**
-	 * Retrieves a Playwright Locator based on the method specified in the LocatorSchema.
-	 *
-	 * @param locatorSchema The LocatorSchema object specifying the locator method and its parameters.
-	 * @returns A promise that resolves to the appropriate Playwright Locator.
+	 * Retrieves a Locator based on the details provided in a LocatorSchema.
+	 * The method identifies the appropriate locator creation function from methodMap and invokes it.
+	 * Throws an error if the locator method is unsupported.
 	 */
 	public getLocator = (locatorSchema: LocatorSchema): Locator => {
 		const methodName = locatorSchema.locatorMethod;
@@ -79,6 +77,11 @@ export class GetBy {
 		throw new Error(`Unsupported locator method: ${methodName}`);
 	};
 
+	/**
+	 * Internal method to retrieve a Locator using a specified GetByMethodSubset and LocatorSchema.
+	 * It identifies the appropriate locator creation function from subMethodMap and invokes it.
+	 * Throws an error if the caller is unknown or if the initial locator is not found.
+	 */
 	private getBy = (caller: GetByMethodSubset, locator: LocatorSchema): Locator => {
 		const method: GetByMethodFunction = this.subMethodMap[caller];
 
@@ -102,10 +105,9 @@ export class GetBy {
 	};
 
 	/**
-	 * Creates a new method that returns a Playwright Locator using the specified method name.
-	 *
-	 * @param methodName The name of the method to use for getting the element.
-	 * @returns An async function that takes a locator and returns a Playwright Locator.
+	 * Creates a method for generating a Locator using a specific GetByMethodSubset.
+	 * Returns a function that takes a LocatorSchema and returns a Locator.
+	 * The returned function is a locator creation function corresponding to the specified methodName.
 	 */
 	private createByMethod = (methodName: GetByMethodSubset) => {
 		return (locator: LocatorSchema): Locator => {
@@ -113,67 +115,21 @@ export class GetBy {
 		};
 	};
 
-	/**
-	 *  Returns a {@link Locator} using the selectors 'role' (required) and 'roleOptions' (optional), from a {@link LocatorSchema} Object.
-	 *
-	 * @param locator - The locator.
-	 * @returns - A promise that resolves to the {@link Locator}.
-	 */
+	// Methods for creating locators using different locator methods.
+	// These methods are generated using createByMethod and provide a unified way to create locators based on LocatorSchema.
+	// Each method is responsible for creating a Locator based on a specific attribute (role, text, label, etc.) provided in LocatorSchema.
+	// These methods return a Locator and throw an error if the necessary attribute is not defined in the LocatorSchema.
 	private role = this.createByMethod(GetByMethod.role);
-
-	/**
-	 * Returns a {@link Locator} using the selectors 'text' (required) and 'textOptions' (optional), from a {@link LocatorSchema} Object.
-	 *
-	 * @param locator - The locator.
-	 * @returns - A promise that resolves to the {@link Locator}.
-	 */
 	private text = this.createByMethod(GetByMethod.text);
-
-	/**
-	 * Returns a {@link Locator} using the selectors 'label' (required) and 'labelOptions' (optional), from a {@link LocatorSchema} Object.
-	 *
-	 * @param locator - The locator.
-	 * @returns - A promise that resolves to the {@link Locator}.
-	 */
 	private label = this.createByMethod(GetByMethod.label);
-
-	/**
-	 *  Returns a {@link Locator} using the selectors 'placeholder' (required) and 'placeholderOptions' (optional), from a {@link LocatorSchema} Object.
-	 *
-	 * @param locator - The locator.
-	 * @returns - A promise that resolves to the {@link Locator}.
-	 */
 	private placeholder = this.createByMethod(GetByMethod.placeholder);
-
-	/**
-	 *  Returns a {@link Locator} using the selectors 'altText' (required) and 'altTextOptions' (optional), from a {@link LocatorSchema} Object.
-	 *
-	 * @param locator - The locator.
-	 * @returns - A promise that resolves to the {@link Locator}.
-	 */
 	private altText = this.createByMethod(GetByMethod.altText);
-
-	/**
-	 *  Returns a {@link Locator} using the selectors 'title' (required) and 'titleOptions' (optional), from a {@link LocatorSchema} Object.
-	 *
-	 * @param locator - The locator.
-	 * @returns - A promise that resolves to the {@link Locator}.
-	 */
 	private title = this.createByMethod(GetByMethod.title);
-
-	/**
-	 *  Returns a {@link Locator} using the selectors 'locator' (required), from a {@link LocatorSchema} Object.
-	 *
-	 * @param locator - The locator.
-	 * @returns - A promise that resolves to the {@link Locator}.
-	 */
 	private locator = this.createByMethod(GetByMethod.locator);
 
 	/**
-	 *  Returns a {@link FrameLocator} using the selector string 'frameLocator' (required), from a {@link LocatorSchema} Object.
-	 *
-	 * @param locatorSchema - Which contains the frameLocator selector.
-	 * @returns A promise that resolves to the {@link FrameLocator}.
+	 * Returns a FrameLocator using the 'frameLocator' selector from a LocatorSchema.
+	 * Throws an error if the frameLocator is not defined.
 	 */
 	private frameLocator = (locatorSchema: LocatorSchema): Locator => {
 		const initialFrameLocator = locatorSchema.frameLocator
@@ -190,10 +146,8 @@ export class GetBy {
 	};
 
 	/**
-	 *  Returns a {@link Locator} using the selectors 'testId' (required), from a {@link LocatorSchema} Object.
-	 *
-	 * @param locator - The locator.
-	 * @returns - A promise that resolves to the {@link Locator}.
+	 * Returns a Locator using the 'testId' selector from a LocatorSchema.
+	 * Throws an error if the testId is not defined.
 	 */
 	private testId = (locator: LocatorSchema): Locator => {
 		const initialPWLocator = locator.testId ? this.page.getByTestId(locator.testId) : null;
@@ -208,10 +162,8 @@ export class GetBy {
 	};
 
 	/**
-	 *  Returns a {@link Locator} using the selectors 'dataCy' (required), from a {@link LocatorSchema} Object.
-	 *
-	 * @param locator - The locator.
-	 * @returns - A promise that resolves to the {@link Locator}.
+	 * Returns a Locator using the 'dataCy' selector from a LocatorSchema.
+	 * Throws an error if the dataCy is undefined.
 	 */
 	private dataCy = (locator: LocatorSchema): Locator => {
 		let initialPWLocator: Locator | null = null;
@@ -230,10 +182,8 @@ export class GetBy {
 	};
 
 	/**
-	 *  Returns a {@link Locator} using the selectors 'id' (required), from a {@link LocatorSchema} Object.
-	 *
-	 * @param locator - The locator.
-	 * @returns - A promise that resolves to the {@link Locator}.
+	 * Returns a Locator using the 'id' selector from a LocatorSchema.
+	 * Throws an error if the id is not defined or the id type is unsupported.
 	 */
 	private id = (locator: LocatorSchema): Locator => {
 		let initialPWLocator: Locator | null = null;
