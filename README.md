@@ -331,7 +331,7 @@ If you encounter any issues or have questions, please check our issues page or r
 
 ## Contributing
 
-We welcome contributions! Please refer to our contribution guidelines for details on how to submit pull requests, report bugs, or request features.
+Pull Requests are welcome!
 
 ## License
 
