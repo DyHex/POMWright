@@ -1,5 +1,4 @@
 import { test } from "../../../../fixtures/all.fixtures";
-import { expect } from "@playwright/test";
 
 test("standard user should be able to login and logout", async ({ sdHome, sdInventory }) => {
 	await sdHome.page.goto(sdHome.fullUrl);

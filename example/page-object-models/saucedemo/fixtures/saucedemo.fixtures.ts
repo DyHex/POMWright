@@ -1,4 +1,4 @@
-import { POMWrightTestFixture as base } from "pomwright";
+import { test as base } from "pomwright";
 import Home from "../pages/home.page";
 import Inventory from "../pages/inventory/inventory.page";
 
