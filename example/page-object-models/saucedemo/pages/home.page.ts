@@ -1,10 +1,10 @@
 import test, { type Page, type TestInfo } from "@playwright/test";
-import { POMWrightLogger } from "pomwright";
+import { PlaywrightReportLogger } from "pomwright";
 import Saucedemo, { type UserCredentials } from "../common/base-page/saucedemo.page";
 import { type LocatorSchemaPath, initLocatorSchemas } from "./home.locatorSchema";
 
 export default class Home extends Saucedemo<LocatorSchemaPath> {
-	constructor(page: Page, testInfo: TestInfo, pwrl: POMWrightLogger) {
+	constructor(page: Page, testInfo: TestInfo, pwrl: PlaywrightReportLogger) {
 		super(page, testInfo, "/", Home.name, pwrl);
 	}
 

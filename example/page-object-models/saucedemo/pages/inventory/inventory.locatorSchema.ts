@@ -1,4 +1,4 @@
-import { GetByMethod, POMWrightGetLocatorBase } from "pomwright";
+import { GetByMethod, GetLocatorBase } from "pomwright";
 import {
 	type LocatorSchemaPath as commmon,
 	initLocatorSchemas as initCommon,
@@ -6,7 +6,7 @@ import {
 
 export type LocatorSchemaPath = commmon | "inventory" | "inventory.container" | "inventory.container.list";
 
-export function initLocatorSchemas(locators: POMWrightGetLocatorBase<LocatorSchemaPath>) {
+export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) {
 	initCommon(locators);
 
 	locators.addSchema("inventory", {

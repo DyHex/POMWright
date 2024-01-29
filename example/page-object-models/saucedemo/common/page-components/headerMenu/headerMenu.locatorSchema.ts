@@ -1,4 +1,4 @@
-import { GetByMethod, POMWrightGetLocatorBase } from "pomwright";
+import { GetByMethod, GetLocatorBase } from "pomwright";
 
 export type LocatorSchemaPath =
 	| "common.headerMenu"
@@ -7,7 +7,7 @@ export type LocatorSchemaPath =
 	| "common.sidebar.menu"
 	| "common.sidebar.menu.link.logout";
 
-export function initLocatorSchemas(locators: POMWrightGetLocatorBase<LocatorSchemaPath>) {
+export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) {
 	locators.addSchema("common.headerMenu", {
 		locator: ".primary_header",
 		locatorMethod: GetByMethod.locator,

@@ -1,4 +1,4 @@
-import { GetByMethod, POMWrightGetLocatorBase } from "pomwright";
+import { GetByMethod, GetLocatorBase } from "pomwright";
 
 export type LocatorSchemaPath =
 	| "content"
@@ -14,7 +14,7 @@ export type LocatorSchemaPath =
 	| "content.region.credentials.usernames"
 	| "content.region.credentials.passwords";
 
-export function initLocatorSchemas(locators: POMWrightGetLocatorBase<LocatorSchemaPath>) {
+export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) {
 	locators.addSchema("content", {
 		locator: ".login_container",
 		locatorMethod: GetByMethod.locator,
