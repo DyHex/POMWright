@@ -9,69 +9,95 @@ POMWright provides a way of abstracting the implementation details of a web page
 ## Features
 
 **Easy Creation of Page Object Classes:**
-Extend a class with POMwright to create a Page Object Class (POC).
+Simply extend a class with BasePage to create a Page Object Class (POC).
 
 **Support for Multiple Domains/BaseURLs:**
-Extend an abstract class with POMWright with a given BaseUrl, then create POCs for that BaseUrl by extending the abstract class.
+Define different base URLs by extending an abstract class with BasePage and have your POCs extend it.
 
-**Custom Playwright Fixture Integration:** Create custom Playwright Fixtures from your POMWright POCs by extending test as POMWrightTestFixture.
+**Custom Playwright Fixture Integration:**
+Seamlessly integrate custom Playwright Fixtures with your POMWright POCs.
 
-**LocatorSchema Interface:** Offers a way to define and structure comprehensive locators per POC and share common locators between them.
+**LocatorSchema Interface:**
+Define comprehensive locators for each POC and share common locators between them.
 
-**Advanced Locator Management:** Enables retrieval and automatic chaining of locators using LocatorSchemaPath.
+**Advanced Locator Management:**
+Efficiently manage and chain locators through LocatorSchemaPaths.
 
-**LocatorSchema Update/Updatess:** Allows updating single locators aswell as each locator a chained locator consist of, dynamically throughout a test.
+**Dynamic Locator Schema Updates:**
+Modify single or multiple locators within a chained locator dynamically during tests.
 
-**Deep Copy of LocatorSchemas:** Ensures original LocatorSchemas are reusable in tests.
+**Deep Copy of LocatorSchemas:**
+Ensure that original LocatorSchemas remain immutable and reusable across tests.
 
-**Custom HTML Logger:** Provides detailed logs for nested locators, aiding in debugging and integration with Playwright's HTML report.
+**Custom HTML Logger:**
+Gain insights with detailed logs for nested locators, integrated with Playwright's HTML report. Or use the Log fixture throughout your own POCs and tests to easily attach them to the HTML report based on log levels.
 
-**SessionStorage Handling:** Includes methods for managing sessionStorage, complementing Playwright's capabilities.
+**SessionStorage Handling:**
+Enhance your tests with advanced sessionStorage handling capabilities.
 
 ## Installation
+
+Ensure you have Node.js installed, then run:
 
 ```bash
 npm install pomwright --save-dev
 ```
 
+or
+
+```bash
+pnpm i -D pomwright
+```
+
 ## Playwright Example Project
 
-Inside the "example" folder you'll find a simple Playwright project using POMWright with POCs, fixtures, LocatorSchema's and tests you can experiment with. To run them, clone the repository and cd into the "example" folder, then do the following:
+Explore POMWright in action by diving into the example project located in the "example" folder. Follow these steps to get started:
 
-Install:
+### Install
+
+Navigate to the "example" folder and install the necessary dependencies:
 
 ```bash
 pnpm install
 ```
 
-Install/download Playwright browsers:
+### Playwright browsers
+
+Install or update Playwright browsers:
 
 ```bash
 pnpm playwright install --with-deps
 ```
 
-Run each test with chromium, firefox and webkit: 
+### Run tests
+
+Execute tests across chromium, firefox, and webkit:
 
 ```bash
 pnpm playwright test
 ```
 
-The playwright.config.ts is set to run up-to 4 tests in parallell, either alter the config or override it through the commandline if needed, e.g.:
+### Parallelism
+
+Control parallel test execution. By default, up to 4 tests run in parallel. Modify this setting as needed:
 
 ```bash
-# 1 will disable parallelism and run the tests serially
-pnpm playwright test --workers 2
+pnpm playwright test --workers 2  # Set the number of parallel workers
 ```
 
-A Playwright HTML report will be created under ./example/playwright-report, open the index.html file in your prefered browser and have a look. 
+### Reports
+
+After the tests complete, a Playwright HTML report is available in ./example/playwright-report. Open the index.html file in your browser to view the results.
 
 ## Usage
 
-**Simple example of creating a Page Object Class:**
+Dive into using POMWright with these examples:
+
+### Create a Page Object Class (POC)
 
 ```TS
 import { Page, TestInfo } from "@playwright/test";
-import { POMWright, POMWrightLogger } from "pomwright";
+import { BasePage, PlaywrightReportLogger, GetByMethod } from "pomwright";
 
 type LocatorSchemaPath = 
   | "content"
@@ -79,8 +105,8 @@ type LocatorSchemaPath =
   | "content.region.details"
   | "content.region.details.button.edit";
 
-export default class Profile extends POMWright<LocatorSchemaPath> {
-  constructor(page: Page, testInfo: TestInfo, pwrl: POMWrightLogger) {
+export default class Profile extends BasePage<LocatorSchemaPath> {
+  constructor(page: Page, testInfo: TestInfo, pwrl: PlaywrightReportLogger) {
     super(page, testInfo, "https://someDomain.com", "/profile", Profile.name, pwrl);
   }
 
@@ -94,7 +120,7 @@ export default class Profile extends POMWright<LocatorSchemaPath> {
       role: "heading",
       roleOptions: {
         name: "Your Profile"
-      }
+      },
       locatorMethod: GetByMethod.role
     });
 
@@ -102,7 +128,7 @@ export default class Profile extends POMWright<LocatorSchemaPath> {
       role: "region",
       roleOptions: {
         name: "Profile Details"
-      }
+      },
       locatorMethod: GetByMethod.role
     });
 
@@ -110,7 +136,7 @@ export default class Profile extends POMWright<LocatorSchemaPath> {
       role: "button",
       roleOptions: {
         name: "Edit"
-      }
+      },
       locatorMethod: GetByMethod.role
     });
   }
@@ -119,10 +145,10 @@ export default class Profile extends POMWright<LocatorSchemaPath> {
 }
 ```
 
-**Creating a Custom Playwright Fixture for the Profile POC:**
+### Creating a Custom Playwright Fixture
 
 ```TS
-import { POMWrightTestFixture as base } from "pomwright";
+import { test as base } from "pomwright";
 import Profile from "...";
 
 type fixtures = {
@@ -137,7 +163,9 @@ export const test = base.extend<fixtures>({
 });
 ```
 
-**Using the fixture in a Playwright tests:**
+### Using the fixture in a Playwright tests
+
+#### click edit button with a single locator
 
 ```TS
 import { test } from ".../fixtures";
@@ -156,6 +184,8 @@ test("click edit button with a single locator", async ({ profile }) => {
 
 });
 ```
+
+#### click edit button with a nested locator
 
 ```TS
 import { test } from ".../fixtures";
@@ -177,6 +207,8 @@ test("click edit button with a nested locator", async ({ profile }) => {
 
 });
 ```
+
+#### specify index for nested locator(s)
 
 ```TS
 import { test } from ".../fixtures";
@@ -201,6 +233,8 @@ test("specify index for nested locator(s)", async ({ profile }) => {
 });
 ```
 
+#### update a locator before use
+
 ```TS
 import { test } from ".../fixtures";
 
@@ -223,6 +257,8 @@ test("update a locator before use", async ({ profile }) => {
 
 });
 ```
+
+#### update a nested locator before use
 
 ```TS
 import { test } from ".../fixtures";
@@ -252,6 +288,8 @@ test("update a nested locator before use", async ({ profile }) => {
 });
 ```
 
+#### make multiple versions of a locator
+
 ```TS
 import { test } from ".../fixtures";
 
@@ -277,3 +315,15 @@ test("make multiple versions of a locator", async ({ profile }) => {
 
 });
 ```
+
+## Troubleshooting and Support
+
+If you encounter any issues or have questions, please check our issues page or reach out to us directly.
+
+## Contributing
+
+We welcome contributions! Please refer to our contribution guidelines for details on how to submit pull requests, report bugs, or request features.
+
+## License
+
+POMWright is open-source software licensed under the Apache-2.0 license
