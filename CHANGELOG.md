@@ -1,5 +1,21 @@
 # pomwright
 
+## 1.0.0
+
+### Major Changes
+
+- 130784f: BREAKING: The following index.ts exports have been renamed:
+
+  - "POMWright" changed to "BasePage"
+  - "POMWrightTestFixture" changed to "test"
+  - "POMWrightLogger" changed to "PlaywrightReportLogger"
+  - "POMWrightGetLocatorBase" changed to "GetLocatorBase"
+  - "POMWrightApi" changed to "BaseApi"
+
+  Documentation updated
+
+  README updated
+
 ## 0.0.9
 
 ### Patch Changes
