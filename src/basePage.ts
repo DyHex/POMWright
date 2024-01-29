@@ -1,10 +1,4 @@
-import {
-	type Locator,
-	type Page,
-	type Selectors,
-	type TestInfo,
-	selectors,
-} from "@playwright/test";
+import { type Locator, type Page, type Selectors, type TestInfo, selectors } from "@playwright/test";
 import { GetLocatorBase } from "./helpers/getLocatorBase";
 import { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 import { SessionStorage } from "./helpers/sessionStorage.actions";
@@ -60,10 +54,7 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
 		this.pocName = pocName;
 
 		this.log = pwrl.getNewChildLogger(pocName);
-		this.locators = new GetLocatorBase<LocatorSchemaPathType>(
-			this,
-			this.log.getNewChildLogger("GetLocator"),
-		);
+		this.locators = new GetLocatorBase<LocatorSchemaPathType>(this, this.log.getNewChildLogger("GetLocator"));
 		this.initLocatorSchemas();
 
 		this.sessionStorage = new SessionStorage(this.page, this.pocName);
@@ -89,9 +80,7 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
 		locatorSchemaPath: LocatorSchemaPathType,
 		indices?: { [key: number]: number | null } | null,
 	): Promise<Locator> => {
-		return await this.getLocatorSchema(locatorSchemaPath).getNestedLocator(
-			indices,
-		);
+		return await this.getLocatorSchema(locatorSchemaPath).getNestedLocator(indices);
 	};
 
 	/**
@@ -103,9 +92,7 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
 	 * @param LocatorSchemaPathType locatorSchemaPath - The unique path identifier for the locator schema.
 	 * @returns Promise<Locator> - A promise that resolves to the nested locator.
 	 */
-	public getLocator = async (
-		locatorSchemaPath: LocatorSchemaPathType,
-	): Promise<Locator> => {
+	public getLocator = async (locatorSchemaPath: LocatorSchemaPathType): Promise<Locator> => {
 		return await this.getLocatorSchema(locatorSchemaPath).getLocator();
 	};
 
