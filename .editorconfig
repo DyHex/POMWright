@@ -1,0 +1,9 @@
+# This .editorconfig file is used to ensure consistent display of code in GitHub, especially regarding indentation.
+
+# top-most EditorConfig file
+root = true
+
+# All files
+[*]
+indent_style = tab
+indent_size = 2
