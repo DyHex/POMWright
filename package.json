@@ -26,7 +26,7 @@
 	},
 	"keywords": ["Playwright", "POM", "Page Object Model", "Test Framework"],
 	"devDependencies": {
-		"@biomejs/biome": "^1.5.1",
+		"@biomejs/biome": "^1.5.3",
 		"@changesets/cli": "^2.27.1",
 		"@changesets/changelog-github": "^0.5.0",
 		"@types/node": "^20.10.8",

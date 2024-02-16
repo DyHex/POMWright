@@ -7,7 +7,7 @@ export { test };
 import { PlaywrightReportLogger } from "./src/helpers/playwrightReportLogger";
 export { PlaywrightReportLogger };
 
-import { GetByMethod, type LocatorSchema, type AriaRoleType } from "./src/helpers/locatorSchema.interface";
+import { type AriaRoleType, GetByMethod, type LocatorSchema } from "./src/helpers/locatorSchema.interface";
 export { GetByMethod, type LocatorSchema, type AriaRoleType };
 
 import { GetLocatorBase } from "./src/helpers/getLocatorBase";
