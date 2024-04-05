@@ -22,9 +22,15 @@
 		"release": "pnpm run build && changeset publish",
 		"lint": "biome check ./src",
 		"format": "biome format ./src --write",
-		"install-browsers": "playwright install --with-deps"
+		"install-browsers": "playwright install --with-deps",
+		"pack-test": "bash pack-test.sh"
 	},
-	"keywords": ["Playwright", "POM", "Page Object Model", "Test Framework"],
+	"keywords": [
+		"Playwright",
+		"POM",
+		"Page Object Model",
+		"Test Framework"
+	],
 	"devDependencies": {
 		"@biomejs/biome": "^1.5.3",
 		"@changesets/cli": "^2.27.1",
