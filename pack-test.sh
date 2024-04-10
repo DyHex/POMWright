@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TEST_DIR="example"
+TEST_DIR="test"
 
 # Function to revert to the latest published version, ensuring it's executed in the ./$TEST_DIR directory
 cleanup() {

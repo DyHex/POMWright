@@ -1,0 +1,19 @@
+{
+	"name": "test",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"start": "http-server ./test-data/staticPage/ -p 8080"
+	},
+	"keywords": [],
+	"devDependencies": {
+		"@playwright/test": "1.40.1",
+		"@types/node": "^20.12.7",
+		"http-server": "^14.1.1",
+		"pomwright": "^1.0.0"
+	},
+	"dependencies": {
+		"dotenv": "^16.4.5"
+	}
+}
