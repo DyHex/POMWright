@@ -3,10 +3,14 @@ name: Run POMWright Tests
 on:
   push:
     branches:
-      - '**'
+      - 'main'
   pull_request:
+    types:
+      - opened # Triggers for new PRs and draft PRs
+      - reopened # Triggers for reopened PRs and draft PRs
+      - synchronize # Triggers on new commits to PRs and draft PRs
     branches:
-      - '**'
+      - '**' # Triggers for PRs and draft PRs targeting any branch
 
 jobs:
   test:
