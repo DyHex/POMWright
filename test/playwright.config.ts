@@ -65,8 +65,8 @@ export default defineConfig({
 					timeout: 5 * 60 * 1000,
 					reuseExistingServer: false,
 					ignoreHTTPSErrors: false,
-					stdout: "pipe",
-					stderr: "pipe",
+					// stdout: "pipe",
+					// stderr: "pipe",
 				},
 		  ]
 		: [
@@ -76,8 +76,8 @@ export default defineConfig({
 					timeout: 5 * 60 * 1000,
 					reuseExistingServer: true,
 					ignoreHTTPSErrors: false,
-					stdout: "pipe",
-					stderr: "pipe",
+					// stdout: "pipe",
+					// stderr: "pipe",
 				},
 		  ],
 });

@@ -1,7 +1,7 @@
 import { type Page, type TestInfo } from "@playwright/test";
 import { beforeEach, describe, expect, test } from "vitest";
 import { PlaywrightReportLogger } from "../index";
-import { type LocatorSchemaPath, MockPOC } from "./basePage.poc";
+import { type LocatorSchemaPath, POC } from "./basePage.test.poc";
 import { getLocatorSchemaDummy } from "./helpers/locatorSchema.interface";
 import type { LogEntry } from "./helpers/playwrightReportLogger";
 
@@ -10,14 +10,14 @@ import type { LogEntry } from "./helpers/playwrightReportLogger";
  */
 
 describe("BasePage: PageObjectModel", () => {
-	let pageObjectClass: MockPOC;
+	let pageObjectClass: POC;
 
 	beforeEach(() => {
 		const page = {} as Page;
 		const testInfo = {} as TestInfo;
 		const sharedLogEntry: LogEntry[] = [];
 		const pwrl = new PlaywrightReportLogger({ current: "warn", initial: "warn" }, sharedLogEntry, "test");
-		pageObjectClass = new MockPOC(page, testInfo, pwrl);
+		pageObjectClass = new POC(page, testInfo, pwrl);
 	});
 
 	test("has property 'page'", () => {
@@ -50,7 +50,7 @@ describe("BasePage: PageObjectModel", () => {
 
 	test("has property 'pocName'", () => {
 		expect(pageObjectClass.pocName).toBeTypeOf("string");
-		expect(pageObjectClass.pocName).toBe("MockPOC");
+		expect(pageObjectClass.pocName).toBe("POC");
 	});
 
 	test("has property 'log'", () => {
@@ -213,14 +213,14 @@ const locatorSchemaCases = [
 ];
 
 describe("BasePage: PageObjectModel.getLocatorSchema", () => {
-	let pageObjectClass: MockPOC;
+	let pageObjectClass: POC;
 
 	beforeEach(() => {
 		const page = {} as Page;
 		const testInfo = {} as TestInfo;
 		const sharedLogEntry: LogEntry[] = [];
 		const pwrl = new PlaywrightReportLogger({ current: "warn", initial: "warn" }, sharedLogEntry, "test");
-		pageObjectClass = new MockPOC(page, testInfo, pwrl);
+		pageObjectClass = new POC(page, testInfo, pwrl);
 	});
 
 	test.each(locatorSchemaCases)(

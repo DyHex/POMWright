@@ -1,5 +1,5 @@
 import { type Page, type TestInfo } from "@playwright/test";
-import { BasePage, GetByMethod, GetLocatorBase, type LocatorSchema, PlaywrightReportLogger } from "../index";
+import { BasePage, GetByMethod, PlaywrightReportLogger } from "../index";
 
 export type LocatorSchemaPath =
 	| "getByRole"
@@ -38,9 +38,9 @@ export type LocatorSchemaPath =
 	| "id.dataCy.testId.locator.title.altText.placeholder.label.text"
 	| "id.dataCy.testId.locator.title.altText.placeholder.label.text.role";
 
-export class MockPOC extends BasePage<LocatorSchemaPath> {
+export class POC extends BasePage<LocatorSchemaPath> {
 	constructor(page: Page, testInfo: TestInfo, pwrl: PlaywrightReportLogger) {
-		super(page, testInfo, "http://localhost:8080", "/", MockPOC.name, pwrl);
+		super(page, testInfo, "http://localhost:8080", "/", POC.name, pwrl);
 	}
 
 	protected initLocatorSchemas() {
