@@ -10,7 +10,7 @@
 - getLocatorBase.applyUpdates() now correctly updates the LocatorSchemaWithMethod and maintains a circular ref. for the entry representing itself in schemasMap while updating other LocatorSchema in SchemasMap directly.
 - getLocatorBase.deepMerge() now correctly validates valid nested properties of LocatorSchema
 
-## Continuius testing
+## Continuous testing
 
 - Build workflow now runs unit tests (vitest)
 - New shell script enabling testing new packages before release
