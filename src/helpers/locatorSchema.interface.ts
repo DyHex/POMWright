@@ -104,7 +104,7 @@ export interface LocatorSchema {
 	/** Defines the preferred Playwright locator method to be used on this LocatorSchema Object */
 	locatorMethod: GetByMethod;
 	/** The human-readable name of the defined locator object, used for debug logging and test report enrichment. */
-	locatorSchemaPath: string;
+	readonly locatorSchemaPath: string;
 }
 
 /**
