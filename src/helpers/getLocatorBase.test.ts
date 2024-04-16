@@ -706,7 +706,6 @@ describe("GetLocatorBase", () => {
 			.update({ roleOptions: { name: "Agree", exact: false } });
 		expect(locatorSchema_B.role).toBe("radio");
 		expect(locatorSchema_B.roleOptions).toEqual({ name: "Agree", exact: false });
-		console.log(locatorSchema_B);
 	});
 
 	test("should be able to chain updates()", () => {
