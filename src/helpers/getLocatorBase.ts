@@ -188,7 +188,21 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 	): void {
 		const schema = schemasMap.get(locatorSchemaPath);
 		if (schema) {
-			schemasMap.set(locatorSchemaPath, this.deepMerge(schema, updateData));
+			const updatedSchema = this.deepMerge(schema, updateData);
+
+			if (
+				"update" &&
+				"updates" &&
+				"getNestedLocator" &&
+				"getLocator" &&
+				"locatorSchemaPath" &&
+				"locatorMethod" &&
+				"schemasMap" in schema
+			) {
+				Object.assign(schema, updatedSchema);
+			} else {
+				throw new Error("Invalid LocatorSchema object provided for update method.");
+			}
 		}
 	}
 
@@ -206,7 +220,24 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 			if (path && updateAtIndex) {
 				const schema = schemasMap.get(path);
 				if (schema) {
-					schemasMap.set(path, this.deepMerge(schema, updateAtIndex));
+					const updatedSchema = this.deepMerge(schema, updateAtIndex);
+
+					// Check if the schema being updated is a LocatorSchemaWithMethods
+					if (
+						"update" &&
+						"updates" &&
+						"getNestedLocator" &&
+						"getLocator" &&
+						"locatorSchemaPath" &&
+						"locatorMethod" &&
+						"schemasMap" in schema
+					) {
+						// Apply updates directly to maintain circular reference
+						Object.assign(schema, updatedSchema);
+					} else {
+						// For partial LocatorSchema, just replace it in the map
+						schemasMap.set(path, updatedSchema);
+					}
 				}
 			}
 		}
@@ -312,43 +343,72 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 	};
 
 	/** Merges 'source' into 'target', combining their properties into a new isolated object. */
-	private deepMerge<TargetType, SourceType>(target: TargetType, source: SourceType): TargetType {
+	private deepMerge<TargetType extends object, SourceType extends Partial<TargetType>>(
+		target: TargetType,
+		source: SourceType,
+		schema: Partial<LocatorSchema> = getLocatorSchemaDummy(), // Use the schema for deep validation
+	): TargetType {
 		// Create a new merged object to ensure immutability
-		const merged = { ...target };
-		const dummySchema = getLocatorSchemaDummy();
+		const merged: TargetType = { ...target };
 
-		if (typeof source === "object" && source !== null) {
-			const filteredKeys = Object.keys(source).filter((key) => key !== "locatorSchemaPath");
+		for (const key of Object.keys(source)) {
+			if (key === "locatorSchemaPath") {
+				throw new Error(
+					`[${
+						this.pageObjectClass.pocName
+					}] Invalid property: 'locatorSchemaPath' cannot be updated. Attempted to update LocatorSchemaPath from '${
+						(target as Record<string, unknown>)[key]
+					}' to '${(source as Record<string, unknown>)[key]}'.`,
+				);
+			}
 
-			for (const key of filteredKeys) {
-				const targetKey = key as keyof TargetType;
-				const sourceKey = key as keyof SourceType;
+			if (!(key in schema)) {
+				throw new Error(`Invalid property: '${key}' is not a valid property of LocatorSchema`);
+			}
 
-				// Check if the key exists in the dummy schema for validation
-				if (!(key in dummySchema)) {
-					throw new Error(`Invalid property: '${key}' is not a valid property of LocatorSchema`);
+			const sourceValue = source[key as keyof typeof source];
+			const targetValue = target[key as keyof typeof target];
+
+			// Check if the schema allows for further nesting
+			if (
+				typeof sourceValue === "object" &&
+				sourceValue !== null &&
+				schema[key as keyof LocatorSchema] &&
+				typeof schema[key as keyof LocatorSchema] === "object"
+			) {
+				if (targetValue && typeof targetValue === "object" && !Array.isArray(targetValue)) {
+					// Recursively merge objects
+					merged[key as keyof typeof merged] = this.deepMerge(
+						targetValue as Record<string, unknown>, // Updated type here
+						sourceValue as Partial<TargetType[keyof TargetType]>,
+						schema[key as keyof LocatorSchema] as Partial<LocatorSchema>,
+					) as TargetType[keyof TargetType]; // Typecast merged object to the correct type
+				} else {
+					// Initialize the target value if it doesn't exist or isn't an object
+					merged[key as keyof typeof merged] = this.deepMerge(
+						{} as Record<string, unknown>, // Updated type here
+						sourceValue as Partial<TargetType[keyof TargetType]>,
+						schema[key as keyof LocatorSchema] as Partial<LocatorSchema>,
+					) as TargetType[keyof TargetType]; // Typecast merged object to the correct type
 				}
-
-				const targetValue = merged[targetKey];
-				const sourceValue = source[sourceKey];
-
-				// Merge logic based on the type of the source value
-				if (sourceValue !== undefined) {
-					if (Array.isArray(targetValue) && Array.isArray(sourceValue)) {
-						// Concatenate arrays
-						merged[targetKey] = [...targetValue, ...sourceValue] as TargetType[keyof TargetType];
-					} else if (sourceValue instanceof RegExp) {
-						// Clone RegExp
-						merged[targetKey] = new RegExp(sourceValue.source, sourceValue.flags) as TargetType[keyof TargetType];
-					} else if (typeof sourceValue === "object" && sourceValue !== null) {
-						// Recursive merge for nested objects
-						merged[targetKey] = targetValue
-							? this.deepMerge(targetValue, sourceValue)
-							: (structuredClone(sourceValue) as TargetType[keyof TargetType]);
-					} else {
-						// Direct assignment for non-object values or nulls
-						merged[targetKey] = sourceValue as unknown as TargetType[keyof TargetType];
-					}
+			} else {
+				// Handle non-object types: primitives, arrays, or RegExps
+				if (Array.isArray(sourceValue)) {
+					(merged as Record<string, unknown>)[key] = Array.isArray(targetValue)
+						? targetValue.concat(sourceValue)
+						: [...sourceValue];
+				} else if (
+					typeof sourceValue === "object" &&
+					sourceValue !== null &&
+					Object.prototype.toString.call(sourceValue) === "[object RegExp]"
+				) {
+					(merged as Record<string, unknown>)[key] = new RegExp(
+						(sourceValue as unknown as RegExp).source,
+						(sourceValue as unknown as RegExp).flags,
+					);
+				} else {
+					// Direct assignment for primitives and nulls
+					(merged as Record<string, unknown>)[key] = sourceValue;
 				}
 			}
 		}
