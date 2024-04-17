@@ -21,7 +21,7 @@ devDependencies:
     version: 14.1.1
   pomwright:
     specifier: ^1.0.0
-    version: 1.0.0(@playwright/test@1.43.1)
+    version: 1.0.1(@playwright/test@1.43.1)
 
 packages:
 
@@ -305,10 +305,10 @@ packages:
       fsevents: 2.3.2
     dev: true
 
-  /pomwright@1.0.0(@playwright/test@1.43.1):
-    resolution: {integrity: sha512-JACHBp3bkEBtZDKhfBonvud9s5z1x0RBWYl9IfxezghttGJUGIxqFbGhDJTx8LR9xxJdYs+YpUM+eLIKYakAlw==}
+  /pomwright@1.0.1(@playwright/test@1.43.1):
+    resolution: {integrity: sha512-mPqCwapT+NwtD/ZcVFjkUxL5XRKmTLXUuUf5LPVH6Gw3vENLbIHqz2zHLwlFBe9/NisHW4V87PFMpZonfVQU6Q==}
     peerDependencies:
-      '@playwright/test': ^1.40.1
+      '@playwright/test': ^1.39.0
     dependencies:
       '@playwright/test': 1.43.1
     dev: true

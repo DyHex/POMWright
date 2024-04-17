@@ -503,7 +503,6 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 			}
 
 			if (currentLocator != null) {
-				currentLocator.scrollIntoViewIfNeeded().catch(() => {});
 				return currentLocator;
 			}
 		})) as Locator;
