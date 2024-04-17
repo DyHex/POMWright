@@ -1,0 +1,37 @@
+name: Run POMWright Tests
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    types:
+      - opened # Triggers for new PRs and draft PRs
+      - reopened # Triggers for reopened PRs and draft PRs
+      - synchronize # Triggers on new commits to PRs and draft PRs
+    branches:
+      - '**' # Triggers for PRs and draft PRs targeting any branch
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v4
+    
+    - name: Set up pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: '8'
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'pnpm'
+
+    - name: Run test script
+      run: bash pack-test.sh
+      env:
+        CI: true
