@@ -20,7 +20,7 @@ devDependencies:
     specifier: ^14.1.1
     version: 14.1.1
   pomwright:
-    specifier: ^1.0.1
+    specifier: ^1.0.0
     version: 1.0.1(@playwright/test@1.43.1)
 
 packages:
