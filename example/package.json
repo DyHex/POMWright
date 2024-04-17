@@ -6,7 +6,7 @@
 	"scripts": {},
 	"keywords": [],
 	"devDependencies": {
-		"@playwright/test": "^1.40.1",
+		"@playwright/test": "^1.43.1",
 		"@types/node": "^20.11.1",
 		"pomwright": "^1.0.0"
 	},

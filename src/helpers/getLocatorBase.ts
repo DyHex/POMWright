@@ -45,6 +45,16 @@ export interface ModifiedLocatorSchema extends UpdatableLocatorSchemaProperties 
 // Type for representing pairs of path and index used in constructing nested locators.
 type PathIndexPairs = { path: string; index?: number }[];
 
+const REQUIRED_PROPERTIES_FOR_LOCATOR_SCHEMA_WITH_METHODS = [
+	"update",
+	"updates",
+	"getNestedLocator",
+	"getLocator",
+	"locatorSchemaPath",
+	"locatorMethod",
+	"schemasMap",
+];
+
 /**
  * Provides core functionality for dynamically generating nested locators.
  * Nested locators help pinpoint elements with higher precision in Playwright tests.
@@ -177,6 +187,10 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		return schemasMap;
 	}
 
+	private isLocatorSchemaWithMethods(schema: LocatorSchemaWithMethods | LocatorSchema): boolean {
+		return REQUIRED_PROPERTIES_FOR_LOCATOR_SCHEMA_WITH_METHODS.every((p) => p in schema);
+	}
+
 	/**
 	 * Applies an update to a specific locator schema within the provided map of schemas.
 	 * This method ensures that the specified updates are merged into the targeted locator schema.
@@ -190,15 +204,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		if (schema) {
 			const updatedSchema = this.deepMerge(schema, updateData);
 
-			if (
-				"update" &&
-				"updates" &&
-				"getNestedLocator" &&
-				"getLocator" &&
-				"locatorSchemaPath" &&
-				"locatorMethod" &&
-				"schemasMap" in schema
-			) {
+			if (this.isLocatorSchemaWithMethods(schema)) {
 				Object.assign(schema, updatedSchema);
 			} else {
 				throw new Error("Invalid LocatorSchema object provided for update method.");
@@ -223,15 +229,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 					const updatedSchema = this.deepMerge(schema, updateAtIndex);
 
 					// Check if the schema being updated is a LocatorSchemaWithMethods
-					if (
-						"update" &&
-						"updates" &&
-						"getNestedLocator" &&
-						"getLocator" &&
-						"locatorSchemaPath" &&
-						"locatorMethod" &&
-						"schemasMap" in schema
-					) {
+					if (this.isLocatorSchemaWithMethods(schema)) {
 						// Apply updates directly to maintain circular reference
 						Object.assign(schema, updatedSchema);
 					} else {

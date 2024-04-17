@@ -1,7 +1,11 @@
-src
-tests
 .changeset
+.github
+.vscode
+example
+src
+test
+.editorconfig
+.gitignore
 pnpm-lock.yaml
 tsconfig.json
-.github
-.gitignore
+*.test.ts
