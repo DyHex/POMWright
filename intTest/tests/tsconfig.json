@@ -1,0 +1,14 @@
+{
+	"extends": "../tsconfig.json",
+	"compilerOptions": {
+		// strict options are enabled in ./tsconfig.json, but we want to disable some for tests
+		"noImplicitAny": false,
+		"strictNullChecks": false,
+		"baseUrl": "..",
+		"paths": {
+			"@fixtures/*": ["fixtures/*"],
+			"@page-object-models/*": ["page-object-models/*"]
+		}
+	},
+	"include": ["**/*.spec.ts"]
+}

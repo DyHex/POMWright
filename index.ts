@@ -1,5 +1,5 @@
-import { BasePage } from "./src/basePage";
-export { BasePage };
+import { BasePage, type BasePageOptions, type ExtractBaseUrlType, type ExtractUrlPathType } from "./src/basePage";
+export { BasePage, type BasePageOptions, type ExtractBaseUrlType, type ExtractUrlPathType };
 
 import { test } from "./src/fixture/base.fixtures";
 export { test };

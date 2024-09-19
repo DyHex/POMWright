@@ -4,10 +4,33 @@ import { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 import { SessionStorage } from "./helpers/sessionStorage.actions";
 import { createCypressIdEngine } from "./utils/selectorEngines";
 
+export type BasePageOptions = {
+	urlOptions?: {
+		baseUrlType?: string | RegExp; // Optional, defaults to string
+		urlPathType?: string | RegExp; // Optional, defaults to string
+	};
+	// Other future options can go here
+};
+
+export type ExtractBaseUrlType<T extends BasePageOptions> = T["urlOptions"] extends { baseUrlType: RegExp }
+	? RegExp
+	: string;
+export type ExtractUrlPathType<T extends BasePageOptions> = T["urlOptions"] extends { urlPathType: RegExp }
+	? RegExp
+	: string;
+export type ExtractFullUrlType<T extends BasePageOptions> = T["urlOptions"] extends
+	| { baseUrlType: RegExp }
+	| { urlPathType: RegExp }
+	? RegExp
+	: string;
+
 let selectorRegistered = false;
 
 /** The BasePage class, extended by all Page Object Classes */
-export abstract class BasePage<LocatorSchemaPathType extends string> {
+export abstract class BasePage<
+	LocatorSchemaPathType extends string,
+	Options extends BasePageOptions = { urlOptions: { baseUrlType: string; urlPathType: string } },
+> {
 	/** Provides Playwright page methods */
 	page: Page;
 
@@ -18,12 +41,15 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
 	selector: Selectors;
 
 	/** The base URL of the Page Object Class */
-	baseUrl: string;
+	// baseUrl: string;
+	baseUrl: ExtractBaseUrlType<Options>;
 
 	/** The URL path of the Page Object Class */
-	urlPath: string;
+	// urlPath: string;
+	urlPath: ExtractUrlPathType<Options>;
 
-	fullUrl: string;
+	// fullUrl: string;
+	fullUrl: ExtractFullUrlType<Options>;
 
 	/** The name of the Page Object Class */
 	pocName: string;
@@ -39,8 +65,8 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
 	constructor(
 		page: Page,
 		testInfo: TestInfo,
-		baseUrl: string,
-		urlPath: string,
+		baseUrl: ExtractBaseUrlType<Options>,
+		urlPath: ExtractUrlPathType<Options>,
 		pocName: string,
 		pwrl: PlaywrightReportLogger,
 	) {
@@ -50,7 +76,7 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
 
 		this.baseUrl = baseUrl;
 		this.urlPath = urlPath;
-		this.fullUrl = `${this.baseUrl}${this.urlPath}`;
+		this.fullUrl = this.constructFullUrl(baseUrl, urlPath); //`${this.baseUrl}${this.urlPath}`;
 		this.pocName = pocName;
 
 		this.log = pwrl.getNewChildLogger(pocName);
@@ -64,6 +90,35 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
 			selectors.register("data-cy", createCypressIdEngine);
 			selectorRegistered = true;
 		}
+	}
+
+	private constructFullUrl(
+		baseUrl: ExtractBaseUrlType<Options>,
+		urlPath: ExtractUrlPathType<Options>,
+	): ExtractFullUrlType<Options> {
+		/**
+		 * Escapes special regex characters in a string by adding a backslash (\) before them.
+		 * This ensures the string can be safely used in a regular expression.
+		 * Characters escaped: - / \ ^ $ * + ? . ( ) | [ ] { }
+		 *
+		 * @param str - The input string containing potential regex characters.
+		 * @returns The escaped string, safe for regex use.
+		 */
+		const escapeStringForRegExp = (str: string) => str.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+
+		if (typeof baseUrl === "string" && typeof urlPath === "string") {
+			return `${baseUrl}${urlPath}` as ExtractFullUrlType<Options>;
+		}
+		if (typeof baseUrl === "string" && urlPath instanceof RegExp) {
+			return new RegExp(`^${escapeStringForRegExp(baseUrl)}${urlPath.source}`) as ExtractFullUrlType<Options>;
+		}
+		if (baseUrl instanceof RegExp && typeof urlPath === "string") {
+			return new RegExp(`${baseUrl.source}${escapeStringForRegExp(urlPath)}$`) as ExtractFullUrlType<Options>;
+		}
+		if (baseUrl instanceof RegExp && urlPath instanceof RegExp) {
+			return new RegExp(`${baseUrl.source}${urlPath.source}`) as ExtractFullUrlType<Options>;
+		}
+		throw new Error("Invalid baseUrl or urlPath types. Expected string or RegExp.");
 	}
 
 	/**
@@ -177,16 +232,6 @@ export abstract class BasePage<LocatorSchemaPathType extends string> {
 	 * The "getLocatorSchema" method is used to retrieve an updatable deep copy of a LocatorSchema defined in the
 	 * GetLocatorBase class. It enriches the returned schema with additional methods to handle updates and retrieval of
 	 * deep copy locators.
-	 *
-	 * Providing a precise and powerful solution for interacting with elements through locators in a structured
-	 * or hierarchical manner:
-	 * - Effortless validation of any element's expected location in the DOM.
-	 * - Improved readability and maintainability of tests.
-	 * - Improved readability and maintainability of Page Object Classes (POCs), through the use of a single source of
-	 * truth and flat locator (LocatorSchema) structure.
-	 * - Improved rebustness of tests in the face of DOM changes.
-	 * - Simpler debugging and maintenance as a result of limitin/scoping the number of possible resolvable elements
-	 * - Highly veratile usage
 	 *
 	 * getLocatorSchema adds the following chainable methods to the returned LocatorSchemaWithMethods object:
 	 *

@@ -1,17 +1,8 @@
-import { expect, test } from "../../fixtures/fixtures";
+import { expect, test } from "@fixtures/withOptions";
 
-test.afterEach(async ({ testPage }) => {
-	await testPage.page.goto(testPage.fullUrl);
-});
-
-test("getLocator should return the single locator the complete LocatorSchemaPath resolves to", async ({ testPage }) => {
-	const locator = await testPage.getLocator("topMenu.notifications.dropdown.item");
-	expect(locator).not.toBeNull();
-	expect(locator).not.toBeUndefined();
-	expect(`${locator}`).toEqual("locator('.w3-bar-item')");
-});
-
-test("should be able to manually chain locators returned by getLocator", async ({ testPage }) => {
+test("given the same locatorSchemaPath, getNestedLocator should return the equvalent of manually chaining with getLocator", async ({
+	testPage,
+}) => {
 	const topMenu = await testPage.getLocator("topMenu");
 
 	const topMenuNotifications = topMenu.locator(await testPage.getLocator("topMenu.notifications"));
@@ -29,4 +20,9 @@ test("should be able to manually chain locators returned by getLocator", async (
 	expect(`${topMenuNotificationsDropdownItem}`).toEqual(
 		"locator('.w3-top').locator(locator('.w3-dropdown-hover')).locator(locator('.w3-dropdown-content')).locator(locator('.w3-bar-item'))",
 	);
+
+	const automaticallyChainedLocator = await testPage.getNestedLocator("topMenu.notifications.dropdown.item");
+	expect(automaticallyChainedLocator).not.toBeNull();
+	expect(automaticallyChainedLocator).not.toBeUndefined();
+	expect(`${automaticallyChainedLocator}`).toEqual(`${topMenuNotificationsDropdownItem}`);
 });

@@ -1,9 +1,9 @@
 import { type Locator, type Page, type TestInfo } from "@playwright/test";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { GetByMethod, GetLocatorBase, PlaywrightReportLogger } from "../../index";
+import type { ModifiedLocatorSchema } from "../../src/helpers/getLocatorBase";
+import type { LogEntry } from "../../src/helpers/playwrightReportLogger";
 import { type LocatorSchemaPath, POC } from "../basePage.test.poc";
-import type { ModifiedLocatorSchema } from "./getLocatorBase";
-import type { LogEntry } from "./playwrightReportLogger";
 
 describe("GetLocatorBase", () => {
 	let pageObjectClass: POC;
