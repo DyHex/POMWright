@@ -1,9 +1,15 @@
 import { type Page, type TestInfo } from "@playwright/test";
 import { beforeEach, describe, expect, test } from "vitest";
 import { PlaywrightReportLogger } from "../index";
-import { type LocatorSchemaPath, POC } from "./basePage.test.poc";
-import { getLocatorSchemaDummy } from "./helpers/locatorSchema.interface";
-import type { LogEntry } from "./helpers/playwrightReportLogger";
+import { getLocatorSchemaDummy } from "../src/helpers/locatorSchema.interface";
+import type { LogEntry } from "../src/helpers/playwrightReportLogger";
+import {
+	type LocatorSchemaPath,
+	POC,
+	POCWithRegExpBaseUrl,
+	POCWithRegExpBaseUrlAndUrlPath,
+	POCWithRegExpUrlPath,
+} from "./basePage.test.poc";
 
 /**
  * BasePage: PageObjectModel
@@ -91,6 +97,112 @@ describe("BasePage: PageObjectModel", () => {
 
 	test("has property 'getLocatorSchema'", () => {
 		expect(pageObjectClass).toHaveProperty("getLocatorSchema");
+	});
+});
+
+/**
+ * BasePage: PageObjectModel with RegExp baseUrl
+ */
+
+describe("BasePage: PageObjectModel with RegExp baseUrl", () => {
+	let pageObjectClass: POCWithRegExpBaseUrl;
+
+	beforeEach(() => {
+		const page = {} as Page;
+		const testInfo = {} as TestInfo;
+		const sharedLogEntry: LogEntry[] = [];
+		const pwrl = new PlaywrightReportLogger({ current: "warn", initial: "warn" }, sharedLogEntry, "test");
+		pageObjectClass = new POCWithRegExpBaseUrl(page, testInfo, pwrl);
+	});
+
+	const urlToMatch = "http://localhost:8080/";
+
+	test("has property 'baseUrl'", () => {
+		expect(pageObjectClass.baseUrl).toBeTypeOf("object");
+		expect(pageObjectClass.baseUrl).toBeInstanceOf(RegExp);
+		expect(urlToMatch).toMatch(pageObjectClass.baseUrl);
+	});
+
+	test("has property 'urlPath'", () => {
+		expect(pageObjectClass.urlPath).toBeTypeOf("string");
+		expect(pageObjectClass.urlPath).toBe("/");
+	});
+
+	test("has property 'fullUrl'", () => {
+		expect(pageObjectClass.fullUrl).toBeTypeOf("object");
+		expect(pageObjectClass.fullUrl).toBeInstanceOf(RegExp);
+		expect(urlToMatch).toMatch(pageObjectClass.fullUrl);
+	});
+});
+
+/**
+ * BasePage: PageObjectModel with RegExp urlPath
+ */
+
+describe("BasePage: PageObjectModel with RegExp urlPath", () => {
+	let pageObjectClass: POCWithRegExpUrlPath;
+
+	beforeEach(() => {
+		const page = {} as Page;
+		const testInfo = {} as TestInfo;
+		const sharedLogEntry: LogEntry[] = [];
+		const pwrl = new PlaywrightReportLogger({ current: "warn", initial: "warn" }, sharedLogEntry, "test");
+		pageObjectClass = new POCWithRegExpUrlPath(page, testInfo, pwrl);
+	});
+
+	const urlToMatch = "http://localhost:8080/";
+
+	test("has property 'baseUrl'", () => {
+		expect(pageObjectClass.baseUrl).toBeTypeOf("string");
+		expect(pageObjectClass.baseUrl).toBe("http://localhost:8080");
+	});
+
+	test("has property 'urlPath'", () => {
+		expect(pageObjectClass.urlPath).toBeTypeOf("object");
+		expect(pageObjectClass.urlPath).toBeInstanceOf(RegExp);
+		expect("/").toMatch(pageObjectClass.urlPath);
+	});
+
+	test("has property 'fullUrl'", () => {
+		expect(pageObjectClass.fullUrl).toBeTypeOf("object");
+		expect(pageObjectClass.fullUrl).toBeInstanceOf(RegExp);
+		expect(urlToMatch).toMatch(pageObjectClass.fullUrl);
+	});
+});
+
+/**
+ * BasePage: PageObjectModel with RegExp baseUrl & urlPath
+ */
+
+describe("BasePage: PageObjectModel with RegExp baseUrl & urlPath", () => {
+	let pageObjectClass: POCWithRegExpBaseUrlAndUrlPath;
+
+	beforeEach(() => {
+		const page = {} as Page;
+		const testInfo = {} as TestInfo;
+		const sharedLogEntry: LogEntry[] = [];
+		const pwrl = new PlaywrightReportLogger({ current: "warn", initial: "warn" }, sharedLogEntry, "test");
+		pageObjectClass = new POCWithRegExpBaseUrlAndUrlPath(page, testInfo, pwrl);
+	});
+
+	const urlToMatch = "http://localhost:8080/";
+
+	test("has property 'baseUrl'", () => {
+		expect(pageObjectClass.baseUrl).toBeTypeOf("object");
+		expect(pageObjectClass.baseUrl).toBeInstanceOf(RegExp);
+		expect(urlToMatch).toMatch(pageObjectClass.baseUrl);
+	});
+
+	test("has property 'urlPath'", () => {
+		expect(pageObjectClass.urlPath).toBeTypeOf("object");
+		expect(pageObjectClass.urlPath).toBeInstanceOf(RegExp);
+		expect("/").toMatch(pageObjectClass.urlPath);
+	});
+
+	test("has property 'fullUrl'", () => {
+		expect(pageObjectClass.fullUrl).toBeTypeOf("object");
+		expect(pageObjectClass.fullUrl).toBeInstanceOf(RegExp);
+		expect(urlToMatch).toMatch(pageObjectClass.fullUrl);
 	});
 });
 

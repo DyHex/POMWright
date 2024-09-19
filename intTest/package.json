@@ -1,0 +1,22 @@
+{
+	"name": "test",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"startOld": "http-server ./test-data/staticPage/ -p 8080",
+		"start": "node ./server.js",
+		"install-browsers": "playwright install --with-deps"
+	},
+	"keywords": [],
+	"devDependencies": {
+		"@playwright/test": "1.47.1",
+		"@types/express": "^4.17.21",
+		"@types/node": "^22.5.5",
+		"express": "^4.21.0",
+		"pomwright": "file:..\\pomwright-1.0.3.tgz"
+	},
+	"dependencies": {
+		"dotenv": "^16.4.5"
+	}
+}

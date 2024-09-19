@@ -1,4 +1,4 @@
-import { expect, test } from "../fixtures/fixtures";
+import { expect, test } from "@fixtures/withOptions";
 
 test("topMenu should have a notification badge with count", async ({ testPage }) => {
 	await testPage.page.goto(testPage.fullUrl);

@@ -1,6 +1,6 @@
+import TestPage from "@page-object-models/testApp/without-options/pages/testPage.page";
 import { expect } from "@playwright/test";
 import { test as base } from "pomwright";
-import TestPage from "../page-object-models/testPage/testPage.page";
 
 type fixtures = {
 	testPage: TestPage;

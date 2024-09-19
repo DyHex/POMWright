@@ -4,6 +4,6 @@ export default defineConfig({
 	test: {
 		globals: true,
 		environment: "node",
-		dir: "src",
+		dir: "test",
 	},
 });

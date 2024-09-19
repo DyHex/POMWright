@@ -1,5 +1,5 @@
 import { type Locator, test } from "@playwright/test";
-import { BasePage } from "../basePage";
+import { BasePage, type BasePageOptions } from "../basePage";
 import { GetBy } from "./getBy.locator";
 import { GetByMethod, type LocatorSchema, getLocatorSchemaDummy } from "./locatorSchema.interface";
 import { PlaywrightReportLogger } from "./playwrightReportLogger";
@@ -69,7 +69,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 	 * Initializes the GetLocatorBase class with a page object class and a logger.
 	 */
 	constructor(
-		protected pageObjectClass: BasePage<LocatorSchemaPathType>,
+		protected pageObjectClass: BasePage<LocatorSchemaPathType, BasePageOptions>,
 		protected log: PlaywrightReportLogger,
 	) {
 		this.locatorSchemas = new Map<LocatorSchemaPathType, () => LocatorSchema>();
