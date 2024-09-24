@@ -6,7 +6,7 @@
 	"scripts": {
 		"startOld": "http-server ./test-data/staticPage/ -p 8080",
 		"start": "node ./server.js",
-		"preinstall": "npx -y only-allow pnpm && npx playwright install-deps"
+		"postinstall": "npx -y only-allow pnpm && npx playwright install-deps"
 	},
 	"keywords": [],
 	"devDependencies": {
