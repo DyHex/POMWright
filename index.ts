@@ -1,5 +1,11 @@
-import { BasePage, type BasePageOptions, type ExtractBaseUrlType, type ExtractUrlPathType } from "./src/basePage";
-export { BasePage, type BasePageOptions, type ExtractBaseUrlType, type ExtractUrlPathType };
+import {
+	BasePage,
+	type BasePageOptions,
+	type ExtractBaseUrlType,
+	type ExtractFullUrlType,
+	type ExtractUrlPathType,
+} from "./src/basePage";
+export { BasePage, type BasePageOptions, type ExtractBaseUrlType, type ExtractFullUrlType, type ExtractUrlPathType };
 
 import { test } from "./src/fixture/base.fixtures";
 export { test };

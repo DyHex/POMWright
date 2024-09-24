@@ -6,15 +6,15 @@
 	"scripts": {
 		"startOld": "http-server ./test-data/staticPage/ -p 8080",
 		"start": "node ./server.js",
-		"install-browsers": "playwright install --with-deps"
+		"postinstall": "npx -y only-allow pnpm && npx playwright install-deps"
 	},
 	"keywords": [],
 	"devDependencies": {
 		"@playwright/test": "1.47.1",
 		"@types/express": "^4.17.21",
-		"@types/node": "^22.5.5",
+		"@types/node": "^20.16.6",
 		"express": "^4.21.0",
-		"pomwright": "file:..\\pomwright-1.0.3.tgz"
+		"pomwright": "^1.1.0"
 	},
 	"dependencies": {
 		"dotenv": "^16.4.5"

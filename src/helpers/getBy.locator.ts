@@ -1,6 +1,6 @@
-import { type Locator, type Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { GetByMethod, type LocatorSchema } from "./locatorSchema.interface";
-import { PlaywrightReportLogger } from "./playwrightReportLogger";
+import type { PlaywrightReportLogger } from "./playwrightReportLogger";
 
 // Type definition for a subset of GetByMethod enum values, excluding specific values for manually implemented methods.
 type GetByMethodSubset = Exclude<
@@ -133,7 +133,7 @@ export class GetBy {
 	 */
 	private frameLocator = (locatorSchema: LocatorSchema): Locator => {
 		const initialFrameLocator = locatorSchema.frameLocator
-			? (this.page.frameLocator(locatorSchema.frameLocator) as Locator)
+			? (this.page.frameLocator(locatorSchema.frameLocator) as unknown as Locator) // intentional, might need a rework...
 			: null;
 
 		if (!initialFrameLocator) {

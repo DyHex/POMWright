@@ -1,5 +1,5 @@
 import type { APIRequestContext } from "@playwright/test";
-import { PlaywrightReportLogger } from "../helpers/playwrightReportLogger";
+import type { PlaywrightReportLogger } from "../helpers/playwrightReportLogger";
 
 export class BaseApi {
 	protected baseUrl: string;

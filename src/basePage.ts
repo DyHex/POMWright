@@ -1,6 +1,6 @@
 import { type Locator, type Page, type Selectors, type TestInfo, selectors } from "@playwright/test";
 import { GetLocatorBase } from "./helpers/getLocatorBase";
-import { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
+import type { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 import { SessionStorage } from "./helpers/sessionStorage.actions";
 import { createCypressIdEngine } from "./utils/selectorEngines";
 
