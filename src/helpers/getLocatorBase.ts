@@ -1,8 +1,8 @@
 import { type Locator, test } from "@playwright/test";
-import { BasePage, type BasePageOptions } from "../basePage";
+import type { BasePage, BasePageOptions } from "../basePage";
 import { GetBy } from "./getBy.locator";
 import { GetByMethod, type LocatorSchema, getLocatorSchemaDummy } from "./locatorSchema.interface";
-import { PlaywrightReportLogger } from "./playwrightReportLogger";
+import type { PlaywrightReportLogger } from "./playwrightReportLogger";
 export { GetByMethod };
 
 // Type representing properties of a LocatorSchema that can be updated, excluding the locatorSchemaPath.
@@ -222,7 +222,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		updatesData: { [index: number]: Partial<LocatorSchema> },
 	): void {
 		for (const [index, updateAtIndex] of Object.entries(updatesData)) {
-			const path = pathIndexPairs[parseInt(index)]?.path;
+			const path = pathIndexPairs[Number.parseInt(index)]?.path;
 			if (path && updateAtIndex) {
 				const schema = schemasMap.get(path);
 				if (schema) {
@@ -326,7 +326,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 				? {
 						locatorString: currentLocator,
 						isNotNull: true,
-				  }
+					}
 				: { isNotNull: false },
 			nestedLocatorResults: nestedLocatorResults,
 		};
