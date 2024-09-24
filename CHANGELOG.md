@@ -1,5 +1,11 @@
 # pomwright
 
+## 1.1.1
+
+### Patch Changes
+
+- [#29](https://github.com/DyHex/POMWright/pull/29) [`14b9bff`](https://github.com/DyHex/POMWright/commit/14b9bff99ec337a4d8b8940c9904620892faae3a) Thanks [@DyHex](https://github.com/DyHex)! - Exports ExtractFullUrlType, updates devDeps and adds additional keywords
+
 ## 1.1.0
 
 ### Minor Changes
