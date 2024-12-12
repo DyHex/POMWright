@@ -1,6 +1,7 @@
 import TestPage from "@page-object-models/testApp/with-options/pages/testPage.page";
 import Color from "@page-object-models/testApp/with-options/pages/testPath/[color]/color.page";
 import TestPath from "@page-object-models/testApp/with-options/pages/testPath/testPath.page";
+import TestFilters from "@page-object-models/testApp/with-options/pages/testfilters/testfilters.page";
 import { expect } from "@playwright/test";
 import { test as base } from "pomwright";
 
@@ -8,6 +9,7 @@ type fixtures = {
 	testPage: TestPage;
 	testPath: TestPath;
 	color: Color;
+	testFilters: TestFilters;
 };
 
 const test = base.extend<fixtures>({
@@ -24,6 +26,11 @@ const test = base.extend<fixtures>({
 	color: async ({ page, log }, use, testInfo) => {
 		const color = new Color(page, testInfo, log);
 		await use(color);
+	},
+
+	testFilters: async ({ page, log }, use, testInfo) => {
+		const testFilters = new TestFilters(page, testInfo, log);
+		await use(testFilters);
 	},
 });
 

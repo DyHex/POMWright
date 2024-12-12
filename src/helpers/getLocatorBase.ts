@@ -444,16 +444,19 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 				try {
 					const nextLocator = this.getBy.getLocator(currentSchema);
 
-					if (currentLocator) {
-						currentLocator = currentLocator.locator(nextLocator);
-						if (index != null) {
-							currentLocator = currentLocator.nth(index);
-						}
-					} else {
-						currentLocator = nextLocator;
-						if (index != null) {
-							currentLocator = currentLocator.nth(index);
-						}
+					currentLocator = currentLocator ? currentLocator.locator(nextLocator) : nextLocator;
+
+					if (currentSchema.locatorMethod !== GetByMethod.frameLocator && currentSchema.filter) {
+						currentLocator = currentLocator.filter({
+							has: currentSchema.filter.has,
+							hasNot: currentSchema.filter.hasNot,
+							hasNotText: currentSchema.filter.hasNotText,
+							hasText: currentSchema.filter.hasText,
+						});
+					}
+
+					if (index != null) {
+						currentLocator = currentLocator.nth(index);
 					}
 
 					if (this.log.isLogLevelEnabled("debug")) {

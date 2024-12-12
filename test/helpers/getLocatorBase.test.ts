@@ -1,4 +1,4 @@
-import { type Locator, type Page, type TestInfo } from "@playwright/test";
+import type { Locator, Page, TestInfo } from "@playwright/test";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { GetByMethod, GetLocatorBase, PlaywrightReportLogger } from "../../index";
 import type { ModifiedLocatorSchema } from "../../src/helpers/getLocatorBase";
@@ -121,11 +121,22 @@ describe("GetLocatorBase", () => {
 			title: "title",
 			titleOptions: { exact: true },
 			locator: ".class",
-			locatorOptions: { hasText: "text" },
+			locatorOptions: {
+				has: ".has" as unknown as Locator,
+				hasNot: ".hasNot" as unknown as Locator,
+				hasNotText: "hasNotText",
+				hasText: "hasText",
+			},
 			frameLocator: 'iframe[title="frame"]',
 			testId: "testId",
 			dataCy: "dataCy",
 			id: "id",
+			filter: {
+				has: ".has" as unknown as Locator,
+				hasNot: ".hasNot" as unknown as Locator,
+				hasNotText: "hasNotText",
+				hasText: "hasText",
+			},
 			locatorMethod: GetByMethod.locator,
 		};
 
@@ -137,7 +148,7 @@ describe("GetLocatorBase", () => {
 		expect(locatorSchema).toBeTypeOf("object");
 
 		const propertiesCount = Object.keys(locatorSchema).length;
-		expect(propertiesCount).toBe(25);
+		expect(propertiesCount).toBe(26);
 
 		expect(locatorSchema).toHaveProperty("locatorMethod");
 		expect(locatorSchema.locatorMethod).toBe(schema1.locatorMethod);
@@ -201,6 +212,10 @@ describe("GetLocatorBase", () => {
 
 		expect(locatorSchema).toHaveProperty("id");
 		expect(locatorSchema.id).toBe(schema1.id);
+
+		expect(locatorSchema).toHaveProperty("filter");
+		expect(locatorSchema.filter).toBeInstanceOf(Object);
+		expect(locatorSchema.filter).toEqual(schema1.locatorOptions);
 
 		expect(locatorSchema).toHaveProperty("update");
 		expect(locatorSchema.update).toBeInstanceOf(Function);
