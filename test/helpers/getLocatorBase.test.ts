@@ -427,9 +427,7 @@ describe("GetLocatorBase", () => {
 			locatorMethod: GetByMethod.locator,
 		};
 
-		console.log("locatorSchema_A:\n", locatorSchema_A);
 		locatorSchema_A.update(newSchema);
-		console.log("locatorSchema_A updated:\n", locatorSchema_A);
 		expect(Object.keys(locatorSchema_A).length).toBe(28);
 		expect(locatorSchema_A).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema_A.schemasMap.get(path)).toEqual(locatorSchema_A);
