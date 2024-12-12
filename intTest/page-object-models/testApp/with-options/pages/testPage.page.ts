@@ -2,8 +2,8 @@ import {
 	type LocatorSchemaPath,
 	initLocatorSchemas,
 } from "@page-object-models/testApp/without-options/pages/testPage.locatorSchema"; // same page, same locator schema
-import { type Page, type TestInfo } from "@playwright/test";
-import { PlaywrightReportLogger } from "pomwright";
+import type { Page, TestInfo } from "@playwright/test";
+import type { PlaywrightReportLogger } from "pomwright";
 import BaseWithOptions from "../base/baseWithOptions.page";
 
 // Note, if BasePageOptions aren't specified, default options are used

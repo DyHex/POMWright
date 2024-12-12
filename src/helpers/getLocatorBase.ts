@@ -5,6 +5,13 @@ import { GetByMethod, type LocatorSchema, getLocatorSchemaDummy } from "./locato
 import type { PlaywrightReportLogger } from "./playwrightReportLogger";
 export { GetByMethod };
 
+type FilterEntry = {
+	has?: Locator;
+	hasNot?: Locator;
+	hasNotText?: string | RegExp;
+	hasText?: string | RegExp;
+};
+
 // Type representing properties of a LocatorSchema that can be updated, excluding the locatorSchemaPath.
 export type UpdatableLocatorSchemaProperties = Omit<LocatorSchema, "locatorSchemaPath">;
 
@@ -18,6 +25,11 @@ interface WithUpdatesMethod {
 	updates(indexedUpdates: {
 		[index: number]: Partial<UpdatableLocatorSchemaProperties> | null;
 	}): LocatorSchemaWithMethods;
+}
+
+// Interface defining a method to apply the locator.filter method to a given LocatorSchema when building a nested locator.
+interface WithAddFilterMethod {
+	addFilter(locatorSchemaPath: string, filterData: FilterEntry): LocatorSchemaWithMethods;
 }
 
 // Interface defining a method to get a nested locator based on provided indices.
@@ -34,9 +46,11 @@ interface WithGetLocatorMethod {
 export type LocatorSchemaWithMethods = LocatorSchema &
 	WithUpdateMethod &
 	WithUpdatesMethod &
+	WithAddFilterMethod &
 	WithGetNestedLocatorMethod &
 	WithGetLocatorMethod & {
 		schemasMap: Map<string, LocatorSchema>;
+		filterMap: Map<string, FilterEntry[]>;
 	};
 
 // Interface representing a modified locator schema, excluding the locatorSchemaPath.
@@ -48,11 +62,13 @@ type PathIndexPairs = { path: string; index?: number }[];
 const REQUIRED_PROPERTIES_FOR_LOCATOR_SCHEMA_WITH_METHODS = [
 	"update",
 	"updates",
+	"addFilter",
 	"getNestedLocator",
 	"getLocator",
 	"locatorSchemaPath",
 	"locatorMethod",
 	"schemasMap",
+	"filterMap",
 ];
 
 /**
@@ -63,8 +79,8 @@ const REQUIRED_PROPERTIES_FOR_LOCATOR_SCHEMA_WITH_METHODS = [
  */
 export class GetLocatorBase<LocatorSchemaPathType extends string> {
 	private getBy: GetBy;
-
 	private locatorSchemas: Map<LocatorSchemaPathType, () => LocatorSchema>;
+
 	/**
 	 * Initializes the GetLocatorBase class with a page object class and a logger.
 	 */
@@ -84,6 +100,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		const schemasMap = this.collectDeepCopies(locatorSchemaPath, pathIndexPairs);
 		const locatorSchemaCopy = schemasMap.get(locatorSchemaPath) as LocatorSchemaWithMethods;
 		locatorSchemaCopy.schemasMap = schemasMap;
+		locatorSchemaCopy.filterMap = new Map<string, FilterEntry[]>(); // Initialize the filterMap
 
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const self = this; // the update and updates functions need locatorSchemaCopy 'this' context
@@ -128,6 +145,26 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		};
 
 		/**
+		 * The equivalent of the Playwright locator.filter() method
+		 * - This method is used for filtering the specified locator based on the provided filterData.
+		 */
+		locatorSchemaCopy.addFilter = function (
+			this: LocatorSchemaWithMethods,
+			locatorSchemaPath: string,
+			filterData: FilterEntry,
+		) {
+			if (!this.filterMap) {
+				this.filterMap = new Map<string, FilterEntry[]>();
+			}
+
+			const existingFilters = this.filterMap.get(locatorSchemaPath) || [];
+			existingFilters.push(filterData);
+			this.filterMap.set(locatorSchemaPath, existingFilters);
+
+			return this;
+		};
+
+		/**
 		 * getNestedLocator(indices?: { [key: number]: number | null } | null)
 		 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
 		 * - Can be chained after the update and updates methods, getNestedLocator will end the chain.
@@ -136,7 +173,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 		 * - Returns a promise that resolves to the nested locator.
 		 */
 		locatorSchemaCopy.getNestedLocator = async (indices?: Record<number, number>) => {
-			return await this.buildNestedLocator(locatorSchemaPath, schemasMap, indices);
+			return await this.buildNestedLocator(locatorSchemaPath, schemasMap, locatorSchemaCopy.filterMap, indices);
 		};
 
 		/**
@@ -422,6 +459,7 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 	protected buildNestedLocator = async (
 		locatorSchemaPath: LocatorSchemaPathType,
 		schemasMap: Map<string, LocatorSchema>,
+		filterMap: Map<string, FilterEntry[]>,
 		indices: Record<number, number> = {},
 	): Promise<Locator> => {
 		return (await test.step(`${this.pageObjectClass.pocName}: Build Nested Locator`, async () => {
@@ -453,6 +491,19 @@ export class GetLocatorBase<LocatorSchemaPathType extends string> {
 							hasNotText: currentSchema.filter.hasNotText,
 							hasText: currentSchema.filter.hasText,
 						});
+					}
+
+					// Apply additional filters from the filterMap
+					const filterEntries = filterMap.get(path);
+					if (filterEntries) {
+						for (const filterData of filterEntries) {
+							currentLocator = currentLocator.filter({
+								has: filterData.has,
+								hasNot: filterData.hasNot,
+								hasNotText: filterData.hasNotText,
+								hasText: filterData.hasText,
+							});
+						}
 					}
 
 					if (index != null) {

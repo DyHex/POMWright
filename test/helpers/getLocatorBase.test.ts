@@ -148,7 +148,7 @@ describe("GetLocatorBase", () => {
 		expect(locatorSchema).toBeTypeOf("object");
 
 		const propertiesCount = Object.keys(locatorSchema).length;
-		expect(propertiesCount).toBe(26);
+		expect(propertiesCount).toBe(28);
 
 		expect(locatorSchema).toHaveProperty("locatorMethod");
 		expect(locatorSchema.locatorMethod).toBe(schema1.locatorMethod);
@@ -215,7 +215,10 @@ describe("GetLocatorBase", () => {
 
 		expect(locatorSchema).toHaveProperty("filter");
 		expect(locatorSchema.filter).toBeInstanceOf(Object);
-		expect(locatorSchema.filter).toEqual(schema1.locatorOptions);
+		expect(locatorSchema.filter).toEqual(schema1.filter);
+
+		expect(locatorSchema).toHaveProperty("addFilter");
+		expect(locatorSchema.addFilter).toBeInstanceOf(Function);
 
 		expect(locatorSchema).toHaveProperty("update");
 		expect(locatorSchema.update).toBeInstanceOf(Function);
@@ -245,7 +248,7 @@ describe("GetLocatorBase", () => {
 		expect(schema0inMap?.locatorMethod).toBe(schema0.locatorMethod);
 		expect(schema0inMap?.locatorSchemaPath).toBe(path0);
 		const retrievedSchema0 = instance.getLocatorSchema(path0);
-		expect(Object.keys(retrievedSchema0).length).toBe(8);
+		expect(Object.keys(retrievedSchema0).length).toBe(10);
 		expect(retrievedSchema0).containSubset(schema0inMap);
 		expect(retrievedSchema0).toBe(retrievedSchema0.schemasMap.get(path0));
 	});
@@ -284,7 +287,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema = instance.getLocatorSchema(path);
 		expect(locatorSchema).toBeTruthy();
-		expect(Object.keys(locatorSchema).length).toBe(8);
+		expect(Object.keys(locatorSchema).length).toBe(10);
 		expect(locatorSchema).containSubset({ ...schema, locatorSchemaPath: path }); // should reflect test data
 		expect(locatorSchema.schemasMap.get(path)).toEqual(locatorSchema); // should reference itself
 
@@ -310,7 +313,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema = instance.getLocatorSchema(path);
 		expect(locatorSchema).toBeTruthy();
-		expect(Object.keys(locatorSchema).length).toBe(8);
+		expect(Object.keys(locatorSchema).length).toBe(10);
 		expect(locatorSchema).containSubset({ ...schema, locatorSchemaPath: path }); // should reflect test data
 		expect(locatorSchema.schemasMap.get(path)).toEqual(locatorSchema); // should reference itself
 
@@ -344,7 +347,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema_A = instance.getLocatorSchema(path1);
 		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(8);
+		expect(Object.keys(locatorSchema_A).length).toBe(10);
 		expect(locatorSchema_A).containSubset({ ...schema1, locatorSchemaPath: path1 }); // should reflect test data
 		expect(locatorSchema_A.schemasMap.get(path1)).toEqual(locatorSchema_A); // should reference itself
 
@@ -369,14 +372,14 @@ describe("GetLocatorBase", () => {
 		// Check that the original locatorSchema in getLocatorBase.locatorSchemas is still the same
 		const locatorSchema_C = instance.getLocatorSchema(path1);
 		expect(locatorSchema_C).toBeTruthy();
-		expect(Object.keys(locatorSchema_C).length).toBe(8);
+		expect(Object.keys(locatorSchema_C).length).toBe(10);
 		expect(locatorSchema_C).containSubset({ ...schema1, locatorSchemaPath: path1 }); // should reflect test data
 		expect(locatorSchema_C.schemasMap.get(path1)).toEqual(locatorSchema_C); // should reference itself
 
 		// Check that we can call .update() again and that the locatorSchema is updated correctly, again
 		locatorSchema_B.update({ locator: ".subClass" });
 		expect(locatorSchema_B).toBeTruthy();
-		expect(Object.keys(locatorSchema_B).length).toBe(8);
+		expect(Object.keys(locatorSchema_B).length).toBe(10);
 		expect(locatorSchema_B).containSubset({ ...schema1, locatorSchemaPath: path1 });
 		expect(locatorSchema_B.schemasMap.get(path1)).toEqual(locatorSchema_B);
 	});
@@ -394,7 +397,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema_A = instance.getLocatorSchema(path);
 		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(7);
+		expect(Object.keys(locatorSchema_A).length).toBe(9);
 		expect(locatorSchema_A).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema_A.schemasMap.get(path)).toEqual(locatorSchema_A);
 
@@ -417,16 +420,22 @@ describe("GetLocatorBase", () => {
 			testId: "testId",
 			dataCy: "dataCy",
 			id: "id",
+			filter: {
+				hasNotText: "hasNotText",
+				hasText: "text",
+			},
 			locatorMethod: GetByMethod.locator,
 		};
 
+		console.log("locatorSchema_A:\n", locatorSchema_A);
 		locatorSchema_A.update(newSchema);
-		expect(Object.keys(locatorSchema_A).length).toBe(25);
+		console.log("locatorSchema_A updated:\n", locatorSchema_A);
+		expect(Object.keys(locatorSchema_A).length).toBe(28);
 		expect(locatorSchema_A).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema_A.schemasMap.get(path)).toEqual(locatorSchema_A);
 
 		const locatorSchema_B = instance.getLocatorSchema(path).update(newSchema);
-		expect(Object.keys(locatorSchema_B).length).toBe(25);
+		expect(Object.keys(locatorSchema_B).length).toBe(28);
 		expect(locatorSchema_B).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema_B.schemasMap.get(path)).toEqual(locatorSchema_B);
 	});
@@ -452,7 +461,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema_A = instance.getLocatorSchema(path1);
 		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(8);
+		expect(Object.keys(locatorSchema_A).length).toBe(10);
 		expect(locatorSchema_A).containSubset({ ...schema1, locatorSchemaPath: path1 }); // should reflect test data
 		expect(locatorSchema_A.schemasMap.get(path1)).toEqual(locatorSchema_A); // should reference itself
 
@@ -489,7 +498,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema = instance.getLocatorSchema(path1);
 		expect(locatorSchema).toBeTruthy();
-		expect(Object.keys(locatorSchema).length).toBe(8);
+		expect(Object.keys(locatorSchema).length).toBe(10);
 		expect(locatorSchema).containSubset({ ...schema1, locatorSchemaPath: path1 }); // should reflect test data
 		expect(locatorSchema.schemasMap.get(path1)).toEqual(locatorSchema); // should reference itself
 
@@ -559,7 +568,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema = instance.getLocatorSchema(path6);
 		expect(locatorSchema).toBeTruthy();
-		expect(Object.keys(locatorSchema).length).toBe(8);
+		expect(Object.keys(locatorSchema).length).toBe(10);
 		expect(locatorSchema).containSubset({ ...schema6, locatorSchemaPath: path6 }); // should reflect test data
 		expect(locatorSchema.schemasMap.get(path6)).toEqual(locatorSchema); // should reference itself
 		expect(locatorSchema.schemasMap.size).toBe(7);
@@ -621,7 +630,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema_A = instance.getLocatorSchema(path1);
 		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(7);
+		expect(Object.keys(locatorSchema_A).length).toBe(9);
 		let path0LocatorSchema_A = locatorSchema_A.schemasMap.get(path0);
 		if (path0LocatorSchema_A) {
 			expect(Object.keys(path0LocatorSchema_A).length).toBe(2);
@@ -666,7 +675,7 @@ describe("GetLocatorBase", () => {
 		};
 
 		locatorSchema_A.updates({ 0: newSchema, 1: newSchema });
-		expect(Object.keys(locatorSchema_A).length).toBe(25);
+		expect(Object.keys(locatorSchema_A).length).toBe(27);
 		expect(locatorSchema_A).containSubset({ ...schema1, locatorSchemaPath: path1 });
 		expect(locatorSchema_A.schemasMap.get(path1)).toEqual(locatorSchema_A);
 		expect(locatorSchema_A.schemasMap.get(path0)).containSubset({ ...schema0, locatorSchemaPath: path0 });
@@ -678,7 +687,7 @@ describe("GetLocatorBase", () => {
 		}
 
 		const locatorSchema_B = instance.getLocatorSchema(path1).updates({ 0: newSchema, 1: newSchema });
-		expect(Object.keys(locatorSchema_B).length).toBe(25);
+		expect(Object.keys(locatorSchema_B).length).toBe(27);
 		expect(locatorSchema_B).containSubset({ ...schema1, locatorSchemaPath: path1 });
 		expect(locatorSchema_B.schemasMap.get(path1)).toEqual(locatorSchema_B);
 		const path0LocatorSchema_B = locatorSchema_B.schemasMap.get(path0);
@@ -704,7 +713,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema_A = instance.getLocatorSchema(path);
 		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(9);
+		expect(Object.keys(locatorSchema_A).length).toBe(11);
 		expect(locatorSchema_A).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema_A.schemasMap.get(path)).toEqual(locatorSchema_A);
 
@@ -746,7 +755,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema_A = instance.getLocatorSchema(path1);
 		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(9);
+		expect(Object.keys(locatorSchema_A).length).toBe(11);
 		expect(locatorSchema_A).containSubset({ ...schema1, locatorSchemaPath: path1 });
 		expect(locatorSchema_A.schemasMap.get(path1)).toEqual(locatorSchema_A);
 
@@ -784,7 +793,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema_A = instance.getLocatorSchema(path);
 		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(9);
+		expect(Object.keys(locatorSchema_A).length).toBe(11);
 		expect(locatorSchema_A).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema_A.schemasMap.get(path)).toEqual(locatorSchema_A);
 
@@ -818,7 +827,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema = instance.getLocatorSchema(path);
 		expect(locatorSchema).toBeTruthy();
-		expect(Object.keys(locatorSchema).length).toBe(9);
+		expect(Object.keys(locatorSchema).length).toBe(11);
 		expect(locatorSchema).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema.schemasMap.get(path)).toEqual(locatorSchema);
 
@@ -853,7 +862,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema = instance.getLocatorSchema(path);
 		expect(locatorSchema).toBeTruthy();
-		expect(Object.keys(locatorSchema).length).toBe(9);
+		expect(Object.keys(locatorSchema).length).toBe(11);
 		expect(locatorSchema).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema.schemasMap.get(path)).toEqual(locatorSchema);
 

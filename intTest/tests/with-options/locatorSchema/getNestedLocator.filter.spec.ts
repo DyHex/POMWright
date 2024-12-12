@@ -63,7 +63,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			.getLocatorSchema("fictional.filter@hasNotText.filter@hasText")
 			.update({ locatorMethod: GetByMethod.frameLocator });
 
-		expect(chainWithFilter.filter.hasText).toEqual("hasText");
+		expect.soft(chainWithFilter.filter.hasText).toEqual("hasText");
 
 		const chainedFrameLocator = await chainWithFilter.getNestedLocator();
 
@@ -101,9 +101,37 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 		);
 	});
 
-	test("filter with has: locatoasdasdr", async ({ testFilters }) => {
-		const reset = testFilters.getLocatorSchema("body.section@playground.button@reset");
+	test("filter with hasText", async ({ testFilters }) => {
+		await testFilters.page.goto(testFilters.fullUrl);
 
-		console.log(reset);
+		const playgroundRed = await testFilters.getNestedLocator("body.section@playground.button@red");
+		await playgroundRed.click();
+
+		const reset0 = await testFilters.getNestedLocator("body.section@playground.button@reset");
+
+		expect(`${reset0}`).toEqual(
+			"locator('body').locator(locator('section')).filter({ hasText: /Playground/i }).locator(getByRole('button', { name: 'Reset Color' }))",
+		);
+
+		const reset1 = await testFilters
+			.getLocatorSchema("body.section@playground.button@reset")
+			.addFilter("body.section@playground", { hasText: /Primary Colors/i })
+			.addFilter("body.section@playground.button@reset", { hasText: /Reset/i })
+			.addFilter("body.section@playground.button@reset", { hasText: /Color/i })
+			.getNestedLocator({ 1: 0, 2: 0 });
+
+		expect(`${reset1}`).toEqual(
+			"locator('body').locator(locator('section')).filter({ hasText: /Playground/i }).filter({ hasText: /Primary Colors/i }).first().locator(getByRole('button', { name: 'Reset Color' })).filter({ hasText: /Reset/i }).filter({ hasText: /Color/i }).first()",
+		);
+
+		const reset2 = await testFilters.getNestedLocator("body.section@playground.button@reset");
+
+		expect(`${reset2}`).toEqual(
+			"locator('body').locator(locator('section')).filter({ hasText: /Playground/i }).locator(getByRole('button', { name: 'Reset Color' }))",
+		);
+
+		await reset1.click();
+		await playgroundRed.click();
+		await reset2.click();
 	});
 });

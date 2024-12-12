@@ -1,5 +1,5 @@
-import { type Page, type TestInfo } from "@playwright/test";
-import { BasePage, GetByMethod, GetLocatorBase, PlaywrightReportLogger } from "../index";
+import type { Page, TestInfo } from "@playwright/test";
+import { BasePage, GetByMethod, type GetLocatorBase, type PlaywrightReportLogger } from "../index";
 
 export type LocatorSchemaPath =
 	| "getByRole"
