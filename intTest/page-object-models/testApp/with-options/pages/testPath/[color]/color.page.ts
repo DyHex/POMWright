@@ -1,7 +1,7 @@
 import { test } from "@fixtures/withOptions";
 import BaseWithOptions from "@page-object-models/testApp/with-options/base/baseWithOptions.page";
 import { type Page, type TestInfo, expect } from "@playwright/test";
-import { PlaywrightReportLogger } from "pomwright";
+import type { PlaywrightReportLogger } from "pomwright";
 import { type LocatorSchemaPath, initLocatorSchemas } from "./color.locatorSchema";
 
 // By providing the urlOptions, the urlPath property now has RegExp type instead of string type (default) for this POC
