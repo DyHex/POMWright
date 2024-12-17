@@ -157,7 +157,14 @@ export abstract class BasePage<
 		throw new Error("Invalid baseUrl or urlPath types. Expected string or RegExp.");
 	}
 
+	public async getNestedLocator(
+		locatorSchemaPath: LocatorSchemaPathType,
+		subPathIndices?: { [K in LocatorSchemaPathType as string]: number | null },
+	): Promise<Locator>;
+
 	/**
+	 * @deprecated Use { LocatorSchemaPath: index } instead of {4:2}, i.e. subPath-based keys instead of indices.
+	 *
 	 * getNestedLocator:
 	 * Delegates to getLocatorSchema(...).getNestedLocator(indices).
 	 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
@@ -166,12 +173,31 @@ export abstract class BasePage<
 	 * to be nested given by sub-paths (indices correspond to last "word" of a sub-path).
 	 * - Returns a promise that resolves to the nested locator.
 	 */
-	public getNestedLocator = async (
+	public async getNestedLocator(
 		locatorSchemaPath: LocatorSchemaPathType,
-		indices?: Record<number, number>,
-	): Promise<Locator> => {
-		return await this.getLocatorSchema(locatorSchemaPath).getNestedLocator(indices);
-	};
+		indices?: { [key: number]: number | null } | null,
+	): Promise<Locator>;
+
+	public async getNestedLocator(
+		locatorSchemaPath: LocatorSchemaPathType,
+		arg?: { [K in LocatorSchemaPathType]?: number | null } | { [key: number]: number | null },
+	): Promise<Locator> {
+		// If no arg or empty
+		if (!arg || Object.keys(arg).length === 0) {
+			return await this.getLocatorSchema(locatorSchemaPath).getNestedLocator({});
+		}
+
+		const keys = Object.keys(arg);
+		const isNumberKey = keys.every((k) => /^\d+$/.test(k));
+		if (isNumberKey) {
+			// Deprecated old usage with numeric keys
+			const numericIndices = arg as { [key: number]: number | null };
+			return await this.getLocatorSchema(locatorSchemaPath).getNestedLocator(numericIndices);
+		}
+		// New usage: keys are subPaths
+		const subPathIndices = arg as { [subPath: string]: number | null };
+		return await this.getLocatorSchema(locatorSchemaPath).getNestedLocator(subPathIndices);
+	}
 
 	/**
 	 * getLocator:

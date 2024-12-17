@@ -115,17 +115,98 @@ export type LocatorSchemaWithMethods<
 > = LocatorSchema & {
 	schemasMap: Map<string, LocatorSchema>;
 	filterMap: Map<string, FilterEntry[]>;
+
+	/**
+	 * New update method:
+	 * Allows updating any schema in the chain by specifying the subPath directly.
+	 * Similar to addFilter, ensures compile-time suggestions for valid sub-paths.
+	 *
+	 * If you want to update multiple schemas, chain multiple .update() calls.
+	 */
+	update(
+		subPath: SubPaths<LocatorSchemaPathType, LocatorSubstring>,
+		updates: Partial<UpdatableLocatorSchemaProperties>,
+	): LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>;
+
+	/**
+	 * @deprecated This update method takes one argument and only updates the LocatorSchema which the full LocatorSchemaPath resolves to.
+	 * Use the new `.update(subPath, updates)` method instead.
+	 *
+	 * update(updates: Partial< UpdatableLocatorSchemaProperties >)
+	 * - Allows updating the properties of the LocatorSchema which the full LocatorSchemaPath resolves to.
+	 * - This method is used for modifying the current schema without affecting the original schema.
+	 * - Takes a "LocatorSchema" object which omits the locatorSchemaPath parameter as input, the parameters provided
+	 * will overwrite the corresponding property in the current schema.
+	 * - Returns the updated deep copy of the "LocatorSchema" with methods.
+	 * - Can be chained with the update and updates methods, and the getLocator or getNestedLocator method.
+	 */
 	update(
 		updates: Partial<UpdatableLocatorSchemaProperties>,
 	): LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>;
+
+	/**
+	 * @deprecated This updates method uses indices to identify which schema to update.
+	 * Use the new `.update(subPath, updates)` method instead, chain the method for each update if multiple.
+	 *
+	 * updates(indexedUpdates: { [index: number]: Partial< UpdatableLocatorSchemaProperties > | null }):
+	 * - Similar to update, but allows updating any locator in the nested chain (all sub-paths of the LocatorSchemaPath).
+	 * - This method can modify the current deep copy of each LocatorSchema that each sub-path resolves to without
+	 * affecting the original schemas
+	 * - Takes an object where keys represent the index of the last "word" of a sub-path, where the value per key is a
+	 * "LocatorSchema" object which omits the locatorSchemaPath parameter as input, the parameters provided will overwrite
+	 * the corresponding property in the given schema.
+	 * - Returns the updated deep copy of the LocatorSchema object with methods and its own updated deep copies for all
+	 * LocatorSchema each sub-path resolved to.
+	 * - Can be chained with the update and updates methods, and the getLocator or getNestedLocator method.
+	 */
 	updates(indexedUpdates: {
 		[index: number]: Partial<UpdatableLocatorSchemaProperties> | null;
 	}): LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>;
+
+	/**
+	 * The equivalent of the Playwright locator.filter() method, the addFilter method is chainable on .getLocatorSchema.
+	 * It will search for a particular string/RegExp/Locator somewhere inside the element, possibly in a descendant element,
+	 * case-insensitively (string).
+	 * - The filterData object can contain the following properties:
+	 *   - has: Locator - Filters elements that contain a certain element.
+	 *   - hasNot: Locator - Filters elements that do not contain a certain element.
+	 *   - hasText: string | RegExp - Filters elements based on text content.
+	 *   - hasNotText: string | RegExp - Filters elements that do not contain a certain text content.
+	 * If you define multiple filterData properties in a single addFilter call instead of multiple addFilter calls, they
+	 * will be chained after each other. If you want to add multiple filters of the same type, you must chain multiple addFilter calls.
+	 */
 	addFilter(
 		subPath: SubPaths<LocatorSchemaPathType, LocatorSubstring>,
 		filterData: FilterEntry,
 	): LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>;
+
+	/**
+	 * New getNestedLocator signature using subPath keys
+	 * Maps each chosen subPath to an index for .nth() calls on that sub-locator.
+	 */
+	getNestedLocator(
+		subPathIndices?: { [K in SubPaths<LocatorSchemaPathType, LocatorSubstring>]?: number | null },
+	): Promise<Locator>;
+
+	/**
+	 * @deprecated Use getNestedLocator({ LocatorSchemaPath: index }) instead of number-based indexing.
+	 *
+	 * getNestedLocator(indices?: { [key: number]: number | null } | null)
+	 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
+	 * - Can be chained after the update and updates methods, getNestedLocator will end the chain.
+	 * - The optional parameter of the method takes an object with 0-based indices "{0: 0, 3: 1}" for one or more locators
+	 * to be nested given by sub-paths (indices correspond to last "word" of a sub-path).
+	 * - Returns a promise that resolves to the nested locator.
+	 */
 	getNestedLocator(indices?: { [key: number]: number | null }): Promise<Locator>;
+
+	/**
+	 * getLocator()
+	 * - Asynchronously retrieves a locator based on the current LocatorSchema. This method does not perform nesting,
+	 * and will return the locator for which the full LocatorSchemaPath resolves to, provided by getLocatorSchema("...")
+	 * - Can be chained after the update and updates methods, getLocator will end the chain.
+	 * - Returns a promise that resolves to the locator.
+	 */
 	getLocator(): Promise<Locator>;
 };
 
@@ -232,6 +313,30 @@ export class GetLocatorBase<
 
 	private isLocatorSchemaWithMethods(schema: LocatorSchema): boolean {
 		return REQUIRED_PROPERTIES_FOR_LOCATOR_SCHEMA_WITH_METHODS.every((p) => p in schema);
+	}
+
+	/**
+	 * applyUpdateToSubPath:
+	 * Applies updates to a specific sub-path schema within schemasMap.
+	 * Similar to applyUpdate, but we locate the sub-path schema directly by its path.
+	 */
+	public applyUpdateToSubPath(
+		schemasMap: Map<string, LocatorSchema>,
+		subPath: LocatorSchemaPathType,
+		updates: Partial<UpdatableLocatorSchemaProperties>,
+	) {
+		const schema = schemasMap.get(subPath);
+		if (!schema) {
+			throw new Error(`No schema found for sub-path: '${subPath}'`);
+		}
+
+		const updatedSchema = this.deepMerge(schema, updates);
+		if (this.isLocatorSchemaWithMethods(schema)) {
+			Object.assign(schema, updatedSchema);
+		} else {
+			// For partial LocatorSchema, just replace it in the map
+			schemasMap.set(subPath, updatedSchema);
+		}
 	}
 
 	/**
@@ -653,32 +758,32 @@ class WithMethodsClass<
 
 		const self = this; // the update and updates functions need locatorSchemaCopy 'this' context
 
-		/**
-		 * update(updates: Partial< UpdatableLocatorSchemaProperties >)
-		 * - Allows updating the properties of the LocatorSchema which the full LocatorSchemaPath resolves to.
-		 * - This method is used for modifying the current schema without affecting the original schema.
-		 * - Takes a "LocatorSchema" object which omits the locatorSchemaPath parameter as input, the parameters provided
-		 * will overwrite the corresponding property in the current schema.
-		 * - Returns the updated deep copy of the "LocatorSchema" with methods.
-		 * - Can be chained with the update and updates methods, and the getLocator or getNestedLocator method.
-		 */
-		locatorSchemaCopy.update = function (updates: Partial<UpdatableLocatorSchemaProperties>) {
-			self.applyUpdate(self.schemasMap, self.locatorSchemaPath as LocatorSchemaPathType, updates);
-			return this;
-		};
+		locatorSchemaCopy.update = function (
+			this: LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>,
+			a: SubPaths<LocatorSchemaPathType, LocatorSubstring> | Partial<UpdatableLocatorSchemaProperties>,
+			b?: Partial<UpdatableLocatorSchemaProperties>,
+		) {
+			const fullPath = this.locatorSchemaPath as string;
+			if (b === undefined) {
+				// Called as update(updates)
+				const updates = a as Partial<UpdatableLocatorSchemaProperties>;
+				// Old behavior or default to applying updates to full locatorSchemaPath
+				self.applyUpdate(self.schemasMap, self.locatorSchemaPath as LocatorSchemaPathType, updates);
+			} else {
+				// Called as update(subPath, updates)
+				const subPath = a as SubPaths<LocatorSchemaPathType, LocatorSubstring>;
+				const updates = b as Partial<UpdatableLocatorSchemaProperties>;
 
-		/**
-		 * updates(indexedUpdates: { [index: number]: Partial< UpdatableLocatorSchemaProperties > | null }):
-		 * - Similar to update, but allows updating any locator in the nested chain (all sub-paths of the LocatorSchemaPath).
-		 * - This method can modify the current deep copy of each LocatorSchema that each sub-path resolves to without
-		 * affecting the original schemas
-		 * - Takes an object where keys represent the index of the last "word" of a sub-path, where the value per key is a
-		 * "LocatorSchema" object which omits the locatorSchemaPath parameter as input, the parameters provided will overwrite
-		 * the corresponding property in the given schema.
-		 * - Returns the updated deep copy of the LocatorSchema object with methods and its own updated deep copies for all
-		 * LocatorSchema each sub-path resolved to.
-		 * - Can be chained with the update and updates methods, and the getLocator or getNestedLocator method.
-		 */
+				if (!(subPath === fullPath || fullPath.startsWith(`${subPath}.`))) {
+					throw new Error(`Invalid sub-path: '${subPath}' is not a valid sub-path of '${fullPath}'.`);
+				}
+
+				self.applyUpdateToSubPath(self.schemasMap, subPath as LocatorSchemaPathType, updates);
+			}
+
+			return this;
+		} as LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>["update"];
+
 		locatorSchemaCopy.updates = function (indexedUpdates: {
 			[index: number]: Partial<UpdatableLocatorSchemaProperties>;
 		}) {
@@ -687,10 +792,6 @@ class WithMethodsClass<
 			return this;
 		};
 
-		/**
-		 * The equivalent of the Playwright locator.filter() method
-		 * - This method is used for filtering the specified locator based on the provided filterData.
-		 */
 		locatorSchemaCopy.addFilter = function (
 			subPath: SubPaths<LocatorSchemaPathType, LocatorSubstring>,
 			filterData: FilterEntry,
@@ -720,12 +821,69 @@ class WithMethodsClass<
 		 * to be nested given by sub-paths (indices correspond to last "word" of a sub-path).
 		 * - Returns a promise that resolves to the nested locator.
 		 */
-		locatorSchemaCopy.getNestedLocator = async (indices?: Record<number, number>) => {
+		locatorSchemaCopy.getNestedLocator = async function (
+			this: LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>,
+			arg?: Record<string | number, number | null>,
+		) {
+			// If no arg provided or empty object, no indexing required
+			if (!arg || Object.keys(arg).length === 0) {
+				return await self.buildNestedLocator(
+					self.locatorSchemaPath as LocatorSchemaPathType,
+					self.schemasMap,
+					this.filterMap,
+					{}, // no indices
+				);
+			}
+
+			// Determine if we are using old number-based indexing or new subPath-based indexing
+			const keys = Object.keys(arg);
+			const isNumberKey = keys.every((k) => /^\d+$/.test(k)); // all keys are numeric
+			if (isNumberKey) {
+				// Deprecated old usage
+				const numericIndices = arg as Record<number, number>;
+				return await self.buildNestedLocator(
+					self.locatorSchemaPath as LocatorSchemaPathType,
+					self.schemasMap,
+					this.filterMap,
+					numericIndices,
+				);
+			}
+			// New usage: keys are subPaths
+			const subPathIndices = arg as { [subPath: string]: number | null };
+
+			// Validate and convert subPathIndices to numeric indices
+			const pathIndexPairs = self.extractPathsFromSchema(self.locatorSchemaPath as string);
+
+			// Build a map from path string to its index in the chain
+			const pathToIndexMap: Record<string, number> = {};
+			pathIndexPairs.forEach((pair, i) => {
+				pathToIndexMap[pair.path] = i;
+			});
+
+			const numericIndices: Record<number, number> = {};
+
+			for (const [subPath, index] of Object.entries(subPathIndices)) {
+				// subPath must be a prefix or equal to fullPath
+				const fullPath = this.locatorSchemaPath as string;
+				if (!(subPath === fullPath || fullPath.startsWith(`${subPath}.`))) {
+					throw new Error(`Invalid sub-path: '${subPath}' is not a valid sub-path of '${fullPath}'.`);
+				}
+
+				const numericIndex = pathToIndexMap[subPath];
+				if (numericIndex === undefined) {
+					throw new Error(`Sub-path '${subPath}' not found in the locator chain for '${fullPath}'.`);
+				}
+
+				if (index !== null) {
+					numericIndices[numericIndex] = index;
+				}
+			}
+
 			return await self.buildNestedLocator(
 				self.locatorSchemaPath as LocatorSchemaPathType,
 				self.schemasMap,
-				locatorSchemaCopy.filterMap,
-				indices ?? {},
+				this.filterMap,
+				numericIndices,
 			);
 		};
 
