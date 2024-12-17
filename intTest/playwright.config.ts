@@ -16,17 +16,17 @@ export default defineConfig({
 	},
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 2 : 1,
+	retries: process.env.CI ? 1 : 1,
 	workers: process.env.CI ? "50%" : 4,
 	reporter: process.env.CI
 		? [
 				["html", { open: "never" }],
 				["github", { printSteps: false }],
-		  ]
+			]
 		: [
 				["html", { open: "on-failure" }],
 				["list", { printSteps: false }],
-		  ],
+			],
 	use: {
 		actionTimeout: 10_000,
 		navigationTimeout: 30_000,
@@ -68,7 +68,7 @@ export default defineConfig({
 					// stdout: "pipe",
 					// stderr: "pipe",
 				},
-		  ]
+			]
 		: [
 				{
 					command: "pnpm start",
@@ -79,5 +79,5 @@ export default defineConfig({
 					// stdout: "pipe",
 					// stderr: "pipe",
 				},
-		  ],
+			],
 });
