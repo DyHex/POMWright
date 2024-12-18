@@ -22,7 +22,7 @@ type FilterEntry = {
  * For example: ExtractSubPaths<"body.section@playground.button@reset"> produces:
  * "body" | "body.section@playground" | "body.section@playground.button@reset"
  */
-type ExtractSubPaths<Path extends string> = Path extends `${infer Head}.${infer Tail}`
+export type ExtractSubPaths<Path extends string> = Path extends `${infer Head}.${infer Tail}`
 	? Head | `${Head}.${ExtractSubPaths<Tail>}`
 	: Path;
 
@@ -34,7 +34,7 @@ type ExtractSubPaths<Path extends string> = Path extends `${infer Head}.${infer 
  * SubPaths returns only "body", "body.section@playground", and "body.section@playground.button@reset"
  * from the entire union of LocatorSchemaPathType, if they exist.
  */
-type SubPaths<
+export type SubPaths<
 	LocatorSchemaPathType extends string,
 	LocatorSubstring extends LocatorSchemaPathType | undefined,
 > = LocatorSubstring extends string
@@ -182,7 +182,18 @@ export type LocatorSchemaWithMethods<
 
 	/**
 	 * New getNestedLocator signature using subPath keys
-	 * Maps each chosen subPath to an index for .nth() calls on that sub-locator.
+	 * Maps each chosen subPath to an index for .nth() on the chained locator created from the LocatorSchema.
+	 * This method is preferred over the number-based indexing for clarity and type safety.
+	 *
+	 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
+	 * - Can be chained once after the update and addFilter methods, getNestedLocator will end the chain.
+	 * - The optional parameter of the method takes an object with subPaths and index for nth
+	 * - Returns a promise that resolves to the nested locator.
+	 *
+	 * @example
+	 * // Returns a locator for the button nested in the first section, which is nested in the main element.
+	 * const button = await page.getNestedLocator("main.section.button@submit", { "main.section": 0 });
+	 * // We can also set the index for multiple subPaths, e.g. { "main.section": 2, "main.section.button@submit": 0 }
 	 */
 	getNestedLocator(
 		subPathIndices?: { [K in SubPaths<LocatorSchemaPathType, LocatorSubstring>]?: number | null },
@@ -798,9 +809,15 @@ class WithMethodsClass<
 		) {
 			const fullPath = this.locatorSchemaPath as string;
 
-			// Check if subPath is exactly fullPath or if fullPath starts with "subPath."
-			if (!(subPath === fullPath || fullPath.startsWith(`${subPath}.`))) {
-				throw new Error(`Invalid sub-path: '${subPath}' is not a valid sub-path of '${fullPath}'.`);
+			if (!self.schemasMap.has(subPath)) {
+				const allowedPaths = self
+					.extractPathsFromSchema(fullPath)
+					.map((p) => p.path)
+					.filter((path) => self.schemasMap.has(path));
+
+				throw new Error(
+					`Invalid sub-path '${subPath}' in addFilter. Allowed sub-paths are:\n${allowedPaths.join(",\n")}`,
+				);
 			}
 
 			if (!this.filterMap) {
@@ -810,6 +827,7 @@ class WithMethodsClass<
 			const existingFilters = this.filterMap.get(subPath) || [];
 			existingFilters.push(filterData);
 			this.filterMap.set(subPath, existingFilters);
+
 			return this;
 		};
 
@@ -823,62 +841,86 @@ class WithMethodsClass<
 		 */
 		locatorSchemaCopy.getNestedLocator = async function (
 			this: LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>,
-			arg?: Record<string | number, number | null>,
-		) {
-			// If no arg provided or empty object, no indexing required
+			arg?:
+				| { [K in SubPaths<LocatorSchemaPathType, LocatorSubstring>]?: number | null }
+				| { [key: number]: number | null }
+				| null,
+		): Promise<Locator> {
+			// Validate argument type
+			if (arg !== undefined && arg !== null && typeof arg !== "object") {
+				throw new Error("Invalid argument passed to getNestedLocator: Expected an object or null.");
+			}
+
+			// If no argument provided, resolve the locator without indexing
 			if (!arg || Object.keys(arg).length === 0) {
 				return await self.buildNestedLocator(
 					self.locatorSchemaPath as LocatorSchemaPathType,
 					self.schemasMap,
 					this.filterMap,
-					{}, // no indices
+					{},
 				);
 			}
 
-			// Determine if we are using old number-based indexing or new subPath-based indexing
+			// Determine whether the keys are numeric (legacy) or sub-path strings
 			const keys = Object.keys(arg);
-			const isNumberKey = keys.every((k) => /^\d+$/.test(k)); // all keys are numeric
-			if (isNumberKey) {
-				// Deprecated old usage
-				const numericIndices = arg as Record<number, number>;
-				return await self.buildNestedLocator(
-					self.locatorSchemaPath as LocatorSchemaPathType,
-					self.schemasMap,
-					this.filterMap,
-					numericIndices,
-				);
-			}
-			// New usage: keys are subPaths
-			const subPathIndices = arg as { [subPath: string]: number | null };
+			const isNumberKey = keys.every((key) => /^\d+$/.test(key)); // All keys are numeric
 
-			// Validate and convert subPathIndices to numeric indices
-			const pathIndexPairs = self.extractPathsFromSchema(self.locatorSchemaPath as string);
-
-			// Build a map from path string to its index in the chain
-			const pathToIndexMap: Record<string, number> = {};
-			pathIndexPairs.forEach((pair, i) => {
-				pathToIndexMap[pair.path] = i;
-			});
-
+			// Prepare numericIndices for buildNestedLocator
 			const numericIndices: Record<number, number> = {};
 
-			for (const [subPath, index] of Object.entries(subPathIndices)) {
-				// subPath must be a prefix or equal to fullPath
-				const fullPath = this.locatorSchemaPath as string;
-				if (!(subPath === fullPath || fullPath.startsWith(`${subPath}.`))) {
-					throw new Error(`Invalid sub-path: '${subPath}' is not a valid sub-path of '${fullPath}'.`);
+			if (isNumberKey) {
+				// Handle legacy numeric indexing
+				for (const [key, value] of Object.entries(arg)) {
+					const index = Number(key);
+					if (typeof value === "number" && value >= 0) {
+						numericIndices[index] = value;
+					} else if (value !== null) {
+						throw new Error(`Invalid index value at key '${key}': Expected a positive number or null.`);
+					}
 				}
+			} else {
+				// Handle new subPath-based indexing
+				const pathIndexPairs = self.extractPathsFromSchema(self.locatorSchemaPath as string);
 
-				const numericIndex = pathToIndexMap[subPath];
-				if (numericIndex === undefined) {
-					throw new Error(`Sub-path '${subPath}' not found in the locator chain for '${fullPath}'.`);
-				}
+				// Precompute a lookup map for sub-paths -> numeric indices
+				const pathToIndexMap = new Map<string, number>(pathIndexPairs.map((pair, idx) => [pair.path, idx]));
 
-				if (index !== null) {
-					numericIndices[numericIndex] = index;
+				// Validate each sub-path key and populate numericIndices
+				for (const [subPath, value] of Object.entries(arg)) {
+					// Cross-check against LocatorSchemaPathType (full valid paths)
+					if (!self.schemasMap.has(subPath)) {
+						// Extract valid paths only when an error is detected
+						const validPaths = Array.from(self.schemasMap.keys());
+						throw new Error(
+							`Invalid sub-path '${subPath}' in getNestedLocator. Allowed sub-paths are:\n${validPaths.join(",\n")}`,
+						);
+					}
+
+					// Check if sub-path exists in pathToIndexMap (valid within this locator chain)
+					if (!pathToIndexMap.has(subPath)) {
+						const validPaths = pathIndexPairs.map((p) => p.path).filter((path) => self.schemasMap.has(path));
+						throw new Error(
+							`Invalid sub-path '${subPath}' in getNestedLocator. Allowed sub-paths are:\n${validPaths.join(",\n")}`,
+						);
+					}
+
+					const numericIndex = pathToIndexMap.get(subPath);
+
+					if (numericIndex === undefined) {
+						throw new Error(`Sub-path '${subPath}' not found in pathToIndexMap.`);
+					}
+
+					if (value !== null && (typeof value !== "number" || value < 0)) {
+						throw new Error(`Invalid index for sub-path '${subPath}': Expected a positive number or null.`);
+					}
+
+					if (value !== null) {
+						numericIndices[numericIndex] = value;
+					}
 				}
 			}
 
+			// Build and return the nested locator
 			return await self.buildNestedLocator(
 				self.locatorSchemaPath as LocatorSchemaPathType,
 				self.schemasMap,

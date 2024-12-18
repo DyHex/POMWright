@@ -1,5 +1,5 @@
 import { type Locator, type Page, type Selectors, type TestInfo, selectors } from "@playwright/test";
-import { GetLocatorBase } from "./helpers/getLocatorBase";
+import { GetLocatorBase, type SubPaths } from "./helpers/getLocatorBase";
 import type { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 import { SessionStorage } from "./helpers/sessionStorage.actions";
 import { createCypressIdEngine } from "./utils/selectorEngines";
@@ -157,18 +157,32 @@ export abstract class BasePage<
 		throw new Error("Invalid baseUrl or urlPath types. Expected string or RegExp.");
 	}
 
-	public async getNestedLocator(
-		locatorSchemaPath: LocatorSchemaPathType,
-		subPathIndices?: { [K in LocatorSchemaPathType as string]: number | null },
+	/**
+	 * getNestedLocator:
+	 * Delegates to getLocatorSchema(...).getNestedLocator({ [K in SubPaths<LocatorSchemaPathType, undefined>]?: number | null }})
+	 *
+	 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
+	 * - Can be chained once after the update and addFilter methods, getNestedLocator will end the chain.
+	 * - The optional parameter of the method takes an object with subPaths and index for nth
+	 * - Returns a promise that resolves to the nested locator.
+	 *
+	 * @example
+	 * // Returns a locator for the button nested in the first section, which is nested in the main element.
+	 * const button = await page.getNestedLocator("main.section.button@submit", { "main.section": 0 });
+	 * // We can also set the index for multiple subPaths, e.g. { "main.section": 2, "main.section.button@submit": 0 }
+	 */
+	public async getNestedLocator<P extends LocatorSchemaPathType>(
+		locatorSchemaPath: P,
+		subPathIndices?: { [K in SubPaths<LocatorSchemaPathType, P>]?: number | null },
 	): Promise<Locator>;
 
 	/**
-	 * @deprecated Use { LocatorSchemaPath: index } instead of {4:2}, i.e. subPath-based keys instead of indices.
+	 * @deprecated Use { SubPaths: index } instead of {4:2}, i.e. subPath-based keys instead of indices.
 	 *
 	 * getNestedLocator:
 	 * Delegates to getLocatorSchema(...).getNestedLocator(indices).
 	 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
-	 * - Can be chained after the update and updates methods, getNestedLocator will end the chain.
+	 * - Can be chained once after the update and addFilter methods, getNestedLocator will end the chain.
 	 * - The optional parameter of the method takes an object with 0-based indices "{0: 0, 3: 1}" for one or more locators
 	 * to be nested given by sub-paths (indices correspond to last "word" of a sub-path).
 	 * - Returns a promise that resolves to the nested locator.
@@ -178,25 +192,19 @@ export abstract class BasePage<
 		indices?: { [key: number]: number | null } | null,
 	): Promise<Locator>;
 
+	/**
+	 * Implementation of getNestedLocator.
+	 */
 	public async getNestedLocator(
 		locatorSchemaPath: LocatorSchemaPathType,
-		arg?: { [K in LocatorSchemaPathType]?: number | null } | { [key: number]: number | null },
+		subPathIndices?: { [K in SubPaths<LocatorSchemaPathType, typeof locatorSchemaPath>]?: number | null },
 	): Promise<Locator> {
-		// If no arg or empty
-		if (!arg || Object.keys(arg).length === 0) {
-			return await this.getLocatorSchema(locatorSchemaPath).getNestedLocator({});
-		}
-
-		const keys = Object.keys(arg);
-		const isNumberKey = keys.every((k) => /^\d+$/.test(k));
-		if (isNumberKey) {
-			// Deprecated old usage with numeric keys
-			const numericIndices = arg as { [key: number]: number | null };
-			return await this.getLocatorSchema(locatorSchemaPath).getNestedLocator(numericIndices);
-		}
-		// New usage: keys are subPaths
-		const subPathIndices = arg as { [subPath: string]: number | null };
-		return await this.getLocatorSchema(locatorSchemaPath).getNestedLocator(subPathIndices);
+		const withValidation = new WithSubPathValidation<LocatorSchemaPathType, typeof locatorSchemaPath>(
+			this as BasePage<LocatorSchemaPathType, BasePageOptions, typeof locatorSchemaPath>,
+			this.log.getNewChildLogger("SubPathValidation"),
+			locatorSchemaPath,
+		);
+		return await withValidation.getNestedLocator(subPathIndices);
 	}
 
 	/**
@@ -355,4 +363,36 @@ export abstract class BasePage<
 	 * }
 	 */
 	protected abstract initLocatorSchemas(): void;
+}
+
+class WithSubPathValidation<
+	LocatorSchemaPathType extends string,
+	ValidatedPath extends LocatorSchemaPathType,
+> extends GetLocatorBase<LocatorSchemaPathType, ValidatedPath> {
+	constructor(
+		pageObjectClass: BasePage<LocatorSchemaPathType, BasePageOptions, ValidatedPath>,
+		log: PlaywrightReportLogger,
+		private locatorSchemaPath: ValidatedPath,
+	) {
+		super(pageObjectClass, log, locatorSchemaPath);
+	}
+
+	/**
+	 * getNestedLocator:
+	 * Ensures `subPathIndices` keys are valid sub-paths of the provided `locatorSchemaPath`.
+	 */
+	public async getNestedLocator(
+		subPathIndices?: { [K in SubPaths<LocatorSchemaPathType, ValidatedPath>]?: number | null },
+	): Promise<Locator>;
+
+	/**
+	 * Legacy overload (deprecated).
+	 */
+	public async getNestedLocator(indices?: { [key: number]: number | null }): Promise<Locator>;
+
+	public async getNestedLocator(
+		arg?: { [K in SubPaths<LocatorSchemaPathType, ValidatedPath>]?: number | null } | { [key: number]: number | null },
+	): Promise<Locator> {
+		return await this.pageObjectClass.getLocatorSchema(this.locatorSchemaPath).getNestedLocator(arg);
+	}
 }

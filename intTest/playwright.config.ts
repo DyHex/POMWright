@@ -9,10 +9,10 @@ dotenv.config({ override: false });
  */
 export default defineConfig({
 	testDir: "./tests",
-	globalTimeout: 60_000 * 30,
-	timeout: 60_000 * 2,
+	globalTimeout: 60_000 * 5,
+	timeout: 60_000 * 1,
 	expect: {
-		timeout: 10_000,
+		timeout: 5_000,
 	},
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
@@ -28,8 +28,8 @@ export default defineConfig({
 				["list", { printSteps: false }],
 			],
 	use: {
-		actionTimeout: 10_000,
-		navigationTimeout: 30_000,
+		actionTimeout: 5_000,
+		navigationTimeout: 10_000,
 		headless: true,
 		viewport: { width: 1280, height: 720 },
 		ignoreHTTPSErrors: false,

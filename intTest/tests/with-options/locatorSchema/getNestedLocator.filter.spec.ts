@@ -101,7 +101,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 		);
 	});
 
-	test("filter with hasText", async ({ testFilters, log }) => {
+	test("filter with hasText", async ({ testFilters }) => {
 		await testFilters.page.goto(testFilters.fullUrl);
 
 		const playgroundRed = await testFilters.getNestedLocator("body.section@playground.button@red");
@@ -113,22 +113,12 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			"locator('body').locator(locator('section')).filter({ hasText: /Playground/i }).locator(getByRole('button', { name: 'Reset Color' }))",
 		);
 
-		log.setLogLevel("debug");
-
 		const reset1 = await testFilters
 			.getLocatorSchema("body.section@playground.button@reset")
 			.addFilter("body.section@playground", { hasText: /Primary Colors/i })
 			.addFilter("body.section@playground.button@reset", { hasText: /Reset/i })
 			.addFilter("body.section@playground.button@reset", { hasText: /Color/i })
-			// .updates({ 1: { locator: "OLD_UPDATES" } })
-			// .update({ locator: "OLD_UPDATE..." })
-			// .update("body.section@playground.button@reset", { roleOptions: { name: "SHINY NEW" } })
-			// .getNestedLocator({ 1: 0, 2: 0 });
 			.getNestedLocator();
-		// .getNestedLocator({ "body": 2, "body.section@playground": 1, "body.section@playground.button@reset": 0 });
-		// .getNestedLocator({ body: 2, "body.section@playground": 1 });
-
-		log.resetLogLevel();
 
 		expect(`${reset1}`).not.toEqual(
 			"locator('body').locator(locator('section')).filter({ hasText: /Playground/i }).filter({ hasText: /Primary Colors/i }).first().locator(getByRole('button', { name: 'Reset Color' })).filter({ hasText: /Reset/i }).filter({ hasText: /Color/i }).first()",
