@@ -56,5 +56,6 @@
 	},
 	"peerDependencies": {
 		"@playwright/test": ">=1.41.0 <1.42.0 || >=1.43.0 <2.0.0"
-	}
+	},
+	"packageManager": "pnpm@9.12.0"
 }

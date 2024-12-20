@@ -1,5 +1,5 @@
 const express = require("express");
-const path = require("path");
+const path = require("node:path");
 
 const app = express();
 const port = 8080;
@@ -58,6 +58,57 @@ app.get("/testpath", (req, res) => {
             const randomColor = generateRandomColor(); // Generate a new random color
             window.location.href = '/testpath/' + randomColor; // Navigate to the random color URL
           });
+        </script>
+      </body>
+    </html>
+  `);
+});
+
+// Route to handle "/testfilters"
+app.get("/testfilters", (req, res) => {
+	res.send(`
+    <html>
+      <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">
+        <section id="section1" style="margin-bottom: 20px; border: 1px solid black; padding: 10px;">
+          <h2 style="color: silver; text-shadow: 1px 1px 1px black;">Primary Colors Section</h2>
+          <button style="background-color: red; color: white; padding: 10px;" onclick="changeColor('section1', 'red')">Red</button>
+          <button style="background-color: blue; color: white; padding: 10px;" onclick="changeColor('section1', 'blue')">Blue</button>
+          <button style="background-color: green; color: white; padding: 10px;" onclick="changeColor('section1', 'green')">Green</button>
+          <button style="background-color: lightgray; color: black; padding: 10px;" onclick="resetColor('section1')">Reset Color</button>
+        </section>
+
+        <section id="section2" style="margin-bottom: 20px; border: 1px solid black; padding: 10px;">
+          <h2 style="color: silver; text-shadow: 1px 1px 1px black;">Primary Colors Explorer</h2>
+          <button style="background-color: red; color: white; padding: 10px;" onclick="changeColor('section2', 'red')">Red</button>
+          <button style="background-color: blue; color: white; padding: 10px;" onclick="changeColor('section2', 'blue')">Blue</button>
+          <button style="background-color: green; color: white; padding: 10px;" onclick="changeColor('section2', 'green')">Green</button>
+          <button style="background-color: lightgray; color: black; padding: 10px;" onclick="resetColor('section2')">Reset Color</button>
+        </section>
+
+        <section id="section3" aria-label="Accessible Section" style="margin-bottom: 20px; border: 1px solid black; padding: 10px;">
+          <h2 style="color: silver; text-shadow: 1px 1px 1px black;">Primary Colors Test</h2>
+          <button style="background-color: red; color: white; padding: 10px;" onclick="changeColor('section3', 'red')">Red</button>
+          <button style="background-color: blue; color: white; padding: 10px;" onclick="changeColor('section3', 'blue')">Blue</button>
+          <button style="background-color: green; color: white; padding: 10px;" onclick="changeColor('section3', 'green')">Green</button>
+          <button style="background-color: lightgray; color: black; padding: 10px;" onclick="resetColor('section3')">Reset Color</button>
+        </section>
+
+        <section id="section4" style="margin-bottom: 20px; border: 1px solid black; padding: 10px;">
+          <h2 style="color: silver; text-shadow: 1px 1px 1px black;">Primary Colors Playground</h2>
+          <button style="background-color: red; color: white; padding: 10px;" onclick="changeColor('section4', 'red')">Red</button>
+          <button style="background-color: blue; color: white; padding: 10px;" onclick="changeColor('section4', 'blue')">Blue</button>
+          <button style="background-color: green; color: white; padding: 10px;" onclick="changeColor('section4', 'green')">Green</button>
+          <button style="background-color: lightgray; color: black; padding: 10px;" onclick="resetColor('section4')">Reset Color</button>
+        </section>
+
+        <script>
+          function changeColor(sectionId, color) {
+            document.getElementById(sectionId).style.backgroundColor = color;
+          }
+
+          function resetColor(sectionId) {
+            document.getElementById(sectionId).style.backgroundColor = "";
+          }
         </script>
       </body>
     </html>

@@ -9,27 +9,27 @@ dotenv.config({ override: false });
  */
 export default defineConfig({
 	testDir: "./tests",
-	globalTimeout: 60_000 * 30,
-	timeout: 60_000 * 2,
+	globalTimeout: 60_000 * 5,
+	timeout: 60_000 * 1,
 	expect: {
-		timeout: 10_000,
+		timeout: 5_000,
 	},
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 2 : 1,
+	retries: process.env.CI ? 1 : 1,
 	workers: process.env.CI ? "50%" : 4,
 	reporter: process.env.CI
 		? [
 				["html", { open: "never" }],
 				["github", { printSteps: false }],
-		  ]
+			]
 		: [
 				["html", { open: "on-failure" }],
 				["list", { printSteps: false }],
-		  ],
+			],
 	use: {
-		actionTimeout: 10_000,
-		navigationTimeout: 30_000,
+		actionTimeout: 5_000,
+		navigationTimeout: 10_000,
 		headless: true,
 		viewport: { width: 1280, height: 720 },
 		ignoreHTTPSErrors: false,
@@ -68,7 +68,7 @@ export default defineConfig({
 					// stdout: "pipe",
 					// stderr: "pipe",
 				},
-		  ]
+			]
 		: [
 				{
 					command: "pnpm start",
@@ -79,5 +79,5 @@ export default defineConfig({
 					// stdout: "pipe",
 					// stderr: "pipe",
 				},
-		  ],
+			],
 });

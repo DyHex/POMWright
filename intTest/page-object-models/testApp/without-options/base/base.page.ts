@@ -1,5 +1,5 @@
-import { type Page, type TestInfo } from "@playwright/test";
-import { BasePage, PlaywrightReportLogger } from "pomwright";
+import type { Page, TestInfo } from "@playwright/test";
+import { BasePage, type PlaywrightReportLogger } from "pomwright";
 // import helper methods / classes etc, here... (To be used in the Base POC)
 
 export default abstract class Base<LocatorSchemaPathType extends string> extends BasePage<LocatorSchemaPathType> {

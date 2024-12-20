@@ -1,4 +1,4 @@
-import { GetByMethod, GetLocatorBase } from "pomwright";
+import { GetByMethod, type GetLocatorBase } from "pomwright";
 
 /**
  * The following locatorSchema implementation is total overkill for the Color POC, but serves as one possible

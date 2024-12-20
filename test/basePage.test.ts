@@ -1,4 +1,4 @@
-import { type Page, type TestInfo } from "@playwright/test";
+import type { Page, TestInfo } from "@playwright/test";
 import { beforeEach, describe, expect, test } from "vitest";
 import { PlaywrightReportLogger } from "../index";
 import { getLocatorSchemaDummy } from "../src/helpers/locatorSchema.interface";
@@ -216,6 +216,8 @@ const baseExpectedProperties = [
 	"schemasMap",
 	"update",
 	"updates",
+	"addFilter",
+	"filterMap",
 	"getNestedLocator",
 	"getLocator",
 ];
@@ -356,6 +358,7 @@ describe("BasePage: PageObjectModel.getLocatorSchema", () => {
 			const hasMethods =
 				typeof locatorSchemaWithMethods.update === "function" &&
 				typeof locatorSchemaWithMethods.updates === "function" &&
+				typeof locatorSchemaWithMethods.addFilter === "function" &&
 				typeof locatorSchemaWithMethods.getNestedLocator === "function" &&
 				typeof locatorSchemaWithMethods.getLocator === "function";
 			expect(hasMethods).toBe(true);

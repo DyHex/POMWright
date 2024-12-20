@@ -1,5 +1,5 @@
-import { type Page, type TestInfo } from "@playwright/test";
-import { PlaywrightReportLogger } from "pomwright";
+import type { Page, TestInfo } from "@playwright/test";
+import type { PlaywrightReportLogger } from "pomwright";
 import Base from "../base/base.page";
 import { type LocatorSchemaPath, initLocatorSchemas } from "./testPage.locatorSchema";
 

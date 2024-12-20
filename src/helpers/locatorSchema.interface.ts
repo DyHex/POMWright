@@ -101,6 +101,13 @@ export interface LocatorSchema {
 	dataCy?: string;
 	/** The ID of the element. 'id' string format: "value", or a regex expression of the value */
 	id?: string | RegExp;
+	/** The equivalent of the Playwright locator.filter() method */
+	filter?: {
+		has?: Locator;
+		hasNot?: Locator;
+		hasNotText?: string | RegExp;
+		hasText?: string | RegExp;
+	};
 	/** Defines the preferred Playwright locator method to be used on this LocatorSchema Object */
 	locatorMethod: GetByMethod;
 	/** The human-readable name of the defined locator object, used for debug logging and test report enrichment. */
@@ -165,6 +172,12 @@ const locatorSchemaDummy: Partial<LocatorSchema> = {
 	testId: undefined as unknown as string | RegExp,
 	dataCy: undefined as unknown as string,
 	id: undefined as unknown as string | RegExp,
+	filter: {
+		has: undefined as unknown as Locator,
+		hasNot: undefined as unknown as Locator,
+		hasNotText: undefined as unknown as string | RegExp,
+		hasText: undefined as unknown as string | RegExp,
+	},
 	locatorMethod: undefined as unknown as GetByMethod,
 	locatorSchemaPath: undefined as unknown as string,
 };

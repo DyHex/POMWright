@@ -1,4 +1,4 @@
-import { GetByMethod, GetLocatorBase } from "pomwright";
+import { GetByMethod, type GetLocatorBase } from "pomwright";
 
 export type LocatorSchemaPath =
 	| "topMenu"
