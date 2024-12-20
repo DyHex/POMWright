@@ -1,7 +1,7 @@
 import type { Locator, Page, TestInfo } from "@playwright/test";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { GetByMethod, GetLocatorBase, PlaywrightReportLogger } from "../../index";
-import type { ModifiedLocatorSchema } from "../../src/helpers/getLocatorBase";
+import type { LocatorSchemaWithoutPath } from "../../src/helpers/getLocatorBase";
 import type { LogEntry } from "../../src/helpers/playwrightReportLogger";
 import { type LocatorSchemaPath, POC } from "../basePage.test.poc";
 
@@ -29,12 +29,12 @@ describe("GetLocatorBase", () => {
 		expect(instance).toBeInstanceOf(GetLocatorBase);
 	});
 
-	test("addSchema() should take a LocatorSchemaPath and a ModifiedLocatorSchema as input and add a LocatorSchema to the locatorSchemas Map", () => {
+	test("addSchema() should take a LocatorSchemaPath and a LocatorSchemaWithoutPath as input and add a LocatorSchema to the locatorSchemas Map", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path = "topMenu" as LocatorSchemaPath;
 
-		const schema: ModifiedLocatorSchema = {
+		const schema: LocatorSchemaWithoutPath = {
 			locator: ".class",
 			locatorMethod: GetByMethod.locator,
 		};
@@ -101,13 +101,13 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path0 = "minimalLocator" as LocatorSchemaPath;
-		const schema0: ModifiedLocatorSchema = {
+		const schema0: LocatorSchemaWithoutPath = {
 			locator: ".class",
 			locatorMethod: GetByMethod.locator,
 		};
 
 		const path1 = "minimalLocator.maximumLocator" as LocatorSchemaPath;
-		const schema1: ModifiedLocatorSchema = {
+		const schema1: LocatorSchemaWithoutPath = {
 			role: "button",
 			roleOptions: { name: "button", exact: true },
 			text: "text",
@@ -257,7 +257,7 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path = "locator" as LocatorSchemaPath;
-		const schema: ModifiedLocatorSchema = {
+		const schema: LocatorSchemaWithoutPath = {
 			locator: ".class",
 			locatorMethod: GetByMethod.locator,
 		};
@@ -277,7 +277,7 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path = "the.path" as LocatorSchemaPath;
-		const schema: ModifiedLocatorSchema = {
+		const schema: LocatorSchemaWithoutPath = {
 			locator: ".subClass",
 			locatorMethod: GetByMethod.locator,
 		};
@@ -303,7 +303,7 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path = "the.path" as LocatorSchemaPath;
-		const schema: ModifiedLocatorSchema = {
+		const schema: LocatorSchemaWithoutPath = {
 			locator: ".subClass",
 			locatorMethod: GetByMethod.locator,
 		};
@@ -330,13 +330,13 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path0 = "the" as LocatorSchemaPath;
-		const schema0: ModifiedLocatorSchema = {
+		const schema0: LocatorSchemaWithoutPath = {
 			locator: ".mainClass",
 			locatorMethod: GetByMethod.locator,
 		};
 
 		const path1 = "the.path" as LocatorSchemaPath;
-		const schema1: ModifiedLocatorSchema = {
+		const schema1: LocatorSchemaWithoutPath = {
 			locator: ".subClass",
 			locatorMethod: GetByMethod.locator,
 		};
@@ -388,7 +388,7 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path = "minimum" as LocatorSchemaPath;
-		const schema: ModifiedLocatorSchema = {
+		const schema: LocatorSchemaWithoutPath = {
 			locatorMethod: GetByMethod.locator,
 		};
 
@@ -401,7 +401,7 @@ describe("GetLocatorBase", () => {
 		expect(locatorSchema_A).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema_A.schemasMap.get(path)).toEqual(locatorSchema_A);
 
-		const newSchema: ModifiedLocatorSchema = {
+		const newSchema: LocatorSchemaWithoutPath = {
 			role: "button",
 			roleOptions: { name: "button", exact: true },
 			text: "text",
@@ -442,13 +442,13 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path0 = "the" as LocatorSchemaPath;
-		const schema0: ModifiedLocatorSchema = {
+		const schema0: LocatorSchemaWithoutPath = {
 			locator: ".mainClass",
 			locatorMethod: GetByMethod.locator,
 		};
 
 		const path1 = "the.path" as LocatorSchemaPath;
-		const schema1: ModifiedLocatorSchema = {
+		const schema1: LocatorSchemaWithoutPath = {
 			locator: ".subClass",
 			locatorMethod: GetByMethod.locator,
 		};
@@ -479,13 +479,13 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path0 = "the" as LocatorSchemaPath;
-		const schema0: ModifiedLocatorSchema = {
+		const schema0: LocatorSchemaWithoutPath = {
 			locator: ".mainClass",
 			locatorMethod: GetByMethod.locator,
 		};
 
 		const path1 = "the.path" as LocatorSchemaPath;
-		const schema1: ModifiedLocatorSchema = {
+		const schema1: LocatorSchemaWithoutPath = {
 			locator: ".subClass",
 			locatorMethod: GetByMethod.locator,
 		};
@@ -514,43 +514,43 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path0 = "zero" as LocatorSchemaPath;
-		const schema0: ModifiedLocatorSchema = {
+		const schema0: LocatorSchemaWithoutPath = {
 			locator: ".zero",
 			locatorMethod: GetByMethod.locator,
 		};
 
 		const path1 = "zero.one" as LocatorSchemaPath;
-		const schema1: ModifiedLocatorSchema = {
+		const schema1: LocatorSchemaWithoutPath = {
 			locator: ".one",
 			locatorMethod: GetByMethod.locator,
 		};
 
 		const path2 = "zero.one.two" as LocatorSchemaPath;
-		const schema2: ModifiedLocatorSchema = {
+		const schema2: LocatorSchemaWithoutPath = {
 			locator: ".two",
 			locatorMethod: GetByMethod.locator,
 		};
 
 		const path3 = "zero.one.two.three" as LocatorSchemaPath;
-		const schema3: ModifiedLocatorSchema = {
+		const schema3: LocatorSchemaWithoutPath = {
 			locator: ".three",
 			locatorMethod: GetByMethod.locator,
 		};
 
 		const path4 = "zero.one.two.three.four" as LocatorSchemaPath;
-		const schema4: ModifiedLocatorSchema = {
+		const schema4: LocatorSchemaWithoutPath = {
 			locator: ".four",
 			locatorMethod: GetByMethod.locator,
 		};
 
 		const path5 = "zero.one.two.three.four.five" as LocatorSchemaPath;
-		const schema5: ModifiedLocatorSchema = {
+		const schema5: LocatorSchemaWithoutPath = {
 			locator: ".five",
 			locatorMethod: GetByMethod.locator,
 		};
 
 		const path6 = "zero.one.two.three.four.five.six" as LocatorSchemaPath;
-		const schema6: ModifiedLocatorSchema = {
+		const schema6: LocatorSchemaWithoutPath = {
 			locator: ".six",
 			locatorMethod: GetByMethod.locator,
 		};
@@ -613,12 +613,12 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path0 = "minimum" as LocatorSchemaPath;
-		const schema0: ModifiedLocatorSchema = {
+		const schema0: LocatorSchemaWithoutPath = {
 			locatorMethod: GetByMethod.locator,
 		};
 
 		const path1 = "minimum.minimum" as LocatorSchemaPath;
-		const schema1: ModifiedLocatorSchema = {
+		const schema1: LocatorSchemaWithoutPath = {
 			locatorMethod: GetByMethod.locator,
 		};
 
@@ -640,7 +640,7 @@ describe("GetLocatorBase", () => {
 
 		const locator = {} as Locator;
 
-		const newSchema: ModifiedLocatorSchema = {
+		const newSchema: LocatorSchemaWithoutPath = {
 			role: "button",
 			roleOptions: {
 				name: "button",
@@ -700,7 +700,7 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path = "button" as LocatorSchemaPath;
-		const schema: ModifiedLocatorSchema = {
+		const schema: LocatorSchemaWithoutPath = {
 			role: "button",
 			roleOptions: { name: "button", exact: true },
 			locatorMethod: GetByMethod.role,
@@ -734,14 +734,14 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path0 = "region" as LocatorSchemaPath;
-		const schema0: ModifiedLocatorSchema = {
+		const schema0: LocatorSchemaWithoutPath = {
 			role: "region",
 			roleOptions: { name: "Personal Details", exact: true },
 			locatorMethod: GetByMethod.role,
 		};
 
 		const path1 = "region.button" as LocatorSchemaPath;
-		const schema1: ModifiedLocatorSchema = {
+		const schema1: LocatorSchemaWithoutPath = {
 			role: "button",
 			roleOptions: { name: "Save", exact: true },
 			locatorMethod: GetByMethod.role,
@@ -780,7 +780,7 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path = "button" as LocatorSchemaPath;
-		const schema: ModifiedLocatorSchema = {
+		const schema: LocatorSchemaWithoutPath = {
 			role: "button",
 			roleOptions: { name: "button", exact: true },
 			locatorMethod: GetByMethod.role,
@@ -814,7 +814,7 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path = "button" as LocatorSchemaPath;
-		const schema: ModifiedLocatorSchema = {
+		const schema: LocatorSchemaWithoutPath = {
 			role: "button",
 			roleOptions: { name: "button", exact: true },
 			locatorMethod: GetByMethod.role,
@@ -849,7 +849,7 @@ describe("GetLocatorBase", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path = "button" as LocatorSchemaPath;
-		const schema: ModifiedLocatorSchema = {
+		const schema: LocatorSchemaWithoutPath = {
 			role: "button",
 			roleOptions: { name: "button", exact: true },
 			locatorMethod: GetByMethod.role,

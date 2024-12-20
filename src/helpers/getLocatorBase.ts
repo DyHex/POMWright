@@ -45,12 +45,7 @@ export type SubPaths<
  * UpdatableLocatorSchemaProperties represent the properties of LocatorSchema that can be changed by update/updates,
  * excluding the locatorSchemaPath itself, which remains immutable.
  */
-export type UpdatableLocatorSchemaProperties = Omit<LocatorSchema, "locatorSchemaPath">;
-
-/**
- * ModifiedLocatorSchema is a convenience type for properties that can form a new LocatorSchema without specifying the locatorSchemaPath.
- */
-export interface ModifiedLocatorSchema extends UpdatableLocatorSchemaProperties {}
+export type LocatorSchemaWithoutPath = Omit<LocatorSchema, "locatorSchemaPath">;
 
 /** PathIndexPairs links each sub-part of a path to an optional index used in getNestedLocator calls. */
 type PathIndexPairs = { path: string; index?: number }[];
@@ -101,11 +96,10 @@ const safeStringifyOfNestedLocatorResults = (obj: unknown) => {
 
 /**
  * LocatorSchemaWithMethods is the type returned by getLocatorSchema. It merges LocatorSchema with chainable methods:
- * - update: Modify certain properties of the resolved locator schema.
- * - updates: Modify multiple schemas along the chain simultaneously.
- * - addFilter: Add filtering criteria to refine a select locator in the chain further.
- * - getNestedLocator: Obtain a fully resolved nested locator.
- * - getLocator: Obtain a direct locator without nesting.
+ * - update: Modify any properties of any LocatorSchema in the chain that make up the LocatorSchemaPath. Can be chained multiple times, applies updates in the order chained.
+ * - addFilter: Add additonal filters to any LocatorSchema in the chain that make up the LocatorSchemaPath. Can be chained multiple times, applies updates in the order chained.
+ * - getNestedLocator: Obtain a fully resolved nested locator. Can be chained once after update and addFilter methods if used, ends the chain and returns the nested locator.
+ * - getLocator: Obtain the direct locator of the LocatorSchema the full LocatorSchemaPath resolves to. Can be chained once after update and addFilter methods if used, ends the chain and returns the nested locator.
  *
  * schemasMap and filterMap store the deep-copied schemas and associated filters, ensuring immutability and isolation from originals.
  */
@@ -113,67 +107,113 @@ export type LocatorSchemaWithMethods<
 	LocatorSchemaPathType extends string,
 	LocatorSubstring extends LocatorSchemaPathType | undefined,
 > = LocatorSchema & {
+	/**
+	 * Contains deepCopies of all the LocatorSchema which make up the full LocatorSchemaPath
+	 *
+	 * Not inteded to be directly iteracted with, though you can if needed (debug).
+	 * Use the chainable methods available on the .getLocatorSchema(LocatorSchemaPath) method instead.
+	 */
 	schemasMap: Map<string, LocatorSchema>;
+
+	/**
+	 * Contains deepCopies of all the LocatorSchema which make up the full LocatorSchemaPath
+	 *
+	 * Not inteded to be directly iteracted with, though you can if needed (debug).
+	 * Use the chainable methods available on the .getLocatorSchema(LocatorSchemaPath) method instead.
+	 */
 	filterMap: Map<string, FilterEntry[]>;
 
 	/**
-	 * New update method:
-	 * Allows updating any schema in the chain by specifying the subPath directly.
-	 * Similar to addFilter, ensures compile-time suggestions for valid sub-paths.
+	 * Allows updating any schema in the chain by specifying the subPath and a partial LocatorSchemaWithoutPath.
+	 * - Gives compile-time suggestions for valid sub-paths of the LocatorSchemaPath provided to .getLocatorSchema().
+	 * - If you want to update multiple schemas, chain multiple .update() calls.
 	 *
-	 * If you want to update multiple schemas, chain multiple .update() calls.
+	 * @example
+	 * // Direct usage:
+	 * const submitButton = await poc.getLocatorSchema("main.form.button@submit").update("main.form.button@submit")
 	 */
 	update(
 		subPath: SubPaths<LocatorSchemaPathType, LocatorSubstring>,
-		updates: Partial<UpdatableLocatorSchemaProperties>,
+		updates: Partial<LocatorSchemaWithoutPath>,
 	): LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>;
 
 	/**
-	 * @deprecated This update method takes one argument and only updates the LocatorSchema which the full LocatorSchemaPath resolves to.
-	 * Use the new `.update(subPath, updates)` method instead.
+	 * @deprecated To be removed in version 2.0.0. Use the new `.update(subPath, updates)` method instead, see example.
 	 *
-	 * update(updates: Partial< UpdatableLocatorSchemaProperties >)
-	 * - Allows updating the properties of the LocatorSchema which the full LocatorSchemaPath resolves to.
-	 * - This method is used for modifying the current schema without affecting the original schema.
-	 * - Takes a "LocatorSchema" object which omits the locatorSchemaPath parameter as input, the parameters provided
-	 * will overwrite the corresponding property in the current schema.
-	 * - Returns the updated deep copy of the "LocatorSchema" with methods.
-	 * - Can be chained with the update and updates methods, and the getLocator or getNestedLocator method.
+	 * This deprecated update method takes one argument and only updates the LocatorSchema which the full LocatorSchemaPath resolves to.
+	 *
+	 * @example
+	 * // New update method usage:
+	 * const userInfoSection = await poc
+	 * 	.getLocatorSchema("main.form.section")
+	 * 	.update("main.form.section", { locatorOptions: { hasText: "User Info:" } })
+	 * 	.getNestedLocator();
 	 */
-	update(
-		updates: Partial<UpdatableLocatorSchemaProperties>,
-	): LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>;
+	update(updates: Partial<LocatorSchemaWithoutPath>): LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>;
 
 	/**
-	 * @deprecated This updates method uses indices to identify which schema to update.
-	 * Use the new `.update(subPath, updates)` method instead, chain the method for each update if multiple.
+	 * @deprecated To be removed in version 2.0.0. Use the new `.update(subPath, updates)` method instead, chain the
+	 * method for each update if multiple, see example.
 	 *
-	 * updates(indexedUpdates: { [index: number]: Partial< UpdatableLocatorSchemaProperties > | null }):
-	 * - Similar to update, but allows updating any locator in the nested chain (all sub-paths of the LocatorSchemaPath).
-	 * - This method can modify the current deep copy of each LocatorSchema that each sub-path resolves to without
-	 * affecting the original schemas
-	 * - Takes an object where keys represent the index of the last "word" of a sub-path, where the value per key is a
-	 * "LocatorSchema" object which omits the locatorSchemaPath parameter as input, the parameters provided will overwrite
-	 * the corresponding property in the given schema.
-	 * - Returns the updated deep copy of the LocatorSchema object with methods and its own updated deep copies for all
-	 * LocatorSchema each sub-path resolved to.
-	 * - Can be chained with the update and updates methods, and the getLocator or getNestedLocator method.
+	 * This deprecated updates method uses indices to identify which schema to update.
+	 *
+	 * @example
+	 * // New update method usage:
+	 * const userInfoSection = await poc
+	 * 	.getLocatorSchema("main.form.section")
+	 * 	.update("main.form", {
+	 * 		role: "form",
+	 * 		roleOptions: { name: "Personalia" },
+	 * 		locatorMethod: GetByMethod.role,
+	 * 	})
+	 * 	.update("main.form.section", { locatorOptions: { hasText: /User Info:/i } })
+	 * 	.getNestedLocator();
 	 */
 	updates(indexedUpdates: {
-		[index: number]: Partial<UpdatableLocatorSchemaProperties> | null;
+		[index: number]: Partial<LocatorSchemaWithoutPath> | null;
 	}): LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>;
 
 	/**
-	 * The equivalent of the Playwright locator.filter() method, the addFilter method is chainable on .getLocatorSchema.
-	 * It will search for a particular string/RegExp/Locator somewhere inside the element, possibly in a descendant element,
+	 * The equivalent of the Playwright locator.filter({...}) method and chainable on .getLocatorSchema(LocatorSchemaPath).
+	 * Can be chained multiple times to add multiple filters to the same or different LocatorSchema.
+	 *
+	 * **See examples further down for usage.**
+	 *
+	 * A filter will search for a particular string/RegExp/Locator somewhere inside the element, possibly in a descendant element,
 	 * case-insensitively (string).
-	 * - The filterData object can contain the following properties:
-	 *   - has: Locator - Filters elements that contain a certain element.
-	 *   - hasNot: Locator - Filters elements that do not contain a certain element.
-	 *   - hasText: string | RegExp - Filters elements based on text content.
-	 *   - hasNotText: string | RegExp - Filters elements that do not contain a certain text content.
+	 *
+	 * The filterData object can contain the following properties:
+	 * - has: Locator - Filters elements that contain a certain element.
+	 * - hasNot: Locator - Filters elements that do not contain a certain element.
+	 * - hasText: string | RegExp - Filters elements based on text content.
+	 * - hasNotText: string | RegExp - Filters elements that do not contain a certain text content.
+	 *
 	 * If you define multiple filterData properties in a single addFilter call instead of multiple addFilter calls, they
-	 * will be chained after each other. If you want to add multiple filters of the same type, you must chain multiple addFilter calls.
+	 * will be chained after each other(playwright decides the order). If you want to add multiple filters of the same
+	 * type, you must chain multiple addFilter calls.
+	 *
+	 * @example
+	 * // Adding a filter to the last LocatorSchema in the chain:
+	 * const userInfoSection = await poc
+	 * 	.getLocatorSchema("main.form.section")
+	 * 	.addFilter("main.form.section", { hasText: "User Info:" })
+	 * 	.getNestedLocator();
+	 *
+	 * // Adding multiple filter to the last LocatorSchema in the chain:
+	 * const userInfoSection = await poc
+	 * 	.getLocatorSchema("main.form.section")
+	 * 	.addFilter("main.form.section", { hasText: "User Info:" })
+	 * 	.addFilter("main.form.section", { hasText: `First Name: ${user.firstName}` })
+	 * 	.getNestedLocator();
+	 *
+	 * // Adding filters to multiple LocatorSchema in the chain:
+	 * const submitButton = await poc.getLocator("main.form.button@submit");
+	 *
+	 * const userInfoSection = await poc
+	 * 	.getLocatorSchema("main.form.section")
+	 * 	.addFilter("main.form", { has: submitButton })
+	 * 	.addFilter("main.form.section", { hasText: "User Info:" })
+	 * 	.getNestedLocator();
 	 */
 	addFilter(
 		subPath: SubPaths<LocatorSchemaPathType, LocatorSubstring>,
@@ -181,42 +221,98 @@ export type LocatorSchemaWithMethods<
 	): LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>;
 
 	/**
-	 * New getNestedLocator signature using subPath keys
-	 * Maps each chosen subPath to an index for .nth() on the chained locator created from the LocatorSchema.
-	 * This method is preferred over the number-based indexing for clarity and type safety.
+	 * Asynchronously builds a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
 	 *
-	 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
-	 * - Can be chained once after the update and addFilter methods, getNestedLocator will end the chain.
-	 * - The optional parameter of the method takes an object with subPaths and index for nth
-	 * - Returns a promise that resolves to the nested locator.
+	 * Builds a nested locator from all LocatorSchema that make up the full LocatorSchemaPath given by
+	 * .getLocatorSchema(LocatorSchemaPath). Optionally, you can provide a list of subPaths and indices to have one or more
+	 * LocatorSchema that make up the full LocatorSchemaPath each resolved to a specific .nth(n) occurrence of the element(s).
+	 *
+	 * - Can be chained once after the update and addFilter methods or directly on the .getLocatorSchema method.
+	 * - getNestedLocator will end the method chain and return a nested Playwright Locator.
+	 * - Optionally parameter takes a list of key(subPath)-value(index) pairs, the locator constructed from the LocatorSchema
+	 * with the specified subPath will resolve to the .nth(n) occurrence of the element, within the chain.
+	 *
+	 * Test retry: POMWright will set the log level to debug during retries of tests. This will trigger getNestedLocator
+	 * to resolve the locator in DOM per nesting step and attach the log results to the HTML report for debugging purposes.
+	 * This enables us to easily see which locator in the chain failed to resolve, making it easier to identify an issue
+	 * or which LocatorSchema needs to be updated.
+	 *
+	 * Debug: Using POMWright's "log" fixture, you can set the log level to "debug" to see the nested locator evaluation
+	 * results when a test isn't running retry.
 	 *
 	 * @example
-	 * // Returns a locator for the button nested in the first section, which is nested in the main element.
-	 * const button = await page.getNestedLocator("main.section.button@submit", { "main.section": 0 });
-	 * // We can also set the index for multiple subPaths, e.g. { "main.section": 2, "main.section.button@submit": 0 }
+	 * // Usage:
+	 * const submitButton = await poc.getLocatorSchema("main.form.button@submit").getNestedLocator();
+	 * await submitButton.click();
+	 *
+	 * // With indexing:
+	 * for (const [index, subscription] of subscriptions.entries()) {
+	 *   const inputUsername = await poc
+	 *     .getLocatorSchema("main.form.item.input@username")
+	 *     .getNestedLocator({ "main.form.item": index });
+	 *   await inputUsername.fill(subscription.username);
+	 *   await inputUsername.blur();
+	 *
+	 *   const enableServiceCheckbox = await poc
+	 *     .getLocatorSchema("main.form.item.checkbox@enableService")
+	 *     .getNestedLocator({ "main.form.item": index });
+	 *   await enableServiceCheckbox.check();
+	 * }
+	 *
+	 * // indexing multiple subPaths:
+	 * const something = await poc
+	 *   .getLocatorSchema("main.form.item.something")
+	 *   .getNestedLocator({
+	 *     "main.form": 0, // locator.first() / locator.nth(0)
+	 *     "main.form.item": 1, // locator.nth(1)
+	 *   });
+	 * await something.click();
 	 */
 	getNestedLocator(
 		subPathIndices?: { [K in SubPaths<LocatorSchemaPathType, LocatorSubstring>]?: number | null },
 	): Promise<Locator>;
 
 	/**
-	 * @deprecated Use getNestedLocator({ LocatorSchemaPath: index }) instead of number-based indexing.
+	 * @deprecated To be removed in version 2.0.0. Use getNestedLocator({ LocatorSchemaPath: index }) instead of
+	 * number-based indexing, see example.
 	 *
-	 * getNestedLocator(indices?: { [key: number]: number | null } | null)
-	 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
-	 * - Can be chained after the update and updates methods, getNestedLocator will end the chain.
-	 * - The optional parameter of the method takes an object with 0-based indices "{0: 0, 3: 1}" for one or more locators
-	 * to be nested given by sub-paths (indices correspond to last "word" of a sub-path).
-	 * - Returns a promise that resolves to the nested locator.
+	 * @example
+	 * // New usage:
+	 * for (const [index, subscription] of subscriptions.entries()) {
+	 *   const inputUsername = await poc
+	 *     .getLocatorSchema("main.form.item.input@username")
+	 *     .getNestedLocator({ "main.form.item": index });
+	 *   await inputUsername.fill(subscription.username);
+	 *   await inputUsername.blur();
+	 *
+	 *   const enableServiceCheckbox = await poc
+	 *     .getLocatorSchema("main.form.item.checkbox@enableService")
+	 *     .getNestedLocator({ "main.form.item": index });
+	 *   await enableServiceCheckbox.check();
+	 * }
+	 *
+	 * // indexing multiple subPaths:
+	 * const something = await poc
+	 *   .getLocatorSchema("main.form.item.something")
+	 *   .getNestedLocator({
+	 *     "main.form": 0, // locator.first() / locator.nth(0)
+	 *     "main.form.item": 1, // locator.nth(1)
+	 *   });
+	 * await something.click();
 	 */
 	getNestedLocator(indices?: { [key: number]: number | null }): Promise<Locator>;
 
 	/**
-	 * getLocator()
-	 * - Asynchronously retrieves a locator based on the current LocatorSchema. This method does not perform nesting,
-	 * and will return the locator for which the full LocatorSchemaPath resolves to, provided by getLocatorSchema("...")
-	 * - Can be chained after the update and updates methods, getLocator will end the chain.
-	 * - Returns a promise that resolves to the locator.
+	 * This method does not perform nesting,and will return the locator for which the full LocatorSchemaPath resolves to,
+	 * provided by getLocatorSchema("...")
+	 *
+	 * - Can be chained once after the update and addFilter methods or directly on the .getLocatorSchema method.
+	 * - getLocator will end the method chain and return a Playwright Locator.
+	 *
+	 * @example
+	 * // Usage:
+	 * const submitButton = await poc.getLocatorSchema("main.form.button@submit").getLocator();
+	 * await expect(submitButton, "should only exist one submit button").toHaveCount(1);
 	 */
 	getLocator(): Promise<Locator>;
 };
@@ -334,7 +430,7 @@ export class GetLocatorBase<
 	public applyUpdateToSubPath(
 		schemasMap: Map<string, LocatorSchema>,
 		subPath: LocatorSchemaPathType,
-		updates: Partial<UpdatableLocatorSchemaProperties>,
+		updates: Partial<LocatorSchemaWithoutPath>,
 	) {
 		const schema = schemasMap.get(subPath);
 		if (!schema) {
@@ -401,7 +497,7 @@ export class GetLocatorBase<
 	 * createLocatorSchema:
 	 * Creates a fresh LocatorSchema object by merging provided schemaDetails with a required locatorSchemaPath.
 	 */
-	private createLocatorSchema(schemaDetails: ModifiedLocatorSchema, locatorSchemaPath: LocatorSchemaPathType) {
+	private createLocatorSchema(schemaDetails: LocatorSchemaWithoutPath, locatorSchemaPath: LocatorSchemaPathType) {
 		const schema: LocatorSchema = { ...schemaDetails, locatorSchemaPath };
 		return schema;
 	}
@@ -411,7 +507,7 @@ export class GetLocatorBase<
 	 * Registers a new LocatorSchema under the given locatorSchemaPath.
 	 * Throws an error if a schema already exists at that path.
 	 */
-	public addSchema(locatorSchemaPath: LocatorSchemaPathType, schemaDetails: ModifiedLocatorSchema): void {
+	public addSchema(locatorSchemaPath: LocatorSchemaPathType, schemaDetails: LocatorSchemaWithoutPath): void {
 		// Create the new schema
 		const newLocatorSchema = this.createLocatorSchema(schemaDetails, locatorSchemaPath);
 
@@ -771,19 +867,19 @@ class WithMethodsClass<
 
 		locatorSchemaCopy.update = function (
 			this: LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>,
-			a: SubPaths<LocatorSchemaPathType, LocatorSubstring> | Partial<UpdatableLocatorSchemaProperties>,
-			b?: Partial<UpdatableLocatorSchemaProperties>,
+			a: SubPaths<LocatorSchemaPathType, LocatorSubstring> | Partial<LocatorSchemaWithoutPath>,
+			b?: Partial<LocatorSchemaWithoutPath>,
 		) {
 			const fullPath = this.locatorSchemaPath as string;
 			if (b === undefined) {
 				// Called as update(updates)
-				const updates = a as Partial<UpdatableLocatorSchemaProperties>;
+				const updates = a as Partial<LocatorSchemaWithoutPath>;
 				// Old behavior or default to applying updates to full locatorSchemaPath
 				self.applyUpdate(self.schemasMap, self.locatorSchemaPath as LocatorSchemaPathType, updates);
 			} else {
 				// Called as update(subPath, updates)
 				const subPath = a as SubPaths<LocatorSchemaPathType, LocatorSubstring>;
-				const updates = b as Partial<UpdatableLocatorSchemaProperties>;
+				const updates = b as Partial<LocatorSchemaWithoutPath>;
 
 				if (!(subPath === fullPath || fullPath.startsWith(`${subPath}.`))) {
 					throw new Error(`Invalid sub-path: '${subPath}' is not a valid sub-path of '${fullPath}'.`);
@@ -796,7 +892,7 @@ class WithMethodsClass<
 		} as LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>["update"];
 
 		locatorSchemaCopy.updates = function (indexedUpdates: {
-			[index: number]: Partial<UpdatableLocatorSchemaProperties>;
+			[index: number]: Partial<LocatorSchemaWithoutPath>;
 		}) {
 			const pathIndexPairs = self.extractPathsFromSchema(self.locatorSchemaPath as string);
 			self.applyUpdates(self.schemasMap, pathIndexPairs, indexedUpdates);
@@ -831,14 +927,6 @@ class WithMethodsClass<
 			return this;
 		};
 
-		/**
-		 * getNestedLocator(indices?: { [key: number]: number | null } | null)
-		 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
-		 * - Can be chained after the update and updates methods, getNestedLocator will end the chain.
-		 * - The optional parameter of the method takes an object with 0-based indices "{0: 0, 3: 1}" for one or more locators
-		 * to be nested given by sub-paths (indices correspond to last "word" of a sub-path).
-		 * - Returns a promise that resolves to the nested locator.
-		 */
 		locatorSchemaCopy.getNestedLocator = async function (
 			this: LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>,
 			arg?:
@@ -929,13 +1017,6 @@ class WithMethodsClass<
 			);
 		};
 
-		/**
-		 * getLocator()
-		 * - Asynchronously retrieves a locator based on the current LocatorSchema. This method does not perform nesting,
-		 * and will return the locator for which the full LocatorSchemaPath resolves to, provided by getLocatorSchema("...")
-		 * - Can be chained after the update and updates methods, getLocator will end the chain.
-		 * - Returns a promise that resolves to the locator.
-		 */
 		locatorSchemaCopy.getLocator = async () => {
 			return self.getBy.getLocator(locatorSchemaCopy);
 		};

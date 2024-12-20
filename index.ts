@@ -16,8 +16,8 @@ export { PlaywrightReportLogger };
 import { type AriaRoleType, GetByMethod, type LocatorSchema } from "./src/helpers/locatorSchema.interface";
 export { GetByMethod, type LocatorSchema, type AriaRoleType };
 
-import { GetLocatorBase, type ModifiedLocatorSchema } from "./src/helpers/getLocatorBase";
-export { GetLocatorBase, type ModifiedLocatorSchema };
+import { GetLocatorBase, type LocatorSchemaWithoutPath } from "./src/helpers/getLocatorBase";
+export { GetLocatorBase, type LocatorSchemaWithoutPath };
 
 import { BaseApi } from "./src/api/baseApi";
 export { BaseApi };

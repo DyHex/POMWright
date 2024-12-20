@@ -1,5 +1,5 @@
 import type { Locator } from "@playwright/test";
-import { GetByMethod, type GetLocatorBase, type ModifiedLocatorSchema } from "pomwright";
+import { GetByMethod, type GetLocatorBase, type LocatorSchemaWithoutPath } from "pomwright";
 
 export type LocatorSchemaPath =
 	| "body"
@@ -32,10 +32,10 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
 		locatorMethod: GetByMethod.locator,
 	});
 
-	const bodySectionSchema: ModifiedLocatorSchema = { locator: "section", locatorMethod: GetByMethod.locator };
+	const bodySectionSchema: LocatorSchemaWithoutPath = { locator: "section", locatorMethod: GetByMethod.locator };
 	locators.addSchema("body.section", bodySectionSchema);
 
-	const bodySectionHeadingSchema: ModifiedLocatorSchema = {
+	const bodySectionHeadingSchema: LocatorSchemaWithoutPath = {
 		role: "heading",
 		roleOptions: {
 			level: 2,
@@ -44,7 +44,7 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
 	};
 	locators.addSchema("body.section.heading", bodySectionHeadingSchema);
 
-	const bodySectionButtonSchema: ModifiedLocatorSchema = { role: "button", locatorMethod: GetByMethod.role };
+	const bodySectionButtonSchema: LocatorSchemaWithoutPath = { role: "button", locatorMethod: GetByMethod.role };
 	locators.addSchema("body.section.button", bodySectionButtonSchema);
 
 	locators.addSchema("body.section@playground", {
@@ -84,7 +84,7 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
 	 * produces correct locator selector strings for LocatorSchema with/without filter.
 	 */
 
-	const allLocatorTypes: ModifiedLocatorSchema = {
+	const allLocatorTypes: LocatorSchemaWithoutPath = {
 		role: "button",
 		text: "text",
 		label: "label",
@@ -99,7 +99,7 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
 		locatorMethod: GetByMethod.role,
 	};
 
-	const allLocatorTypesWithOptions: ModifiedLocatorSchema = {
+	const allLocatorTypesWithOptions: LocatorSchemaWithoutPath = {
 		...allLocatorTypes,
 		roleOptions: {
 			name: "roleOptions",

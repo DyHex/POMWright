@@ -158,18 +158,34 @@ export abstract class BasePage<
 	}
 
 	/**
-	 * getNestedLocator:
-	 * Delegates to getLocatorSchema(...).getNestedLocator({ [K in SubPaths<LocatorSchemaPathType, undefined>]?: number | null }})
+	 * Short-hand wrapper method for calling .getLocatorSchema(LocatorSchemaPath).getNestedLocator(subPathIndices?)
 	 *
-	 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
-	 * - Can be chained once after the update and addFilter methods, getNestedLocator will end the chain.
-	 * - The optional parameter of the method takes an object with subPaths and index for nth
-	 * - Returns a promise that resolves to the nested locator.
+	 * Asynchronously builds a nested locator from all LocatorSchema that make up the full LocatorSchemaPath. Optionally,
+	 * you can provide a list of subPaths and indices to have one or more LocatorSchema that make up the full
+	 * LocatorSchemaPath each resolved to a specific .nth(n) occurrence of the element(s).
+	 *
+	 * Note: This short-hand wrapper method is useful for quickly building nested locators without having to call
+	 * getLocatorSchema("...") first. On the other hand, it can't be used to update or add filters to the LocatorSchema.
+	 *
+	 * Test retry: POMWright will set the log level to debug during retries of tests. This will trigger getNestedLocator
+	 * to resolve the locator in DOM per nesting step and attach the log results to the HTML report for debugging purposes.
+	 * This enables us to easily see which locator in the chain failed to resolve, making it easier to identify an issue
+	 * or which LocatorSchema needs to be updated.
+	 *
+	 * Debug: Using POMWright's "log" fixture, you can set the log level to "debug" to see the nested locator evaluation
+	 * results when a test isn't running retry.
 	 *
 	 * @example
-	 * // Returns a locator for the button nested in the first section, which is nested in the main element.
-	 * const button = await page.getNestedLocator("main.section.button@submit", { "main.section": 0 });
-	 * // We can also set the index for multiple subPaths, e.g. { "main.section": 2, "main.section.button@submit": 0 }
+	 * // Usage:
+	 * const submitButton = await poc.getNestedLocator("main.form.button@submit");
+	 * await submitButton.click();
+	 *
+	 * // With indexing:
+	 * const something = await poc.getNestedLocator("main.form.item.something", {
+	 *     "main.form": 0, // locator.first() / locator.nth(0)
+	 *     "main.form.item": 1, // locator.nth(1)
+	 *   });
+	 * await something.click();
 	 */
 	public async getNestedLocator<P extends LocatorSchemaPathType>(
 		locatorSchemaPath: P,
@@ -177,15 +193,17 @@ export abstract class BasePage<
 	): Promise<Locator>;
 
 	/**
-	 * @deprecated Use { SubPaths: index } instead of {4:2}, i.e. subPath-based keys instead of indices.
+	 * @deprecated Use { SubPaths: index } instead of {4:2}, i.e. subPath-based keys instead of indices, see example.
 	 *
-	 * getNestedLocator:
-	 * Delegates to getLocatorSchema(...).getNestedLocator(indices).
-	 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
-	 * - Can be chained once after the update and addFilter methods, getNestedLocator will end the chain.
-	 * - The optional parameter of the method takes an object with 0-based indices "{0: 0, 3: 1}" for one or more locators
-	 * to be nested given by sub-paths (indices correspond to last "word" of a sub-path).
-	 * - Returns a promise that resolves to the nested locator.
+	 * Deprecated short-hand wrapper method for calling .getLocatorSchema(LocatorSchemaPath).getNestedLocator(subPathIndices?)
+	 *
+	 * @example
+	 * // New Usage:
+	 * const something = await poc.getNestedLocator("main.form.item.something", {
+	 *     "main.form": 0, // locator.first() / locator.nth(0)
+	 *     "main.form.item": 1, // locator.nth(1)
+	 *   });
+	 * await something.click();
 	 */
 	public async getNestedLocator(
 		locatorSchemaPath: LocatorSchemaPathType,
@@ -208,12 +226,18 @@ export abstract class BasePage<
 	}
 
 	/**
-	 * getLocator:
-	 * Delegates to getLocatorSchema(...).getLocator().
-	 * - Asynchronously retrieves a locator based on the current LocatorSchema. This method does not perform nesting,
-	 * and will return the locator for which the full LocatorSchemaPath resolves to, provided by getLocatorSchema("...")
-	 * - Can be chained after the update and updates methods, getLocator will end the chain.
-	 * - Returns a promise that resolves to the locator.
+	 * Short-hand wrapper method for calling .getLocatorSchema(LocatorSchemaPath).getLocator()
+	 *
+	 * This method does not perform nesting,and will return the locator for which the full LocatorSchemaPath resolves to,
+	 * provided by getLocatorSchema("...")
+	 *
+	 * Note: This short-hand wrapper method is useful for quickly getting a locator without having to call
+	 * getLocatorSchema("...") first. On the other hand, it can't be used to update or add filters to the LocatorSchema.
+	 *
+	 * @example
+	 * // Usage:
+	 * const submitButton = await poc.getLocator("main.form.button@submit");
+	 * await expect(submitButton, "should only exist one submit button").toHaveCount(1);
 	 */
 	public getLocator = async (locatorSchemaPath: LocatorSchemaPathType): Promise<Locator> => {
 		return await this.getLocatorSchema(locatorSchemaPath).getLocator();
@@ -223,7 +247,7 @@ export abstract class BasePage<
 	 * getLocatorSchema:
 	 * Delegates to this.locators.getLocatorSchema.
 	 * Returns a chainable schema object for the given path.
-	 * Once called with a specific path P, addFilter is restricted to sub-paths of P.
+	 * Once called with a specific path P, the update and addFilter methods are restricted to sub-paths of P.
 	 *
 	 * The "getLocatorSchema" method is used to retrieve an updatable deep copy of a LocatorSchema defined in the
 	 * GetLocatorBase class. It enriches the returned schema with additional methods to handle updates and retrieval of
@@ -231,41 +255,28 @@ export abstract class BasePage<
 	 *
 	 * getLocatorSchema adds the following chainable methods to the returned LocatorSchemaWithMethods object:
 	 *
-	 * update(updates: Partial< UpdatableLocatorSchemaProperties >)
-	 * - Allows updating the properties of the LocatorSchema which the full LocatorSchemaPath resolves to.
-	 * - This method is used for modifying the current schema without affecting the original schema.
-	 * - Takes a "LocatorSchema" object which omits the locatorSchemaPath parameter as input, the parameters provided
-	 * will overwrite the corresponding property in the current schema.
-	 * - Returns the updated deep copy of the "LocatorSchema" with methods.
-	 * - Can be chained with the update and updates methods, and the getLocator or getNestedLocator method.
-	 *
-	 * updates(indexedUpdates: { [index: number]: Partial< UpdatableLocatorSchemaProperties > | null }):
-	 * - Similar to update, but allows updating any locator in the nested chain (all sub-paths of the LocatorSchemaPath).
-	 * - This method can modify the current deep copy of each LocatorSchema that each sub-path resolves to without
-	 * affecting the original schemas
-	 * - Takes an object where keys represent the index of the last "word" of a sub-path, where the value per key is a
-	 * "LocatorSchema" object which omits the locatorSchemaPath parameter as input, the parameters provided will overwrite
-	 * the corresponding property in the given schema.
-	 * - Returns the updated deep copy of the LocatorSchema object with methods and its own updated deep copies for all
-	 * LocatorSchema each sub-path resolved to.
-	 * - Can be chained with the update and updates methods, and the getLocator or getNestedLocator method.
+	 * update
+	 * - Allows updating any schema in the chain by specifying the subPath directly.
+	 * - Gives compile-time suggestions for valid sub-paths of the LocatorSchemaPath provided to .getLocatorSchema().
+	 * - If you want to update multiple schemas, chain multiple .update() calls.
 	 *
 	 * addFilter(subPath: SubPaths<LocatorSchemaPathType, LocatorSubstring>, filterData: FilterEntry)
-	 * The equivalent of the Playwright locator.filter() method
+	 * - The equivalent of the Playwright locator.filter() method
 	 * - This method is used for filtering the specified locator based on the provided filterData.
+	 * - Can be chained multiple times to add multiple filters to the same or different LocatorSchema.
 	 *
-	 * getNestedLocator(indices?: { [key: number]: number | null } | null)
-	 * - Asynchronously retrieves a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
-	 * - Can be chained after the update and updates methods, getNestedLocator will end the chain.
-	 * - The optional parameter of the method takes an object with 0-based indices "{0: 0, 3: 1}" for one or more locators
-	 * to be nested given by sub-paths (indices correspond to last "word" of a sub-path).
-	 * - Returns a promise that resolves to the nested locator.
+	 * getNestedLocator
+	 * - Asynchronously builds a nested locator based on the LocatorSchemaPath provided by getLocatorSchema("...")
+	 * - Can be chained once after the update and addFilter methods or directly on the .getLocatorSchema method.
+	 * - getNestedLocator will end the method chain and return a nested Playwright Locator.
+	 * - Optionally parameter takes a list of key(subPath)-value(index) pairs, the locator constructed from the LocatorSchema
+	 * with the specified subPath will resolve to the .nth(n) occurrence of the element, within the chain.
 	 *
 	 * getLocator()
-	 * - Asynchronously retrieves a locator based on the current LocatorSchema. This method does not perform nesting,
-	 * and will return the locator for which the full LocatorSchemaPath resolves to, provided by getLocatorSchema("...")
-	 * - Can be chained after the update and updates methods, getLocator will end the chain.
-	 * - Returns a promise that resolves to the locator.
+	 * - Asynchronously retrieves a locator based on the current LocatorSchemaPath.
+	 * - This method does not perform nesting and will return the locator for which the full LocatorSchemaPath resolves to, provided by getLocatorSchema("...")
+	 * - Can be chained once after the update and addFilter methods or directly on the .getLocatorSchema method.
+	 * - getLocator will end the method chain and return a Playwright Locator.
 	 *
 	 * Note: Calling getLocator() and getNestedLocator() on the same LocatorSchemaPath will return a Locator for the same
 	 * element, but the Locator returned by getNestedLocator() will be a locator resolving to said same element through
@@ -275,7 +286,7 @@ export abstract class BasePage<
 	 * That said, for certain use cases, getLocator() can be useful, and you could use it to manually chain locators
 	 * yourself if some edge case required it. Though, it would be likely be more prudent to expand your LocatorSchemaPath
 	 * type and initLocatorSchemas() method to include the additional locators you need for the given POC, and then use
-	 * getNestedLocator() instead.
+	 * getNestedLocator() instead, or by implementing a helper method on your Page Object Class.
 	 */
 	public getLocatorSchema<P extends LocatorSchemaPathType>(path: P) {
 		return this.locators.getLocatorSchema(path);
