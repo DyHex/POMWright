@@ -1,7 +1,3 @@
----
-"pomwright": minor
----
-
 # POMWright
 
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/DyHex/POMWright/main.yaml?label=CI%20on%20main) [![NPM Version](https://img.shields.io/npm/v/pomwright)](https://www.npmjs.com/package/pomwright) ![NPM Downloads](https://img.shields.io/npm/dt/pomwright) ![GitHub License](https://img.shields.io/github/license/DyHex/POMWright) [![NPM dev or peer Dependency Version](https://img.shields.io/npm/dependency-version/pomwright/peer/%40playwright%2Ftest)](https://www.npmjs.com/package/playwright) [![Static Badge](https://img.shields.io/badge/created%40-ICE-ffcd00)](https://www.ice.no/)
