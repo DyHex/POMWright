@@ -1,0 +1,461 @@
+# Using POMWright
+
+POMWright is a small TypeScript-based framework implementing the Page Object Model Design Pattern for Playwright.
+
+POMWright has Playwright/test as a peer dependency and will use whichever supported installed version of Playwright.
+
+## Requirements
+
+![NPM dev or peer Dependency Version](https://img.shields.io/npm/dependency-version/pomwright/peer/%40playwright%2Ftest)
+
+## Installation
+
+```bash
+npm install pomwright --save-dev
+```
+
+or
+
+```bash
+pnpm i -D pomwright
+```
+
+## Getting Started
+
+To begin using POMWright you don't need much, be it an existing or new Playwright project the approach is the same.
+
+> Tip: Implementing POMWright in an existing Playwright project can be done in increments by implementing new Page Object Classes (POC's) with POMWright and/or refactoring existing POC's to POMWright one at a time. POMWright is just typescript and Playwright, and can be used along side your existing Playwright code in tests.
+
+### Creating a Page Object Class (POC)
+
+Lets begin by creating a Page Object Class for a simple login page using POMWright.
+
+#### First we'll need a few imports
+
+```TS
+// login.page.ts
+import type { Page, TestInfo } from "@playwright/test";
+import { BasePage, type PlaywrightReportLogger, GetByMethod } from "pomwright";
+```
+
+From playwright we import:
+
+- [Page](https://playwright.dev/docs/api/class-page) - Page provides methods to interact with a single tab in a Browser.
+- [TestInfo](https://playwright.dev/docs/api/class-testinfo) - TestInfo contains information about the currently running test.
+
+From POMWright we import:
+
+- [BasePage]() - An abstract class which is the foundation of all POC's in POMWright.
+- [PlaywrightReportLogger]() - A custom logger which records log messages and attaches them to the Playwright HTML report per test.
+- [GetByMethod]() - Dictates which Playwright Locator method POMWright uses for a given LocatorSchema when creating single or nested Locators
+
+#### We can now create a minimal implementation of our POC
+
+```TS
+// login.page.ts
+import type { Page, TestInfo } from "@playwright/test";
+import { BasePage, GetByMethod, type PlaywrightReportLogger } from "pomwright";
+
+type LocatorSchemaPath = "";
+
+export default class Login extends BasePage<LocatorSchemaPath> {
+  constructor(page: Page, testInfo: TestInfo, pwrl: PlaywrightReportLogger) {
+    super(page, testInfo, "https://someDomain.com", "/login", Login.name, pwrl);
+  }
+
+  protected initLocatorSchemas() {}
+}
+```
+
+As you can see, when we extend our POC with `BasePage` we must provide a type called `LocatorSchemaPath` and our POC must also implement the abstract method `initLocatorSchemas()`. For now you only need to know that they are needed, they will be explained in a moment.
+
+The constructor has to invoke super with the following parameters:
+
+- page - see [Page](https://playwright.dev/docs/api/class-page)
+- testInfo - see [TestInfo](https://playwright.dev/docs/api/class-testinfo)
+- baseUrl - a string, similar to [BaseURL](https://playwright.dev/docs/api/class-testoptions#test-options-base-url) in playwright.config
+- urlPath - a string, the resource path of the POCs page URL
+- pocName - a string, the POCs human-readable name, used for logging and enriching the playwright HTML report
+- pwrl - see [PlaywrightReportLogger]()
+
+Since each POC we create will be initialized as a custom Playwright fixture, we'll need to provide atleast three of these parameters to the constructor, namely [Page](https://playwright.dev/docs/api/class-page), [TestInfo](https://playwright.dev/docs/api/class-testinfo) and [PlaywrightReportLogger](), as they will be provided by their respective fixtures. The rest can be defined in the POC as above or in the custom fixture initializing the POC.
+
+#### We can now define the POC's LocatorSchemaPath's and corresponding LocatorSchema
+
+Playwright Docs loosely explains the concept of the [Page Object Model Pattern](https://playwright.dev/docs/pom) with some examples. The principle is the same but the structure and how we go about it is a bit different in POMWright.
+
+Instead of defining Locators as properties or methods in our POC's, we define them through [LocatorSchema]()'s with their own unique [LocatorSchemaPath]()'s. In short, each Page Object Class (POC) extending BasePage should define its own LocatorSchemaPath Type, which is a union of strings with the following rules:
+
+1. The only character of significance is `.` (dot/period), any other single character or combination of characters are considered words.
+2. A LocatorSchemaPath string must start and end with a word.
+3. Words are seperated by `.` (dot/period).
+4. Each LocatorSchemaPath string must be unique within its scope.
+
+Though the rules are simple, there are some nuances, I advise you to read the more indepth explanation [here]().
+
+Back to our example, lets add some LocatorSchemaPath's to our POC representing our simple login page:
+
+```TS
+// login.page.ts
+import type { Page, TestInfo } from "@playwright/test";
+import { BasePage, GetByMethod, type PlaywrightReportLogger } from "pomwright";
+
+type LocatorSchemaPath = 
+  | "main"
+  | "main.section@login"
+  | "main.section@login.heading"
+  | "main.section@login.form"
+  | "main.section@login.form.input@email"
+  | "main.section@login.form.input@password"
+  | "main.section@login.form.button@login"
+  | "main.section@login.link@createUser";
+
+export default class Login extends BasePage<LocatorSchemaPath> {
+  constructor(page: Page, testInfo: TestInfo, pwrl: PlaywrightReportLogger) {
+    super(page, testInfo, "https://someDomain.com", "/login", Login.name, pwrl);
+  }
+
+  protected initLocatorSchemas() {}
+
+}
+```
+
+We havn't introduced them yet, but as it stands, if we were to invoke any of POMWright's methods with any of these LocatorSchemaPath's we'd get a "not implemented" error, thus we need to add our LocatorSchema's which our LocatorSchemaPath's will reference.
+
+The LocatorSchema interface lets us define an object for creating a Locator with any of Playwright's locator methods, I advise you to read the more indepth explanation [here]().
+
+Now lets add our LocatorSchema, we do this through the `initLocatorSchemas()` method.
+
+```TS
+// login.page.ts
+import type { Page, TestInfo } from "@playwright/test";
+import { BasePage, GetByMethod, type PlaywrightReportLogger } from "pomwright";
+
+type LocatorSchemaPath = 
+  | "main"
+  | "main.section@login"
+  | "main.section@login.heading"
+  | "main.section@login.form"
+  | "main.section@login.form.input@email"
+  | "main.section@login.form.input@password"
+  | "main.section@login.form.button@login"
+  | "main.section@login.link@createUser";
+
+export default class Login extends BasePage<LocatorSchemaPath> {
+  constructor(page: Page, testInfo: TestInfo, pwrl: PlaywrightReportLogger) {
+    super(page, testInfo, "https://someDomain.com", "/login", Login.name, pwrl);
+  }
+
+  protected initLocatorSchemas() {
+    this.locators.addSchema("main", {
+      locator: "main",
+      locatorMethod: GetByMethod.locator
+    });
+
+    this.locators.addSchema("main.section@login", {
+      role: "region",
+      roleOptions: {
+        name: "Login"
+      },
+      locatorMethod: GetByMethod.role
+    });
+
+    this.locators.addSchema("main.section@login.heading", {
+      role: "heading",
+      roleOptions: {
+        name: "Welcome",
+        level: 1
+      },
+      locatorMethod: GetByMethod.role
+    });
+
+    this.locators.addSchema("main.section@login.form", {
+      role: "form",
+      locatorMethod: GetByMethod.role
+    });
+
+    this.locators.addSchema("main.section@login.form.input@email", {
+      role: "textbox",
+      roleOptions: {
+        name: "E-mail"
+      },
+      locatorMethod: GetByMethod.role
+    });
+
+    this.locators.addSchema("main.section@login.form.input@password", {
+      role: "textbox",
+      roleOptions: {
+        name: "Password"
+      },
+      locatorMethod: GetByMethod.role
+    });
+
+    this.locators.addSchema("main.section@login.form.button@login", {
+      role: "button",
+      roleOptions: {
+        name: "Login"
+      },
+      locatorMethod: GetByMethod.role
+    });
+
+    this.locators.addSchema("main.section@login.link@createUser", {
+      role: "link",
+      roleOptions: {
+        name: "Create an account"
+      },
+      locatorMethod: GetByMethod.role
+    });
+  }
+}
+```
+
+#### We can then create helper methods for our POC which uses the LocatorSchema's we defined
+
+For an indepth explanation of POMWright's locator methods, see [get-locator-methods-explanation.md]()
+
+To make sure we can use Playwright test.step in our helper method, we'll import test from Playwright through POMWright.
+
+```TS
+// login.page.ts
+import type { Page, TestInfo } from "@playwright/test";
+import { BasePage, GetByMethod, type PlaywrightReportLogger, test } from "pomwright";
+
+type LocatorSchemaPath = 
+  | "main"
+  | "main.section@login"
+  | "main.section@login.heading"
+  | "main.section@login.form"
+  | "main.section@login.form.input@email"
+  | "main.section@login.form.input@password"
+  | "main.section@login.form.button@login"
+  | "main.section@login.link@createUser";
+
+export default class Login extends BasePage<LocatorSchemaPath> {
+  constructor(page: Page, testInfo: TestInfo, pwrl: PlaywrightReportLogger) {
+    super(page, testInfo, "https://someDomain.com", "/login", Login.name, pwrl);
+  }
+
+  protected initLocatorSchemas() {
+    this.locators.addSchema("main", {
+      locator: "main",
+      locatorMethod: GetByMethod.locator
+    });
+
+    this.locators.addSchema("main.section@login", {
+      role: "region",
+      roleOptions: {
+        name: "Login"
+      },
+      locatorMethod: GetByMethod.role
+    });
+
+    this.locators.addSchema("main.section@login.heading", {
+      role: "heading",
+      roleOptions: {
+        name: "Welcome",
+        level: 1
+      },
+      locatorMethod: GetByMethod.role
+    });
+
+    this.locators.addSchema("main.section@login.form", {
+      role: "form",
+      locatorMethod: GetByMethod.role
+    });
+
+    this.locators.addSchema("main.section@login.form.input@email", {
+      role: "textbox",
+      roleOptions: {
+        name: "E-mail"
+      },
+      locatorMethod: GetByMethod.role
+    });
+
+    this.locators.addSchema("main.section@login.form.input@password", {
+      role: "textbox",
+      roleOptions: {
+        name: "Password"
+      },
+      locatorMethod: GetByMethod.role
+    });
+
+    this.locators.addSchema("main.section@login.form.button@login", {
+      role: "button",
+      roleOptions: {
+        name: "Login"
+      },
+      locatorMethod: GetByMethod.role
+    });
+
+    this.locators.addSchema("main.section@login.link@createUser", {
+      role: "link",
+      roleOptions: {
+        name: "Create an account"
+      },
+      locatorMethod: GetByMethod.role
+    });
+  }
+
+  async fillLoginFormAndLoginAs(user: User) {
+    await test.step(`${this.pocName}: Fill login form and login as '${user.firstName}'`, async () => {
+      const email = await this.getNestedLocator("main.section@login.form.input@email");
+      await email.fill(user.email);
+
+      const password = await this.getNestedLocator("main.section@login.form.input@password");
+      await password.fill(user.password);
+
+      const loginBtn = await this.getNestedLocator("main.section@login.form.button@login");
+      await loginBtn.click();
+    });
+  }
+}
+```
+
+#### Improved readability, maintainability and re-usability of LocatorSchema
+
+This is all well and good, but the Page Object Class quickly becomes large and daunting when we keep our LocatorSchema's inside it. To resolve this lets move our LocatorSchemaPath's and LocatorSchema's into a seperate file.
+
+To do this we need to import `GetLocatorBase` from POMWright and implement an initLocatorSchemas function.
+
+```TS
+// login.locatorSchema.ts
+import { GetByMethod, type GetLocatorBase } from "pomwright";
+
+export type LocatorSchemaPath = 
+  | "main"
+  | "main.section@login"
+  | "main.section@login.heading"
+  | "main.section@login.form"
+  | "main.section@login.form.input@email"
+  | "main.section@login.form.input@password"
+  | "main.section@login.form.button@login"
+  | "main.section@login.link@createUser";
+
+export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) {
+  locators.addSchema("main", {
+    locator: "main",
+    locatorMethod: GetByMethod.locator
+  });
+
+  locators.addSchema("main.section@login", {
+    role: "region",
+    roleOptions: {
+      name: "Login"
+    },
+    locatorMethod: GetByMethod.role
+  });
+
+  locators.addSchema("main.section@login.heading", {
+    role: "heading",
+    roleOptions: {
+      name: "Welcome",
+      level: 1
+    },
+    locatorMethod: GetByMethod.role
+  });
+
+  locators.addSchema("main.section@login.form", {
+    role: "form",
+    locatorMethod: GetByMethod.role
+  });
+
+  locators.addSchema("main.section@login.form.input@email", {
+    role: "textbox",
+    roleOptions: {
+      name: "E-mail"
+    },
+    locatorMethod: GetByMethod.role
+  });
+
+  locators.addSchema("main.section@login.form.input@password", {
+    role: "textbox",
+    roleOptions: {
+      name: "Password"
+    },
+    locatorMethod: GetByMethod.role
+  });
+
+  locators.addSchema("main.section@login.form.button@login", {
+    role: "button",
+    roleOptions: {
+      name: "Login"
+    },
+    locatorMethod: GetByMethod.role
+  });
+
+  locators.addSchema("main.section@login.link@createUser", {
+    role: "link",
+    roleOptions: {
+      name: "Create an account"
+    },
+    locatorMethod: GetByMethod.role
+  });
+}
+```
+
+We can then update our login POC as follows:
+
+```TS
+// login.page.ts
+import type { Page, TestInfo } from "@playwright/test";
+import { BasePage, type PlaywrightReportLogger, test } from "pomwright";
+import { type LocatorSchemaPath, initLocatorSchemas } from "./login.locatorSchema";
+
+export default class Login extends BasePage<LocatorSchemaPath> {
+  constructor(page: Page, testInfo: TestInfo, pwrl: PlaywrightReportLogger) {
+    super(page, testInfo, "https://someDomain.com", "/login", Login.name, pwrl);
+  }
+
+  protected initLocatorSchemas() {
+    initLocatorSchemas(this.locators);
+  }
+
+  async fillLoginFormAndLoginAs(user: User) {
+    await test.step(`${this.pocName}: Fill login form and login as '${user.firstName}'`, async () => {
+      const email = await this.getNestedLocator("main.section@login.form.input@email");
+      await email.fill(user.email);
+
+      const password = await this.getNestedLocator("main.section@login.form.input@password");
+      await password.fill(user.password);
+
+      const loginBtn = await this.getNestedLocator("main.section@login.form.button@login");
+      await loginBtn.click();
+    });
+  }
+}
+```
+
+By moving the POC's LocatorSchemaPath's and LocatorSchema's into a seperate file, our Page Object Class will only contain its helper methods, making both easier to read and maintain. Especially considering that a POC can have well over a hundred LocatorSchema's/LocatorSchemaPath's.
+
+#### Now lets use our POC to create a custom Playwright fixture so we can use it in our tests
+
+```TS
+// myApp.fixtures.ts
+import { test as base } from "pomwright";
+import Login from "../pom/myApp/pages/login/login.page";
+
+type myApp = {
+  login: Login;
+}
+
+export const test = base.extend<myApp>({
+  login: async ({ page, log }, use, testInfo) => {
+    const login = new Login(page, testInfo, log);
+    await use(login);
+  }
+});
+```
+
+#### Using our POC fixture in a test
+
+```TS
+import { test } from "../fixtures/myApp.fixtures";
+
+test("Login to myApp as Bob", async ({ login, profile, testUser }) => {
+  await login.page.goto(login.fullUrl);
+
+  await login.fillLoginFormAndLoginAs(testUser.bob);
+
+  await profile.page.waitForURL(profile.fullUrl);
+});
+```
