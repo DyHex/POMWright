@@ -46,7 +46,7 @@ From playwright we import:
 From POMWright we import:
 
 - [BasePage](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/src/basePage.ts) - An abstract class which is the foundation of all POC's in POMWright.
-- [PlaywrightReportLogger]() - A custom logger which records log messages and attaches them to the Playwright HTML report per test.
+- [PlaywrightReportLogger](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/src/helpers/playwrightReportLogger.ts) - A custom logger which records log messages and attaches them to the Playwright HTML report per test.
 - [GetByMethod](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/src/helpers/locatorSchema.interface.ts#L7) - Dictates which Playwright Locator method POMWright uses for a given LocatorSchema when creating single or nested Locators
 
 #### We can now create a minimal implementation of our POC
