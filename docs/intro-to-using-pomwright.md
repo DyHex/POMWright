@@ -80,6 +80,8 @@ The constructor has to invoke super with the following parameters:
 
 Since each POC we create will be initialized as a custom Playwright fixture, we'll need to provide atleast three of these parameters to the constructor, namely [Page](https://playwright.dev/docs/api/class-page), [TestInfo](https://playwright.dev/docs/api/class-testinfo) and [PlaywrightReportLogger](), as they will be provided by their respective fixtures. The rest can be defined in the POC as above or in the custom fixture initializing the POC.
 
+For an indepth explanation of BasePage see [BasePage-explanation.md]()
+
 #### We can now define the POC's LocatorSchemaPath's and corresponding LocatorSchema
 
 Playwright Docs loosely explains the concept of the [Page Object Model Pattern](https://playwright.dev/docs/pom) with some examples. The principle is the same but the structure and how we go about it is a bit different in POMWright.
@@ -124,7 +126,7 @@ We havn't introduced them yet, but as it stands, if we were to invoke any of POM
 
 The LocatorSchema interface lets us define an object for creating a Locator with any of Playwright's locator methods, I advise you to read the more indepth explanation [here]().
 
-Now lets add our LocatorSchema, we do this through the `initLocatorSchemas()` method.
+Now lets add our LocatorSchema, we do this through the `initLocatorSchemas()` method, through the POC's `locators` property which it gets from extending BasePage. The `locators` property is an instance of the GetLocatorBase class, which handles LocatorSchema management and provides the POC with POMWright's locator methods, see [get-locator-methods-explanation.mb]() for further details.
 
 ```TS
 // login.page.ts
@@ -429,6 +431,8 @@ By moving the POC's LocatorSchemaPath's and LocatorSchema's into a seperate file
 
 #### Now lets use our POC to create a custom Playwright fixture so we can use it in our tests
 
+You can read further about fixtures in [Playwrights documentation](https://playwright.dev/docs/test-fixtures).
+
 ```TS
 // myApp.fixtures.ts
 import { test as base } from "pomwright";
@@ -446,16 +450,73 @@ export const test = base.extend<myApp>({
 });
 ```
 
+For us to access and use POMWright's `log` fixture (PlaywrightReportLogger) which our POC needs, we'll need to import test from POMWright. POMWright itself extends and exports playwright test the same way we've done above.
+
+We'll then import our POCs and extend test (base) from POMWright/Playwright with our new custom fixtures and export it as test. We're basically just adding additional fixtures to Playwright/test.
+
+Say we've created additional POCs for myApp's home page and profile page we'll just add them to the same fixture file like so:
+
+```TS
+// myApp.fixtures.ts
+import { test as base } from "pomwright";
+import Home from "../pom/myApp/pages/home.page";
+import Login from "../pom/myApp/pages/login/login.page";
+import Profile from "../pom/myApp/pages/profile/profile.page";
+
+type myApp = {
+  home: Home;
+  login: Login;
+  profile: Profile;
+}
+
+export const test = base.extend<myApp>({
+  home: async ({ page, log }, use, testInfo) => {
+    const home = new Home(page, testInfo, log);
+    await use(home);
+  },
+
+  login: async ({ page, log }, use, testInfo) => {
+    const login = new Login(page, testInfo, log);
+    await use(login);
+  },
+
+  profile: async ({ page, log }, use, testInfo) => {
+    const profile = new Profile(page, testInfo, log);
+    await use(profile);
+  }
+});
+```
+
+Likely we'll want multiple types of fixtures, seperate fixtures for different apps/domains, fixtures for third-party solutions we might need to interact with, automatic fixtures etc. Thus it makes sense to seperate different fixtures into seperate files giving us a more maintainable structure. As all our fixture files extends test with additional fixtures and exports test, we'll want a main fixture file to merge them so we only need one import of test to access all our fixtures when writing our tests.
+
+```TS
+// all.fixtures.ts
+import { mergeTests } from "@playwright/test";
+import { test as myAppFixtures } from "./myApp/myApp.fixtures";
+import { test as testUser } from "./testData/testUser.fixtures";
+
+export const test = mergeTests(myAppFixtures, testUser);
+```
+
 #### Using our POC fixture in a test
 
 ```TS
-import { test } from "../fixtures/myApp.fixtures";
+import { test } from "@fixtures/all.fixtures";
 
-test("Login to myApp as Bob", async ({ login, profile, testUser }) => {
-  await login.page.goto(login.fullUrl);
+test("Login to myApp as Bob", async ({ home, login, profile, testUser }) => {
+  await test.step(`${home.pocName}: Navigate to '${home.fullUrl}' and initiate login`, async () => {
+    await home.page.goto(home.fullUrl);
+
+    const loginBtn = await home.getNestedLocator("common.navMenu.link@login");
+    await loginBtn.click();
+  })
+  
+  await login.page.waitForURL(login.fullUrl);
 
   await login.fillLoginFormAndLoginAs(testUser.bob);
 
   await profile.page.waitForURL(profile.fullUrl);
 });
 ```
+
+You can extend playwright/test with as many fixtures you want, Playwright will only load the fixtures we specify and whichever fixtures are needed to build them for a given test.
