@@ -1,12 +1,28 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.2.2/schema.json",
-	"organizeImports": {
-		"enabled": true
+	"$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
 	},
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"recommended": true
+			"recommended": true,
+			"style": {
+				"noParameterAssign": "error",
+				"useAsConstAssertion": "error",
+				"useDefaultParameterLast": "error",
+				"useEnumInitializers": "error",
+				"useSelfClosingElements": "error",
+				"useSingleVarDeclarator": "error",
+				"noUnusedTemplateLiteral": "error",
+				"useNumberNamespace": "error",
+				"noInferrableTypes": "error",
+				"noUselessElse": "error"
+			}
 		}
 	},
 	"formatter": {
@@ -15,15 +31,16 @@
 		"indentStyle": "tab",
 		"indentWidth": 2,
 		"lineWidth": 120,
-		"ignore": []
+		"includes": ["**"]
 	},
 	"files": {
-		"ignore": [
-			"dist/**",
-			"node_modules/**",
-			"example/node_modules/**",
-			"example/playwright-report/**",
-			"example/test-results/**"
+		"includes": [
+			"**",
+			"!**/dist",
+			"!**/node_modules",
+			"!**/intTest/node_modules",
+			"!**/intTest/playwright-report",
+			"!**/intTest/test-results"
 		]
 	}
 }

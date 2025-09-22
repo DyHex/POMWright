@@ -182,7 +182,7 @@ export class PlaywrightReportLogger {
 				const parsedMessage = JSON.parse(log.message);
 				messageContentType = "application/json";
 				messageBody = JSON.stringify(parsedMessage, null, 2);
-			} catch (error) {
+			} catch (_error) {
 				messageContentType = "text/plain";
 				messageBody = log.message;
 			}

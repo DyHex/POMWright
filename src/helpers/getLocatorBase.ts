@@ -1,7 +1,7 @@
 import { type Locator, test } from "@playwright/test";
 import type { BasePage, BasePageOptions } from "../basePage";
 import { GetBy } from "./getBy.locator";
-import { GetByMethod, type LocatorSchema, getLocatorSchemaDummy } from "./locatorSchema.interface";
+import { GetByMethod, getLocatorSchemaDummy, type LocatorSchema } from "./locatorSchema.interface";
 import type { PlaywrightReportLogger } from "./playwrightReportLogger";
 export { GetByMethod };
 
@@ -918,9 +918,7 @@ class WithMethodsClass<
 			return this;
 		} as LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>["update"];
 
-		locatorSchemaCopy.updates = function (indexedUpdates: {
-			[index: number]: Partial<LocatorSchemaWithoutPath>;
-		}) {
+		locatorSchemaCopy.updates = function (indexedUpdates: { [index: number]: Partial<LocatorSchemaWithoutPath> }) {
 			const pathIndexPairs = self.extractPathsFromSchema(self.locatorSchemaPath as string);
 			self.applyUpdates(self.schemasMap, pathIndexPairs, indexedUpdates);
 			return this;
