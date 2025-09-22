@@ -46,6 +46,7 @@ class MyApi extends BaseApi {
 ```
 
 Then in a test you'd do:
+
 ```ts
 test("some test", { tag: ["@api", "@user"] }, async ({ myApi }) => {
   // Create user
