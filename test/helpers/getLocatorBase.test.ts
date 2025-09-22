@@ -97,6 +97,120 @@ describe("GetLocatorBase", () => {
 		);
 	});
 
+	test("addSchema() should throw when the LocatorSchemaPath only contains a '.'", () => {
+		const instance = new GetLocatorBase(pageObjectClass, mockLog);
+
+		expect(() => {
+			instance.addSchema("." as unknown as LocatorSchemaPath, {
+				text: "text",
+				locatorMethod: GetByMethod.text,
+			});
+		}).toThrowError(
+			`[${pageObjectClass.pocName}] Invalid LocatorSchemaPath '.'. LocatorSchemaPath must not be empty, start or end with a '.', or contain consecutive '.'.`,
+		);
+	});
+
+	test("addSchema() should throw when the LocatorSchemaPath only contains dots '.'", () => {
+		const instance = new GetLocatorBase(pageObjectClass, mockLog);
+
+		expect(() => {
+			instance.addSchema("..." as unknown as LocatorSchemaPath, {
+				text: "text",
+				locatorMethod: GetByMethod.text,
+			});
+		}).toThrowError(
+			`[${pageObjectClass.pocName}] Invalid LocatorSchemaPath '...'. LocatorSchemaPath must not be empty, start or end with a '.', or contain consecutive '.'.`,
+		);
+	});
+
+	test("addSchema() should throw when the LocatorSchemaPath starts with a '.'", () => {
+		const instance = new GetLocatorBase(pageObjectClass, mockLog);
+
+		expect(() => {
+			instance.addSchema(".startsWithDot" as unknown as LocatorSchemaPath, {
+				text: "text",
+				locatorMethod: GetByMethod.text,
+			});
+		}).toThrowError(
+			`[${pageObjectClass.pocName}] Invalid LocatorSchemaPath '.startsWithDot'. LocatorSchemaPath must not be empty, start or end with a '.', or contain consecutive '.'.`,
+		);
+	});
+
+	test("addSchema() should throw when the LocatorSchemaPath ends with a '.'", () => {
+		const instance = new GetLocatorBase(pageObjectClass, mockLog);
+
+		expect(() => {
+			instance.addSchema("endsWithDot." as unknown as LocatorSchemaPath, {
+				text: "text",
+				locatorMethod: GetByMethod.text,
+			});
+		}).toThrowError(
+			`[${pageObjectClass.pocName}] Invalid LocatorSchemaPath 'endsWithDot.'. LocatorSchemaPath must not be empty, start or end with a '.', or contain consecutive '.'.`,
+		);
+	});
+
+	test("addSchema() should throw when the LocatorSchemaPath contains consecutive '.' characters", () => {
+		const instance = new GetLocatorBase(pageObjectClass, mockLog);
+
+		for (const path of ["main..button", "...button", "main..."]) {
+			expect(() => {
+				instance.addSchema(path as unknown as LocatorSchemaPath, {
+					text: "text",
+					locatorMethod: GetByMethod.text,
+				});
+			}).toThrowError(
+				`[${pageObjectClass.pocName}] Invalid LocatorSchemaPath '${path}'. LocatorSchemaPath must not be empty, start or end with a '.', or contain consecutive '.'.`,
+			);
+		}
+	});
+
+	test("addSchema() should throw when the LocatorSchemaPath is an empty string", () => {
+		const instance = new GetLocatorBase(pageObjectClass, mockLog);
+
+		expect(() => {
+			instance.addSchema("" as unknown as LocatorSchemaPath, {
+				text: "text",
+				locatorMethod: GetByMethod.text,
+			});
+		}).toThrowError(
+			`[${pageObjectClass.pocName}] Invalid LocatorSchemaPath ''. LocatorSchemaPath must not be empty, start or end with a '.', or contain consecutive '.'.`,
+		);
+	});
+
+	test("addSchema() compile-time guards disallow invalid LocatorSchemaPath strings", () => {
+		const instance = new GetLocatorBase(pageObjectClass, mockLog);
+
+		expect(() => {
+			// @ts-expect-error LocatorSchemaPath cannot be empty
+			instance.addSchema("", { locatorMethod: GetByMethod.text });
+		}).toThrowError(
+			`[${pageObjectClass.pocName}] Invalid LocatorSchemaPath ''. LocatorSchemaPath must not be empty, start or end with a '.', or contain consecutive '.'.`,
+		);
+
+		expect(() => {
+			// @ts-expect-error LocatorSchemaPath cannot start with a dot
+			instance.addSchema(".startsWithDot", { locatorMethod: GetByMethod.text });
+		}).toThrowError(
+			`[${pageObjectClass.pocName}] Invalid LocatorSchemaPath '.startsWithDot'. LocatorSchemaPath must not be empty, start or end with a '.', or contain consecutive '.'.`,
+		);
+
+		expect(() => {
+			// @ts-expect-error LocatorSchemaPath cannot end with a dot
+			instance.addSchema("endsWithDot.", { locatorMethod: GetByMethod.text });
+		}).toThrowError(
+			`[${pageObjectClass.pocName}] Invalid LocatorSchemaPath 'endsWithDot.'. LocatorSchemaPath must not be empty, start or end with a '.', or contain consecutive '.'.`,
+		);
+
+		expect(() => {
+			// @ts-expect-error LocatorSchemaPath cannot contain consecutive dots
+			instance.addSchema("main..button", { locatorMethod: GetByMethod.text });
+		}).toThrowError(
+			`[${pageObjectClass.pocName}] Invalid LocatorSchemaPath 'main..button'. LocatorSchemaPath must not be empty, start or end with a '.', or contain consecutive '.'.`,
+		);
+
+		expect(instance).toBeInstanceOf(GetLocatorBase);
+	});
+
 	test("getLocatorSchema() should return a LocatorSchemaWithMethods object", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 

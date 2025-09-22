@@ -50,6 +50,17 @@ export type LocatorSchemaWithoutPath = Omit<LocatorSchema, "locatorSchemaPath">;
 /** PathIndexPairs links each sub-part of a path to an optional index used in getNestedLocator calls. */
 type PathIndexPairs = { path: string; index?: number }[];
 
+/**
+ * Ensures LocatorSchemaPath strings are non-empty, do not start/end with dots, and avoid consecutive dots.
+ */
+type LocatorSchemaPathValid<Path extends string> = Path extends ""
+	? never
+	: Path extends `.${string}` | `${string}.`
+		? never
+		: Path extends `${string}..${string}`
+			? never
+			: Path;
+
 const REQUIRED_PROPERTIES_FOR_LOCATOR_SCHEMA_WITH_METHODS = [
 	"update",
 	"updates",
@@ -507,7 +518,23 @@ export class GetLocatorBase<
 	 * Registers a new LocatorSchema under the given locatorSchemaPath.
 	 * Throws an error if a schema already exists at that path.
 	 */
-	public addSchema(locatorSchemaPath: LocatorSchemaPathType, schemaDetails: LocatorSchemaWithoutPath): void {
+	public addSchema(
+		locatorSchemaPath: LocatorSchemaPathType & LocatorSchemaPathValid<LocatorSchemaPathType>,
+		schemaDetails: LocatorSchemaWithoutPath,
+	): void {
+		if (
+			locatorSchemaPath.length === 0 ||
+			locatorSchemaPath.startsWith(".") ||
+			locatorSchemaPath.endsWith(".") ||
+			locatorSchemaPath.includes("..")
+		) {
+			throw new Error(
+				`[${
+					this.pageObjectClass.pocName
+				}] Invalid LocatorSchemaPath '${locatorSchemaPath}'. LocatorSchemaPath must not be empty, start or end with a '.', or contain consecutive '.'.`,
+			);
+		}
+
 		// Create the new schema
 		const newLocatorSchema = this.createLocatorSchema(schemaDetails, locatorSchemaPath);
 

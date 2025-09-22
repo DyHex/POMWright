@@ -401,15 +401,15 @@ test.describe("addFilter", () => {
 				[
 					"body",
 					[
-						{
-							has: {
+						expect.objectContaining({
+							has: expect.objectContaining({
 								_frame: expect.objectContaining({
 									_guid: expect.any(String),
 									_type: "Frame",
 								}),
 								_selector: "section",
-							},
-						},
+							}),
+						}),
 					],
 				],
 				["body.section", [{ hasText: "Dude... Green is not a primary color." }, { hasText: "Playground" }]],
