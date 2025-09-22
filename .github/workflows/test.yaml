@@ -31,7 +31,35 @@ jobs:
         node-version: '24.x'
         cache: 'pnpm'
 
+    - name: Install dependencies
+      run: pnpm i
+
+    - name: Install intTest dependencies
+      working-directory: orderform.web
+      run: pnpm i
+
+    - name: Generate Playwright Report Name
+      if: always()
+      shell: bash
+      working-directory: orderform.web
+      run: |
+        # Determine branch name: use github.head_ref for PRs, fallback to github.ref_name for pushes
+        branchName="${{ github.head_ref || github.ref_name }}"
+        # Replace any character that isn't a letter, number, or hyphen with '-'
+        normalizedBranchName="${branchName//[^a-zA-Z0-9æÆøØåÅ\-]/-}"
+        timestamp=$(date +"%d_%m_%Y_%H%M")
+        echo "PLAYWRIGHT_REPORT_NAME=playwright-report-$normalizedBranchName-$timestamp" >> $GITHUB_ENV
+
     - name: Run test script
-      run: bash pack-test.sh
+      id: test
+      run: pnpm test
       env:
         CI: true
+
+    - name: Upload Playwright Test Report Artifact on failure
+      if: failure() && steps.test.outcome == 'failure'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.PLAYWRIGHT_REPORT_NAME }}
+        path: intTest/playwright-report
+        retention-days: 30
