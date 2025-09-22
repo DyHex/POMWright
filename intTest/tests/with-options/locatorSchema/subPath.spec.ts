@@ -364,9 +364,9 @@ test.describe("update, deprecated update & deprecated updates", () => {
 		expect(`${updateNestedLocator}`).toEqual(`${deprecatedUpdatesNestedLocator}`);
 		expect(`${deprecatedUpdateNestedLocator}`).toEqual(`${deprecatedUpdatesNestedLocator}`);
 
-		expect(updateNestedLocator).not.toStrictEqual(deprecatedUpdateNestedLocator);
-		expect(updateNestedLocator).not.toStrictEqual(deprecatedUpdatesNestedLocator);
-		expect(deprecatedUpdateNestedLocator).not.toStrictEqual(deprecatedUpdatesNestedLocator);
+		expect(updateNestedLocator).not.toBe(deprecatedUpdateNestedLocator);
+		expect(updateNestedLocator).not.toBe(deprecatedUpdatesNestedLocator);
+		expect(deprecatedUpdateNestedLocator).not.toBe(deprecatedUpdatesNestedLocator);
 	});
 });
 
