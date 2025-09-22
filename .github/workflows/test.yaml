@@ -35,6 +35,7 @@ jobs:
       run: pnpm i
 
     - name: Install intTest dependencies
+      working-directory: ./intTest
       run: pnpm i
 
     - name: Generate Playwright Report Name
