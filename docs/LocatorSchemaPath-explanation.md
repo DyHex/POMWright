@@ -125,6 +125,9 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
 
 The portion before `@` usually describes the element type (`section`, `button`), while the part after `@` is a friendly identifier (`playground`, `reset`).  This makes long chains readable while still conveying intent.
 
+> **Note:** There is nothing special about the character `@`, in the eyes of POMWright it's just another character in a word. The only "special" character is `.` dot.
+
+Another important 
 > **Note:** We do not aim to map the DOM structure of elements 1:1 through LocatorSchemaPath's. This would result in very long paths... We just map the relevant elements and enough of them to ensure unique paths through elements we want to validate and interact with in our tests. Thus we get some free validation of DOM structure, elements are where we expect them to be and we can create and maintain a "library" of quite simple Locators to produce unique and reliable selectors for our tests through POMWright's automatic chaining.
 
 ## Sub paths & intellisense/autocomplete
@@ -138,10 +141,10 @@ await profile
   .getNestedLocator();
 ```
 
-The TypeScript union of all `LocatorSchemaPath` strings gives you auto‑complete and prevents typos during compilation. Making the LocatorSchemaPath's searchable, need to click a specific button but don't remember the path? Write "button" and get an intellisense list of all paths containing the letters "button" etc.
+The TypeScript union of all `LocatorSchemaPath` strings gives you auto‑complete and prevents typos during compilation. Making the LocatorSchemaPath's searchable. Need to click a specific button but don't remember the path? Write "button" and get an intellisense list of all paths containing the "button" etc.
 
 Did an element change? Update the LocatorSchema definition, keep using the same LocatorSchemaPath. All tests using said LocatorSchemaPath will now work again.
 
-Need to change a path because the DOM structure changed? Rename the LocatorSchemaPath string, and it will automatically be updated in the addSchema call and in any test or POC referencing it (might depend on your VSCode settings). Or alternatively search and replace.
+Need to change a path because the DOM structure changed? Rename the LocatorSchemaPath string, and it will automatically be updated in the addSchema call and in any test or POC referencing it (might depend on your VSCode/IDE settings). Or alternatively search and replace.
 
-Either way, it's a lot less work compared to dealing with hardcoded and duplication of said locators in every test. Making maintanence pretty easy.
+Either way, it's a lot less work compared to dealing with hardcoded Locators and duplication of said Locators across every test. Making maintanence quite comfortable. While ensuring all tests use the same selectors to interact and validate the same elements.

@@ -38,6 +38,7 @@ const third = await page
   .getLocatorSchema("topMenu.notifications.dropdown.item")
   .getNestedLocator({ "topMenu.notifications.dropdown.item": 2 });
 ```
+
 > Note: numeric indices will be removed in a future update, so use keyed sub-paths instead, as shown in the example above.
 
 ## getLocator
