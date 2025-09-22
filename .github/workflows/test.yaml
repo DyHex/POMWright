@@ -31,13 +31,6 @@ jobs:
         node-version: '24.x'
         cache: 'pnpm'
 
-    - name: Install dependencies
-      run: pnpm i
-
-    - name: Install intTest dependencies
-      working-directory: ./intTest
-      run: pnpm i
-
     - name: Generate Playwright Report Name
       if: always()
       shell: bash
