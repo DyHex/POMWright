@@ -35,13 +35,11 @@ jobs:
       run: pnpm i
 
     - name: Install intTest dependencies
-      working-directory: orderform.web
       run: pnpm i
 
     - name: Generate Playwright Report Name
       if: always()
       shell: bash
-      working-directory: orderform.web
       run: |
         # Determine branch name: use github.head_ref for PRs, fallback to github.ref_name for pushes
         branchName="${{ github.head_ref || github.ref_name }}"
@@ -52,7 +50,7 @@ jobs:
 
     - name: Run test script
       id: test
-      run: pnpm test
+      run: pnpm pack-test
       env:
         CI: true
 
