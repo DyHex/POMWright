@@ -10,14 +10,14 @@
 	},
 	"keywords": [],
 	"devDependencies": {
-		"@playwright/test": "1.47.1",
-		"@types/express": "^4.17.21",
-		"@types/node": "^20.16.6",
-		"express": "^4.21.0",
-		"pomwright": "^1.1.1"
+		"@playwright/test": "1.55.0",
+		"@types/express": "^5.0.3",
+		"@types/node": "^24.5.2",
+		"express": "^5.1.0",
+		"pomwright": "^1.2.0"
 	},
 	"dependencies": {
-		"dotenv": "^16.4.5"
+		"dotenv": "^17.2.2"
 	},
 	"packageManager": "pnpm@9.12.0"
 }
