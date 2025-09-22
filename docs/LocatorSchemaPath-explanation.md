@@ -39,8 +39,6 @@ type LocatorSchemaPath =
 
 Especially useful when we import and reuse LocatorSchemaPaths and LocatorSchema between POCs.
 
-
-
 ```ts
 import { GetByMethod, type GetLocatorBase } from "pomwright";
 import { type LocatorSchemaPath as common, initLocatorSchemas as initCommon } from "../page-components/common.locatorSchema";
@@ -59,7 +57,7 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
   });
 ```
 
-As briefly mentioned, LocatorSchemaPath strings are used as Keys in a Map of LocatorSchema. Thus the last rule is: 
+As briefly mentioned, LocatorSchemaPath strings are used as Keys in a Map of LocatorSchema. Thus the last rule is:
 
 Each LocatorSchemaPath string must be referenced by a addSchema call in the initLocatorSchemas function. POMwright will throw a "not implemented" run-time error for the LocatorSchemaPath if you forget.
 
@@ -123,19 +121,27 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
 }
 ```
 
+> We can use `main.button` to count all buttons, and `main.button@continue` to interact with the continue button etc.
+
 The portion before `@` usually describes the element type (`section`, `button`), while the part after `@` is a friendly identifier (`playground`, `reset`).  This makes long chains readable while still conveying intent.
 
 > **Note:** We do not aim to map the DOM structure of elements 1:1 through LocatorSchemaPath's. This would result in very long paths... We just map the relevant elements and enough of them to ensure unique paths through elements we want to validate and interact with in our tests. Thus we get some free validation of DOM structure, elements are where we expect them to be and we can create and maintain a "library" of quite simple Locators to produce unique and reliable selectors for our tests through POMWright's automatic chaining.
 
 ## Sub paths & intellisense/autocomplete
 
-Every dot‑delimited segment forms a sub path. POMWright uses these to scope updates and filters or to select specific `nth` occurrences.
+Every dot‑delimited segment forms a sub path. POMWright uses these to scope updates and filters or to select specific `nth` occurrences for any Locator which makes up the chain.
 
 ```ts
 await profile
-  .getLocatorSchema("body.section@playground.button@reset")
-  .addFilter("body.section@playground", { hasText: /Primary Colors/i })
+  .getLocatorSchema("body.section@playground.button@reset") // auto-complete for all LocatorSchemaPath's
+  .addFilter("body.section@playground", { hasText: /Primary Colors/i }) // auto-complete for all valid sub-paths of the LocatorSchemaPath referenced in the getLocatorSchema call
   .getNestedLocator();
 ```
 
-The TypeScript union of all `LocatorSchemaPath` strings gives you auto‑complete and prevents typos during compilation.
+The TypeScript union of all `LocatorSchemaPath` strings gives you auto‑complete and prevents typos during compilation. Making the LocatorSchemaPath's searchable, need to click a specific button but don't remember the path? Write "button" and get an intellisense list of all paths containing the letters "button" etc.
+
+Did an element change? Update the LocatorSchema definition, keep using the same LocatorSchemaPath. All tests using said LocatorSchemaPath will now work again.
+
+Need to change a path because the DOM structure changed? Rename the LocatorSchemaPath string, and it will automatically be updated in the addSchema call and in any test or POC referencing it (might depend on your VSCode settings). Or alternatively search and replace.
+
+Either way, it's a lot less work compared to dealing with hardcoded and duplication of said locators in every test. Making maintanence pretty easy.

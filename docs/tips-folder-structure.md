@@ -32,6 +32,7 @@ How you structure your project is ultimately up to you and what makes sense ofte
         homepage.spec.ts
         /profile
           profile.spec.ts
+      /e2e
     /app2
     /e2e
 ```

@@ -75,3 +75,37 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
 ```
 
 For reusable pieces you can import and declare `LocatorSchemaWithoutPath` objects and reuse them within the file or across locatorSchema files.
+
+```ts
+import { GetByMethod, type GetLocatorBase, type LocatorSchemaWithoutPath } from "pomwright";
+
+type LocatorSchemaPath = 
+  | "main"
+  | "main.button"
+  | "main.button@continue"
+  | "main.button@back";
+
+export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) {
+
+  locators.addSchema("main", {
+    locator: "main",
+    locatorMethod: GetByMethod.locator
+  });
+
+  const button: LocatorSchemaWithoutPath = { role: "button", locatorMethod: GetByMethod.role}
+
+  locators.addSchema("main.button", {
+    ...button,
+  });
+
+  locators.addSchema("main.button@continue", {
+    ...button,
+    roleOptions: { name: "Continue" },
+  });
+
+  locators.addSchema("main.button@back", {
+    ...button,
+    roleOptions: { name: "Back" },
+  });
+}
+```
