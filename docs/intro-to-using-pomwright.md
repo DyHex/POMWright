@@ -45,9 +45,9 @@ From playwright we import:
 
 From POMWright we import:
 
-- [BasePage](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/src/basePage.ts) - An abstract class which is the foundation of all POC's in POMWright.
-- [PlaywrightReportLogger](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/src/helpers/playwrightReportLogger.ts) - A custom logger which records log messages and attaches them to the Playwright HTML report in chronological order (timestamp) per test.
-- [GetByMethod](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/src/helpers/locatorSchema.interface.ts#L7) - Dictates which Playwright Locator method POMWright uses for a given LocatorSchema when creating single or nested Locators.
+- [BasePage](../src/basePage.ts) - An abstract class which is the foundation of all POC's in POMWright.
+- [PlaywrightReportLogger](../src/helpers/playwrightReportLogger.ts) - A custom logger which records log messages and attaches them to the Playwright HTML report in chronological order (timestamp) per test.
+- [GetByMethod](../src/helpers/locatorSchema.interface.ts#L7) - Dictates which Playwright Locator method POMWright uses for a given LocatorSchema when creating single or nested Locators.
 
 #### We can now create a minimal implementation of our POC
 
@@ -76,24 +76,24 @@ The constructor has to invoke super with the following parameters:
 - baseUrl - a string, similar to [BaseURL](https://playwright.dev/docs/api/class-testoptions#test-options-base-url) in playwright.config
 - urlPath - a string, the resource path of the POCs page URL
 - pocName - a string, the POCs human-readable name, used for logging and enriching the playwright HTML report
-- pwrl - see [PlaywrightReportLogger](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/src/helpers/playwrightReportLogger.ts)
+- pwrl - see [PlaywrightReportLogger](../src/helpers/playwrightReportLogger.ts)
 
-Since each POC we create will be initialized as a custom Playwright fixture, we'll need to provide atleast three of these parameters to the constructor, namely [Page](https://playwright.dev/docs/api/class-page), [TestInfo](https://playwright.dev/docs/api/class-testinfo) and [PlaywrightReportLogger](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/src/fixture/base.fixtures.ts), as they will be provided by their respective fixtures. The rest can be defined in the POC as above or in the custom fixture initializing the POC.
+Since each POC we create will be initialized as a custom Playwright fixture, we'll need to provide atleast three of these parameters to the constructor, namely [Page](https://playwright.dev/docs/api/class-page), [TestInfo](https://playwright.dev/docs/api/class-testinfo) and [PlaywrightReportLogger](../src/fixture/base.fixtures.ts), as they will be provided by their respective fixtures. The rest can be defined in the POC as above or in the custom fixture initializing the POC.
 
-For an indepth explanation of BasePage see [BasePage-explanation.md](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/docs/BasePage-explanation.md)
+For an indepth explanation of BasePage see [BasePage-explanation.md](BasePage-explanation.md)
 
 #### We can now define the POC's LocatorSchemaPath's and corresponding LocatorSchema
 
 Playwright Docs loosely explain the concept of the [Page Object Model Pattern](https://playwright.dev/docs/pom) with some examples. The principle is the same but the structure and how we go about it is a bit different in POMWright.
 
-Instead of defining Locators as properties or methods in our POC's, we define them through [LocatorSchema](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/docs/LocatorSchema-explanation.md)'s with their own unique [LocatorSchemaPath](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/docs/LocatorSchemaPath-explanation.md)'s. In short, each Page Object Class (POC) extending BasePage should define its own LocatorSchemaPath Type, which is a union of strings with the following rules:
+Instead of defining Locators as properties or methods in our POC's, we define them through [LocatorSchema](./LocatorSchema-explanation.md)'s with their own unique [LocatorSchemaPath](./LocatorSchemaPath-explanation.md)'s. In short, each Page Object Class (POC) extending BasePage should define its own LocatorSchemaPath Type, which is a union of strings with the following rules:
 
 1. The only character of significance is `.` (dot/period), any other single character or combination of characters are considered words (human readable).
 2. A LocatorSchemaPath string must start and end with a word.
 3. Words are seperated by `.` (dot/period).
 4. Each LocatorSchemaPath string must be unique within its scope.
 
-In practice, a LocatorSchemaPath functions as a unique identifier. While the rules are straightforward, there are important nuances. Because LocatorSchemaPath is a core concept of POMWright, I strongly recommend reading the more in-depth explanation [here](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/docs/LocatorSchemaPath-explanation.md) before you proceed.
+In practice, a LocatorSchemaPath functions as a unique identifier. While the rules are straightforward, there are important nuances. Because LocatorSchemaPath is a core concept of POMWright, I strongly recommend reading the more in-depth explanation [here](./LocatorSchemaPath-explanation.md) before you proceed.
 
 Back to our example, lets add some LocatorSchemaPath's to our POC representing our simple login page:
 
@@ -124,9 +124,9 @@ export default class Login extends BasePage<LocatorSchemaPath> {
 
 We havn't introduced them yet, but as it stands, if we were to invoke any of POMWright's methods with any of these LocatorSchemaPath's we'd get a "not implemented" error, thus we need to add our LocatorSchema's which our LocatorSchemaPath's reference.
 
-The LocatorSchema interface lets us define an object for creating a Locator with any of Playwright's locator methods, I advise you to read the more in-depth explanation [here](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/docs/LocatorSchema-explanation.md).
+The LocatorSchema interface lets us define an object for creating a Locator with any of Playwright's locator methods, I advise you to read the more in-depth explanation [here](./LocatorSchema-explanation.md).
 
-Now lets add our LocatorSchema, we do this through the `initLocatorSchemas()` method, through the POC's `locators` property which it gets from extending BasePage. The `locators` property is an instance of the GetLocatorBase class, which handles LocatorSchema management and provides the POC with POMWright's locator methods, see [get-locator-methods-explanation.mb](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/docs/get-locator-methods-explanation.md) for further details.
+Now lets add our LocatorSchema, we do this through the `initLocatorSchemas()` method, through the POC's `locators` property which it gets from extending BasePage. The `locators` property is an instance of the GetLocatorBase class, which handles LocatorSchema management and provides the POC with POMWright's locator methods, see [get-locator-methods-explanation.mb](./get-locator-methods-explanation.md) for further details.
 
 ```TS
 // login.page.ts
@@ -213,7 +213,7 @@ export default class Login extends BasePage<LocatorSchemaPath> {
 
 #### We can then create helper methods for our POC which uses the LocatorSchema's we defined
 
-For an indepth explanation of POMWright's locator methods, see [get-locator-methods-explanation.md](https://github.com/DyHex/POMWright/blob/docs/improve-documentation/docs/get-locator-methods-explanation.md)
+For an indepth explanation of POMWright's locator methods, see [get-locator-methods-explanation.md](./get-locator-methods-explanation.md)
 
 To make sure we can use Playwright test.step in our helper method, we'll import test from Playwright through POMWright.
 

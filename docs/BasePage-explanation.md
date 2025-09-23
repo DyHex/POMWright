@@ -9,7 +9,7 @@ BasePage<LocatorSchemaPathType, Options = { urlOptions: { baseUrlType: string; u
 ```
 
 * **LocatorSchemaPathType** – union of valid locator paths for the POC.
-* **Options** – optional configuration that allows the `baseUrl` or `urlPath` to be typed as a `RegExp` when dynamic values are required for mapping certain resource paths. See [intTest/page-object-models/testApp/with-options/base/baseWithOptions.page.ts](https://github.com/DyHex/POMWright/blob/main/intTest/page-object-models/testApp/with-options/base/baseWithOptions.page.ts)
+* **Options** – optional configuration that allows the `baseUrl` or `urlPath` to be typed as a `RegExp` when dynamic values are required for mapping certain resource paths. See [intTest/page-object-models/testApp/with-options/base/baseWithOptions.page.ts](../intTest/page-object-models/testApp/with-options/base/baseWithOptions.page.ts)
 * **LocatorSubstring** – internal type used when working with sub paths; normally left undefined.
 
 ## Constructor
@@ -93,4 +93,4 @@ All locators are strongly typed, giving compile‑time suggestions and preventin
 
 Instead of extending each of your POC's with BasePage from POMWright, opt instead to create an abstract BasePage class for your domain and have it extend BasePage from POMWright. Then have each of your POC's extend your abstract POC instead. This allows us to easily sentralize common helper methods, LocatorSchema, etc. and reuse it across all our POC's for the given domain.
 
-For examples see [intTest/page-object-models/testApp](https://github.com/DyHex/POMWright/tree/main/intTest/page-object-models/testApp)
+For examples see [intTest/page-object-models/testApp](../intTest/page-object-models/testApp)

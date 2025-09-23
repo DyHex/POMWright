@@ -171,7 +171,7 @@ page.getByTestId("reset-btn");
 
 ### `dataCy`
 
-`dataCy` is a POMWright convenience for the legacy `data-cy` attribute used in Cypress-based projects. Under the hood it still calls `page.locator()` with the [`data-cy=` selector engine](https://playwright.dev/docs/selectors#custom-selectors) registered by `BasePage`.
+`dataCy` is a POMWright convenience for the legacy `data-cy` attribute used in Cypress-based projects. Under the hood it still calls `page.locator()` with the [`data-cy=` selector engine](https://playwright.dev/docs/extensibility#custom-selector-engines) registered by `BasePage`.
 
 ```ts
 locators.addSchema("content.card.actions", {
