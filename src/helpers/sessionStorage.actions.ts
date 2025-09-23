@@ -39,7 +39,7 @@ export class SessionStorage {
 					const item = sessionStorage.getItem(key);
 					try {
 						storage[key] = item ? JSON.parse(item) : null;
-					} catch (e) {
+					} catch (_e) {
 						storage[key] = item;
 					}
 				}
@@ -94,7 +94,7 @@ export class SessionStorage {
 			contextExists = await this.page.evaluate(() => {
 				return typeof window !== "undefined" && window.sessionStorage !== undefined;
 			});
-		} catch (e) {
+		} catch (_e) {
 			// Execution context was destroyed; navigate event likely occurred
 			contextExists = false;
 		}
@@ -130,7 +130,7 @@ export class SessionStorage {
 			const allData = await this.readFromSessionStorage();
 			if (keys && keys.length > 0) {
 				for (const key of keys) {
-					if (Object.prototype.hasOwnProperty.call(allData, key)) {
+					if (Object.hasOwn(allData, key)) {
 						result[key] = allData[key];
 					}
 				}

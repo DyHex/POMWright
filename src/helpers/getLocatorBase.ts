@@ -1,7 +1,7 @@
 import { type Locator, test } from "@playwright/test";
 import type { BasePage, BasePageOptions } from "../basePage";
 import { GetBy } from "./getBy.locator";
-import { GetByMethod, type LocatorSchema, getLocatorSchemaDummy } from "./locatorSchema.interface";
+import { GetByMethod, getLocatorSchemaDummy, type LocatorSchema } from "./locatorSchema.interface";
 import type { PlaywrightReportLogger } from "./playwrightReportLogger";
 export { GetByMethod };
 
@@ -49,6 +49,17 @@ export type LocatorSchemaWithoutPath = Omit<LocatorSchema, "locatorSchemaPath">;
 
 /** PathIndexPairs links each sub-part of a path to an optional index used in getNestedLocator calls. */
 type PathIndexPairs = { path: string; index?: number }[];
+
+/**
+ * Ensures LocatorSchemaPath strings are non-empty, do not start/end with dots, and avoid consecutive dots.
+ */
+type LocatorSchemaPathValid<Path extends string> = Path extends ""
+	? never
+	: Path extends `.${string}` | `${string}.`
+		? never
+		: Path extends `${string}..${string}`
+			? never
+			: Path;
 
 const REQUIRED_PROPERTIES_FOR_LOCATOR_SCHEMA_WITH_METHODS = [
 	"update",
@@ -507,7 +518,23 @@ export class GetLocatorBase<
 	 * Registers a new LocatorSchema under the given locatorSchemaPath.
 	 * Throws an error if a schema already exists at that path.
 	 */
-	public addSchema(locatorSchemaPath: LocatorSchemaPathType, schemaDetails: LocatorSchemaWithoutPath): void {
+	public addSchema(
+		locatorSchemaPath: LocatorSchemaPathType & LocatorSchemaPathValid<LocatorSchemaPathType>,
+		schemaDetails: LocatorSchemaWithoutPath,
+	): void {
+		if (
+			locatorSchemaPath.length === 0 ||
+			locatorSchemaPath.startsWith(".") ||
+			locatorSchemaPath.endsWith(".") ||
+			locatorSchemaPath.includes("..")
+		) {
+			throw new Error(
+				`[${
+					this.pageObjectClass.pocName
+				}] Invalid LocatorSchemaPath '${locatorSchemaPath}'. LocatorSchemaPath must not be empty, start or end with a '.', or contain consecutive '.'.`,
+			);
+		}
+
 		// Create the new schema
 		const newLocatorSchema = this.createLocatorSchema(schemaDetails, locatorSchemaPath);
 
@@ -891,9 +918,7 @@ class WithMethodsClass<
 			return this;
 		} as LocatorSchemaWithMethods<LocatorSchemaPathType, LocatorSubstring>["update"];
 
-		locatorSchemaCopy.updates = function (indexedUpdates: {
-			[index: number]: Partial<LocatorSchemaWithoutPath>;
-		}) {
+		locatorSchemaCopy.updates = function (indexedUpdates: { [index: number]: Partial<LocatorSchemaWithoutPath> }) {
 			const pathIndexPairs = self.extractPathsFromSchema(self.locatorSchemaPath as string);
 			self.applyUpdates(self.schemasMap, pathIndexPairs, indexedUpdates);
 			return this;

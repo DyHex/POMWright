@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import dotenv from "dotenv";
 
 // Environment variables ./.env
-dotenv.config({ override: false });
+dotenv.config({ override: false, quiet: true });
 
 /**
  * See https://playwright.dev/docs/test-configuration.

@@ -1,4 +1,4 @@
-import { type Locator, type Page, type Selectors, type TestInfo, selectors } from "@playwright/test";
+import { type Locator, type Page, type Selectors, selectors, type TestInfo } from "@playwright/test";
 import { GetLocatorBase, type SubPaths } from "./helpers/getLocatorBase";
 import type { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 import { SessionStorage } from "./helpers/sessionStorage.actions";
@@ -140,7 +140,7 @@ export abstract class BasePage<
 		 * @param str - The input string containing potential regex characters.
 		 * @returns The escaped string, safe for regex use.
 		 */
-		const escapeStringForRegExp = (str: string) => str.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+		const escapeStringForRegExp = (str: string) => str.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
 
 		if (typeof baseUrl === "string" && typeof urlPath === "string") {
 			return `${baseUrl}${urlPath}` as ExtractFullUrlType<Options>;

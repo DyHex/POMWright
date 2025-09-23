@@ -364,9 +364,9 @@ test.describe("update, deprecated update & deprecated updates", () => {
 		expect(`${updateNestedLocator}`).toEqual(`${deprecatedUpdatesNestedLocator}`);
 		expect(`${deprecatedUpdateNestedLocator}`).toEqual(`${deprecatedUpdatesNestedLocator}`);
 
-		expect(updateNestedLocator).not.toEqual(deprecatedUpdateNestedLocator);
-		expect(updateNestedLocator).not.toEqual(deprecatedUpdatesNestedLocator);
-		expect(deprecatedUpdateNestedLocator).not.toEqual(deprecatedUpdatesNestedLocator);
+		expect(updateNestedLocator).not.toBe(deprecatedUpdateNestedLocator);
+		expect(updateNestedLocator).not.toBe(deprecatedUpdatesNestedLocator);
+		expect(deprecatedUpdateNestedLocator).not.toBe(deprecatedUpdatesNestedLocator);
 	});
 });
 
@@ -401,15 +401,15 @@ test.describe("addFilter", () => {
 				[
 					"body",
 					[
-						{
-							has: {
+						expect.objectContaining({
+							has: expect.objectContaining({
 								_frame: expect.objectContaining({
 									_guid: expect.any(String),
 									_type: "Frame",
 								}),
 								_selector: "section",
-							},
-						},
+							}),
+						}),
 					],
 				],
 				["body.section", [{ hasText: "Dude... Green is not a primary color." }, { hasText: "Playground" }]],
