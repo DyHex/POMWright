@@ -126,7 +126,7 @@ We havn't introduced them yet, but as it stands, if we were to invoke any of POM
 
 The LocatorSchema interface lets us define an object for creating a Locator with any of Playwright's locator methods, I advise you to read the more in-depth explanation [here](./LocatorSchema-explanation.md).
 
-Now lets add our LocatorSchema, we do this through the `initLocatorSchemas()` method, through the POC's `locators` property which it gets from extending BasePage. The `locators` property is an instance of the GetLocatorBase class, which handles LocatorSchema management and provides the POC with POMWright's locator methods, see [get-locator-methods-explanation.mb](./get-locator-methods-explanation.md) for further details.
+Now lets add our LocatorSchema, we do this through the `initLocatorSchemas()` method, through the POC's `locators` property which it gets from extending BasePage. The `locators` property is an instance of the GetLocatorBase class, which handles LocatorSchema management and provides the POC with POMWright's locator methods, see [get-locator-methods-explanation.md](./get-locator-methods-explanation.md) for further details.
 
 ```TS
 // login.page.ts
@@ -562,7 +562,7 @@ export default class Login extends MyAppBase<LocatorSchemaPath> {
   }
 
   protected initLocatorSchemas() {
-    initLocatorSchemas(this.locators);z
+    initLocatorSchemas(this.locators);
   }
 
   async fillLoginFormAndLoginAs(user: User) {
