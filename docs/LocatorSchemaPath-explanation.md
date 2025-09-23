@@ -1,10 +1,10 @@
 # LocatorSchemaPath
 
-A `LocatorSchemaPath` is a string used as the unique key for a `LocatorSchema` which POMWright creates a Playwright Locator from.
+A `LocatorSchemaPath` is the unique key that identifies a `LocatorSchema`.  Paths let POMWright build nested Playwright locators while keeping the definitions type‑safe and searchable.
 
-## Format, rules & nuances
+## Path syntax
 
-A `LocatorSchemaPath` must be a string or a union of strings.
+A `LocatorSchemaPath` is declared as a union of string literals.
 
 ```ts
 type LocatorSchemaPath = "main";
@@ -18,30 +18,50 @@ type LocatorSchemaPath =
   | "main.heading";
 ```
 
+In other words, each `.` (dot) separates a new segment in the chain. A LocatorSchemaPath string:
+
+- Cannot be empty.
+- The string cannot start or end with `.`.
+- The string cannot contain consecutive dots.
+
 A path must start and end with a "word", a word is any combination of characters except `.` (dot). The following paths will throw during runtime:
 
 ```ts
-type LocatorSchemaPath = 
-  | ""              // Empty string throws 
-  | ".main"         // Starting with a dot throws           
-  | "main."         // Ending with a dot throws
-  | "main..heading" // Consecutive dots throws
+// These throw at runtime
+type LocatorSchemaPath =
+  | ""              // empty string
+  | ".main"         // starting with a dot
+  | "main."         // ending with a dot
+  | "main..heading" // consecutive dots
 ```
 
-Paths must be unique within its scope, or POMWright will throw a run-time error when Playwright initializes the fixtures (POCs) for the test. In other words, POMWright will make sure to fail your test before it begins so you can fix the mistake.
-
-```ts
-type LocatorSchemaPath = 
-  | "main"
-  | "main.heading"  // Gets added to the POC's Locator Map
-  | "main.heading"; // Already exists in the Map, thus POMWright will throw
-```
-
-Especially useful when we import and reuse LocatorSchemaPaths and LocatorSchema between POCs.
+Every path represents a chain of locators that describe the hierarchy of elements on the page. POMWright enforces uniqueness, so registering the same path twice causes fixture initialisation to fail before any test using them can runs.
 
 ```ts
 import { GetByMethod, type GetLocatorBase } from "pomwright";
-import { type LocatorSchemaPath as common, initLocatorSchemas as initCommon } from "../page-components/common.locatorSchema";
+
+export type LocatorSchemaPath =
+  | "main"
+  | "main.heading";
+
+export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) {
+  locators.addSchema("main.heading", { /* ... */ });
+  locators.addSchema("main.heading", { /* ... */ }); // duplicate – throws
+}
+```
+
+## Referencing schemas
+
+Each path declared in the type must be implemented with `addSchema` inside `initLocatorSchemas`.  Missing implementations raise a `not implemented` error when the fixtures are created, helping you catch mistakes early.
+
+Locator paths can be shared across Page Object Classes by re‑exporting the union of strings:
+
+```ts
+import { GetByMethod, type GetLocatorBase } from "pomwright";
+import {
+  type LocatorSchemaPath as common,
+  initLocatorSchemas as initCommon
+} from "../page-components/common.locatorSchema";
 
 export type LocatorSchemaPath =
   | common
@@ -55,18 +75,19 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
     roleOptions: { name: "Welcome!" },
     locatorMethod: GetByMethod.role
   });
+}
 ```
 
-As briefly mentioned, LocatorSchemaPath strings are used as Keys in a Map of LocatorSchema. Thus the last rule is:
+## Descriptive segments
 
-Each LocatorSchemaPath string must be referenced by a addSchema call in the initLocatorSchemas function. POMwright will throw a "not implemented" run-time error for the LocatorSchemaPath if you forget.
-
-A practical nuance is that a LocatorSchemaPath string can have "words" or sub-paths that doesn't reference any actual LocatorSchema.
+A path may include segments that exist purely for readability.  POMWright skips any missing intermediate keys when chaining the locator.
 
 ```ts
+import { GetByMethod, type GetLocatorBase } from "pomwright";
+
 type LocatorSchemaPath = 
   | "main"
-  | "main.button.continue";  // "button" is here used for human context
+  | "main.button.continue";  // "button" communicates intent
 
 export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) {
 
@@ -83,9 +104,7 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
 }
 ```
 
-The word "button" just tells us (the tester/developer) that "continue" is a button, which is perfecly valid, POMWright will see that there exists no key in the map for "main.button" when building a nested/chained Locator from the path "main.button.continue" and will just skip it, thus chaining the Locators created from the sub-path "main" and "main.button.continue" when creating the nested Locator.
-
-Another way to do this is by not using a whole word, and instead use `@` to make the paths more human-readable.
+You can also suffix segments with a friendly name using `@`.  POMWright treats `@` like any other character—it simply improves readability for humans. You're free to use any special character to improve readability.
 
 ```ts
 import { GetByMethod, type GetLocatorBase, type LocatorSchemaWithoutPath } from "pomwright";
@@ -103,7 +122,10 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
     locatorMethod: GetByMethod.locator
   });
 
-  const button: LocatorSchemaWithoutPath = { role: "button", locatorMethod: GetByMethod.role}
+  const button: LocatorSchemaWithoutPath = { 
+      role: "button", 
+      locatorMethod: GetByMethod.role
+    }
 
   locators.addSchema("main.button", {
     ...button,
@@ -111,40 +133,33 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
 
   locators.addSchema("main.button@continue", {
     ...button,
-    roleOptions: { name: "Continue" },
+    roleOptions: { name: "Continue" }
   });
 
   locators.addSchema("main.button@back", {
     ...button,
-    roleOptions: { name: "Back" },
+    roleOptions: { name: "Back" }
   });
 }
 ```
 
-> We can use `main.button` to count all buttons, and `main.button@continue` to interact with the continue button etc.
+> Use something like `main.button` when you need a broad locator (for example, to count buttons) and `main.button@continue` or `main.button@back` when you need a specific instance.
 
 The portion before `@` usually describes the element type (`section`, `button`), while the part after `@` is a friendly identifier (`playground`, `reset`).  This makes long chains readable while still conveying intent.
 
 > **Note:** There is nothing special about the character `@`, in the eyes of POMWright it's just another character in a word. The only "special" character is `.` dot.
 
-Another important 
-> **Note:** We do not aim to map the DOM structure of elements 1:1 through LocatorSchemaPath's. This would result in very long paths... We just map the relevant elements and enough of them to ensure unique paths through elements we want to validate and interact with in our tests. Thus we get some free validation of DOM structure, elements are where we expect them to be and we can create and maintain a "library" of quite simple Locators to produce unique and reliable selectors for our tests through POMWright's automatic chaining.
+Remember: the goal is not to mirror the DOM structure 1:1. Just enough to ensure a descriptive and unique path to the elements you interact with and validate through the use of simple Locators.
 
-## Sub paths & intellisense/autocomplete
+## LocatorSchemaPath, Sub-paths and IntelliSense
 
-Every dot‑delimited segment forms a sub path. POMWright uses these to scope updates and filters or to select specific `nth` occurrences for any Locator which makes up the chain.
+Every dot‑delimited segment forms a sub path.  Sub paths power IntelliSense and let you scope updates or filters to a specific part of the chain.
 
 ```ts
-await profile
-  .getLocatorSchema("body.section@playground.button@reset") // auto-complete for all LocatorSchemaPath's
-  .addFilter("body.section@playground", { hasText: /Primary Colors/i }) // auto-complete for all valid sub-paths of the LocatorSchemaPath referenced in the getLocatorSchema call
+const resetBtn = await profile
+  .getLocatorSchema("body.section@playground.button@reset")
+  .addFilter("body.section@playground", { hasText: /Primary Colors/i })
   .getNestedLocator();
 ```
 
-The TypeScript union of all `LocatorSchemaPath` strings gives you auto‑complete and prevents typos during compilation. Making the LocatorSchemaPath's searchable. Need to click a specific button but don't remember the path? Write "button" and get an intellisense list of all paths containing the "button" etc.
-
-Did an element change? Update the LocatorSchema definition, keep using the same LocatorSchemaPath. All tests using said LocatorSchemaPath will now work again.
-
-Need to change a path because the DOM structure changed? Rename the LocatorSchemaPath string, and it will automatically be updated in the addSchema call and in any test or POC referencing it (might depend on your VSCode/IDE settings). Or alternatively search and replace.
-
-Either way, it's a lot less work compared to dealing with hardcoded Locators and duplication of said Locators across every test. Making maintanence quite comfortable. While ensuring all tests use the same selectors to interact and validate the same elements.
+The TypeScript union of all paths enables autocomplete, prevents typos, and makes refactors simple.  Update a single `LocatorSchema` definition and every test using that path immediately benefits from the change.
