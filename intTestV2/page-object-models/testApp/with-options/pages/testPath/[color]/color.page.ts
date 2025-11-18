@@ -22,7 +22,7 @@ export default class ColorV2 extends BaseWithOptionsV2<
 		await test.step("Expect color page", async () => {
 			await this.page.waitForURL(this.fullUrl);
 
-			const heading = await this.nestedLocator("body.heading");
+			const heading = await this.getNestedLocator("body.heading");
 			await heading.waitFor({ state: "visible" });
 		});
 	}
@@ -33,7 +33,7 @@ export default class ColorV2 extends BaseWithOptionsV2<
 			const hexCode = currentUrl.split("/").pop();
 
 			await test.step("Verify hex code in table equals hex code in urlPath", async () => {
-				const hexCodeCell = await this.nestedLocator("body.table@hexCode.row.cell");
+				const hexCodeCell = await this.getNestedLocator("body.table@hexCode.row.cell");
 				await expect(hexCodeCell).toContainText(`#${hexCode}`, {
 					useInnerText: true,
 					ignoreCase: true,
@@ -41,7 +41,7 @@ export default class ColorV2 extends BaseWithOptionsV2<
 			});
 
 			await test.step("Verify hex code in urlPath is the page background color", async () => {
-				const body = await this.nestedLocator("body");
+				const body = await this.getNestedLocator("body");
 				const bgColor = await body.getAttribute("style");
 				expect(bgColor).toContain(`background-color: #${hexCode}`);
 			});

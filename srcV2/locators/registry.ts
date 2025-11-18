@@ -232,21 +232,12 @@ export class LocatorQueryBuilder<LocatorSchemaPathType extends string, LocatorSu
 		return this;
 	}
 
-	nth<SubPath extends LocatorChainPaths<LocatorSchemaPathType, LocatorSubstring>>(subPath: SubPath, index: number) {
+	nth<SubPath extends LocatorChainPaths<LocatorSchemaPathType, LocatorSubstring>>(
+		subPath: SubPath,
+		index: IndexSelector,
+	) {
 		this.ensureSubPath(subPath);
 		this.indices.set(subPath, index);
-		return this;
-	}
-
-	first<SubPath extends LocatorChainPaths<LocatorSchemaPathType, LocatorSubstring>>(subPath: SubPath) {
-		this.ensureSubPath(subPath);
-		this.indices.set(subPath, "first");
-		return this;
-	}
-
-	last<SubPath extends LocatorChainPaths<LocatorSchemaPathType, LocatorSubstring>>(subPath: SubPath) {
-		this.ensureSubPath(subPath);
-		this.indices.set(subPath, "last");
 		return this;
 	}
 
@@ -321,7 +312,7 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		};
 	}
 
-	query<Path extends LocatorSchemaPathType>(path: Path) {
+	getLocatorSchema<Path extends LocatorSchemaPathType>(path: Path) {
 		return new LocatorQueryBuilder<LocatorSchemaPathType, Path>(this, path);
 	}
 
@@ -330,7 +321,7 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		const { definition } = record;
 
 		if (isFrameLocatorDefinition(definition)) {
-			throw new Error(`Locator schema path "${path}" resolves to a frameLocator. Use nestedLocator() instead.`);
+			throw new Error(`Locator schema path "${path}" resolves to a frameLocator. Use getNestedLocator() instead.`);
 		}
 
 		let locator = createLocator(this.page, definition) as Locator;
@@ -357,12 +348,8 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		return locator;
 	}
 
-	async getLocatorChain<Path extends LocatorSchemaPathType>(path: Path) {
-		return this.query(path).getLocator();
-	}
-
 	async getNestedLocator<Path extends LocatorSchemaPathType>(path: Path, overrides?: PathIndexMap) {
-		return this.query(path).getNestedLocator(overrides);
+		return this.getLocatorSchema(path).getNestedLocator(overrides);
 	}
 
 	async buildLocatorChain(

@@ -74,17 +74,15 @@ export abstract class BasePageV2<
 
 	protected abstract defineLocators(): void;
 
-	public locator<Path extends LocatorSchemaPathType>(path: Path) {
-		return this.locatorRegistry.getLocatorChain(path);
-	}
-
 	public async getLocator<Path extends LocatorSchemaPathType>(path: Path) {
 		return this.locatorRegistry.getLocator(path);
 	}
 
-	public nestedLocator<Path extends LocatorSchemaPathType>(
+	public getNestedLocator<Path extends LocatorSchemaPathType>(
 		path: Path,
-		overrides?: Record<LocatorChainPaths<LocatorSchemaPathType, Path>, number | "first" | "last" | null | undefined>,
+		overrides?: Partial<
+			Record<LocatorChainPaths<LocatorSchemaPathType, Path>, number | "first" | "last" | null | undefined>
+		>,
 	) {
 		return this.locatorRegistry.getNestedLocator(
 			path,
@@ -92,8 +90,10 @@ export abstract class BasePageV2<
 		);
 	}
 
-	public query<Path extends LocatorSchemaPathType>(path: Path): LocatorQueryBuilder<LocatorSchemaPathType, Path> {
-		return this.locatorRegistry.query(path);
+	public getLocatorSchema<Path extends LocatorSchemaPathType>(
+		path: Path,
+	): LocatorQueryBuilder<LocatorSchemaPathType, Path> {
+		return this.locatorRegistry.getLocatorSchema(path);
 	}
 
 	private composeFullUrl(

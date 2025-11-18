@@ -88,7 +88,7 @@ export type LocatorSchemaRecord = {
 
 export type IndexSelector = number | "first" | "last";
 
-export type PathIndexMap = Record<string, IndexSelector | null | undefined>;
+export type PathIndexMap = Partial<Record<string, IndexSelector | null | undefined>>;
 
 export type LocatorRegistrationConfig = {
 	filters?: FilterDefinition | FilterDefinition[];

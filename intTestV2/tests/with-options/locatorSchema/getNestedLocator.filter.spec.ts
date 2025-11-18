@@ -15,7 +15,7 @@ test("given the same locators, nestedLocator should return the equivalent of man
 		"locator('.w3-top').locator('.w3-dropdown-hover').locator('.w3-dropdown-content').locator('.w3-bar-item')",
 	);
 
-	const automaticallyChainedLocator = await testPage.nestedLocator("topMenu.notifications.dropdown.item");
+	const automaticallyChainedLocator = await testPage.getNestedLocator("topMenu.notifications.dropdown.item");
 	expect(automaticallyChainedLocator).not.toBeNull();
 	expect(automaticallyChainedLocator).not.toBeUndefined();
 	expect(`${automaticallyChainedLocator}`).toEqual(`${topMenuNotificationsDropdownItem}`);
@@ -84,7 +84,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	for (const { definition, expected, label } of testCases) {
 		test(`definition ${label}: should apply filter`, async ({ testFilters }) => {
 			const nested = await testFilters
-				.query("fictional.filter@undefined")
+				.getLocatorSchema("fictional.filter@undefined")
 				.replace("fictional.filter@undefined", definition)
 				.getNestedLocator();
 
@@ -94,7 +94,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 
 	test("frameLocator should NOT apply filter", async ({ testFilters }) => {
 		const nested = await testFilters
-			.query("fictional.filter@hasNotText.filter@hasText")
+			.getLocatorSchema("fictional.filter@hasNotText.filter@hasText")
 			.replace("fictional.filter@hasNotText.filter@hasText", {
 				type: "frameLocator",
 				selector: 'iframe[title="name"]',
@@ -119,7 +119,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 
 	test("multiple nesting/chaining", async ({ testFilters }) => {
 		const multiChain = await testFilters
-			.query("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText")
+			.getLocatorSchema("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText")
 			.replace("fictional.filter@hasNotText", {
 				type: "role",
 				role: "button",
@@ -153,7 +153,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 		const heading = await testFilters.getLocator("body.section.heading");
 
 		const nested = await testFilters
-			.query("fictional.filter@hasNotText")
+			.getLocatorSchema("fictional.filter@hasNotText")
 			.filter("fictional.filter@hasNotText", { has: heading })
 			.getNestedLocator();
 
@@ -165,29 +165,29 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	test("filter with hasText", async ({ testFilters }) => {
 		await testFilters.page.goto(testFilters.fullUrl);
 
-		const playgroundRed = await testFilters.nestedLocator("body.section@playground.button@red");
+		const playgroundRed = await testFilters.getNestedLocator("body.section@playground.button@red");
 		await playgroundRed.click();
 
-		const reset0 = await testFilters.nestedLocator("body.section@playground.button@reset");
+		const reset0 = await testFilters.getNestedLocator("body.section@playground.button@reset");
 
 		expect(`${reset0}`).toEqual(
 			"locator('body').locator('section').filter({ hasText: /Playground/i }).getByRole('button', { name: 'Reset Color' })",
 		);
 
 		const reset1 = await testFilters
-			.query("body.section@playground.button@reset")
+			.getLocatorSchema("body.section@playground.button@reset")
 			.filter("body.section@playground", { hasText: /Primary Colors/i })
 			.nth("body.section@playground", 0)
 			.filter("body.section@playground.button@reset", { hasText: /Reset/i })
 			.filter("body.section@playground.button@reset", { hasText: /Color/i })
-			.first("body.section@playground.button@reset")
+			.nth("body.section@playground.button@reset", "first")
 			.getNestedLocator();
 
 		expect(`${reset1}`).toEqual(
 			"locator('body').locator('section').filter({ hasText: /Playground/i }).filter({ hasText: /Primary Colors/i }).first().getByRole('button', { name: 'Reset Color' }).filter({ hasText: /Reset/i }).filter({ hasText: /Color/i }).first()",
 		);
 
-		const reset2 = await testFilters.nestedLocator("body.section@playground.button@reset");
+		const reset2 = await testFilters.getNestedLocator("body.section@playground.button@reset");
 
 		expect(`${reset2}`).toEqual(
 			"locator('body').locator('section').filter({ hasText: /Playground/i }).getByRole('button', { name: 'Reset Color' })",
