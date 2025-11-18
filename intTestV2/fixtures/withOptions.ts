@@ -1,18 +1,18 @@
-import TestFilters from "@page-object-models/testApp/with-options/pages/testfilters/testfilters.page";
-import TestPage from "@page-object-models/testApp/with-options/pages/testPage.page";
-import Color from "@page-object-models/testApp/with-options/pages/testPath/[color]/color.page";
-import TestPath from "@page-object-models/testApp/with-options/pages/testPath/testPath.page";
+import TestFilters from "@page-object-models-v2/testApp/with-options/pages/testfilters/testfilters.page";
+import TestPage from "@page-object-models-v2/testApp/with-options/pages/testPage.page";
+import Color from "@page-object-models-v2/testApp/with-options/pages/testPath/[color]/color.page";
+import TestPath from "@page-object-models-v2/testApp/with-options/pages/testPath/testPath.page";
 import { expect } from "@playwright/test";
 import { test as base } from "pomwright";
 
-type fixtures = {
+type Fixtures = {
 	testPage: TestPage;
 	testPath: TestPath;
 	color: Color;
 	testFilters: TestFilters;
 };
 
-const test = base.extend<fixtures>({
+const test = base.extend<Fixtures>({
 	testPage: async ({ page, log }, use, testInfo) => {
 		const testPage = new TestPage(page, testInfo, log);
 		await use(testPage);

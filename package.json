@@ -19,11 +19,20 @@
 	"types": "dist/index.d.ts",
 	"scripts": {
 		"build": "tsup index.ts --format cjs,esm --dts",
+		"build:v2": "tsup srcV2/index.ts --format cjs,esm --dts --out-dir srcV2/dist",
+		"build:all": "pnpm build && pnpm build:v2",
 		"release": "pnpm run build && changeset publish",
 		"lint": "biome check ./src",
+		"lint:v2": "biome check ./srcV2",
+		"lint:all": "pnpm lint && pnpm lint:v2",
 		"format": "biome format ./src --write",
+		"format:v2": "biome format ./srcV2 --write",
+		"format:all": "pnpm format && pnpm format:v2",
 		"pack-test": "bash pack-test.sh",
-		"test": "vitest run && bash pack-test.sh"
+		"pack-test:v2": "bash pack-test-v2.sh",
+		"test": "vitest run && bash pack-test.sh",
+		"test:v2": "bash pack-test-v2.sh",
+		"test:all": "pnpm test && pnpm test:v2"
 	},
 	"keywords": [
 		"Playwright",

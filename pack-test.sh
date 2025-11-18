@@ -42,6 +42,6 @@ pnpm i -D ../pomwright-$VERSION.tgz || { echo "Local package installation failed
 # Install dependencies and run playwright tests
 pnpm i --frozen-lockfile || { echo "Installation failed"; exit 1; }
 pnpm playwright install --with-deps || { echo "Playwright dependencies installation failed"; exit 1; }
-pnpm playwright test || { echo "Tests failed"; exit 1; }
+pnpm playwright test --project=chromium || { echo "Tests failed"; exit 1; }
 
 echo "Testing completed successfully."

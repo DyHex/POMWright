@@ -1,0 +1,23 @@
+{
+	"name": "pomwright-v2",
+	"version": "2.0.0-alpha.0",
+	"description": "Next-generation POMWright API built around fluent locator registration.",
+	"license": "Apache-2.0",
+	"main": "dist/index.js",
+	"module": "dist/index.mjs",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"peerDependencies": {
+		"@playwright/test": ">=1.41.0 <1.42.0 || >=1.43.0 <2.0.0"
+	},
+	"packageManager": "pnpm@9.12.0"
+}
