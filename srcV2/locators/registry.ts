@@ -63,6 +63,45 @@ const normalizeFilters = (filters?: FilterDefinition | FilterDefinition[]) => {
 	return Array.isArray(filters) ? [...filters] : [filters];
 };
 
+const hasOptions = (
+	definition: Partial<LocatorStrategyDefinition> | undefined,
+): definition is Partial<LocatorStrategyDefinition> & { options?: unknown } => {
+	if (!definition || typeof definition !== "object") {
+		return false;
+	}
+	return "options" in definition;
+};
+
+const mergeLocatorDefinition = (
+	current: LocatorStrategyDefinition,
+	updates: Partial<LocatorStrategyDefinition>,
+): LocatorStrategyDefinition => {
+	if (!updates || Object.keys(updates).length === 0) {
+		return current;
+	}
+
+	const next = { ...current, ...updates } as LocatorStrategyDefinition;
+
+	if (hasOptions(current) || hasOptions(updates)) {
+		const nextWithOptions = next as LocatorStrategyDefinition & { options?: unknown };
+		const existingOptions = hasOptions(current) ? current.options : undefined;
+		if (hasOptions(updates)) {
+			if (updates.options && typeof updates.options === "object") {
+				nextWithOptions.options = {
+					...(typeof existingOptions === "object" && existingOptions !== null ? existingOptions : {}),
+					...updates.options,
+				} as typeof nextWithOptions.options;
+			} else {
+				nextWithOptions.options = updates.options as typeof nextWithOptions.options;
+			}
+		} else {
+			nextWithOptions.options = existingOptions as typeof nextWithOptions.options;
+		}
+	}
+
+	return next;
+};
+
 const createLocator = (
 	target: LocatorBuilderTarget,
 	definition: LocatorStrategyDefinition,
@@ -199,29 +238,21 @@ export class LocatorQueryBuilder<LocatorSchemaPathType extends string, LocatorSu
 		}
 	}
 
-	replace<SubPath extends LocatorChainPaths<LocatorSchemaPathType, LocatorSubstring>>(
+	update<SubPath extends LocatorChainPaths<LocatorSchemaPathType, LocatorSubstring>>(
 		subPath: SubPath,
-		definition: LocatorStrategyDefinition,
-	) {
-		this.ensureSubPath(subPath);
-		this.definitions.set(subPath, definition);
-		return this;
-	}
-
-	mutate<SubPath extends LocatorChainPaths<LocatorSchemaPathType, LocatorSubstring>>(
-		subPath: SubPath,
-		mutate: (definition: LocatorStrategyDefinition) => LocatorStrategyDefinition,
+		updates: Partial<LocatorStrategyDefinition>,
 	) {
 		this.ensureSubPath(subPath);
 		const current = this.definitions.get(subPath);
 		if (!current) {
 			throw new Error(`No locator schema registered for sub-path "${subPath}".`);
 		}
-		this.definitions.set(subPath, mutate(current));
+		const merged = mergeLocatorDefinition(current, updates);
+		this.definitions.set(subPath, merged);
 		return this;
 	}
 
-	filter<SubPath extends LocatorChainPaths<LocatorSchemaPathType, LocatorSubstring>>(
+	addFilter<SubPath extends LocatorChainPaths<LocatorSchemaPathType, LocatorSubstring>>(
 		subPath: SubPath,
 		filter: FilterDefinition,
 	) {
