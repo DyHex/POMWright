@@ -16,6 +16,7 @@ export type {
 	AltTextDefinition,
 	DataCyDefinition,
 	FilterDefinition,
+	FilterLocatorReference,
 	FrameLocatorDefinition,
 	IdDefinition,
 	IndexSelector,
@@ -23,11 +24,13 @@ export type {
 	LocatorDefinition,
 	LocatorRegistrationConfig,
 	LocatorStrategyDefinition,
+	LocatorUpdate,
 	PathIndexMap,
 	PlaceholderDefinition,
+	PlaywrightFilterDefinition,
+	ResolvedFilterDefinition,
 	RoleDefinition,
 	TestIdDefinition,
 	TextDefinition,
 	TitleDefinition,
 } from "./locators/types";
-export type { LocatorChainPaths } from "./locators/utils";

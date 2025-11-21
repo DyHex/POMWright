@@ -75,22 +75,47 @@ export type LocatorStrategyDefinition =
 	| IdDefinition
 	| DataCyDefinition;
 
-export type FilterDefinition = Parameters<Locator["filter"]>[0];
+export type PlaywrightFilterDefinition = NonNullable<Parameters<Locator["filter"]>[0]>;
+export type ResolvedFilterDefinition = PlaywrightFilterDefinition;
+
+export type FilterLocatorReference<LocatorSchemaPathType extends string> =
+	| Locator
+	| LocatorStrategyDefinition
+	| { locator: LocatorStrategyDefinition }
+	| { locatorPath: LocatorSchemaPathType }
+	| LocatorSchemaPathType;
+
+export type FilterDefinition<LocatorSchemaPathType extends string> =
+	| PlaywrightFilterDefinition
+	| (Omit<PlaywrightFilterDefinition, "has" | "hasNot"> & {
+			has?: PlaywrightFilterDefinition["has"] | FilterLocatorReference<LocatorSchemaPathType>;
+			hasNot?: PlaywrightFilterDefinition["hasNot"] | FilterLocatorReference<LocatorSchemaPathType>;
+	  });
+
+export type FilterPatch<LocatorSchemaPathType extends string> =
+	| FilterDefinition<LocatorSchemaPathType>[]
+	| {
+			append?: FilterDefinition<LocatorSchemaPathType> | FilterDefinition<LocatorSchemaPathType>[];
+			replace?: FilterDefinition<LocatorSchemaPathType> | FilterDefinition<LocatorSchemaPathType>[];
+			clear?: boolean;
+	  };
 
 export type LocatorBuilderTarget = Page | Locator | FrameLocator;
 
-export type LocatorSchemaRecord = {
+export type LocatorSchemaRecord<LocatorSchemaPathType extends string = string> = {
 	locatorSchemaPath: string;
 	definition: LocatorStrategyDefinition;
-	filters?: FilterDefinition[];
+	filters?: FilterDefinition<LocatorSchemaPathType>[];
 	index?: IndexSelector | null;
 };
+
+export type LocatorUpdate = Partial<LocatorStrategyDefinition>;
 
 export type IndexSelector = number | "first" | "last";
 
 export type PathIndexMap = Partial<Record<string, IndexSelector | null | undefined>>;
 
-export type LocatorRegistrationConfig = {
-	filters?: FilterDefinition | FilterDefinition[];
+export type LocatorRegistrationConfig<LocatorSchemaPathType extends string = string> = {
+	filters?: FilterDefinition<LocatorSchemaPathType> | FilterDefinition<LocatorSchemaPathType>[];
 	index?: IndexSelector | null;
 };

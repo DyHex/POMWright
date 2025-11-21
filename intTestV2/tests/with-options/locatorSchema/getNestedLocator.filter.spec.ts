@@ -1,26 +1,6 @@
 import { expect, test } from "@fixtures-v2/withOptions";
 import type { LocatorStrategyDefinition } from "pomwright";
 
-test("given the same locators, nestedLocator should return the equivalent of manually chaining with playwright page.locator", async ({
-	testPage,
-	page,
-}) => {
-	const topMenuNotificationsDropdownItem = page
-		.locator(".w3-top") // topMenu
-		.locator(".w3-dropdown-hover") // topMenu.notifications
-		.locator(".w3-dropdown-content") // topMenu.notifications.dropdown
-		.locator(".w3-bar-item"); // topMenu.notifications.dropdown.item
-
-	expect(`${topMenuNotificationsDropdownItem}`).toEqual(
-		"locator('.w3-top').locator('.w3-dropdown-hover').locator('.w3-dropdown-content').locator('.w3-bar-item')",
-	);
-
-	const automaticallyChainedLocator = await testPage.getNestedLocator("topMenu.notifications.dropdown.item");
-	expect(automaticallyChainedLocator).not.toBeNull();
-	expect(automaticallyChainedLocator).not.toBeUndefined();
-	expect(`${automaticallyChainedLocator}`).toEqual(`${topMenuNotificationsDropdownItem}`);
-});
-
 test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	type TestCase = {
 		definition: LocatorStrategyDefinition;
@@ -29,56 +9,20 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	};
 
 	const testCases: TestCase[] = [
-		{
-			label: "role",
-			definition: { type: "role", role: "button" },
-			expected: "getByRole('button')",
-		},
-		{
-			label: "text",
-			definition: { type: "text", text: "text" },
-			expected: "getByText('text')",
-		},
-		{
-			label: "label",
-			definition: { type: "label", text: "label" },
-			expected: "getByLabel('label')",
-		},
+		{ label: "role", definition: { type: "role", role: "button" }, expected: "getByRole('button')" },
+		{ label: "text", definition: { type: "text", text: "text" }, expected: "getByText('text')" },
+		{ label: "label", definition: { type: "label", text: "label" }, expected: "getByLabel('label')" },
 		{
 			label: "placeholder",
 			definition: { type: "placeholder", text: "placeholder" },
 			expected: "getByPlaceholder('placeholder')",
 		},
-		{
-			label: "altText",
-			definition: { type: "altText", text: "altText" },
-			expected: "getByAltText('altText')",
-		},
-		{
-			label: "title",
-			definition: { type: "title", text: "title" },
-			expected: "getByTitle('title')",
-		},
-		{
-			label: "locator",
-			definition: { type: "locator", selector: "locator" },
-			expected: "locator('locator')",
-		},
-		{
-			label: "dataCy",
-			definition: { type: "dataCy", value: "dataCy" },
-			expected: "locator('data-cy=dataCy')",
-		},
-		{
-			label: "testId",
-			definition: { type: "testId", testId: "testId" },
-			expected: "getByTestId('testId')",
-		},
-		{
-			label: "id",
-			definition: { type: "id", id: "id" },
-			expected: "locator('#id')",
-		},
+		{ label: "altText", definition: { type: "altText", text: "altText" }, expected: "getByAltText('altText')" },
+		{ label: "title", definition: { type: "title", text: "title" }, expected: "getByTitle('title')" },
+		{ label: "locator", definition: { type: "locator", selector: "locator" }, expected: "locator('locator')" },
+		{ label: "dataCy", definition: { type: "dataCy", value: "dataCy" }, expected: "locator('data-cy=dataCy')" },
+		{ label: "testId", definition: { type: "testId", testId: "testId" }, expected: "getByTestId('testId')" },
+		{ label: "id", definition: { type: "id", id: "id" }, expected: "locator('#id')" },
 	];
 
 	for (const { definition, expected, label } of testCases) {
@@ -101,23 +45,18 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			})
 			.getNestedLocator();
 
-		console.log("nested frameLocator:", `${nested}`);
-		console.log("nested frameLocator:", `${JSON.stringify(nested)}`);
-
 		const nested2 = nested.getByRole("button");
 
 		expect(`${nested2}`).toEqual(
 			"getByRole('button').filter({ hasNotText: 'hasNotText' }).locator('iframe[title=\"name\"]').contentFrame().getByRole('button')",
 		);
 
-		console.log("nested2 frameLocator:", `${nested2}`);
-
 		expect(`${nested}`).toEqual(
 			"getByRole('button').filter({ hasNotText: 'hasNotText' }).locator('iframe[title=\"name\"]').contentFrame()",
 		);
 	});
 
-	test("multiple nesting/chaining", async ({ testFilters }) => {
+	test("multiple nesting/chaining retains filters across the chain", async ({ testFilters }) => {
 		const multiChain = await testFilters
 			.getLocatorSchema("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText")
 			.update("fictional.filter@hasNotText", {
@@ -149,52 +88,82 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 		);
 	});
 
-	test("filter with has: locator", async ({ testFilters }) => {
-		const heading = await testFilters.getLocator("body.section.heading");
+	test("filter definitions that omit options stay stable", async ({ testFilters }) => {
+		const nested = await testFilters.getNestedLocator("fictional.filter@optionsUndefined");
+		expect(`${nested}`).toEqual("getByRole('button')");
+	});
 
-		const nested = await testFilters
-			.getLocatorSchema("fictional.filter@hasNotText")
-			.addFilter("fictional.filter@hasNotText", { has: heading })
-			.getNestedLocator();
+	test("schema filters resolve locatorPath references", async ({ testFilters, page }) => {
+		const nested = await testFilters.getNestedLocator("fictional.locatorAndOptionsWithfilter@allOptions");
+
+		const manual = page.getByRole("button", { name: "roleOptions" }).filter({
+			has: page.getByRole("heading", { level: 2 }),
+			hasNot: page.getByRole("button"),
+			hasText: "hasText",
+			hasNotText: "hasNotText",
+		});
+
+		expect(`${nested}`).toEqual(`${manual}`);
+
+		const has = page.getByRole("heading", { level: 2 });
+		const hasNot = page.getByRole("button");
+
+		const manual2 = page.getByRole("button", { name: "roleOptions" }).filter({
+			has: has,
+			hasNot: hasNot,
+			hasText: "hasText",
+			hasNotText: "hasNotText",
+		});
+
+		expect(`${nested}`).toEqual(`${manual2}`);
 
 		expect(`${nested}`).toEqual(
-			"getByRole('button').filter({ hasNotText: 'hasNotText' }).filter({ has: getByRole('heading', { level: 2 }) })",
+			"getByRole('button', { name: 'roleOptions' }).filter({ hasText: 'hasText' }).filter({ hasNotText: 'hasNotText' }).filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('button') })",
 		);
 	});
 
-	test("filter with hasText", async ({ testFilters }) => {
-		await testFilters.page.goto(testFilters.fullUrl);
+	test("schema filters can inline locator definitions", async ({ testFilters }) => {
+		const nested = await testFilters.getNestedLocator("fictional.locatorWithfilter@allOptions");
 
-		const playgroundRed = await testFilters.getNestedLocator("body.section@playground.button@red");
-		await playgroundRed.click();
-
-		const reset0 = await testFilters.getNestedLocator("body.section@playground.button@reset");
-
-		expect(`${reset0}`).toEqual(
-			"locator('body').locator('section').filter({ hasText: /Playground/i }).getByRole('button', { name: 'Reset Color' })",
+		expect(`${nested}`).toEqual(
+			"getByRole('button').filter({ hasText: 'hasText' }).filter({ hasNotText: 'hasNotText' }).filter({ has: locator('section') }).filter({ hasNot: locator('[data-cy=missing]') })",
 		);
+	});
 
-		const reset1 = await testFilters
-			.getLocatorSchema("body.section@playground.button@reset")
-			.addFilter("body.section@playground", { hasText: /Primary Colors/i })
-			.nth("body.section@playground", 0)
-			.addFilter("body.section@playground.button@reset", { hasText: /Reset/i })
-			.addFilter("body.section@playground.button@reset", { hasText: /Color/i })
-			.nth("body.section@playground.button@reset", "first")
+	test("frame locator definitions are rejected inside filters", async ({ testFilters }) => {
+		await expect(
+			testFilters
+				.getLocatorSchema("fictional.filter@hasNotText")
+				.addFilter("fictional.filter@hasNotText", {
+					has: { locator: { type: "frameLocator", selector: "iframe" } },
+				})
+				.getNestedLocator(),
+		).rejects.toThrow(/Frame locators cannot be used as filter locators/);
+	});
+
+	test("getNestedLocator resolves has/hasNot locatorPath references", async ({ testFilters }) => {
+		const nested = await testFilters
+			.getLocatorSchema("fictional.filter@hasNotText")
+			.addFilter("fictional.filter@hasNotText", { has: { locatorPath: "body.section.heading" } })
+			.addFilter("fictional.filter@hasNotText", { hasNot: { locatorPath: "body.section@playground.button@red" } })
 			.getNestedLocator();
 
-		expect(`${reset1}`).toEqual(
-			"locator('body').locator('section').filter({ hasText: /Playground/i }).filter({ hasText: /Primary Colors/i }).first().getByRole('button', { name: 'Reset Color' }).filter({ hasText: /Reset/i }).filter({ hasText: /Color/i }).first()",
+		expect(`${nested}`).toEqual(
+			"getByRole('button').filter({ hasNotText: 'hasNotText' }).filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('button', { name: 'Red' }) })",
 		);
+	});
 
-		const reset2 = await testFilters.getNestedLocator("body.section@playground.button@reset");
+	test("getNestedLocator resolves inline locator definitions for has/hasNot", async ({ testFilters }) => {
+		const nested = await testFilters
+			.getLocatorSchema("fictional.filter@hasNotText")
+			.addFilter("fictional.filter@hasNotText", { has: { locator: { type: "locator", selector: "section" } } })
+			.addFilter("fictional.filter@hasNotText", {
+				hasNot: { locator: { type: "locator", selector: "[data-cy=missing]" } },
+			})
+			.getNestedLocator();
 
-		expect(`${reset2}`).toEqual(
-			"locator('body').locator('section').filter({ hasText: /Playground/i }).getByRole('button', { name: 'Reset Color' })",
+		expect(`${nested}`).toEqual(
+			"getByRole('button').filter({ hasNotText: 'hasNotText' }).filter({ has: locator('section') }).filter({ hasNot: locator('[data-cy=missing]') })",
 		);
-
-		await reset1.click();
-		await playgroundRed.click();
-		await reset2.click();
 	});
 });

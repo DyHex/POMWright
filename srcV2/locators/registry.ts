@@ -3,13 +3,17 @@ import type { PlaywrightReportLogger } from "../helpers/playwrightReportLogger";
 import type {
 	DataCyDefinition,
 	FilterDefinition,
+	FilterLocatorReference,
 	FrameLocatorDefinition,
 	IndexSelector,
 	LocatorBuilderTarget,
 	LocatorRegistrationConfig,
 	LocatorSchemaRecord,
 	LocatorStrategyDefinition,
+	LocatorUpdate,
 	PathIndexMap,
+	PlaywrightFilterDefinition,
+	ResolvedFilterDefinition,
 	RoleDefinition,
 } from "./types";
 import type { LocatorChainPaths } from "./utils";
@@ -35,7 +39,7 @@ const stringifyForLog = (value: unknown) => {
 	);
 };
 
-const applyFilters = (locator: Locator, filters: FilterDefinition[]) => {
+const applyFilters = (locator: Locator, filters: PlaywrightFilterDefinition[]) => {
 	let current = locator;
 	for (const filter of filters) {
 		current = current.filter(filter);
@@ -56,7 +60,9 @@ const applyIndexSelector = (locator: Locator, selector: IndexSelector | null | u
 	return locator.nth(selector);
 };
 
-const normalizeFilters = (filters?: FilterDefinition | FilterDefinition[]) => {
+const normalizeFilters = <LocatorSchemaPathType extends string>(
+	filters?: FilterDefinition<LocatorSchemaPathType> | FilterDefinition<LocatorSchemaPathType>[],
+) => {
 	if (!filters) {
 		return undefined;
 	}
@@ -139,69 +145,96 @@ const createLocator = (
 const isFrameLocatorDefinition = (definition: LocatorStrategyDefinition): definition is FrameLocatorDefinition =>
 	definition.type === "frameLocator";
 
+const isLocatorInstance = (value: unknown): value is Locator => {
+	return !!value && typeof value === "object" && typeof (value as Locator).filter === "function";
+};
+
 export class LocatorRegistrationBuilder<LocatorSchemaPathType extends string> {
 	constructor(
 		private readonly registry: LocatorRegistry<LocatorSchemaPathType>,
 		private readonly path: LocatorSchemaPathType,
 	) {}
 
-	getByRole(role: RoleDefinition["role"], options?: RoleDefinition["options"], config?: LocatorRegistrationConfig) {
+	getByRole(
+		role: RoleDefinition["role"],
+		options?: RoleDefinition["options"],
+		config?: LocatorRegistrationConfig<LocatorSchemaPathType>,
+	) {
 		return this.commit({ type: "role", role, options }, config);
 	}
 
-	getByText(text: string, options?: Parameters<Page["getByText"]>[1], config?: LocatorRegistrationConfig) {
+	getByText(
+		text: string,
+		options?: Parameters<Page["getByText"]>[1],
+		config?: LocatorRegistrationConfig<LocatorSchemaPathType>,
+	) {
 		return this.commit({ type: "text", text, options }, config);
 	}
 
-	getByLabel(text: string, options?: Parameters<Page["getByLabel"]>[1], config?: LocatorRegistrationConfig) {
+	getByLabel(
+		text: string,
+		options?: Parameters<Page["getByLabel"]>[1],
+		config?: LocatorRegistrationConfig<LocatorSchemaPathType>,
+	) {
 		return this.commit({ type: "label", text, options }, config);
 	}
 
 	getByPlaceholder(
 		text: string,
 		options?: Parameters<Page["getByPlaceholder"]>[1],
-		config?: LocatorRegistrationConfig,
+		config?: LocatorRegistrationConfig<LocatorSchemaPathType>,
 	) {
 		return this.commit({ type: "placeholder", text, options }, config);
 	}
 
-	getByAltText(text: string, options?: Parameters<Page["getByAltText"]>[1], config?: LocatorRegistrationConfig) {
+	getByAltText(
+		text: string,
+		options?: Parameters<Page["getByAltText"]>[1],
+		config?: LocatorRegistrationConfig<LocatorSchemaPathType>,
+	) {
 		return this.commit({ type: "altText", text, options }, config);
 	}
 
-	getByTitle(text: string, options?: Parameters<Page["getByTitle"]>[1], config?: LocatorRegistrationConfig) {
+	getByTitle(
+		text: string,
+		options?: Parameters<Page["getByTitle"]>[1],
+		config?: LocatorRegistrationConfig<LocatorSchemaPathType>,
+	) {
 		return this.commit({ type: "title", text, options }, config);
 	}
 
 	locator(
 		selector: Parameters<Page["locator"]>[0],
 		options?: Parameters<Page["locator"]>[1],
-		config?: LocatorRegistrationConfig,
+		config?: LocatorRegistrationConfig<LocatorSchemaPathType>,
 	) {
 		return this.commit({ type: "locator", selector, options }, config);
 	}
 
-	frameLocator(selector: Parameters<Page["frameLocator"]>[0], config?: LocatorRegistrationConfig) {
+	frameLocator(
+		selector: Parameters<Page["frameLocator"]>[0],
+		config?: LocatorRegistrationConfig<LocatorSchemaPathType>,
+	) {
 		return this.commit({ type: "frameLocator", selector }, config);
 	}
 
-	getByTestId(testId: Parameters<Page["getByTestId"]>[0], config?: LocatorRegistrationConfig) {
+	getByTestId(testId: Parameters<Page["getByTestId"]>[0], config?: LocatorRegistrationConfig<LocatorSchemaPathType>) {
 		return this.commit({ type: "testId", testId }, config);
 	}
 
-	getById(id: string, config?: LocatorRegistrationConfig) {
+	getById(id: string, config?: LocatorRegistrationConfig<LocatorSchemaPathType>) {
 		return this.commit({ type: "id", id }, config);
 	}
 
-	getByDataCy(value: DataCyDefinition["value"], config?: LocatorRegistrationConfig) {
+	getByDataCy(value: DataCyDefinition["value"], config?: LocatorRegistrationConfig<LocatorSchemaPathType>) {
 		return this.commit({ type: "dataCy", value }, config);
 	}
 
-	private commit(definition: LocatorStrategyDefinition, config?: LocatorRegistrationConfig) {
+	private commit(definition: LocatorStrategyDefinition, config?: LocatorRegistrationConfig<LocatorSchemaPathType>) {
 		this.registry.register(this.path, {
 			locatorSchemaPath: this.path,
 			definition,
-			filters: normalizeFilters(config?.filters),
+			filters: normalizeFilters<LocatorSchemaPathType>(config?.filters),
 			index: config?.index ?? null,
 		});
 		return this.registry;
@@ -210,7 +243,7 @@ export class LocatorRegistrationBuilder<LocatorSchemaPathType extends string> {
 
 export class LocatorQueryBuilder<LocatorSchemaPathType extends string, LocatorSubstring extends LocatorSchemaPathType> {
 	private readonly definitions = new Map<string, LocatorStrategyDefinition>();
-	private readonly filters = new Map<string, FilterDefinition[]>();
+	private readonly filters = new Map<string, FilterDefinition<LocatorSchemaPathType>[]>();
 	private readonly indices = new Map<string, IndexSelector | null>();
 
 	constructor(
@@ -240,7 +273,7 @@ export class LocatorQueryBuilder<LocatorSchemaPathType extends string, LocatorSu
 
 	update<SubPath extends LocatorChainPaths<LocatorSchemaPathType, LocatorSubstring>>(
 		subPath: SubPath,
-		updates: Partial<LocatorStrategyDefinition>,
+		updates: LocatorUpdate,
 	) {
 		this.ensureSubPath(subPath);
 		const current = this.definitions.get(subPath);
@@ -254,12 +287,18 @@ export class LocatorQueryBuilder<LocatorSchemaPathType extends string, LocatorSu
 
 	addFilter<SubPath extends LocatorChainPaths<LocatorSchemaPathType, LocatorSubstring>>(
 		subPath: SubPath,
-		filter: FilterDefinition,
+		filter: FilterDefinition<LocatorSchemaPathType>,
 	) {
 		this.ensureSubPath(subPath);
 		const existing = this.filters.get(subPath) ?? [];
 		existing.push(filter);
 		this.filters.set(subPath, existing);
+		return this;
+	}
+
+	removeFilters<SubPath extends LocatorChainPaths<LocatorSchemaPathType, LocatorSubstring>>(subPath: SubPath) {
+		this.ensureSubPath(subPath);
+		this.filters.set(subPath, []);
 		return this;
 	}
 
@@ -273,7 +312,24 @@ export class LocatorQueryBuilder<LocatorSchemaPathType extends string, LocatorSu
 	}
 
 	async getLocator() {
-		const { locator } = await this.resolve();
+		const definition = this.definitions.get(this.path);
+
+		if (!definition) {
+			throw new Error(`No locator schema registered for path "${this.path}".`);
+		}
+
+		if (isFrameLocatorDefinition(definition)) {
+			throw new Error(`Locator schema path "${this.path}" resolves to a frameLocator. Use getNestedLocator() instead.`);
+		}
+
+		const filtersForPath = this.filters.get(this.path) ?? [];
+		const indicesForPath = this.indices.get(this.path) ?? null;
+
+		const definitions = new Map<string, LocatorStrategyDefinition>([[this.path, definition]]);
+		const filters = new Map<string, FilterDefinition<LocatorSchemaPathType>[]>([[this.path, [...filtersForPath]]]);
+		const indices = new Map<string, IndexSelector | null>([[this.path, indicesForPath]]);
+
+		const { locator } = await this.registry.buildLocatorChain(this.path, definitions, filters, indices);
 		if (!locator) {
 			throw new Error(`Unable to resolve direct locator for path "${this.path}".`);
 		}
@@ -300,7 +356,7 @@ export class LocatorQueryBuilder<LocatorSchemaPathType extends string, LocatorSu
 }
 
 export class LocatorRegistry<LocatorSchemaPathType extends string> {
-	private readonly schemas = new Map<LocatorSchemaPathType, LocatorSchemaRecord>();
+	private readonly schemas = new Map<LocatorSchemaPathType, LocatorSchemaRecord<LocatorSchemaPathType>>();
 
 	constructor(
 		private readonly page: Page,
@@ -311,7 +367,7 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		return new LocatorRegistrationBuilder<LocatorSchemaPathType>(this, path);
 	}
 
-	register(path: LocatorSchemaPathType, record: LocatorSchemaRecord) {
+	register(path: LocatorSchemaPathType, record: LocatorSchemaRecord<LocatorSchemaPathType>) {
 		validateLocatorSchemaPath(path);
 		this.schemas.set(path, {
 			locatorSchemaPath: record.locatorSchemaPath,
@@ -321,7 +377,7 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		});
 	}
 
-	get<Path extends LocatorSchemaPathType>(path: Path): LocatorSchemaRecord {
+	get<Path extends LocatorSchemaPathType>(path: Path): LocatorSchemaRecord<LocatorSchemaPathType> {
 		const record = this.schemas.get(path);
 		if (!record) {
 			throw new Error(`No locator schema registered for path "${path}".`);
@@ -329,7 +385,7 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		return record;
 	}
 
-	getIfExists<Path extends LocatorSchemaPathType>(path: Path): LocatorSchemaRecord | undefined {
+	getIfExists<Path extends LocatorSchemaPathType>(path: Path): LocatorSchemaRecord<LocatorSchemaPathType> | undefined {
 		const record = this.schemas.get(path);
 		if (!record) {
 			return undefined;
@@ -341,6 +397,71 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 			filters: record.filters ? [...record.filters] : undefined,
 			index: record.index ?? null,
 		};
+	}
+
+	private async resolveFilterLocator(
+		locatorReference: FilterLocatorReference<LocatorSchemaPathType>,
+		target: LocatorBuilderTarget,
+	) {
+		if (isLocatorInstance(locatorReference)) {
+			return locatorReference;
+		}
+
+		if (typeof locatorReference === "string") {
+			return this.getLocator(locatorReference as LocatorSchemaPathType);
+		}
+
+		if ("locatorPath" in locatorReference) {
+			return this.getLocator(locatorReference.locatorPath as LocatorSchemaPathType);
+		}
+
+		const definition = "locator" in locatorReference ? locatorReference.locator : locatorReference;
+
+		if (isFrameLocatorDefinition(definition)) {
+			throw new Error("Frame locators cannot be used as filter locators.");
+		}
+
+		const isFrameTarget = "owner" in target && typeof (target as { owner?: unknown }).owner === "function";
+		const filterTarget = isFrameTarget ? target : this.page;
+		return createLocator(filterTarget, definition) as Locator;
+	}
+
+	private async resolveFiltersForTarget(
+		filters: FilterDefinition<LocatorSchemaPathType>[] | undefined,
+		target: LocatorBuilderTarget,
+	) {
+		if (!filters || filters.length === 0) {
+			return [] as ResolvedFilterDefinition[];
+		}
+
+		const resolved: ResolvedFilterDefinition[] = [];
+		for (const filter of filters) {
+			if (filter && typeof filter === "object" && ("has" in filter || "hasNot" in filter)) {
+				const { has, hasNot, ...rest } = filter as FilterDefinition<LocatorSchemaPathType> & {
+					has?: FilterLocatorReference<LocatorSchemaPathType>;
+					hasNot?: FilterLocatorReference<LocatorSchemaPathType>;
+				};
+
+				const normalizedFilter: ResolvedFilterDefinition = {
+					...(rest as PlaywrightFilterDefinition),
+				} as ResolvedFilterDefinition;
+
+				if (has !== undefined) {
+					normalizedFilter.has = await this.resolveFilterLocator(has, target);
+				}
+
+				if (hasNot !== undefined) {
+					normalizedFilter.hasNot = await this.resolveFilterLocator(hasNot, target);
+				}
+
+				resolved.push(normalizedFilter);
+				continue;
+			}
+
+			resolved.push(filter as ResolvedFilterDefinition);
+		}
+
+		return resolved;
 	}
 
 	getLocatorSchema<Path extends LocatorSchemaPathType>(path: Path) {
@@ -356,7 +477,7 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		}
 
 		let locator = createLocator(this.page, definition) as Locator;
-		const combinedFilters = [...(record.filters ?? [])];
+		const combinedFilters = await this.resolveFiltersForTarget(record.filters, locator);
 		if (combinedFilters.length > 0) {
 			locator = applyFilters(locator, combinedFilters);
 		}
@@ -386,7 +507,7 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 	async buildLocatorChain(
 		path: LocatorSchemaPathType,
 		definitions: Map<string, LocatorStrategyDefinition>,
-		filters: Map<string, FilterDefinition[]>,
+		filters: Map<string, FilterDefinition<LocatorSchemaPathType>[]>,
 		indices: Map<string, IndexSelector | null>,
 		overrides?: PathIndexMap,
 	) {
@@ -410,7 +531,7 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		const debugSteps: {
 			path: string;
 			definition: LocatorStrategyDefinition;
-			appliedFilters: FilterDefinition[];
+			appliedFilters: ResolvedFilterDefinition[];
 			index?: IndexSelector | null | undefined;
 		}[] = [];
 
@@ -432,7 +553,7 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 			}
 
 			const locatorResult = createLocator(currentTarget, definition) as Locator;
-			const combinedFilters = [...(filters.get(part) ?? [])];
+			const combinedFilters = await this.resolveFiltersForTarget(filters.get(part), currentTarget);
 			let resolvedLocator = locatorResult;
 			if (combinedFilters.length > 0) {
 				resolvedLocator = applyFilters(resolvedLocator, combinedFilters);

@@ -1,4 +1,3 @@
-import type { Locator } from "@playwright/test";
 import type { LocatorRegistry } from "pomwright";
 
 export type LocatorSchemaPath =
@@ -69,8 +68,8 @@ export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>)
 		{},
 		{
 			filters: {
-				has: "has" as unknown as Locator,
-				hasNot: "hasNot" as unknown as Locator,
+				has: { locator: { type: "locator", selector: "section" } },
+				hasNot: { locator: { type: "locator", selector: "[data-cy=missing]" } },
 				hasText: "hasText",
 				hasNotText: "hasNotText",
 			},
@@ -82,19 +81,21 @@ export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>)
 		{ name: "roleOptions" },
 		{
 			filters: {
-				has: "has" as unknown as Locator,
-				hasNot: "hasNot" as unknown as Locator,
+				has: { locatorPath: "body.section.heading" },
+				hasNot: { locatorPath: "body.section.button" },
 				hasText: "hasText",
 				hasNotText: "hasNotText",
 			},
 		},
 	);
 
-	locators.add("fictional.filter@has").getByRole("button", {}, { filters: { has: "has" as unknown as Locator } });
+	locators
+		.add("fictional.filter@has")
+		.getByRole("button", {}, { filters: { has: { locatorPath: "body.section.heading" } } });
 
 	locators
 		.add("fictional.filter@hasNot")
-		.getByRole("button", {}, { filters: { hasNot: "hasNot" as unknown as Locator } });
+		.getByRole("button", {}, { filters: { hasNot: { locatorPath: "body.section.button" } } });
 
 	locators.add("fictional.filter@hasText").getByRole("button", {}, { filters: { hasText: "hasText" } });
 
