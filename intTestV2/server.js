@@ -115,6 +115,101 @@ app.get("/testfilters", (req, res) => {
   `);
 });
 
+app.get("/iframe", (_req, res) => {
+	res.send(`
+    <html>
+      <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">
+        <h1>Iframe playground</h1>
+
+        <section id="sectionA" style="margin-bottom: 20px; border: 2px solid #333; padding: 10px;">
+          <h2>Section A</h2>
+          <iframe
+            id="iframeA"
+            title="iframeA"
+            src="/iframe/a"
+            style="width: 400px; height: 200px; border: 3px solid #0066cc;"
+          ></iframe>
+        </section>
+
+        <section id="sectionB" style="margin-bottom: 20px; border: 2px solid #333; padding: 10px;">
+          <h2>Section B</h2>
+          <iframe
+            id="iframeB"
+            title="iframeB"
+            src="/iframe/b"
+            style="width: 400px; height: 240px; border: 3px solid #cc6600;"
+          ></iframe>
+        </section>
+      </body>
+    </html>
+  `);
+});
+
+app.get("/iframe/a", (_req, res) => {
+	res.send(`
+    <html>
+      <body style="margin: 0; padding: 10px; font-family: Arial, sans-serif;">
+        <h3>Frame A</h3>
+        <button id="toggleA" data-testid="toggle-a" aria-pressed="false">Toggle A: Off</button>
+        <script>
+          const buttonA = document.getElementById('toggleA');
+          buttonA.addEventListener('click', () => {
+            const pressed = buttonA.getAttribute('aria-pressed') === 'true';
+            buttonA.setAttribute('aria-pressed', (!pressed).toString());
+            buttonA.textContent = pressed ? 'Toggle A: Off' : 'Toggle A: On';
+          });
+        </script>
+      </body>
+    </html>
+  `);
+});
+
+app.get("/iframe/b", (_req, res) => {
+	res.send(`
+    <html>
+      <body style="margin: 0; padding: 10px; font-family: Arial, sans-serif;">
+        <h3>Frame B</h3>
+        <button id="toggleB" data-testid="toggle-b" aria-pressed="false">Toggle B: Off</button>
+
+        <iframe
+          id="iframeC"
+          title="iframeC"
+          src="/iframe/c"
+          style="display: block; margin-top: 12px; width: 320px; height: 160px; border: 3px solid #009933;"
+        ></iframe>
+
+        <script>
+          const buttonB = document.getElementById('toggleB');
+          buttonB.addEventListener('click', () => {
+            const pressed = buttonB.getAttribute('aria-pressed') === 'true';
+            buttonB.setAttribute('aria-pressed', (!pressed).toString());
+            buttonB.textContent = pressed ? 'Toggle B: Off' : 'Toggle B: On';
+          });
+        </script>
+      </body>
+    </html>
+  `);
+});
+
+app.get("/iframe/c", (_req, res) => {
+	res.send(`
+    <html>
+      <body style="margin: 0; padding: 10px; font-family: Arial, sans-serif;">
+        <h3>Frame C</h3>
+        <button id="toggleC" data-testid="toggle-c" aria-pressed="false">Toggle C: Off</button>
+        <script>
+          const buttonC = document.getElementById('toggleC');
+          buttonC.addEventListener('click', () => {
+            const pressed = buttonC.getAttribute('aria-pressed') === 'true';
+            buttonC.setAttribute('aria-pressed', (!pressed).toString());
+            buttonC.textContent = pressed ? 'Toggle C: Off' : 'Toggle C: On';
+          });
+        </script>
+      </body>
+    </html>
+  `);
+});
+
 // Start the server
 app.listen(port, () => {
 	console.log(`Server running at http://localhost:${port}/`);

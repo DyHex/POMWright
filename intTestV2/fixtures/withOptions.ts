@@ -1,3 +1,4 @@
+import IframePage from "@page-object-models-v2/testApp/with-options/pages/iframe/iframe.page";
 import TestFilters from "@page-object-models-v2/testApp/with-options/pages/testfilters/testfilters.page";
 import TestPage from "@page-object-models-v2/testApp/with-options/pages/testPage.page";
 import Color from "@page-object-models-v2/testApp/with-options/pages/testPath/[color]/color.page";
@@ -6,6 +7,7 @@ import { expect } from "@playwright/test";
 import { test as base } from "pomwright";
 
 type Fixtures = {
+	iframePage: IframePage;
 	testPage: TestPage;
 	testPath: TestPath;
 	color: Color;
@@ -13,6 +15,10 @@ type Fixtures = {
 };
 
 const test = base.extend<Fixtures>({
+	iframePage: async ({ page, log }, use, testInfo) => {
+		const iframePage = new IframePage(page, testInfo, log);
+		await use(iframePage);
+	},
 	testPage: async ({ page, log }, use, testInfo) => {
 		const testPage = new TestPage(page, testInfo, log);
 		await use(testPage);

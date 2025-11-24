@@ -109,7 +109,22 @@ export type LocatorSchemaRecord<LocatorSchemaPathType extends string = string> =
 	index?: IndexSelector | null;
 };
 
-export type LocatorUpdate = Partial<LocatorStrategyDefinition>;
+type LocatorUpdateFor<Definition extends LocatorStrategyDefinition> = { type: Definition["type"] } & Partial<
+	Omit<Definition, "type">
+>;
+
+export type LocatorUpdate =
+	| LocatorUpdateFor<RoleDefinition>
+	| LocatorUpdateFor<TextDefinition>
+	| LocatorUpdateFor<LabelDefinition>
+	| LocatorUpdateFor<PlaceholderDefinition>
+	| LocatorUpdateFor<AltTextDefinition>
+	| LocatorUpdateFor<TitleDefinition>
+	| LocatorUpdateFor<LocatorDefinition>
+	| LocatorUpdateFor<FrameLocatorDefinition>
+	| LocatorUpdateFor<TestIdDefinition>
+	| LocatorUpdateFor<IdDefinition>
+	| LocatorUpdateFor<DataCyDefinition>;
 
 export type IndexSelector = number | "first" | "last";
 

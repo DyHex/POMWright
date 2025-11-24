@@ -36,24 +36,40 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 		});
 	}
 
-	test("frameLocator should NOT apply filter", async ({ testFilters }) => {
-		const nested = await testFilters
+	test("frameLocator keeps the chain inside the frame and skips frame-level filters", async ({ testFilters, page }) => {
+		const frameTerminalBuilder = testFilters
 			.getLocatorSchema("fictional.filter@hasNotText.filter@hasText")
 			.update("fictional.filter@hasNotText.filter@hasText", {
 				type: "frameLocator",
 				selector: 'iframe[title="name"]',
+			});
+
+		const directFrameLocator = await frameTerminalBuilder.getLocator();
+		const manualFrame = page.frameLocator('iframe[title="name"]').owner();
+
+		expect(`${directFrameLocator}`).toEqual(`${manualFrame}`);
+
+		const nestedBuilder = testFilters
+			.getLocatorSchema("fictional.filter@hasNotText.filter@hasText.filter@hasNotText")
+			.update("fictional.filter@hasNotText.filter@hasText", {
+				type: "frameLocator",
+				selector: 'iframe[title="name"]',
 			})
-			.getNestedLocator();
+			.update("fictional.filter@hasNotText.filter@hasText.filter@hasNotText", {
+				type: "role",
+				role: "button",
+				options: { name: "inside frame" },
+			});
 
-		const nested2 = nested.getByRole("button");
+		const nested = await nestedBuilder.getNestedLocator();
+		const manualNested = page
+			.getByRole("button")
+			.filter({ hasNotText: "hasNotText" })
+			.frameLocator('iframe[title="name"]')
+			.getByRole("button", { name: "inside frame" })
+			.filter({ hasNotText: "hasNotText" });
 
-		expect(`${nested2}`).toEqual(
-			"getByRole('button').filter({ hasNotText: 'hasNotText' }).locator('iframe[title=\"name\"]').contentFrame().getByRole('button')",
-		);
-
-		expect(`${nested}`).toEqual(
-			"getByRole('button').filter({ hasNotText: 'hasNotText' }).locator('iframe[title=\"name\"]').contentFrame()",
-		);
+		expect(`${nested}`).toEqual(`${manualNested}`);
 	});
 
 	test("multiple nesting/chaining retains filters across the chain", async ({ testFilters }) => {

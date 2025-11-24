@@ -30,7 +30,7 @@ test("update operations can be chained across sub-paths", async ({ testFilters }
 test("update merges options without requiring full definitions", async ({ testFilters }) => {
 	const merged = await testFilters
 		.getLocatorSchema("body.section.heading")
-		.update("body.section.heading", { options: { name: "HEADING TEXT" } })
+		.update("body.section.heading", { type: "role", options: { name: "HEADING TEXT" } })
 		.getNestedLocator();
 
 	expect(`${merged}`).toEqual(
@@ -46,7 +46,7 @@ test("update handles full and partial definitions from fresh builders", async ({
 
 	const partial = await testFilters
 		.getLocatorSchema("body.section.heading")
-		.update("body.section.heading", { options: { level: 3 } })
+		.update("body.section.heading", { type: "role", options: { level: 3 } })
 		.getNestedLocator();
 
 	expect(`${full}`).toEqual("locator('body').locator('section').getByRole('heading', { level: 3 })");
@@ -86,8 +86,8 @@ test("update can mix ancestor and descendant changes without mutating registry",
 
 	const chained = await testFilters
 		.getLocatorSchema("body.section.heading")
-		.update("body", { selector: "SOMEBODY" })
-		.update("body.section.heading", { options: { name: "HEADING TEXT" } })
+		.update("body", { type: "locator", selector: "SOMEBODY" })
+		.update("body.section.heading", { type: "role", options: { name: "HEADING TEXT" } })
 		.getNestedLocator();
 
 	expect(`${chained}`).toEqual(
@@ -113,7 +113,7 @@ test("update can remove locator options filters", async ({ testFilters }) => {
 
 	const locator = await testFilters
 		.getLocatorSchema("body.section@playground")
-		.update("body.section@playground", { options: undefined })
+		.update("body.section@playground", { type: "locator", options: undefined })
 		.getNestedLocator();
 
 	expect(`${locator}`).toEqual("locator('body').locator('section')");

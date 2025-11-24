@@ -1,20 +1,28 @@
 import type { Locator, Page } from "@playwright/test";
 import type { PlaywrightReportLogger } from "../helpers/playwrightReportLogger";
 import type {
+	AltTextDefinition,
 	DataCyDefinition,
 	FilterDefinition,
 	FilterLocatorReference,
 	FrameLocatorDefinition,
+	IdDefinition,
 	IndexSelector,
+	LabelDefinition,
 	LocatorBuilderTarget,
+	LocatorDefinition,
 	LocatorRegistrationConfig,
 	LocatorSchemaRecord,
 	LocatorStrategyDefinition,
 	LocatorUpdate,
 	PathIndexMap,
+	PlaceholderDefinition,
 	PlaywrightFilterDefinition,
 	ResolvedFilterDefinition,
 	RoleDefinition,
+	TestIdDefinition,
+	TextDefinition,
+	TitleDefinition,
 } from "./types";
 import type { LocatorChainPaths } from "./utils";
 import { cssEscape, expandSchemaPath, validateLocatorSchemaPath } from "./utils";
@@ -69,43 +77,137 @@ const normalizeFilters = <LocatorSchemaPathType extends string>(
 	return Array.isArray(filters) ? [...filters] : [filters];
 };
 
-const hasOptions = (
-	definition: Partial<LocatorStrategyDefinition> | undefined,
-): definition is Partial<LocatorStrategyDefinition> & { options?: unknown } => {
-	if (!definition || typeof definition !== "object") {
-		return false;
+const mergeOptions = <OptionsType>(
+	currentOptions: OptionsType | undefined,
+	updates: { options?: OptionsType } | undefined,
+) => {
+	if (updates && "options" in updates) {
+		const updateOptions = updates.options;
+		if (updateOptions && typeof updateOptions === "object") {
+			return {
+				...(typeof currentOptions === "object" && currentOptions !== null ? currentOptions : {}),
+				...updateOptions,
+			} as OptionsType;
+		}
+		return updateOptions as OptionsType;
 	}
-	return "options" in definition;
+
+	return currentOptions as OptionsType;
 };
 
 const mergeLocatorDefinition = (
 	current: LocatorStrategyDefinition,
-	updates: Partial<LocatorStrategyDefinition>,
+	updates: LocatorUpdate,
+	path: string,
 ): LocatorStrategyDefinition => {
-	if (!updates || Object.keys(updates).length === 0) {
-		return current;
+	if (!updates || typeof updates !== "object" || !("type" in updates)) {
+		throw new Error(`Locator update for "${path}" requires a "type" property.`);
 	}
 
-	const next = { ...current, ...updates } as LocatorStrategyDefinition;
-
-	if (hasOptions(current) || hasOptions(updates)) {
-		const nextWithOptions = next as LocatorStrategyDefinition & { options?: unknown };
-		const existingOptions = hasOptions(current) ? current.options : undefined;
-		if (hasOptions(updates)) {
-			if (updates.options && typeof updates.options === "object") {
-				nextWithOptions.options = {
-					...(typeof existingOptions === "object" && existingOptions !== null ? existingOptions : {}),
-					...updates.options,
-				} as typeof nextWithOptions.options;
-			} else {
-				nextWithOptions.options = updates.options as typeof nextWithOptions.options;
+	switch (updates.type) {
+		case "role": {
+			const role = updates.role ?? (current.type === "role" ? current.role : undefined);
+			if (role === undefined) {
+				throw new Error(`Locator update for "${path}" of type "role" requires a "role" value.`);
 			}
-		} else {
-			nextWithOptions.options = existingOptions as typeof nextWithOptions.options;
+			const options = mergeOptions(current.type === "role" ? current.options : undefined, updates);
+			return options !== undefined
+				? ({ type: "role", role, options } as RoleDefinition)
+				: ({ type: "role", role } as RoleDefinition);
+		}
+		case "text": {
+			const text = updates.text ?? (current.type === "text" ? current.text : undefined);
+			if (text === undefined) {
+				throw new Error(`Locator update for "${path}" of type "text" requires a "text" value.`);
+			}
+			const options = mergeOptions(current.type === "text" ? current.options : undefined, updates);
+			return options !== undefined
+				? ({ type: "text", text, options } as TextDefinition)
+				: ({ type: "text", text } as TextDefinition);
+		}
+		case "label": {
+			const text = updates.text ?? (current.type === "label" ? current.text : undefined);
+			if (text === undefined) {
+				throw new Error(`Locator update for "${path}" of type "label" requires a "text" value.`);
+			}
+			const options = mergeOptions(current.type === "label" ? current.options : undefined, updates);
+			return options !== undefined
+				? ({ type: "label", text, options } as LabelDefinition)
+				: ({ type: "label", text } as LabelDefinition);
+		}
+		case "placeholder": {
+			const text = updates.text ?? (current.type === "placeholder" ? current.text : undefined);
+			if (text === undefined) {
+				throw new Error(`Locator update for "${path}" of type "placeholder" requires a "text" value.`);
+			}
+			const options = mergeOptions(current.type === "placeholder" ? current.options : undefined, updates);
+			return options !== undefined
+				? ({ type: "placeholder", text, options } as PlaceholderDefinition)
+				: ({ type: "placeholder", text } as PlaceholderDefinition);
+		}
+		case "altText": {
+			const text = updates.text ?? (current.type === "altText" ? current.text : undefined);
+			if (text === undefined) {
+				throw new Error(`Locator update for "${path}" of type "altText" requires a "text" value.`);
+			}
+			const options = mergeOptions(current.type === "altText" ? current.options : undefined, updates);
+			return options !== undefined
+				? ({ type: "altText", text, options } as AltTextDefinition)
+				: ({ type: "altText", text } as AltTextDefinition);
+		}
+		case "title": {
+			const text = updates.text ?? (current.type === "title" ? current.text : undefined);
+			if (text === undefined) {
+				throw new Error(`Locator update for "${path}" of type "title" requires a "text" value.`);
+			}
+			const options = mergeOptions(current.type === "title" ? current.options : undefined, updates);
+			return options !== undefined
+				? ({ type: "title", text, options } as TitleDefinition)
+				: ({ type: "title", text } as TitleDefinition);
+		}
+		case "locator": {
+			const selector = updates.selector ?? (current.type === "locator" ? current.selector : undefined);
+			if (selector === undefined) {
+				throw new Error(`Locator update for "${path}" of type "locator" requires a "selector" value.`);
+			}
+			const options = mergeOptions(current.type === "locator" ? current.options : undefined, updates);
+			return options !== undefined
+				? ({ type: "locator", selector, options } as LocatorDefinition)
+				: ({ type: "locator", selector } as LocatorDefinition);
+		}
+		case "frameLocator": {
+			const selector = updates.selector ?? (current.type === "frameLocator" ? current.selector : undefined);
+			if (selector === undefined) {
+				throw new Error(`Locator update for "${path}" of type "frameLocator" requires a "selector" value.`);
+			}
+			return { type: "frameLocator", selector } as FrameLocatorDefinition;
+		}
+		case "testId": {
+			const testId = updates.testId ?? (current.type === "testId" ? current.testId : undefined);
+			if (testId === undefined) {
+				throw new Error(`Locator update for "${path}" of type "testId" requires a "testId" value.`);
+			}
+			return { type: "testId", testId } as TestIdDefinition;
+		}
+		case "id": {
+			const id = updates.id ?? (current.type === "id" ? current.id : undefined);
+			if (id === undefined) {
+				throw new Error(`Locator update for "${path}" of type "id" requires an "id" value.`);
+			}
+			return { type: "id", id } as IdDefinition;
+		}
+		case "dataCy": {
+			const value = updates.value ?? (current.type === "dataCy" ? current.value : undefined);
+			if (value === undefined) {
+				throw new Error(`Locator update for "${path}" of type "dataCy" requires a "value".`);
+			}
+			return { type: "dataCy", value: `${value}` } as DataCyDefinition;
+		}
+		default: {
+			const exhaustive: never = updates;
+			return exhaustive;
 		}
 	}
-
-	return next;
 };
 
 const createLocator = (
@@ -280,7 +382,7 @@ export class LocatorQueryBuilder<LocatorSchemaPathType extends string, LocatorSu
 		if (!current) {
 			throw new Error(`No locator schema registered for sub-path "${subPath}".`);
 		}
-		const merged = mergeLocatorDefinition(current, updates);
+		const merged = mergeLocatorDefinition(current, updates, subPath);
 		this.definitions.set(subPath, merged);
 		return this;
 	}
@@ -316,10 +418,6 @@ export class LocatorQueryBuilder<LocatorSchemaPathType extends string, LocatorSu
 
 		if (!definition) {
 			throw new Error(`No locator schema registered for path "${this.path}".`);
-		}
-
-		if (isFrameLocatorDefinition(definition)) {
-			throw new Error(`Locator schema path "${this.path}" resolves to a frameLocator. Use getNestedLocator() instead.`);
 		}
 
 		const filtersForPath = this.filters.get(this.path) ?? [];
@@ -470,19 +568,15 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 
 	async getLocator<Path extends LocatorSchemaPathType>(path: Path) {
 		const record = this.get(path);
-		const { definition } = record;
+		const definitions = new Map<string, LocatorStrategyDefinition>([[path, record.definition]]);
+		const filters = new Map<string, FilterDefinition<LocatorSchemaPathType>[]>([
+			[path, record.filters ? [...record.filters] : []],
+		]);
+		const indices = new Map<string, IndexSelector | null>([[path, record.index ?? null]]);
 
-		if (isFrameLocatorDefinition(definition)) {
-			throw new Error(`Locator schema path "${path}" resolves to a frameLocator. Use getNestedLocator() instead.`);
-		}
-
-		let locator = createLocator(this.page, definition) as Locator;
-		const combinedFilters = await this.resolveFiltersForTarget(record.filters, locator);
-		if (combinedFilters.length > 0) {
-			locator = applyFilters(locator, combinedFilters);
-		}
-		if (record.index !== null && record.index !== undefined) {
-			locator = applyIndexSelector(locator, record.index);
+		const { locator, steps } = await this.buildLocatorChain(path, definitions, filters, indices);
+		if (!locator) {
+			throw new Error(`Unable to resolve direct locator for path "${path}".`);
 		}
 
 		if (this.log.isLogLevelEnabled("debug")) {
@@ -490,9 +584,7 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 				"Resolved direct locator",
 				stringifyForLog({
 					path,
-					definition,
-					filters: combinedFilters,
-					index: record.index ?? null,
+					steps,
 				}),
 			);
 		}
@@ -535,7 +627,9 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 			index?: IndexSelector | null | undefined;
 		}[] = [];
 
-		for (const part of registeredChain) {
+		const lastIndex = registeredChain.length - 1;
+
+		for (const [index, part] of registeredChain.entries()) {
 			const definition = definitions.get(part);
 			if (!definition) {
 				throw new Error(`Missing locator definition for "${part}" while resolving "${path}".`);
@@ -543,11 +637,17 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 
 			if (isFrameLocatorDefinition(definition)) {
 				const frameLocator = createLocator(currentTarget, definition) as ReturnType<Page["frameLocator"]>;
-				const ownerLocator = frameLocator.owner();
-				// Provide a readable chain string while keeping the FrameLocator usable for subsequent steps.
-				(frameLocator as unknown as { toString: () => string }).toString = () => `${ownerLocator}.contentFrame()`;
-				currentTarget = frameLocator as LocatorBuilderTarget;
-				lastLocator = frameLocator as unknown as Locator;
+				const isTerminalStep = index === lastIndex;
+
+				if (isTerminalStep) {
+					const ownerLocator = frameLocator.owner();
+					currentTarget = ownerLocator;
+					lastLocator = ownerLocator;
+				} else {
+					currentTarget = frameLocator as LocatorBuilderTarget;
+					lastLocator = frameLocator as unknown as Locator;
+				}
+
 				debugSteps.push({ path: part, definition, appliedFilters: [] });
 				continue;
 			}

@@ -21,7 +21,7 @@ test("shorthand getNestedLocator returns the same nested locator as getLocatorSc
 test("independent builders do not share state", async ({ testFilters }) => {
 	const modified = await testFilters
 		.getLocatorSchema("body.section.heading")
-		.update("body.section.heading", { options: { name: "hello", level: 3, exact: true } })
+		.update("body.section.heading", { type: "role", options: { name: "hello", level: 3, exact: true } })
 		.getNestedLocator();
 
 	const untouched = await testFilters.getLocatorSchema("body.section.heading").getNestedLocator();
