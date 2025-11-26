@@ -4,7 +4,7 @@ import { createCypressIdEngine } from "../src/utils/selectorEngines";
 import type { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 import type { LocatorQueryBuilder } from "./locators/registry";
 import { LocatorRegistry } from "./locators/registry";
-import type { LocatorChainPaths } from "./locators/utils";
+import type { LocatorChainPaths, ValidLocatorPath } from "./locators/utils";
 
 export type BasePageOptions = {
 	urlOptions?: {
@@ -74,14 +74,17 @@ export abstract class BasePageV2<
 
 	protected abstract defineLocators(): void;
 
-	public async getLocator<Path extends LocatorSchemaPathType>(path: Path) {
+	public async getLocator<Path extends ValidLocatorPath<LocatorSchemaPathType>>(path: Path) {
 		return this.locatorRegistry.getLocator(path);
 	}
 
-	public getNestedLocator<Path extends LocatorSchemaPathType>(
+	public getNestedLocator<Path extends ValidLocatorPath<LocatorSchemaPathType>>(
 		path: Path,
 		overrides?: Partial<
-			Record<LocatorChainPaths<LocatorSchemaPathType, Path>, number | "first" | "last" | null | undefined>
+			Record<
+				LocatorChainPaths<ValidLocatorPath<LocatorSchemaPathType>, Path>,
+				number | "first" | "last" | null | undefined
+			>
 		>,
 	) {
 		return this.locatorRegistry.getNestedLocator(
@@ -90,7 +93,7 @@ export abstract class BasePageV2<
 		);
 	}
 
-	public getLocatorSchema<Path extends LocatorSchemaPathType>(
+	public getLocatorSchema<Path extends ValidLocatorPath<LocatorSchemaPathType>>(
 		path: Path,
 	): LocatorQueryBuilder<LocatorSchemaPathType, Path> {
 		return this.locatorRegistry.getLocatorSchema(path);

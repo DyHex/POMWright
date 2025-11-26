@@ -1,4 +1,8 @@
 import type { FrameLocator, Locator, Page } from "@playwright/test";
+import type { LocatorSchemaPathValid } from "./utils";
+
+export type LocatorSchemaPathAlias<LocatorSchemaPathType extends string> = LocatorSchemaPathType &
+	LocatorSchemaPathValid<LocatorSchemaPathType>;
 
 export type RoleDefinition = {
 	type: "role";
@@ -78,34 +82,50 @@ export type LocatorStrategyDefinition =
 export type PlaywrightFilterDefinition = NonNullable<Parameters<Locator["filter"]>[0]>;
 export type ResolvedFilterDefinition = PlaywrightFilterDefinition;
 
-export type FilterLocatorReference<LocatorSchemaPathType extends string> =
+export type FilterLocatorReference<
+	LocatorSchemaPathType extends string,
+	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+> =
 	| Locator
 	| LocatorStrategyDefinition
 	| { locator: LocatorStrategyDefinition }
-	| { locatorPath: LocatorSchemaPathType }
-	| LocatorSchemaPathType;
+	| { locatorPath: AllowedPaths }
+	| AllowedPaths;
 
-export type FilterDefinition<LocatorSchemaPathType extends string> =
+export type FilterDefinition<
+	LocatorSchemaPathType extends string,
+	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+> =
 	| PlaywrightFilterDefinition
 	| (Omit<PlaywrightFilterDefinition, "has" | "hasNot"> & {
-			has?: PlaywrightFilterDefinition["has"] | FilterLocatorReference<LocatorSchemaPathType>;
-			hasNot?: PlaywrightFilterDefinition["hasNot"] | FilterLocatorReference<LocatorSchemaPathType>;
+			has?: PlaywrightFilterDefinition["has"] | FilterLocatorReference<LocatorSchemaPathType, AllowedPaths>;
+			hasNot?: PlaywrightFilterDefinition["hasNot"] | FilterLocatorReference<LocatorSchemaPathType, AllowedPaths>;
 	  });
 
-export type FilterPatch<LocatorSchemaPathType extends string> =
-	| FilterDefinition<LocatorSchemaPathType>[]
+export type FilterPatch<
+	LocatorSchemaPathType extends string,
+	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+> =
+	| FilterDefinition<LocatorSchemaPathType, AllowedPaths>[]
 	| {
-			append?: FilterDefinition<LocatorSchemaPathType> | FilterDefinition<LocatorSchemaPathType>[];
-			replace?: FilterDefinition<LocatorSchemaPathType> | FilterDefinition<LocatorSchemaPathType>[];
+			append?:
+				| FilterDefinition<LocatorSchemaPathType, AllowedPaths>
+				| FilterDefinition<LocatorSchemaPathType, AllowedPaths>[];
+			replace?:
+				| FilterDefinition<LocatorSchemaPathType, AllowedPaths>
+				| FilterDefinition<LocatorSchemaPathType, AllowedPaths>[];
 			clear?: boolean;
 	  };
 
 export type LocatorBuilderTarget = Page | Locator | FrameLocator;
 
-export type LocatorSchemaRecord<LocatorSchemaPathType extends string = string> = {
-	locatorSchemaPath: string;
+export type LocatorSchemaRecord<
+	LocatorSchemaPathType extends string = string,
+	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+> = {
+	locatorSchemaPath: LocatorSchemaPathAlias<LocatorSchemaPathType>;
 	definition: LocatorStrategyDefinition;
-	filters?: FilterDefinition<LocatorSchemaPathType>[];
+	filters?: FilterDefinition<LocatorSchemaPathType, AllowedPaths>[];
 	index?: IndexSelector | null;
 };
 
@@ -130,7 +150,12 @@ export type IndexSelector = number | "first" | "last";
 
 export type PathIndexMap = Partial<Record<string, IndexSelector | null | undefined>>;
 
-export type LocatorRegistrationConfig<LocatorSchemaPathType extends string = string> = {
-	filters?: FilterDefinition<LocatorSchemaPathType> | FilterDefinition<LocatorSchemaPathType>[];
+export type LocatorRegistrationConfig<
+	LocatorSchemaPathType extends string = string,
+	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+> = {
+	filters?:
+		| FilterDefinition<LocatorSchemaPathType, AllowedPaths>
+		| FilterDefinition<LocatorSchemaPathType, AllowedPaths>[];
 	index?: IndexSelector | null;
 };

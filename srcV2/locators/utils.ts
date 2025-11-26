@@ -18,6 +18,17 @@ export const validateLocatorSchemaPath = (path: string) => {
 	}
 };
 
+export type LocatorSchemaPathValid<Path extends string> = Path extends ""
+	? never
+	: Path extends `.${string}` | `${string}.`
+		? never
+		: Path extends `${string}..${string}`
+			? never
+			: Path;
+
+export type ValidLocatorPath<LocatorSchemaPathType extends string> = LocatorSchemaPathType &
+	LocatorSchemaPathValid<LocatorSchemaPathType>;
+
 export const expandSchemaPath = (path: string): string[] => {
 	validateLocatorSchemaPath(path);
 	const parts = path.split(".");
