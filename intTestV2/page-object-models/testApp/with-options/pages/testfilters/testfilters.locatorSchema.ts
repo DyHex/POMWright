@@ -1,6 +1,8 @@
 import type { LocatorRegistry } from "pomwright";
 
 export type LocatorSchemaPath =
+	| "one"
+	| "one.two"
 	| "body"
 	| "body.section"
 	| "body.section.heading"
@@ -26,6 +28,10 @@ export type LocatorSchemaPath =
 	| "fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText";
 
 export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>) {
+	locators.add("one").locator("div.one");
+
+	locators.add("one.two").locator("div.two", { filters: { hasText: "two" }, index: 0 });
+
 	locators.add("body").locator("body");
 
 	locators.add("body.section").locator("section");

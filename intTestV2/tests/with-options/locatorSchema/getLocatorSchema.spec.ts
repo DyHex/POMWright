@@ -21,7 +21,8 @@ test("shorthand getNestedLocator returns the same nested locator as getLocatorSc
 test("independent builders do not share state", async ({ testFilters }) => {
 	const modified = await testFilters
 		.getLocatorSchema("body.section.heading")
-		.update("body.section.heading", { type: "role", options: { name: "hello", level: 3, exact: true } })
+		.update("body.section.heading")
+		.getByRole({ name: "hello", level: 3, exact: true })
 		.getNestedLocator();
 
 	const untouched = await testFilters.getLocatorSchema("body.section.heading").getNestedLocator();
@@ -37,7 +38,7 @@ test("getLocatorSchema propagates registered filters and indices to getLocator",
 
 	const locator = await testFilters
 		.getLocatorSchema("body.section@playground.button@reset")
-		.addFilter("body.section@playground.button@reset", { hasText: /Reset/i })
+		.filter("body.section@playground.button@reset", { hasText: /Reset/i })
 		.nth("body.section@playground.button@reset", "first")
 		.getLocator();
 

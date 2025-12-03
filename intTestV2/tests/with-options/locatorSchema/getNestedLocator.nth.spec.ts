@@ -20,6 +20,16 @@ test("getLocatorSchema.getNestedLocator applies overrides", async ({ testFilters
 	expect(`${locator}`).toEqual(expectedChain);
 });
 
+test("getNestedLocator accepts ordered filter and index override arrays", async ({ testFilters }) => {
+	const locator = await testFilters.getNestedLocator("fictional.filter@hasText", {
+		"fictional.filter@hasText": [{ filter: { hasText: "extra" } }, { nth: 1 }, { filter: { hasNotText: "tail" } }],
+	});
+
+	expect(`${locator}`).toEqual(
+		"getByRole('button').filter({ hasText: 'hasText' }).filter({ hasText: 'extra' }).nth(1).filter({ hasNotText: 'tail' })",
+	);
+});
+
 test("getNestedLocator maps negative indexes to last()", async ({ testFilters }) => {
 	const locator = await testFilters.getNestedLocator(fullPath, {
 		"fictional.filter@hasNotText": -1,

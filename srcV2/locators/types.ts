@@ -82,6 +82,21 @@ export type LocatorStrategyDefinition =
 export type PlaywrightFilterDefinition = NonNullable<Parameters<Locator["filter"]>[0]>;
 export type ResolvedFilterDefinition = PlaywrightFilterDefinition;
 
+export type LocatorStep<
+	LocatorSchemaPathType extends string = string,
+	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+> =
+	| { kind: "filter"; filter: FilterDefinition<LocatorSchemaPathType, AllowedPaths> }
+	| { kind: "index"; index: IndexSelector | null };
+
+export type LocatorStepOverride<
+	LocatorSchemaPathType extends string = string,
+	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+> =
+	| { nth: IndexSelector | null }
+	| { filter: FilterDefinition<LocatorSchemaPathType, AllowedPaths> }
+	| FilterDefinition<LocatorSchemaPathType, AllowedPaths>;
+
 export type FilterLocatorReference<
 	LocatorSchemaPathType extends string,
 	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
@@ -125,6 +140,7 @@ export type LocatorSchemaRecord<
 > = {
 	locatorSchemaPath: LocatorSchemaPathAlias<LocatorSchemaPathType>;
 	definition: LocatorStrategyDefinition;
+	steps?: LocatorStep<LocatorSchemaPathType, AllowedPaths>[];
 	filters?: FilterDefinition<LocatorSchemaPathType, AllowedPaths>[];
 	index?: IndexSelector | null;
 };
@@ -149,6 +165,19 @@ export type LocatorUpdate =
 export type IndexSelector = number | "first" | "last";
 
 export type PathIndexMap = Partial<Record<string, IndexSelector | null | undefined>>;
+
+export type LocatorOverrides<
+	LocatorSchemaPathType extends string = string,
+	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+> = Partial<
+	Record<
+		AllowedPaths,
+		| IndexSelector
+		| null
+		| LocatorStepOverride<LocatorSchemaPathType, AllowedPaths>
+		| LocatorStepOverride<LocatorSchemaPathType, AllowedPaths>[]
+	>
+>;
 
 export type LocatorRegistrationConfig<
 	LocatorSchemaPathType extends string = string,

@@ -2,9 +2,8 @@ import { type Page, type Selectors, selectors, type TestInfo } from "@playwright
 import { SessionStorage } from "../src/helpers/sessionStorage.actions";
 import { createCypressIdEngine } from "../src/utils/selectorEngines";
 import type { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
-import type { LocatorQueryBuilder } from "./locators/registry";
-import { LocatorRegistry } from "./locators/registry";
-import type { LocatorChainPaths, ValidLocatorPath } from "./locators/utils";
+import type { GetLocatorAccessor, GetLocatorSchemaAccessor, GetNestedLocatorAccessor } from "./locators/registry";
+import { bindLocatorAccessors, LocatorRegistry } from "./locators/registry";
 
 export type BasePageOptions = {
 	urlOptions?: {
@@ -41,6 +40,9 @@ export abstract class BasePageV2<
 	readonly sessionStorage: SessionStorage;
 	protected readonly log: PlaywrightReportLogger;
 	protected readonly locatorRegistry: LocatorRegistry<LocatorSchemaPathType>;
+	public readonly getLocator: GetLocatorAccessor<LocatorSchemaPathType>;
+	public readonly getLocatorSchema: GetLocatorSchemaAccessor<LocatorSchemaPathType>;
+	public readonly getNestedLocator: GetNestedLocatorAccessor<LocatorSchemaPathType>;
 
 	protected constructor(
 		page: Page,
@@ -62,6 +64,10 @@ export abstract class BasePageV2<
 			page,
 			this.log.getNewChildLogger("LocatorRegistry"),
 		);
+		const { getLocator, getNestedLocator, getLocatorSchema } = bindLocatorAccessors(this.locatorRegistry);
+		this.getLocator = getLocator;
+		this.getLocatorSchema = getLocatorSchema;
+		this.getNestedLocator = getNestedLocator;
 		this.sessionStorage = new SessionStorage(page, pocName);
 
 		this.defineLocators();
@@ -73,31 +79,6 @@ export abstract class BasePageV2<
 	}
 
 	protected abstract defineLocators(): void;
-
-	public async getLocator<Path extends ValidLocatorPath<LocatorSchemaPathType>>(path: Path) {
-		return this.locatorRegistry.getLocator(path);
-	}
-
-	public getNestedLocator<Path extends ValidLocatorPath<LocatorSchemaPathType>>(
-		path: Path,
-		overrides?: Partial<
-			Record<
-				LocatorChainPaths<ValidLocatorPath<LocatorSchemaPathType>, Path>,
-				number | "first" | "last" | null | undefined
-			>
-		>,
-	) {
-		return this.locatorRegistry.getNestedLocator(
-			path,
-			overrides as Record<string, number | "first" | "last" | null | undefined>,
-		);
-	}
-
-	public getLocatorSchema<Path extends ValidLocatorPath<LocatorSchemaPathType>>(
-		path: Path,
-	): LocatorQueryBuilder<LocatorSchemaPathType, Path> {
-		return this.locatorRegistry.getLocatorSchema(path);
-	}
 
 	private composeFullUrl(
 		baseUrl: ExtractBaseUrlType<Options>,

@@ -30,3 +30,13 @@ test("should be able to manually chain locators returned by getLocator", async (
 		"locator('.w3-top').locator(locator('.w3-dropdown-hover')).locator(locator('.w3-dropdown-content')).locator(locator('.w3-bar-item'))",
 	);
 });
+
+test("getLocator fluent wrapper supports update and clearSteps", async ({ testFilters }) => {
+	const updated = await testFilters.getLocator("body.section.heading").update().getByRole("heading", { level: 3 });
+
+	expect(`${updated}`).toEqual("getByRole('heading', { level: 3 })");
+
+	const cleared = await testFilters.getLocator("fictional.filter@hasText").clearSteps();
+
+	expect(`${cleared}`).toEqual("getByRole('button')");
+});

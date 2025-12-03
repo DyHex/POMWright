@@ -42,3 +42,36 @@ test("getNestedLocator returns a fresh locator each time", async ({ testPage }) 
 	expect(first).not.toBe(second);
 	expect(`${first}`).toEqual(`${second}`);
 });
+
+test("getNestedLocator fluent wrapper records filters and indices in call order", async ({ testFilters }) => {
+	const chained = await testFilters
+		.getNestedLocator("fictional.filter@hasText")
+		.filter("fictional.filter@hasText", { hasText: "extra" })
+		.nth("fictional.filter@hasText", 1);
+
+	expect(`${chained}`).toEqual(
+		"getByRole('button').filter({ hasText: 'hasText' }).filter({ hasText: 'extra' }).nth(1)",
+	);
+});
+
+test("getNestedLocator fluent wrapper supports update and clearSteps", async ({ testFilters }) => {
+	const updated = await testFilters
+		.getNestedLocator("body.section.heading")
+		.update("body.section.heading")
+		.getByRole("heading", { level: 3 });
+
+	expect(`${updated}`).toEqual("locator('body').locator('section').getByRole('heading', { level: 3 })");
+
+	const cleared = await testFilters.getNestedLocator("fictional.filter@hasText").clearSteps("fictional.filter@hasText");
+
+	expect(`${cleared}`).toEqual("getByRole('button')");
+});
+
+test("getNestedLocator fluent update can switch strategies without a terminator", async ({ testFilters }) => {
+	const locator = await testFilters
+		.getNestedLocator("body.section.heading")
+		.update("body.section.heading")
+		.getByText("Updated heading");
+
+	expect(`${locator}`).toEqual("locator('body').locator('section').getByText('Updated heading')");
+});

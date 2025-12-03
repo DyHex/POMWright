@@ -8,6 +8,10 @@ export {
 export { test } from "./fixture/base.fixtures";
 export { type LogEntry, type LogLevel, PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 export {
+	bindLocatorAccessors,
+	type GetLocatorAccessor,
+	type GetLocatorSchemaAccessor,
+	type GetNestedLocatorAccessor,
 	LocatorQueryBuilder,
 	LocatorRegistrationBuilder,
 	LocatorRegistry,
@@ -22,7 +26,10 @@ export type {
 	IndexSelector,
 	LabelDefinition,
 	LocatorDefinition,
+	LocatorOverrides,
 	LocatorRegistrationConfig,
+	LocatorStep,
+	LocatorStepOverride,
 	LocatorStrategyDefinition,
 	LocatorUpdate,
 	PathIndexMap,
