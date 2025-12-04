@@ -36,7 +36,7 @@ const stringifyForLog = (value: unknown) => {
 	const seen = new WeakSet();
 	return JSON.stringify(
 		value,
-		(key, current) => {
+		(_key, current) => {
 			if (typeof current === "object" && current !== null) {
 				if (seen.has(current)) {
 					return "[Circular]";
@@ -193,8 +193,8 @@ const extractIndexFromSteps = <LocatorSchemaPathType extends string, AllowedPath
 	steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[],
 ) => {
 	for (let i = steps.length - 1; i >= 0; i -= 1) {
-		const step = steps[i]!;
-		if (step.kind === "index") {
+		const step = steps[i];
+		if (step && step.kind === "index") {
 			return step.index ?? null;
 		}
 	}
@@ -260,6 +260,22 @@ type RegistrationConfig<
 	LocatorSchemaPathType extends string,
 	Path extends RegistryPath<LocatorSchemaPathType>,
 > = LocatorRegistrationConfig<Path, RegistryPath<LocatorSchemaPathType>>;
+
+type UpdateArgsWithOptions<Primary, Options, LocatorSchemaPathType extends string, AllowedPaths extends string> =
+	| []
+	| [LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>]
+	| [Primary]
+	| [Options]
+	| [Primary, Options]
+	| [Primary, LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>]
+	| [Options, LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>]
+	| [Primary, Options, LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>];
+
+type UpdateArgsWithoutOptions<Primary, LocatorSchemaPathType extends string, AllowedPaths extends string> =
+	| []
+	| [LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>]
+	| [Primary]
+	| [Primary, LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>];
 
 const mergeLocatorDefinition = (
 	current: LocatorStrategyDefinition,
@@ -774,36 +790,16 @@ class LocatorUpdateBuilder<
 	) {}
 
 	getByRole(
-		role: RoleDefinition["role"],
-		options: RoleDefinition["options"],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByRole(
-		role: RoleDefinition["role"],
-		options?: RoleDefinition["options"],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByRole(
-		role: RoleDefinition["role"],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByRole(
-		options: RoleDefinition["options"],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByRole(
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByRole(
-		roleOrOptionsOrConfig?:
-			| RoleDefinition["role"]
-			| RoleDefinition["options"]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		optionsOrConfig?: RoleDefinition["options"] | LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
+		...args: UpdateArgsWithOptions<
+			RoleDefinition["role"],
+			RoleDefinition["options"],
+			LocatorSchemaPathType,
+			LocatorSubstring
+		>
 	) {
+		const [roleOrOptionsOrConfig, optionsOrConfig, config] = args;
 		const optionsProvided =
-			arguments.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
 		const {
 			primary: role,
 			options,
@@ -826,38 +822,16 @@ class LocatorUpdateBuilder<
 	}
 
 	getByText(
-		text: Parameters<Page["getByText"]>[0],
-		options: Parameters<Page["getByText"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByText(
-		text: Parameters<Page["getByText"]>[0],
-		options?: Parameters<Page["getByText"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByText(
-		text: Parameters<Page["getByText"]>[0],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByText(
-		options: Parameters<Page["getByText"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByText(
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByText(
-		textOrOptionsOrConfig?:
-			| Parameters<Page["getByText"]>[0]
-			| Parameters<Page["getByText"]>[1]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		optionsOrConfig?:
-			| Parameters<Page["getByText"]>[1]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
+		...args: UpdateArgsWithOptions<
+			Parameters<Page["getByText"]>[0],
+			Parameters<Page["getByText"]>[1],
+			LocatorSchemaPathType,
+			LocatorSubstring
+		>
 	) {
+		const [textOrOptionsOrConfig, optionsOrConfig, config] = args;
 		const optionsProvided =
-			arguments.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
 		const {
 			primary: text,
 			options,
@@ -880,38 +854,16 @@ class LocatorUpdateBuilder<
 	}
 
 	getByLabel(
-		text: Parameters<Page["getByLabel"]>[0],
-		options: Parameters<Page["getByLabel"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByLabel(
-		text: Parameters<Page["getByLabel"]>[0],
-		options?: Parameters<Page["getByLabel"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByLabel(
-		text: Parameters<Page["getByLabel"]>[0],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByLabel(
-		options: Parameters<Page["getByLabel"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByLabel(
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByLabel(
-		textOrOptionsOrConfig?:
-			| Parameters<Page["getByLabel"]>[0]
-			| Parameters<Page["getByLabel"]>[1]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		optionsOrConfig?:
-			| Parameters<Page["getByLabel"]>[1]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
+		...args: UpdateArgsWithOptions<
+			Parameters<Page["getByLabel"]>[0],
+			Parameters<Page["getByLabel"]>[1],
+			LocatorSchemaPathType,
+			LocatorSubstring
+		>
 	) {
+		const [textOrOptionsOrConfig, optionsOrConfig, config] = args;
 		const optionsProvided =
-			arguments.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
 		const {
 			primary: text,
 			options,
@@ -934,38 +886,16 @@ class LocatorUpdateBuilder<
 	}
 
 	getByPlaceholder(
-		text: Parameters<Page["getByPlaceholder"]>[0],
-		options: Parameters<Page["getByPlaceholder"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByPlaceholder(
-		text: Parameters<Page["getByPlaceholder"]>[0],
-		options?: Parameters<Page["getByPlaceholder"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByPlaceholder(
-		text: Parameters<Page["getByPlaceholder"]>[0],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByPlaceholder(
-		options: Parameters<Page["getByPlaceholder"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByPlaceholder(
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByPlaceholder(
-		textOrOptionsOrConfig?:
-			| Parameters<Page["getByPlaceholder"]>[0]
-			| Parameters<Page["getByPlaceholder"]>[1]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		optionsOrConfig?:
-			| Parameters<Page["getByPlaceholder"]>[1]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
+		...args: UpdateArgsWithOptions<
+			Parameters<Page["getByPlaceholder"]>[0],
+			Parameters<Page["getByPlaceholder"]>[1],
+			LocatorSchemaPathType,
+			LocatorSubstring
+		>
 	) {
+		const [textOrOptionsOrConfig, optionsOrConfig, config] = args;
 		const optionsProvided =
-			arguments.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
 		const {
 			primary: text,
 			options,
@@ -988,38 +918,16 @@ class LocatorUpdateBuilder<
 	}
 
 	getByAltText(
-		text: Parameters<Page["getByAltText"]>[0],
-		options: Parameters<Page["getByAltText"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByAltText(
-		text: Parameters<Page["getByAltText"]>[0],
-		options?: Parameters<Page["getByAltText"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByAltText(
-		text: Parameters<Page["getByAltText"]>[0],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByAltText(
-		options: Parameters<Page["getByAltText"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByAltText(
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByAltText(
-		textOrOptionsOrConfig?:
-			| Parameters<Page["getByAltText"]>[0]
-			| Parameters<Page["getByAltText"]>[1]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		optionsOrConfig?:
-			| Parameters<Page["getByAltText"]>[1]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
+		...args: UpdateArgsWithOptions<
+			Parameters<Page["getByAltText"]>[0],
+			Parameters<Page["getByAltText"]>[1],
+			LocatorSchemaPathType,
+			LocatorSubstring
+		>
 	) {
+		const [textOrOptionsOrConfig, optionsOrConfig, config] = args;
 		const optionsProvided =
-			arguments.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
 		const {
 			primary: text,
 			options,
@@ -1042,38 +950,16 @@ class LocatorUpdateBuilder<
 	}
 
 	getByTitle(
-		text: Parameters<Page["getByTitle"]>[0],
-		options: Parameters<Page["getByTitle"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByTitle(
-		text: Parameters<Page["getByTitle"]>[0],
-		options?: Parameters<Page["getByTitle"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByTitle(
-		text: Parameters<Page["getByTitle"]>[0],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByTitle(
-		options: Parameters<Page["getByTitle"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByTitle(
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByTitle(
-		textOrOptionsOrConfig?:
-			| Parameters<Page["getByTitle"]>[0]
-			| Parameters<Page["getByTitle"]>[1]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		optionsOrConfig?:
-			| Parameters<Page["getByTitle"]>[1]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
+		...args: UpdateArgsWithOptions<
+			Parameters<Page["getByTitle"]>[0],
+			Parameters<Page["getByTitle"]>[1],
+			LocatorSchemaPathType,
+			LocatorSubstring
+		>
 	) {
+		const [textOrOptionsOrConfig, optionsOrConfig, config] = args;
 		const optionsProvided =
-			arguments.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
 		const {
 			primary: text,
 			options,
@@ -1096,38 +982,16 @@ class LocatorUpdateBuilder<
 	}
 
 	locator(
-		selector: Parameters<Page["locator"]>[0],
-		options: Parameters<Page["locator"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	locator(
-		selector: Parameters<Page["locator"]>[0],
-		options?: Parameters<Page["locator"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	locator(
-		selector: Parameters<Page["locator"]>[0],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	locator(
-		options: Parameters<Page["locator"]>[1],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	locator(
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	locator(
-		selectorOrOptionsOrConfig?:
-			| Parameters<Page["locator"]>[0]
-			| Parameters<Page["locator"]>[1]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		optionsOrConfig?:
-			| Parameters<Page["locator"]>[1]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
+		...args: UpdateArgsWithOptions<
+			Parameters<Page["locator"]>[0],
+			Parameters<Page["locator"]>[1],
+			LocatorSchemaPathType,
+			LocatorSubstring
+		>
 	) {
+		const [selectorOrOptionsOrConfig, optionsOrConfig, config] = args;
 		const optionsProvided =
-			arguments.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
 		const {
 			primary: selector,
 			options,
@@ -1150,18 +1014,9 @@ class LocatorUpdateBuilder<
 	}
 
 	frameLocator(
-		selector: Parameters<Page["frameLocator"]>[0],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	frameLocator(
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	frameLocator(
-		selectorOrConfig?:
-			| Parameters<Page["frameLocator"]>[0]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
+		...args: UpdateArgsWithoutOptions<Parameters<Page["frameLocator"]>[0], LocatorSchemaPathType, LocatorSubstring>
 	) {
+		const [selectorOrConfig, config] = args;
 		const isConfigFirst = isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(selectorOrConfig);
 		const registrationConfig = (isConfigFirst ? selectorOrConfig : undefined) ?? config;
 		const selector = isConfigFirst ? undefined : selectorOrConfig;
@@ -1175,18 +1030,9 @@ class LocatorUpdateBuilder<
 	}
 
 	getByTestId(
-		testId: Parameters<Page["getByTestId"]>[0],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByTestId(
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByTestId(
-		testIdOrConfig?:
-			| Parameters<Page["getByTestId"]>[0]
-			| LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
+		...args: UpdateArgsWithoutOptions<Parameters<Page["getByTestId"]>[0], LocatorSchemaPathType, LocatorSubstring>
 	) {
+		const [testIdOrConfig, config] = args;
 		const isConfigFirst = isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(testIdOrConfig);
 		const registrationConfig = (isConfigFirst ? testIdOrConfig : undefined) ?? config;
 		const testId = isConfigFirst ? undefined : testIdOrConfig;
@@ -1199,17 +1045,8 @@ class LocatorUpdateBuilder<
 		return this.commit(definition, registrationConfig);
 	}
 
-	getById(
-		id: string,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getById(
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getById(
-		idOrConfig?: string | LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	) {
+	getById(...args: UpdateArgsWithoutOptions<string, LocatorSchemaPathType, LocatorSubstring>) {
+		const [idOrConfig, config] = args;
 		const isConfigFirst = isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(idOrConfig);
 		const registrationConfig = (isConfigFirst ? idOrConfig : undefined) ?? config;
 		const id = isConfigFirst ? undefined : idOrConfig;
@@ -1222,17 +1059,8 @@ class LocatorUpdateBuilder<
 		return this.commit(definition, registrationConfig);
 	}
 
-	getByDataCy(
-		value: DataCyDefinition["value"],
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByDataCy(
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	getByDataCy(
-		valueOrConfig?: DataCyDefinition["value"] | LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	) {
+	getByDataCy(...args: UpdateArgsWithoutOptions<DataCyDefinition["value"], LocatorSchemaPathType, LocatorSubstring>) {
+		const [valueOrConfig, config] = args;
 		const isConfigFirst = isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(valueOrConfig);
 		const registrationConfig = (isConfigFirst ? valueOrConfig : undefined) ?? config;
 		const value = isConfigFirst ? undefined : valueOrConfig;
@@ -1461,7 +1289,10 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 	) {
 		validateLocatorSchemaPath(path);
 		if (this.schemas.has(path)) {
-			const existing = this.schemas.get(path)!;
+			const existing = this.schemas.get(path);
+			if (!existing) {
+				throw new Error(`A locator schema with the path "${path}" already exists.`);
+			}
 			const errorDetails = stringifyForLog({
 				existing: existing,
 				attempted: record,
@@ -1784,13 +1615,19 @@ type PublicUpdateBuilder<Builder> = Omit<Builder, keyof Builder & ("commit" | "p
 type UpdateProxy<Builder, Return> = {
 	[Key in keyof PublicUpdateBuilder<Builder>]: PublicUpdateBuilder<Builder>[Key] extends (
 		...args: infer Args
-	) => LocatorQueryBuilder<any, any>
-		? (...args: Args) => Return
+	) => infer Result
+		? Result extends LocatorQueryBuilder<infer SchemaPath, infer SubPath>
+			? SchemaPath extends string
+				? SubPath extends RegistryPath<SchemaPath>
+					? (...args: Args) => Return
+					: never
+				: never
+			: never
 		: never;
 };
 
-const createUpdateProxy = <Builder, Return>(builder: Builder, returnValue: Return) =>
-	new Proxy(builder as object, {
+const createUpdateProxy = <Builder extends object, Return>(builder: Builder, returnValue: Return) =>
+	new Proxy(builder, {
 		get(_target, property, receiver) {
 			const value = Reflect.get(builder as object, property, receiver) as unknown;
 
@@ -1819,7 +1656,7 @@ class NestedLocatorThenable<LocatorSchemaPathType extends string, Path extends R
 
 	constructor(
 		registry: LocatorRegistry<LocatorSchemaPathType>,
-		private readonly path: Path,
+		path: Path,
 		overrides?: NestedOverrides<LocatorSchemaPathType>,
 	) {
 		this.queryBuilder = registry.getLocatorSchema(path);
@@ -1847,10 +1684,10 @@ class NestedLocatorThenable<LocatorSchemaPathType extends string, Path extends R
 
 	update<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, Path>>(subPath: SubPath) {
 		const builder = this.queryBuilder.update(subPath);
-		return createUpdateProxy(
-			builder as unknown as Record<string, (...args: any[]) => LocatorQueryBuilder<any, any>>,
-			this,
-		);
+		return createUpdateProxy(builder, this) as UpdateProxy<
+			LocatorUpdateBuilder<LocatorSchemaPathType, Path, SubPath>,
+			this
+		>;
 	}
 
 	clearSteps<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, Path>>(subPath: SubPath) {
@@ -1858,6 +1695,7 @@ class NestedLocatorThenable<LocatorSchemaPathType extends string, Path extends R
 		return this;
 	}
 
+	// biome-ignore lint/suspicious/noThenProperty: Promise-like wrapper enables await on the fluent locator helpers.
 	then<TResult1 = Locator, TResult2 = never>(
 		onfulfilled?: ((value: Locator) => TResult1 | PromiseLike<TResult1>) | null,
 		onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
@@ -1888,10 +1726,10 @@ class LocatorThenable<LocatorSchemaPathType extends string, Path extends Registr
 
 	update() {
 		const builder = this.queryBuilder.update(this.path as LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, Path>);
-		return createUpdateProxy(
-			builder as unknown as Record<string, (...args: any[]) => LocatorQueryBuilder<any, any>>,
-			this,
-		);
+		return createUpdateProxy(builder, this) as UpdateProxy<
+			LocatorUpdateBuilder<LocatorSchemaPathType, Path, LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, Path>>,
+			this
+		>;
 	}
 
 	clearSteps() {
@@ -1899,6 +1737,7 @@ class LocatorThenable<LocatorSchemaPathType extends string, Path extends Registr
 		return this;
 	}
 
+	// biome-ignore lint/suspicious/noThenProperty: Promise-like wrapper enables await on the fluent locator helpers.
 	then<TResult1 = Locator, TResult2 = never>(
 		onfulfilled?: ((value: Locator) => TResult1 | PromiseLike<TResult1>) | null,
 		onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,

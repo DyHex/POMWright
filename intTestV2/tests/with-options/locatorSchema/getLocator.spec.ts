@@ -40,3 +40,28 @@ test("getLocator fluent wrapper supports update and clearSteps", async ({ testFi
 
 	expect(`${cleared}`).toEqual("getByRole('button')");
 });
+
+test("getLocator update accepts partial patch arguments", async ({ testFilters }) => {
+	const baseline = await testFilters.getLocator("body.section.heading");
+
+	expect(`${baseline}`).toEqual("getByRole('heading', { level: 2 })");
+
+	const noArgs = await testFilters.getLocator("body.section.heading").update().getByRole();
+
+	expect(`${noArgs}`).toEqual("getByRole('heading', { level: 2 })");
+
+	const optionsOnly = await testFilters.getLocator("body.section.heading").update().getByRole({ level: 4 });
+
+	expect(`${optionsOnly}`).toEqual("getByRole('heading', { level: 4 })");
+
+	const roleOnly = await testFilters.getLocator("body.section.heading").update().getByRole("heading");
+
+	expect(`${roleOnly}`).toEqual("getByRole('heading', { level: 2 })");
+
+	const roleAndOptions = await testFilters
+		.getLocator("body.section.heading")
+		.update()
+		.getByRole("heading", { level: 5 });
+
+	expect(`${roleAndOptions}`).toEqual("getByRole('heading', { level: 5 })");
+});

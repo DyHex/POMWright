@@ -75,3 +75,34 @@ test("getNestedLocator fluent update can switch strategies without a terminator"
 
 	expect(`${locator}`).toEqual("locator('body').locator('section').getByText('Updated heading')");
 });
+
+test("getNestedLocator update accepts partial patch arguments", async ({ testFilters }) => {
+	const baseline = await testFilters.getNestedLocator("body.section.heading");
+
+	expect(`${baseline}`).toEqual("locator('body').locator('section').getByRole('heading', { level: 2 })");
+
+	const noArgs = await testFilters.getNestedLocator("body.section.heading").update("body.section.heading").getByRole();
+
+	expect(`${noArgs}`).toEqual("locator('body').locator('section').getByRole('heading', { level: 2 })");
+
+	const optionsOnly = await testFilters
+		.getNestedLocator("body.section.heading")
+		.update("body.section.heading")
+		.getByRole({ level: 4 });
+
+	expect(`${optionsOnly}`).toEqual("locator('body').locator('section').getByRole('heading', { level: 4 })");
+
+	const roleOnly = await testFilters
+		.getNestedLocator("body.section.heading")
+		.update("body.section.heading")
+		.getByRole("heading");
+
+	expect(`${roleOnly}`).toEqual("locator('body').locator('section').getByRole('heading', { level: 2 })");
+
+	const roleAndOptions = await testFilters
+		.getNestedLocator("body.section.heading")
+		.update("body.section.heading")
+		.getByRole("heading", { level: 5 });
+
+	expect(`${roleAndOptions}`).toEqual("locator('body').locator('section').getByRole('heading', { level: 5 })");
+});
