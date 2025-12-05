@@ -1,30 +1,28 @@
 import { expect, test } from "@fixtures-v2/withOptions";
-import type { Page } from "@playwright/test";
-import { bindLocatorAccessors, LocatorRegistry, PlaywrightReportLogger } from "pomwright";
-
-const createRegistry = (page: Page, name: string) => {
-	const logger = new PlaywrightReportLogger({ current: "debug", initial: "debug" }, [], "root");
-	return new LocatorRegistry<string>(page, logger.getNewChildLogger(name));
-};
+import { bindLocatorAccessors, createRegistry } from "pomwright";
 
 test("bindLocatorAccessors creates isolated bound wrappers per registry", async ({ page }) => {
-	const registryA = createRegistry(page, "A");
-	registryA.add("root").locator("div.a");
+	type LocatorSchemaPaths = "main";
+
+	const registryA = createRegistry<LocatorSchemaPaths>(page, "A");
+	registryA.add("main").locator("div.a");
 	const { getNestedLocator: getNestedLocatorA } = bindLocatorAccessors(registryA);
 
-	const registryB = createRegistry(page, "B");
-	registryB.add("root").locator("div.b");
+	const registryB = createRegistry<LocatorSchemaPaths>(page, "B");
+	registryB.add("main").locator("div.b");
 	const { getNestedLocator: getNestedLocatorB } = bindLocatorAccessors(registryB);
 
-	const locatorA = await getNestedLocatorA("root");
-	const locatorB = await getNestedLocatorB("root");
+	const locatorA = await getNestedLocatorA("main");
+	const locatorB = await getNestedLocatorB("main");
 
 	expect(`${locatorA}`).toEqual("locator('div.a')");
 	expect(`${locatorB}`).toEqual("locator('div.b')");
 });
 
 test("factory-based wrappers preserve fluent helpers without BasePage", async ({ page }) => {
-	const registry = createRegistry(page, "fluent");
+	type LocatorSchemaPaths = "chain" | "chain.child";
+
+	const registry = createRegistry<LocatorSchemaPaths>(page, "fluent");
 	registry.add("chain").locator("div.root");
 	registry.add("chain.child").locator("div.child").filter({ hasText: "x" }).nth(1).filter({ hasText: "y" });
 
@@ -38,7 +36,9 @@ test("factory-based wrappers preserve fluent helpers without BasePage", async ({
 });
 
 test("bindLocatorAccessors exposes getLocatorSchema builder", async ({ page }) => {
-	const registry = createRegistry(page, "schema");
+	type LocatorSchemaPaths = "tree" | "tree.leaf";
+
+	const registry = createRegistry<LocatorSchemaPaths>(page, "schema");
 	registry.add("tree").locator("div.tree");
 	registry.add("tree.leaf").locator("div.leaf");
 

@@ -9,6 +9,7 @@ export { test } from "./fixture/base.fixtures";
 export { type LogEntry, type LogLevel, PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 export {
 	bindLocatorAccessors,
+	createRegistry,
 	type GetLocatorAccessor,
 	type GetLocatorSchemaAccessor,
 	type GetNestedLocatorAccessor,
@@ -41,3 +42,8 @@ export type {
 	TextDefinition,
 	TitleDefinition,
 } from "./locators/types";
+export type {
+	LocatorSchemaPathError,
+	LocatorSchemaPathErrors,
+	LocatorSchemaPathFormat,
+} from "./locators/utils";

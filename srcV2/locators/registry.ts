@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import type { PlaywrightReportLogger } from "../helpers/playwrightReportLogger";
+import { PlaywrightReportLogger } from "../helpers/playwrightReportLogger";
 import type {
 	AltTextDefinition,
 	DataCyDefinition,
@@ -26,7 +26,7 @@ import type {
 	TextDefinition,
 	TitleDefinition,
 } from "./types";
-import type { LocatorChainPaths, LocatorSchemaPathValid } from "./utils";
+import type { LocatorChainPaths, LocatorSchemaPathErrors, LocatorSchemaPathValid } from "./utils";
 import { cssEscape, expandSchemaPath, validateLocatorSchemaPath } from "./utils";
 
 type RegistryPath<LocatorSchemaPathType extends string> = LocatorSchemaPathType &
@@ -119,6 +119,25 @@ const normalizeOverrideSteps = <LocatorSchemaPathType extends string, AllowedPat
 
 	return { steps, replaceIndex } as const;
 };
+
+function normalizeIdValue(id: string): string;
+function normalizeIdValue(id: RegExp): RegExp;
+function normalizeIdValue(id: string | RegExp | undefined): string | RegExp | undefined;
+function normalizeIdValue(id: string | RegExp | undefined) {
+	if (typeof id !== "string") {
+		return id;
+	}
+
+	if (id.startsWith("#")) {
+		return id.slice(1);
+	}
+
+	if (id.startsWith("id=")) {
+		return id.slice("id=".length);
+	}
+
+	return id;
+}
 
 const isRegistrationConfig = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
 	value: unknown,
@@ -393,7 +412,8 @@ const mergeLocatorDefinition = (
 		}
 		case "id": {
 			const idSource = source("id");
-			const id = updates.id ?? idSource?.id;
+			const rawId = updates.id ?? idSource?.id;
+			const id = normalizeIdValue(rawId);
 			if (id === undefined) {
 				throw new Error(`Locator update for "${path}" of type "id" requires an "id" value.`);
 			}
@@ -437,8 +457,15 @@ const createLocator = (
 			return target.frameLocator(definition.selector);
 		case "testId":
 			return target.getByTestId(definition.testId);
-		case "id":
-			return target.locator(`#${cssEscape(definition.id)}`);
+		case "id": {
+			if (typeof definition.id === "string") {
+				const normalized = normalizeIdValue(definition.id);
+				return target.locator(`#${cssEscape(normalized ?? "")}`);
+			}
+			const pattern = definition.id.source;
+			const safePattern = cssEscape(pattern);
+			return target.locator(`[id*="${safePattern}"]`);
+		}
 		case "dataCy":
 			return target.locator(`data-cy=${definition.value}`);
 		default: {
@@ -738,8 +765,8 @@ export class LocatorRegistrationBuilder<
 		return this.commit({ type: "testId", testId }, config);
 	}
 
-	getById(id: string, config?: RegistrationConfig<LocatorSchemaPathType, Path>) {
-		return this.commit({ type: "id", id }, config);
+	getById(id: string | RegExp, config?: RegistrationConfig<LocatorSchemaPathType, Path>) {
+		return this.commit({ type: "id", id: normalizeIdValue(id) as IdDefinition["id"] }, config);
 	}
 
 	getByDataCy(value: DataCyDefinition["value"], config?: RegistrationConfig<LocatorSchemaPathType, Path>) {
@@ -1045,11 +1072,11 @@ class LocatorUpdateBuilder<
 		return this.commit(definition, registrationConfig);
 	}
 
-	getById(...args: UpdateArgsWithoutOptions<string, LocatorSchemaPathType, LocatorSubstring>) {
+	getById(...args: UpdateArgsWithoutOptions<string | RegExp, LocatorSchemaPathType, LocatorSubstring>) {
 		const [idOrConfig, config] = args;
 		const isConfigFirst = isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(idOrConfig);
 		const registrationConfig = (isConfigFirst ? idOrConfig : undefined) ?? config;
-		const id = isConfigFirst ? undefined : idOrConfig;
+		const id = isConfigFirst ? undefined : normalizeIdValue(idOrConfig);
 
 		const definition: LocatorUpdate = {
 			type: "id",
@@ -1767,6 +1794,15 @@ export type GetNestedLocatorAccessor<LocatorSchemaPathType extends string> = <
 	path: Path,
 	overrides?: LocatorOverrides<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 ) => NestedLocatorThenable<LocatorSchemaPathType, Path>;
+
+export const createRegistry = <Paths extends string>(
+	page: Page,
+	name: string,
+	..._check: LocatorSchemaPathErrors<Paths> extends never ? [] : [LocatorSchemaPathErrors<Paths>]
+) => {
+	const logger = new PlaywrightReportLogger({ current: "debug", initial: "debug" }, [], "root");
+	return new LocatorRegistry<Paths>(page, logger.getNewChildLogger(name));
+};
 
 export const bindLocatorAccessors = <LocatorSchemaPathType extends string>(
 	registry: LocatorRegistry<LocatorSchemaPathType>,

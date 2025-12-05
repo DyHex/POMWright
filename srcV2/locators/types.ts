@@ -58,7 +58,7 @@ export type TestIdDefinition = {
 
 export type IdDefinition = {
 	type: "id";
-	id: string;
+	id: string | RegExp;
 };
 
 export type DataCyDefinition = {
