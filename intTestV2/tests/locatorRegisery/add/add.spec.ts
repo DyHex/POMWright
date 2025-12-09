@@ -1,12 +1,18 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "@fixtures-v2/withOptions";
-import { createRegistry } from "pomwright";
+import { PlaywrightReportLogger, createRegistryWithAccessors } from "pomwright";
+
+const createTestRegistry = <Paths extends string>(page: Page) => {
+	const logger = new PlaywrightReportLogger({ current: "debug", initial: "debug" }, [], "test-registry");
+	return createRegistryWithAccessors<Paths>(page, logger).registry;
+};
 
 const errMsg = "No locator schema registered for path";
 
 test("add frameLocator to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "iframe";
 
-	const registry = createRegistry<LocatorSchemaPaths>(page, "RegistryName");
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	expect(() => registry.get("iframe")).toThrowError(`${errMsg} "iframe".`);
 
@@ -24,7 +30,7 @@ test("add frameLocator to registry", async ({ page }) => {
 test("add getByAltText to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "image";
 
-	const registry = createRegistry<LocatorSchemaPaths>(page, "RegistryName");
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	expect(() => registry.get("image")).toThrowError(`${errMsg} "image".`);
 
@@ -42,7 +48,7 @@ test("add getByAltText to registry", async ({ page }) => {
 test("add getByDataCy to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "elementByDataCy";
 
-	const registry = createRegistry<LocatorSchemaPaths>(page, "RegistryName");
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	expect(() => registry.get("elementByDataCy")).toThrowError(`${errMsg} "elementByDataCy".`);
 
@@ -62,7 +68,7 @@ test("add getByDataCy to registry", async ({ page }) => {
 test("add getById to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "stringId" | "stringId.#stringId" | "regExpId";
 
-	const registry = createRegistry<LocatorSchemaPaths>(page, "RegistryName");
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 	const errMsg = "No locator schema registered for path";
 
 	expect(() => registry.get("stringId")).toThrowError(`${errMsg} "stringId".`);
@@ -105,7 +111,7 @@ test("add getById to registry", async ({ page }) => {
 test("add getByLabel to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "elementByLabel";
 
-	const registry = createRegistry<LocatorSchemaPaths>(page, "RegistryName");
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	expect(() => registry.get("elementByLabel")).toThrowError(`${errMsg} "elementByLabel".`);
 
@@ -123,7 +129,7 @@ test("add getByLabel to registry", async ({ page }) => {
 test("add getByPlaceholder to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "elementByPlaceholder";
 
-	const registry = createRegistry<LocatorSchemaPaths>(page, "RegistryName");
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	expect(() => registry.get("elementByPlaceholder")).toThrowError(`${errMsg} "elementByPlaceholder".`);
 
@@ -141,7 +147,7 @@ test("add getByPlaceholder to registry", async ({ page }) => {
 test("add getByRole to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "buttonByRole";
 
-	const registry = createRegistry<LocatorSchemaPaths>(page, "RegistryName");
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	expect(() => registry.get("buttonByRole")).toThrowError(`${errMsg} "buttonByRole".`);
 
@@ -159,7 +165,7 @@ test("add getByRole to registry", async ({ page }) => {
 test("add getByTestId to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "elementByTestId";
 
-	const registry = createRegistry<LocatorSchemaPaths>(page, "RegistryName");
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	expect(() => registry.get("elementByTestId")).toThrowError(`${errMsg} "elementByTestId".`);
 
@@ -177,7 +183,7 @@ test("add getByTestId to registry", async ({ page }) => {
 test("add getByText to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "elementByText";
 
-	const registry = createRegistry<LocatorSchemaPaths>(page, "RegistryName");
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	expect(() => registry.get("elementByText")).toThrowError(`${errMsg} "elementByText".`);
 
@@ -195,7 +201,7 @@ test("add getByText to registry", async ({ page }) => {
 test("add getByTitle to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "elementByTitle";
 
-	const registry = createRegistry<LocatorSchemaPaths>(page, "RegistryName");
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	expect(() => registry.get("elementByTitle")).toThrowError(`${errMsg} "elementByTitle".`);
 
@@ -213,7 +219,7 @@ test("add getByTitle to registry", async ({ page }) => {
 test("add locator to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "body";
 
-	const registry = createRegistry<LocatorSchemaPaths>(page, "RegistryName");
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	expect(() => registry.get("body")).toThrowError(`${errMsg} "body".`);
 
@@ -231,7 +237,7 @@ test("add locator to registry", async ({ page }) => {
 test("A LocatorSchemaPath can only be added once", async ({ page }) => {
 	type LocatorSchemaPaths = "body";
 
-	const registry = createRegistry<LocatorSchemaPaths>(page, "RegistryName");
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	registry.add("body").locator("body");
 

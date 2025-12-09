@@ -2,8 +2,13 @@ import { type Page, type Selectors, selectors, type TestInfo } from "@playwright
 import { SessionStorage } from "../src/helpers/sessionStorage.actions";
 import { createCypressIdEngine } from "../src/utils/selectorEngines";
 import type { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
-import type { GetLocatorAccessor, GetLocatorSchemaAccessor, GetNestedLocatorAccessor } from "./locators/registry";
-import { bindLocatorAccessors, LocatorRegistry } from "./locators/registry";
+import {
+	createRegistryWithAccessors,
+	type GetLocatorAccessor,
+	type GetLocatorSchemaAccessor,
+	type GetNestedLocatorAccessor,
+	type LocatorRegistry,
+} from "./locators/registry";
 
 export type BasePageOptions = {
 	urlOptions?: {
@@ -60,11 +65,9 @@ export abstract class BasePageV2<
 		this.fullUrl = this.composeFullUrl(baseUrl, urlPath);
 		this.pocName = pocName;
 		this.log = playwrightReportLogger.getNewChildLogger(pocName);
-		this.locatorRegistry = new LocatorRegistry<LocatorSchemaPathType>(
-			page,
-			this.log.getNewChildLogger("LocatorRegistry"),
-		);
-		const { getLocator, getNestedLocator, getLocatorSchema } = bindLocatorAccessors(this.locatorRegistry);
+		const { registry, getLocator, getNestedLocator, getLocatorSchema } =
+			createRegistryWithAccessors<LocatorSchemaPathType>(page, this.log.getNewChildLogger("LocatorRegistry"));
+		this.locatorRegistry = registry;
 		this.getLocator = getLocator;
 		this.getLocatorSchema = getLocatorSchema;
 		this.getNestedLocator = getNestedLocator;

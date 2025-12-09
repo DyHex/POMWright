@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { PlaywrightReportLogger } from "../helpers/playwrightReportLogger";
+import type { PlaywrightReportLogger } from "../helpers/playwrightReportLogger";
 import type {
 	AltTextDefinition,
 	DataCyDefinition,
@@ -1795,20 +1795,12 @@ export type GetNestedLocatorAccessor<LocatorSchemaPathType extends string> = <
 	overrides?: LocatorOverrides<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 ) => NestedLocatorThenable<LocatorSchemaPathType, Path>;
 
-export const createRegistry = <Paths extends string>(
-	page: Page,
-	name: string,
-	..._check: LocatorSchemaPathErrors<Paths> extends never ? [] : [LocatorSchemaPathErrors<Paths>]
-) => {
-	const logger = new PlaywrightReportLogger({ current: "debug", initial: "debug" }, [], "root");
-	return new LocatorRegistry<Paths>(page, logger.getNewChildLogger(name));
-};
-
-export const bindLocatorAccessors = <LocatorSchemaPathType extends string>(
-	registry: LocatorRegistry<LocatorSchemaPathType>,
-) => {
+export const createRegistryWithAccessors = <Paths extends string>(page: Page, logger: PlaywrightReportLogger) => {
+	type PathErrors = LocatorSchemaPathErrors<Paths>;
+	const _assertValidPaths: PathErrors extends never ? true : never = true as PathErrors extends never ? true : never;
+	const registry = new LocatorRegistry<Paths>(page, logger);
 	const getLocator = registry.createGetLocator();
 	const getNestedLocator = registry.createGetNestedLocator();
 	const getLocatorSchema = registry.createGetLocatorSchema();
-	return { getLocator, getNestedLocator, getLocatorSchema } as const;
+	return { registry, getLocator, getNestedLocator, getLocatorSchema } as const;
 };

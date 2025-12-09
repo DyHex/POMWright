@@ -8,8 +8,7 @@ export {
 export { test } from "./fixture/base.fixtures";
 export { type LogEntry, type LogLevel, PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 export {
-	bindLocatorAccessors,
-	createRegistry,
+	createRegistryWithAccessors,
 	type GetLocatorAccessor,
 	type GetLocatorSchemaAccessor,
 	type GetNestedLocatorAccessor,

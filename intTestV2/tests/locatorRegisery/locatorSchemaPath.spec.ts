@@ -1,6 +1,12 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "@fixtures-v2/withOptions";
-import { createRegistry } from "pomwright";
+import { PlaywrightReportLogger, createRegistryWithAccessors } from "pomwright";
 import { formatLocatorSchemaPathForError } from "../../../srcV2/locators/utils.js";
+
+const createTestRegistry = <Paths extends string>(page: Page) => {
+	const logger = new PlaywrightReportLogger({ current: "debug", initial: "debug" }, [], "test-registry");
+	return createRegistryWithAccessors<Paths>(page, logger).registry;
+};
 
 test("flags invalid LocatorSchemaPaths at compile time and rejects them at runtime", async ({ page }) => {
 	type Paths =
@@ -20,7 +26,7 @@ test("flags invalid LocatorSchemaPaths at compile time and rejects them at runti
 		| "\v" // LINE TABULATION
 		| "\f" // FORM FEED
 		| "\r" // CARRIAGE RETURN
-		| "a\u0085b" // NEXT LINE: ""
+		| "a\u0085b" // NEXT LINE: "\u0085"
 		| " " // NO-BREAK SPACE
 		| " " // OGHAM SPACE MARK
 		| " " // EN QUAD
@@ -42,8 +48,8 @@ test("flags invalid LocatorSchemaPaths at compile time and rejects them at runti
 
 	// Compile-time errors expected for invalid paths above,
 	// but they won't fail the test run; they are reported in the IDE
-	// via the createRegistry<Paths> call and as a result NOT listed/suggested on registry.add(...) calls below.
-	const registry = createRegistry<Paths>(page, "RegistryName");
+	// via the createTestRegistry<Paths> helper and as a result NOT listed/suggested on registry.add(...) calls below.
+	const registry = createTestRegistry<Paths>(page);
 
 	// Valid paths should work fine at runtime:
 	registry.add("valid").locator("body");
@@ -77,7 +83,7 @@ test("flags invalid LocatorSchemaPaths at compile time and rejects them at runti
 		"\v", // LINE TABULATION
 		"\f", // FORM FEED
 		"\r", // CARRIAGE RETURN
-		"a\u0085b", // NEXT LINE: ""
+		"a\u0085b", // NEXT LINE: "\u0085"
 		" ", // NO-BREAK SPACE
 		" ", // OGHAM SPACE MARK
 		" ", // EN QUAD
