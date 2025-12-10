@@ -1,76 +1,15 @@
-// All Unicode characters with White_Space=Yes (UAX #44)
-// Kept in one place so TS and runtime stay conceptually aligned. No trolling in tests allowed.
-type UnicodeWhitespaceChar =
-	| "\u0009" // CHARACTER TABULATION: "\t"
-	| "\u000A" // LINE FEED: "\n"
-	| "\u000B" // LINE TABULATION: "\v"
-	| "\u000C" // FORM FEED: "\f"
-	| "\u000D" // CARRIAGE RETURN: "\r"
-	| "\u0020" // SPACE: " "
-	| "\u0085" // NEXT LINE: ""
-	| "\u00A0" // NO-BREAK SPACE: " "
-	| "\u1680" // OGHAM SPACE MARK: " "
-	| "\u2000" // EN QUAD: " "
-	| "\u2001" // EM QUAD: " "
-	| "\u2002" // EN SPACE: " "
-	| "\u2003" // EM SPACE: " "
-	| "\u2004" // THREE-PER-EM SPACE: " "
-	| "\u2005" // FOUR-PER-EM SPACE: " "
-	| "\u2006" // SIX-PER-EM SPACE: " "
-	| "\u2007" // FIGURE SPACE: " "
-	| "\u2008" // PUNCTUATION SPACE: " "
-	| "\u2009" // THIN SPACE: " "
-	| "\u200A" // HAIR SPACE: " "
-	| "\u2028" // LINE SEPARATOR: vscode says no
-	| "\u2029" // PARAGRAPH SEPARATOR: vscode says no
-	| "\u202F" // NARROW NO-BREAK SPACE: " "
-	| "\u205F" // MEDIUM MATHEMATICAL SPACE: " "
-	| "\u3000"; // IDEOGRAPHIC SPACE: "　"
-
-export type LocatorSchemaPathError<S extends string, Reason extends string> = [
-	"Invalid locator schema path",
-	Reason,
-	S,
-];
-
-export type LocatorSchemaPathFormat<S extends string> = string extends S
-	? // If S is a wide string (not a literal union), don't try to deeply validate
-		S
-	: S extends ""
-		? LocatorSchemaPathError<S, "String can't be empty">
-		: _LocatorSchemaPathFormat<S, S, true, false>;
-
-type _LocatorSchemaPathFormat<
-	Original extends string,
-	Rest extends string,
-	AtStart extends boolean,
-	PrevDot extends boolean,
-> = Rest extends ""
-	? PrevDot extends true
-		? LocatorSchemaPathError<Original, "String can't end with '.'">
-		: Original
-	: Rest extends `${infer C}${infer Tail}`
-		? C extends UnicodeWhitespaceChar
-			? LocatorSchemaPathError<Original, "String can't contain whitespace chars">
-			: C extends "."
-				? AtStart extends true
-					? LocatorSchemaPathError<Original, "String can't start with '.'">
-					: PrevDot extends true
-						? LocatorSchemaPathError<Original, "String can't contain consecutive '.'">
-						: _LocatorSchemaPathFormat<Original, Tail, false, true>
-				: _LocatorSchemaPathFormat<Original, Tail, false, false>
-		: never;
-
-export type LocatorSchemaPathErrors<Paths extends string> = Exclude<LocatorSchemaPathFormat<Paths>, Paths>;
-
-export type LocatorSchemaPathValid<Path extends string> = Path extends unknown
-	? LocatorSchemaPathFormat<Path> extends Path
-		? Path
-		: never
-	: never;
-
-export type ValidLocatorPath<LocatorSchemaPathType extends string> = LocatorSchemaPathType &
-	LocatorSchemaPathValid<LocatorSchemaPathType>;
+import type { Locator, Page } from "@playwright/test";
+import type {
+	FilterDefinition,
+	FrameLocatorDefinition,
+	IndexSelector,
+	LocatorBuilderTarget,
+	LocatorOverrides,
+	LocatorRegistrationConfig,
+	LocatorStep,
+	LocatorStepOverride,
+	LocatorStrategyDefinition,
+} from "./types";
 
 // Used only at runtime for messages: escape all special chars so
 // whitespace, quotes, etc. are visible and testable.
@@ -121,13 +60,197 @@ export const cssEscape = (value: string) => {
 	return value.replace(/([\\"'#.:;,?*+<>{}[\\]()])/g, "\\$1");
 };
 
-export type ExtractSubPaths<Path extends string> = Path extends `${infer Head}.${infer Tail}`
-	? Head | `${Head}.${ExtractSubPaths<Tail>}`
-	: Path;
+export const normalizeFilters = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
+	filters?:
+		| FilterDefinition<LocatorSchemaPathType, AllowedPaths>
+		| FilterDefinition<LocatorSchemaPathType, AllowedPaths>[],
+) => {
+	if (!filters) {
+		return undefined;
+	}
+	return Array.isArray(filters)
+		? ([...filters] as FilterDefinition<LocatorSchemaPathType, AllowedPaths>[])
+		: ([filters] as FilterDefinition<LocatorSchemaPathType, AllowedPaths>[]);
+};
 
-export type LocatorChainPaths<
-	LocatorSchemaPathType extends string,
-	LocatorSubstring extends LocatorSchemaPathType | undefined,
-> = LocatorSubstring extends string
-	? Extract<LocatorSchemaPathType, LocatorSubstring | ExtractSubPaths<LocatorSubstring>>
-	: never;
+export const normalizeSteps = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
+	steps?: LocatorStep<LocatorSchemaPathType, AllowedPaths>[],
+) => (steps ? steps.map((step) => ({ ...step })) : []);
+
+export const normalizeOverrideSteps = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
+	value?:
+		| LocatorOverrides<LocatorSchemaPathType, AllowedPaths>[keyof LocatorOverrides<LocatorSchemaPathType, AllowedPaths>]
+		| undefined,
+) => {
+	if (value === undefined) {
+		return { steps: [] as LocatorStep<LocatorSchemaPathType, AllowedPaths>[], replaceIndex: false };
+	}
+
+	if (typeof value === "number" || value === "first" || value === "last" || value === null) {
+		return {
+			steps: [{ kind: "index", index: value }] as LocatorStep<LocatorSchemaPathType, AllowedPaths>[],
+			replaceIndex: true,
+		};
+	}
+
+	const entries = Array.isArray(value) ? value : [value];
+	const steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[] = [];
+	let replaceIndex = false;
+
+	for (const entry of entries as LocatorStepOverride<LocatorSchemaPathType, AllowedPaths>[]) {
+		if (entry && typeof entry === "object" && "nth" in entry) {
+			steps.push({ kind: "index", index: entry.nth ?? null });
+			replaceIndex = true;
+			continue;
+		}
+
+		if (entry && typeof entry === "object" && "filter" in entry) {
+			steps.push({ kind: "filter", filter: entry.filter });
+			continue;
+		}
+
+		steps.push({ kind: "filter", filter: entry as FilterDefinition<LocatorSchemaPathType, AllowedPaths> });
+	}
+
+	return { steps, replaceIndex } as const;
+};
+
+export const stepsFromLegacyConfig = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
+	config?: LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>,
+) => {
+	const filters = normalizeFilters<LocatorSchemaPathType, AllowedPaths>(config?.filters) ?? [];
+	const steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[] = filters.map((filter) => ({
+		kind: "filter",
+		filter,
+	}));
+
+	if (config && "index" in config) {
+		steps.push({ kind: "index", index: config.index ?? null });
+	}
+
+	return steps;
+};
+
+export function normalizeIdValue(id: string): string;
+export function normalizeIdValue(id: RegExp): RegExp;
+export function normalizeIdValue(id: string | RegExp | undefined): string | RegExp | undefined;
+export function normalizeIdValue(id: string | RegExp | undefined) {
+	if (typeof id !== "string") {
+		return id;
+	}
+
+	if (id.startsWith("#")) {
+		return id.slice(1);
+	}
+
+	if (id.startsWith("id=")) {
+		return id.slice("id=".length);
+	}
+
+	return id;
+}
+
+export const isRegistrationConfig = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
+	value: unknown,
+): value is LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths> => {
+	if (!value || typeof value !== "object") {
+		return false;
+	}
+	return "filters" in value || "index" in value;
+};
+
+export const splitOptionsAndConfig = <OptionsType, LocatorSchemaPathType extends string, AllowedPaths extends string>(
+	optionsOrConfig?: OptionsType | LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>,
+	config?: LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>,
+) => {
+	const options = isRegistrationConfig<LocatorSchemaPathType, AllowedPaths>(optionsOrConfig)
+		? undefined
+		: (optionsOrConfig as OptionsType | undefined);
+	const hasOptions = optionsOrConfig !== undefined && !isRegistrationConfig(optionsOrConfig);
+	const registrationConfig =
+		(isRegistrationConfig<LocatorSchemaPathType, AllowedPaths>(optionsOrConfig) ? optionsOrConfig : undefined) ??
+		config;
+
+	return { options, config: registrationConfig, hasOptions };
+};
+
+export const stringifyForLog = (value: unknown) => {
+	const seen = new WeakSet();
+	return JSON.stringify(
+		value,
+		(_key, current) => {
+			if (typeof current === "object" && current !== null) {
+				if (seen.has(current)) {
+					return "[Circular]";
+				}
+				seen.add(current);
+			}
+			if (current instanceof RegExp) {
+				return { type: "RegExp", source: current.source, flags: current.flags };
+			}
+			return current;
+		},
+		2,
+	);
+};
+
+export const applyIndexSelector = (locator: Locator, selector: IndexSelector | null | undefined) => {
+	if (selector === undefined || selector === null) {
+		return locator;
+	}
+	if (selector === "first") {
+		return locator.first();
+	}
+	if (selector === "last") {
+		return locator.last();
+	}
+	return locator.nth(selector);
+};
+
+export const createLocator = (
+	target: LocatorBuilderTarget,
+	definition: LocatorStrategyDefinition,
+): Locator | ReturnType<Page["frameLocator"]> => {
+	switch (definition.type) {
+		case "role":
+			return target.getByRole(definition.role, definition.options);
+		case "text":
+			return target.getByText(definition.text, definition.options);
+		case "label":
+			return target.getByLabel(definition.text, definition.options);
+		case "placeholder":
+			return target.getByPlaceholder(definition.text, definition.options);
+		case "altText":
+			return target.getByAltText(definition.text, definition.options);
+		case "title":
+			return target.getByTitle(definition.text, definition.options);
+		case "locator":
+			return target.locator(definition.selector, definition.options);
+		case "frameLocator":
+			return target.frameLocator(definition.selector);
+		case "testId":
+			return target.getByTestId(definition.testId);
+		case "id": {
+			if (typeof definition.id === "string") {
+				const normalized = normalizeIdValue(definition.id);
+				return target.locator(`#${cssEscape(normalized ?? "")}`);
+			}
+			const pattern = definition.id.source;
+			const safePattern = cssEscape(pattern);
+			return target.locator(`[id*="${safePattern}"]`);
+		}
+		case "dataCy":
+			return target.locator(`data-cy=${definition.value}`);
+		default: {
+			const exhaustive: never = definition;
+			return exhaustive;
+		}
+	}
+};
+
+export const isFrameLocatorDefinition = (definition: LocatorStrategyDefinition): definition is FrameLocatorDefinition =>
+	definition.type === "frameLocator";
+
+export const isLocatorInstance = (value: unknown): value is Locator => {
+	return !!value && typeof value === "object" && typeof (value as Locator).filter === "function";
+};

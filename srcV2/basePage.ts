@@ -8,7 +8,7 @@ import {
 	type GetLocatorSchemaAccessor,
 	type GetNestedLocatorAccessor,
 	type LocatorRegistry,
-} from "./locators/registry";
+} from "./locators";
 
 export type BasePageOptions = {
 	urlOptions?: {

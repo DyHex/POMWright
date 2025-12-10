@@ -7,15 +7,6 @@ export {
 } from "./basePage";
 export { test } from "./fixture/base.fixtures";
 export { type LogEntry, type LogLevel, PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
-export {
-	createRegistryWithAccessors,
-	type GetLocatorAccessor,
-	type GetLocatorSchemaAccessor,
-	type GetNestedLocatorAccessor,
-	LocatorQueryBuilder,
-	LocatorRegistrationBuilder,
-	LocatorRegistry,
-} from "./locators/registry";
 export type {
 	AltTextDefinition,
 	DataCyDefinition,
@@ -28,6 +19,9 @@ export type {
 	LocatorDefinition,
 	LocatorOverrides,
 	LocatorRegistrationConfig,
+	LocatorSchemaPathError,
+	LocatorSchemaPathErrors,
+	LocatorSchemaPathFormat,
 	LocatorStep,
 	LocatorStepOverride,
 	LocatorStrategyDefinition,
@@ -40,9 +34,15 @@ export type {
 	TestIdDefinition,
 	TextDefinition,
 	TitleDefinition,
-} from "./locators/types";
-export type {
-	LocatorSchemaPathError,
-	LocatorSchemaPathErrors,
-	LocatorSchemaPathFormat,
-} from "./locators/utils";
+} from "./locators";
+export {
+	createRegistryWithAccessors,
+	type GetLocatorAccessor,
+	type GetLocatorSchemaAccessor,
+	type GetNestedLocatorAccessor,
+	LocatorQueryBuilder,
+	LocatorRegistrationBuilder,
+	LocatorRegistry,
+	LocatorThenable,
+	NestedLocatorThenable,
+} from "./locators";
