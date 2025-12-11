@@ -26,29 +26,9 @@ import {
 	isLocatorInstance,
 	normalizeOverrideSteps,
 	normalizeSteps,
-	stepsFromLegacyConfig,
 	stringifyForLog,
 	validateLocatorSchemaPath,
 } from "./utils";
-
-const extractFiltersFromSteps = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
-	steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[],
-) =>
-	steps
-		.filter((step) => step.kind === "filter")
-		.map((step) => (step as { filter: unknown }).filter) as FilterDefinition<LocatorSchemaPathType, AllowedPaths>[];
-
-const extractIndexFromSteps = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
-	steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[],
-) => {
-	for (let i = steps.length - 1; i >= 0; i -= 1) {
-		const step = steps[i];
-		if (step && step.kind === "index") {
-			return step.index ?? null;
-		}
-	}
-	return null;
-};
 
 export class LocatorRegistry<LocatorSchemaPathType extends string> {
 	private readonly schemas = new Map<
@@ -62,41 +42,10 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 	) {}
 
 	private normalizeRecord(record: LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>) {
-		const legacyConfig: LocatorSchemaRecord<
-			LocatorSchemaPathType,
-			RegistryPath<LocatorSchemaPathType>
-		> = {} as LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
-
-		if (record.filters) {
-			legacyConfig.filters = record.filters;
-		}
-
-		if (record.index !== undefined) {
-			legacyConfig.index = record.index;
-		}
-
-		const steps = normalizeSteps<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>(
-			record.steps ??
-				stepsFromLegacyConfig<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>(
-					Object.keys(legacyConfig).length > 0 ? legacyConfig : undefined,
-				),
-		);
-
-		const extractedFilters = extractFiltersFromSteps<
-			RegistryPath<LocatorSchemaPathType>,
-			RegistryPath<LocatorSchemaPathType>
-		>(steps);
-		const extractedIndex = extractIndexFromSteps<
-			RegistryPath<LocatorSchemaPathType>,
-			RegistryPath<LocatorSchemaPathType>
-		>(steps);
-
 		return {
 			locatorSchemaPath: record.locatorSchemaPath,
 			definition: record.definition,
-			steps,
-			filters: extractedFilters.length > 0 ? extractedFilters : undefined,
-			index: extractedIndex,
+			steps: normalizeSteps<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>(record.steps),
 		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
 	}
 
@@ -144,9 +93,7 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		return {
 			locatorSchemaPath: record.locatorSchemaPath,
 			definition: record.definition,
-			steps: record.steps ? normalizeSteps(record.steps) : undefined,
-			filters: record.filters ? [...record.filters] : undefined,
-			index: record.index ?? null,
+			steps: normalizeSteps(record.steps),
 		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
 	}
 
@@ -161,14 +108,7 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		return {
 			locatorSchemaPath: record.locatorSchemaPath,
 			definition: record.definition,
-			steps: record.steps ? normalizeSteps(record.steps) : undefined,
-			filters: record.filters
-				? ([...record.filters] as FilterDefinition<
-						RegistryPath<LocatorSchemaPathType>,
-						RegistryPath<LocatorSchemaPathType>
-					>[])
-				: undefined,
-			index: record.index ?? null,
+			steps: normalizeSteps(record.steps),
 		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
 	}
 

@@ -8,7 +8,6 @@ import type {
 	IndexSelector,
 	LabelDefinition,
 	LocatorDefinition,
-	LocatorRegistrationConfig,
 	LocatorSchemaRecord,
 	LocatorStep,
 	LocatorStrategyDefinition,
@@ -18,12 +17,7 @@ import type {
 	TextDefinition,
 	TitleDefinition,
 } from "./types";
-import { normalizeIdValue, normalizeSteps, splitOptionsAndConfig, stepsFromLegacyConfig } from "./utils";
-
-type RegistrationConfig<
-	LocatorSchemaPathType extends string,
-	Path extends RegistryPath<LocatorSchemaPathType>,
-> = LocatorRegistrationConfig<Path, RegistryPath<LocatorSchemaPathType>>;
+import { normalizeIdValue, normalizeSteps } from "./utils";
 
 export class LocatorRegistrationBuilder<
 	LocatorSchemaPathType extends string,
@@ -55,271 +49,119 @@ export class LocatorRegistrationBuilder<
 	getByRole(
 		role: RoleDefinition["role"],
 		options: RoleDefinition["options"],
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByRole(
-		role: RoleDefinition["role"],
-		options?: RoleDefinition["options"],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByRole(
-		role: RoleDefinition["role"],
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
 	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
 	getByRole(role: RoleDefinition["role"]): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByRole(
-		role: RoleDefinition["role"],
-		optionsOrConfig?: RoleDefinition["options"] | RegistrationConfig<LocatorSchemaPathType, Path>,
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	) {
-		const {
-			options,
-			config: registrationConfig,
-			hasOptions,
-		} = splitOptionsAndConfig<RoleDefinition["options"], LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>(
-			optionsOrConfig,
-			config,
-		);
+	getByRole(role: RoleDefinition["role"], options?: RoleDefinition["options"]) {
+		const definition =
+			options !== undefined
+				? ({ type: "role", role, options } as RoleDefinition)
+				: ({ type: "role", role } as RoleDefinition);
 
-		const definition = hasOptions
-			? ({ type: "role", role, options } as RoleDefinition)
-			: ({ type: "role", role } as RoleDefinition);
-
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
 	getByText(
 		text: string,
 		options: Parameters<Page["getByText"]>[1],
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
 	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByText(
-		text: string,
-		options?: Parameters<Page["getByText"]>[1],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByText(
-		text: string,
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByText(
-		text: string,
-		optionsOrConfig?: Parameters<Page["getByText"]>[1] | RegistrationConfig<LocatorSchemaPathType, Path>,
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	) {
-		const {
-			options,
-			config: registrationConfig,
-			hasOptions,
-		} = splitOptionsAndConfig<
-			Parameters<Page["getByText"]>[1],
-			LocatorSchemaPathType,
-			RegistryPath<LocatorSchemaPathType>
-		>(optionsOrConfig, config);
+	getByText(text: string): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
+	getByText(text: string, options?: Parameters<Page["getByText"]>[1]) {
+		const definition =
+			options !== undefined
+				? ({ type: "text", text, options } as TextDefinition)
+				: ({ type: "text", text } as TextDefinition);
 
-		const definition = hasOptions
-			? ({ type: "text", text, options } as TextDefinition)
-			: ({ type: "text", text } as TextDefinition);
-
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
 	getByLabel(
 		text: string,
 		options: Parameters<Page["getByLabel"]>[1],
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
 	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByLabel(
-		text: string,
-		options?: Parameters<Page["getByLabel"]>[1],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByLabel(
-		text: string,
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByLabel(
-		text: string,
-		optionsOrConfig?: Parameters<Page["getByLabel"]>[1] | RegistrationConfig<LocatorSchemaPathType, Path>,
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	) {
-		const {
-			options,
-			config: registrationConfig,
-			hasOptions,
-		} = splitOptionsAndConfig<
-			Parameters<Page["getByLabel"]>[1],
-			LocatorSchemaPathType,
-			RegistryPath<LocatorSchemaPathType>
-		>(optionsOrConfig, config);
+	getByLabel(text: string): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
+	getByLabel(text: string, options?: Parameters<Page["getByLabel"]>[1]) {
+		const definition =
+			options !== undefined
+				? ({ type: "label", text, options } as LabelDefinition)
+				: ({ type: "label", text } as LabelDefinition);
 
-		const definition = hasOptions
-			? ({ type: "label", text, options } as LabelDefinition)
-			: ({ type: "label", text } as LabelDefinition);
-
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
 	getByPlaceholder(
 		text: string,
 		options: Parameters<Page["getByPlaceholder"]>[1],
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
 	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByPlaceholder(
-		text: string,
-		options?: Parameters<Page["getByPlaceholder"]>[1],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByPlaceholder(
-		text: string,
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByPlaceholder(
-		text: string,
-		optionsOrConfig?: Parameters<Page["getByPlaceholder"]>[1] | RegistrationConfig<LocatorSchemaPathType, Path>,
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	) {
-		const {
-			options,
-			config: registrationConfig,
-			hasOptions,
-		} = splitOptionsAndConfig<
-			Parameters<Page["getByPlaceholder"]>[1],
-			LocatorSchemaPathType,
-			RegistryPath<LocatorSchemaPathType>
-		>(optionsOrConfig, config);
+	getByPlaceholder(text: string): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
+	getByPlaceholder(text: string, options?: Parameters<Page["getByPlaceholder"]>[1]) {
+		const definition =
+			options !== undefined
+				? ({ type: "placeholder", text, options } as PlaceholderDefinition)
+				: ({ type: "placeholder", text } as PlaceholderDefinition);
 
-		const definition = hasOptions
-			? ({ type: "placeholder", text, options } as PlaceholderDefinition)
-			: ({ type: "placeholder", text } as PlaceholderDefinition);
-
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
 	getByAltText(
 		text: string,
 		options: Parameters<Page["getByAltText"]>[1],
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
 	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByAltText(
-		text: string,
-		options?: Parameters<Page["getByAltText"]>[1],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByAltText(
-		text: string,
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByAltText(
-		text: string,
-		optionsOrConfig?: Parameters<Page["getByAltText"]>[1] | RegistrationConfig<LocatorSchemaPathType, Path>,
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	) {
-		const {
-			options,
-			config: registrationConfig,
-			hasOptions,
-		} = splitOptionsAndConfig<
-			Parameters<Page["getByAltText"]>[1],
-			LocatorSchemaPathType,
-			RegistryPath<LocatorSchemaPathType>
-		>(optionsOrConfig, config);
+	getByAltText(text: string): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
+	getByAltText(text: string, options?: Parameters<Page["getByAltText"]>[1]) {
+		const definition =
+			options !== undefined
+				? ({ type: "altText", text, options } as AltTextDefinition)
+				: ({ type: "altText", text } as AltTextDefinition);
 
-		const definition = hasOptions
-			? ({ type: "altText", text, options } as AltTextDefinition)
-			: ({ type: "altText", text } as AltTextDefinition);
-
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
 	getByTitle(
 		text: string,
 		options: Parameters<Page["getByTitle"]>[1],
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
 	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByTitle(
-		text: string,
-		options?: Parameters<Page["getByTitle"]>[1],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByTitle(
-		text: string,
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByTitle(
-		text: string,
-		optionsOrConfig?: Parameters<Page["getByTitle"]>[1] | RegistrationConfig<LocatorSchemaPathType, Path>,
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	) {
-		const {
-			options,
-			config: registrationConfig,
-			hasOptions,
-		} = splitOptionsAndConfig<
-			Parameters<Page["getByTitle"]>[1],
-			LocatorSchemaPathType,
-			RegistryPath<LocatorSchemaPathType>
-		>(optionsOrConfig, config);
+	getByTitle(text: string): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
+	getByTitle(text: string, options?: Parameters<Page["getByTitle"]>[1]) {
+		const definition =
+			options !== undefined
+				? ({ type: "title", text, options } as TitleDefinition)
+				: ({ type: "title", text } as TitleDefinition);
 
-		const definition = hasOptions
-			? ({ type: "title", text, options } as TitleDefinition)
-			: ({ type: "title", text } as TitleDefinition);
-
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
 	locator(
 		selector: Parameters<Page["locator"]>[0],
 		options: Parameters<Page["locator"]>[1],
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
 	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	locator(
-		selector: Parameters<Page["locator"]>[0],
-		options?: Parameters<Page["locator"]>[1],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	locator(
-		selector: Parameters<Page["locator"]>[0],
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	locator(
-		selector: Parameters<Page["locator"]>[0],
-		optionsOrConfig?: Parameters<Page["locator"]>[1] | RegistrationConfig<LocatorSchemaPathType, Path>,
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	) {
-		const {
-			options,
-			config: registrationConfig,
-			hasOptions,
-		} = splitOptionsAndConfig<
-			Parameters<Page["locator"]>[1],
-			LocatorSchemaPathType,
-			RegistryPath<LocatorSchemaPathType>
-		>(optionsOrConfig, config);
+	locator(selector: Parameters<Page["locator"]>[0]): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
+	locator(selector: Parameters<Page["locator"]>[0], options?: Parameters<Page["locator"]>[1]) {
+		const definition =
+			options !== undefined
+				? ({ type: "locator", selector, options } as LocatorDefinition)
+				: ({ type: "locator", selector } as LocatorDefinition);
 
-		const definition = hasOptions
-			? ({ type: "locator", selector, options } as LocatorDefinition)
-			: ({ type: "locator", selector } as LocatorDefinition);
-
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
-	frameLocator(
-		selector: Parameters<Page["frameLocator"]>[0],
-		config?: RegistrationConfig<LocatorSchemaPathType, Path>,
-	) {
-		return this.commit({ type: "frameLocator", selector }, config);
+	frameLocator(selector: Parameters<Page["frameLocator"]>[0]) {
+		return this.commit({ type: "frameLocator", selector });
 	}
 
-	getByTestId(testId: Parameters<Page["getByTestId"]>[0], config?: RegistrationConfig<LocatorSchemaPathType, Path>) {
-		return this.commit({ type: "testId", testId }, config);
+	getByTestId(testId: Parameters<Page["getByTestId"]>[0]) {
+		return this.commit({ type: "testId", testId });
 	}
 
-	getById(id: string | RegExp, config?: RegistrationConfig<LocatorSchemaPathType, Path>) {
-		return this.commit({ type: "id", id: normalizeIdValue(id) as IdDefinition["id"] }, config);
+	getById(id: string | RegExp) {
+		return this.commit({ type: "id", id: normalizeIdValue(id) as IdDefinition["id"] });
 	}
 
-	getByDataCy(value: DataCyDefinition["value"], config?: RegistrationConfig<LocatorSchemaPathType, Path>) {
-		return this.commit({ type: "dataCy", value }, config);
+	getByDataCy(value: DataCyDefinition["value"]) {
+		return this.commit({ type: "dataCy", value });
 	}
 
-	private commit(definition: LocatorStrategyDefinition, config?: RegistrationConfig<LocatorSchemaPathType, Path>) {
+	private commit(definition: LocatorStrategyDefinition) {
 		this.definition = definition;
-		const configSteps = stepsFromLegacyConfig<Path, RegistryPath<LocatorSchemaPathType>>(config);
-		this.steps.push(...configSteps);
 		this.persist();
 		return this;
 	}

@@ -8,7 +8,13 @@ test("demonstrate filter and index implementation in v2", async ({ page, testFil
 	const initialLocator = await schemaTwo.getNestedLocator();
 	expect(`${initialLocator}`).toEqual("locator('div.one').locator('div.two').filter({ hasText: 'two' }).first()");
 
-	schemaTwo.update("one.two").locator({ filters: [{ hasText: "NewText" }, { hasText: "AdditionalText" }], index: -1 });
+	schemaTwo
+		.update("one.two")
+		.locator()
+		.clearSteps("one.two")
+		.filter("one.two", { hasText: "NewText" })
+		.filter("one.two", { hasText: "AdditionalText" })
+		.nth("one.two", "last");
 	const newLocator = await schemaTwo.getNestedLocator();
 	expect(`${newLocator}`).toEqual(
 		"locator('div.one').locator('div.two').filter({ hasText: 'NewText' }).filter({ hasText: 'AdditionalText' }).last()",

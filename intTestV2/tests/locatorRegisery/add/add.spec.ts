@@ -1,6 +1,6 @@
-import type { Page } from "@playwright/test";
 import { expect, test } from "@fixtures-v2/withOptions";
-import { PlaywrightReportLogger, createRegistryWithAccessors } from "pomwright";
+import type { Page } from "@playwright/test";
+import { createRegistryWithAccessors, PlaywrightReportLogger } from "pomwright";
 
 const createTestRegistry = <Paths extends string>(page: Page) => {
 	const logger = new PlaywrightReportLogger({ current: "debug", initial: "debug" }, [], "test-registry");
@@ -20,8 +20,6 @@ test("add frameLocator to registry", async ({ page }) => {
 
 	expect(registry.get("iframe")).toEqual({
 		definition: { selector: "iframe#my-frame", type: "frameLocator" },
-		filters: undefined,
-		index: null,
 		locatorSchemaPath: "iframe",
 		steps: [],
 	});
@@ -38,8 +36,6 @@ test("add getByAltText to registry", async ({ page }) => {
 
 	expect(registry.get("image")).toEqual({
 		definition: { text: "Sample Image", type: "altText" },
-		filters: undefined,
-		index: null,
 		locatorSchemaPath: "image",
 		steps: [],
 	});
@@ -58,8 +54,6 @@ test("add getByDataCy to registry", async ({ page }) => {
 
 	expect(registry.get("elementByDataCy")).toEqual({
 		definition: { value: "data-cy-value", type: "dataCy" },
-		filters: undefined,
-		index: null,
 		locatorSchemaPath: "elementByDataCy",
 		steps: [],
 	});
@@ -80,8 +74,6 @@ test("add getById to registry", async ({ page }) => {
 
 	const expectedStringIdDefinition = {
 		definition: { id: "unique-element", type: "id" },
-		filters: undefined,
-		index: null,
 		locatorSchemaPath: "stringId",
 		steps: [],
 	};
@@ -100,8 +92,6 @@ test("add getById to registry", async ({ page }) => {
 	registry.add("regExpId").getById(/unique-\w+/);
 	const regExpDefinition = {
 		definition: { id: /unique-\w+/, type: "id" },
-		filters: undefined,
-		index: null,
 		locatorSchemaPath: "regExpId",
 		steps: [],
 	};
@@ -119,8 +109,6 @@ test("add getByLabel to registry", async ({ page }) => {
 
 	expect(registry.get("elementByLabel")).toEqual({
 		definition: { text: "Username", type: "label" },
-		filters: undefined,
-		index: null,
 		locatorSchemaPath: "elementByLabel",
 		steps: [],
 	});
@@ -137,8 +125,6 @@ test("add getByPlaceholder to registry", async ({ page }) => {
 
 	expect(registry.get("elementByPlaceholder")).toEqual({
 		definition: { text: "Enter your name", type: "placeholder" },
-		filters: undefined,
-		index: null,
 		locatorSchemaPath: "elementByPlaceholder",
 		steps: [],
 	});
@@ -155,8 +141,6 @@ test("add getByRole to registry", async ({ page }) => {
 
 	expect(registry.get("buttonByRole")).toEqual({
 		definition: { role: "button", options: { name: "Submit" }, type: "role" },
-		filters: undefined,
-		index: null,
 		locatorSchemaPath: "buttonByRole",
 		steps: [],
 	});
@@ -173,8 +157,6 @@ test("add getByTestId to registry", async ({ page }) => {
 
 	expect(registry.get("elementByTestId")).toEqual({
 		definition: { testId: "login-button", type: "testId" },
-		filters: undefined,
-		index: null,
 		locatorSchemaPath: "elementByTestId",
 		steps: [],
 	});
@@ -191,8 +173,6 @@ test("add getByText to registry", async ({ page }) => {
 
 	expect(registry.get("elementByText")).toEqual({
 		definition: { text: "Welcome", type: "text" },
-		filters: undefined,
-		index: null,
 		locatorSchemaPath: "elementByText",
 		steps: [],
 	});
@@ -209,8 +189,6 @@ test("add getByTitle to registry", async ({ page }) => {
 
 	expect(registry.get("elementByTitle")).toEqual({
 		definition: { text: "Home Page", type: "title" },
-		filters: undefined,
-		index: null,
 		locatorSchemaPath: "elementByTitle",
 		steps: [],
 	});
@@ -227,11 +205,24 @@ test("add locator to registry", async ({ page }) => {
 
 	expect(registry.get("body")).toEqual({
 		definition: { selector: "body", type: "locator" },
-		filters: undefined,
-		index: null,
 		locatorSchemaPath: "body",
 		steps: [],
 	});
+});
+
+test("add records chained filters and indices in order for nested paths", async ({ page }) => {
+	type LocatorSchemaPaths = "list" | "list.item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.add("list").locator("ul.list").filter({ hasText: "List" }).nth(1);
+	registry.add("list.item").getByRole("listitem", { name: /Row/ }).filter({ hasText: "Row" }).nth("last");
+
+	const nested = await registry.getNestedLocator("list.item");
+
+	expect(`${nested}`).toEqual(
+		"locator('ul.list').filter({ hasText: 'List' }).nth(1).getByRole('listitem', { name: /Row/ }).filter({ hasText: 'Row' }).last()",
+	);
 });
 
 test("A LocatorSchemaPath can only be added once", async ({ page }) => {

@@ -11,7 +11,9 @@ test("update can switch locator strategies while preserving filters and indices"
 	const manualLocator = page.locator("body").locator("newSelector").filter({ hasText: "Text" }).first();
 	const locator = await schema
 		.update(path)
-		.locator("newSelector", { filters: { hasText: "Text" }, index: 0 })
+		.locator("newSelector")
+		.filter(path, { hasText: "Text" })
+		.nth(path, 0)
 		.getNestedLocator();
 	expect(`${locator}`).toEqual(`${manualLocator}`);
 

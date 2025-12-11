@@ -46,3 +46,18 @@ test("nth overrides are scoped to each builder instance", async ({ testFilters }
 	expect(`${first}`).toEqual("locator('body').locator('section').getByRole('button').first()");
 	expect(`${second}`).toEqual("locator('body').locator('section').getByRole('button')");
 });
+
+test("filter and nth ordering apply per sub-path when chained on getLocatorSchema", async ({ testFilters }) => {
+	const locator = await testFilters
+		.getLocatorSchema("one.two")
+		.clearSteps("one.two")
+		.filter("one", { hasText: "outer" })
+		.nth("one", "first")
+		.filter("one.two", { hasText: "inner" })
+		.nth("one.two", "last")
+		.getNestedLocator();
+
+	expect(`${locator}`).toEqual(
+		"locator('div.one').filter({ hasText: 'outer' }).first().locator('div.two').filter({ hasText: 'inner' }).last()",
+	);
+});

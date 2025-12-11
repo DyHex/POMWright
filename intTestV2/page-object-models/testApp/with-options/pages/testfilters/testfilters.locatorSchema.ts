@@ -30,7 +30,7 @@ export type LocatorSchemaPath =
 export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>) {
 	locators.add("one").locator("div.one");
 
-	locators.add("one.two").locator("div.two", { filters: { hasText: "two" }, index: 0 });
+	locators.add("one.two").locator("div.two").filter({ hasText: "two" }).nth(0);
 
 	locators.add("body").locator("body");
 
@@ -63,71 +63,52 @@ export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>)
 
 	locators
 		.add("fictional.filter@optionsUndefined")
-		.getByRole(
-			"button",
-			{},
-			{ filters: { has: undefined, hasNot: undefined, hasText: undefined, hasNotText: undefined } },
-		);
+		.getByRole("button")
+		.filter({ has: undefined, hasNot: undefined, hasText: undefined, hasNotText: undefined });
 
-	locators.add("fictional.locatorWithfilter@allOptions").getByRole(
-		"button",
-		{},
-		{
-			filters: {
-				has: { locator: { type: "locator", selector: "section" } },
-				hasNot: { locator: { type: "locator", selector: "[data-cy=missing]" } },
-				hasText: "hasText",
-				hasNotText: "hasNotText",
-			},
-		},
-	);
+	locators
+		.add("fictional.locatorWithfilter@allOptions")
+		.getByRole("button")
+		.filter({
+			has: { locator: { type: "locator", selector: "section" } },
+			hasNot: { locator: { type: "locator", selector: "[data-cy=missing]" } },
+			hasText: "hasText",
+			hasNotText: "hasNotText",
+		});
 
-	locators.add("fictional.locatorAndOptionsWithfilter@allOptions").getByRole(
-		"button",
-		{ name: "roleOptions" },
-		{
-			filters: {
-				has: { locatorPath: "body.section.heading" },
-				hasNot: { locatorPath: "body.section.button" },
-				hasText: "hasText",
-				hasNotText: "hasNotText",
-			},
-		},
-	);
+	locators
+		.add("fictional.locatorAndOptionsWithfilter@allOptions")
+		.getByRole("button", { name: "roleOptions" })
+		.filter({
+			has: { locatorPath: "body.section.heading" },
+			hasNot: { locatorPath: "body.section.button" },
+			hasText: "hasText",
+			hasNotText: "hasNotText",
+		});
 
 	locators
 		.add("fictional.filter@has")
-		.getByRole("button", {}, { filters: { has: { locatorPath: "body.section.heading" } } });
+		.getByRole("button")
+		.filter({ has: { locatorPath: "body.section.heading" } });
 
 	locators
 		.add("fictional.filter@hasNot")
-		.getByRole("button", {}, { filters: { hasNot: { locatorPath: "body.section.button" } } });
+		.getByRole("button")
+		.filter({ hasNot: { locatorPath: "body.section.button" } });
 
-	locators.add("fictional.filter@hasText").getByRole("button", {}, { filters: { hasText: "hasText" } });
+	locators.add("fictional.filter@hasText").getByRole("button").filter({ hasText: "hasText" });
 
-	locators.add("fictional.filter@hasNotText").getByRole("button", {}, { filters: { hasNotText: "hasNotText" } });
+	locators.add("fictional.filter@hasNotText").getByRole("button").filter({ hasNotText: "hasNotText" });
 
-	locators.add("fictional.filter@hasNotText.filter@hasText").getByRole(
-		"button",
-		{},
-		{
-			filters: { hasText: "hasText" },
-		},
-	);
+	locators.add("fictional.filter@hasNotText.filter@hasText").getByRole("button").filter({ hasText: "hasText" });
 
-	locators.add("fictional.filter@hasNotText.filter@hasText.filter@hasNotText").getByRole(
-		"button",
-		{},
-		{
-			filters: { hasNotText: "hasNotText" },
-		},
-	);
+	locators
+		.add("fictional.filter@hasNotText.filter@hasText.filter@hasNotText")
+		.getByRole("button")
+		.filter({ hasNotText: "hasNotText" });
 
-	locators.add("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText").getByRole(
-		"button",
-		{},
-		{
-			filters: { hasText: "hasText" },
-		},
-	);
+	locators
+		.add("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText")
+		.getByRole("button")
+		.filter({ hasText: "hasText" });
 }

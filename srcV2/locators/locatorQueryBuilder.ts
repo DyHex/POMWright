@@ -1,18 +1,17 @@
 import type { Locator } from "@playwright/test";
 import type { LocatorRegistry } from "./locatorRegistry";
-import { LocatorUpdateBuilder, mergeLocatorDefinition, replaceStepsWithConfig } from "./locatorUpdateBuilder";
+import { LocatorUpdateBuilder, mergeLocatorDefinition } from "./locatorUpdateBuilder";
 import type {
 	FilterDefinition,
 	IndexSelector,
 	LocatorChainPaths,
 	LocatorOverrides,
-	LocatorRegistrationConfig,
 	LocatorStep,
 	LocatorStrategyDefinition,
 	LocatorUpdate,
 	RegistryPath,
 } from "./types";
-import { expandSchemaPath, normalizeSteps, stepsFromLegacyConfig } from "./utils";
+import { expandSchemaPath, normalizeSteps } from "./utils";
 
 export class LocatorQueryBuilder<
 	LocatorSchemaPathType extends string,
@@ -36,12 +35,9 @@ export class LocatorQueryBuilder<
 				continue;
 			}
 			this.definitions.set(part, { ...record.definition });
-			const recordSteps = record.steps
-				? normalizeSteps<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>(record.steps)
-				: stepsFromLegacyConfig<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>({
-						filters: record.filters,
-						index: record.index,
-					});
+			const recordSteps = normalizeSteps<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>(
+				record.steps,
+			);
 			this.steps.set(part, recordSteps);
 			if (part === path) {
 				hasTerminal = true;
@@ -91,7 +87,6 @@ export class LocatorQueryBuilder<
 	applyUpdate<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
 		updates: LocatorUpdate,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
 	) {
 		this.ensureSubPath(subPath);
 		const current = this.definitions.get(subPath);
@@ -101,15 +96,6 @@ export class LocatorQueryBuilder<
 		const baseline = this.registry.get(subPath as RegistryPath<LocatorSchemaPathType>).definition;
 		const merged = mergeLocatorDefinition(current, updates, subPath, baseline);
 		this.definitions.set(subPath, merged);
-
-		if (config) {
-			const existingSteps = this.steps.get(subPath) ?? [];
-			const replaced = replaceStepsWithConfig<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>(
-				existingSteps,
-				config,
-			);
-			this.steps.set(subPath, replaced);
-		}
 		return this;
 	}
 

@@ -3,50 +3,43 @@ import type { LocatorQueryBuilder } from "./locatorQueryBuilder";
 import type {
 	DataCyDefinition,
 	LocatorChainPaths,
-	LocatorRegistrationConfig,
-	LocatorStep,
 	LocatorStrategyDefinition,
 	LocatorUpdate,
 	RegistryPath,
 	RoleDefinition,
 } from "./types";
-import { isRegistrationConfig, normalizeFilters, normalizeIdValue, splitOptionsAndConfig } from "./utils";
+import { normalizeIdValue } from "./utils";
 
-const parseUpdateArguments = <Primary, OptionsType, LocatorSchemaPathType extends string, AllowedPaths extends string>(
-	primaryOrOptionsOrConfig?: Primary | OptionsType | LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>,
-	optionsOrConfig?: OptionsType | LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>,
-	config?: LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>,
+const parseUpdateArguments = <Primary, OptionsType>(
+	primaryOrOptions?: Primary | OptionsType,
+	options?: OptionsType,
 	optionsProvided?: boolean,
 ) => {
 	let primary: Primary | undefined;
-	let options: OptionsType | undefined;
+	let parsedOptions: OptionsType | undefined;
 	let hasOptions = optionsProvided ?? false;
-	let registrationConfig: LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths> | undefined;
 
-	if (isRegistrationConfig<LocatorSchemaPathType, AllowedPaths>(primaryOrOptionsOrConfig)) {
-		registrationConfig = primaryOrOptionsOrConfig;
-	} else if (primaryOrOptionsOrConfig !== undefined) {
-		if (typeof primaryOrOptionsOrConfig === "object") {
-			options = primaryOrOptionsOrConfig as OptionsType;
+	if (options !== undefined) {
+		parsedOptions = options;
+		hasOptions = true;
+	}
+
+	if (primaryOrOptions !== undefined) {
+		const treatAsOptions =
+			!hasOptions &&
+			options === undefined &&
+			typeof primaryOrOptions === "object" &&
+			!(primaryOrOptions instanceof RegExp);
+
+		if (treatAsOptions) {
+			parsedOptions = primaryOrOptions as OptionsType;
 			hasOptions = true;
 		} else {
-			primary = primaryOrOptionsOrConfig as Primary;
+			primary = primaryOrOptions as Primary;
 		}
 	}
 
-	const {
-		options: parsedOptions,
-		config: parsedConfig,
-		hasOptions: parsedHasOptions,
-	} = splitOptionsAndConfig<OptionsType, LocatorSchemaPathType, AllowedPaths>(optionsOrConfig, config);
-
-	if (options === undefined && parsedOptions !== undefined) {
-		options = parsedOptions;
-	}
-	registrationConfig ??= parsedConfig;
-	hasOptions = hasOptions || parsedHasOptions;
-
-	return { primary, options, config: registrationConfig, hasOptions };
+	return { primary, options: parsedOptions, hasOptions };
 };
 
 const mergeOptions = <OptionsType>(
@@ -67,21 +60,9 @@ const mergeOptions = <OptionsType>(
 	return currentOptions as OptionsType;
 };
 
-type UpdateArgsWithOptions<Primary, Options, LocatorSchemaPathType extends string, AllowedPaths extends string> =
-	| []
-	| [LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>]
-	| [Primary]
-	| [Options]
-	| [Primary, Options]
-	| [Primary, LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>]
-	| [Options, LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>]
-	| [Primary, Options, LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>];
+type UpdateArgsWithOptions<Primary, Options> = [] | [Primary] | [Options] | [Primary, Options];
 
-type UpdateArgsWithoutOptions<Primary, LocatorSchemaPathType extends string, AllowedPaths extends string> =
-	| []
-	| [LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>]
-	| [Primary]
-	| [Primary, LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>];
+type UpdateArgsWithoutOptions<Primary> = [] | [Primary];
 
 const mergeLocatorDefinition = (
 	current: LocatorStrategyDefinition,
@@ -220,28 +201,6 @@ const mergeLocatorDefinition = (
 		}
 	}
 };
-export const replaceStepsWithConfig = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
-	existing: LocatorStep<LocatorSchemaPathType, AllowedPaths>[],
-	config?: LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>,
-) => {
-	let steps = [...existing];
-
-	if (config && "filters" in config) {
-		const normalized = normalizeFilters<LocatorSchemaPathType, AllowedPaths>(config.filters) ?? [];
-		steps = steps.filter((step) => step.kind !== "filter");
-		steps.push(
-			...normalized.map((filter) => ({ kind: "filter", filter }) as LocatorStep<LocatorSchemaPathType, AllowedPaths>),
-		);
-	}
-
-	if (config && "index" in config) {
-		steps = steps.filter((step) => step.kind !== "index");
-		steps.push({ kind: "index", index: config.index ?? null });
-	}
-
-	return steps;
-};
-
 export class LocatorUpdateBuilder<
 	LocatorSchemaPathType extends string,
 	LocatorSubstring extends RegistryPath<LocatorSchemaPathType>,
@@ -252,295 +211,204 @@ export class LocatorUpdateBuilder<
 		private readonly subPath: SubPath,
 	) {}
 
-	getByRole(
-		...args: UpdateArgsWithOptions<
-			RoleDefinition["role"],
-			RoleDefinition["options"],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>
-	) {
-		const [roleOrOptionsOrConfig, optionsOrConfig, config] = args;
-		const optionsProvided =
-			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+	getByRole(...args: UpdateArgsWithOptions<RoleDefinition["role"], RoleDefinition["options"]>) {
+		const [roleOrOptions, options] = args;
 		const {
 			primary: role,
-			options,
-			config: registrationConfig,
+			options: parsedOptions,
 			hasOptions,
-		} = parseUpdateArguments<
-			RoleDefinition["role"],
-			RoleDefinition["options"],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>(roleOrOptionsOrConfig, optionsOrConfig, config, optionsProvided);
+		} = parseUpdateArguments<RoleDefinition["role"], RoleDefinition["options"]>(
+			roleOrOptions,
+			options,
+			args.length >= 2,
+		);
 
 		const definition: LocatorUpdate = {
 			type: "role",
 			...(role !== undefined ? { role } : {}),
-			...(hasOptions ? { options } : {}),
+			...(hasOptions ? { options: parsedOptions } : {}),
 		};
 
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
-	getByText(
-		...args: UpdateArgsWithOptions<
-			Parameters<Page["getByText"]>[0],
-			Parameters<Page["getByText"]>[1],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>
-	) {
-		const [textOrOptionsOrConfig, optionsOrConfig, config] = args;
-		const optionsProvided =
-			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+	getByText(...args: UpdateArgsWithOptions<Parameters<Page["getByText"]>[0], Parameters<Page["getByText"]>[1]>) {
+		const [textOrOptions, options] = args;
 		const {
 			primary: text,
-			options,
-			config: registrationConfig,
+			options: parsedOptions,
 			hasOptions,
-		} = parseUpdateArguments<
-			Parameters<Page["getByText"]>[0],
-			Parameters<Page["getByText"]>[1],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>(textOrOptionsOrConfig, optionsOrConfig, config, optionsProvided);
+		} = parseUpdateArguments<Parameters<Page["getByText"]>[0], Parameters<Page["getByText"]>[1]>(
+			textOrOptions,
+			options,
+			args.length >= 2,
+		);
 
 		const definition: LocatorUpdate = {
 			type: "text",
 			...(text !== undefined ? { text } : {}),
-			...(hasOptions ? { options } : {}),
+			...(hasOptions ? { options: parsedOptions } : {}),
 		};
 
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
-	getByLabel(
-		...args: UpdateArgsWithOptions<
-			Parameters<Page["getByLabel"]>[0],
-			Parameters<Page["getByLabel"]>[1],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>
-	) {
-		const [textOrOptionsOrConfig, optionsOrConfig, config] = args;
-		const optionsProvided =
-			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+	getByLabel(...args: UpdateArgsWithOptions<Parameters<Page["getByLabel"]>[0], Parameters<Page["getByLabel"]>[1]>) {
+		const [textOrOptions, options] = args;
 		const {
 			primary: text,
-			options,
-			config: registrationConfig,
+			options: parsedOptions,
 			hasOptions,
-		} = parseUpdateArguments<
-			Parameters<Page["getByLabel"]>[0],
-			Parameters<Page["getByLabel"]>[1],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>(textOrOptionsOrConfig, optionsOrConfig, config, optionsProvided);
+		} = parseUpdateArguments<Parameters<Page["getByLabel"]>[0], Parameters<Page["getByLabel"]>[1]>(
+			textOrOptions,
+			options,
+			args.length >= 2,
+		);
 
 		const definition: LocatorUpdate = {
 			type: "label",
 			...(text !== undefined ? { text } : {}),
-			...(hasOptions ? { options } : {}),
+			...(hasOptions ? { options: parsedOptions } : {}),
 		};
 
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
 	getByPlaceholder(
-		...args: UpdateArgsWithOptions<
-			Parameters<Page["getByPlaceholder"]>[0],
-			Parameters<Page["getByPlaceholder"]>[1],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>
+		...args: UpdateArgsWithOptions<Parameters<Page["getByPlaceholder"]>[0], Parameters<Page["getByPlaceholder"]>[1]>
 	) {
-		const [textOrOptionsOrConfig, optionsOrConfig, config] = args;
-		const optionsProvided =
-			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+		const [textOrOptions, options] = args;
 		const {
 			primary: text,
-			options,
-			config: registrationConfig,
+			options: parsedOptions,
 			hasOptions,
-		} = parseUpdateArguments<
-			Parameters<Page["getByPlaceholder"]>[0],
-			Parameters<Page["getByPlaceholder"]>[1],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>(textOrOptionsOrConfig, optionsOrConfig, config, optionsProvided);
+		} = parseUpdateArguments<Parameters<Page["getByPlaceholder"]>[0], Parameters<Page["getByPlaceholder"]>[1]>(
+			textOrOptions,
+			options,
+			args.length >= 2,
+		);
 
 		const definition: LocatorUpdate = {
 			type: "placeholder",
 			...(text !== undefined ? { text } : {}),
-			...(hasOptions ? { options } : {}),
+			...(hasOptions ? { options: parsedOptions } : {}),
 		};
 
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
 	getByAltText(
-		...args: UpdateArgsWithOptions<
-			Parameters<Page["getByAltText"]>[0],
-			Parameters<Page["getByAltText"]>[1],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>
+		...args: UpdateArgsWithOptions<Parameters<Page["getByAltText"]>[0], Parameters<Page["getByAltText"]>[1]>
 	) {
-		const [textOrOptionsOrConfig, optionsOrConfig, config] = args;
-		const optionsProvided =
-			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+		const [textOrOptions, options] = args;
 		const {
 			primary: text,
-			options,
-			config: registrationConfig,
+			options: parsedOptions,
 			hasOptions,
-		} = parseUpdateArguments<
-			Parameters<Page["getByAltText"]>[0],
-			Parameters<Page["getByAltText"]>[1],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>(textOrOptionsOrConfig, optionsOrConfig, config, optionsProvided);
+		} = parseUpdateArguments<Parameters<Page["getByAltText"]>[0], Parameters<Page["getByAltText"]>[1]>(
+			textOrOptions,
+			options,
+			args.length >= 2,
+		);
 
 		const definition: LocatorUpdate = {
 			type: "altText",
 			...(text !== undefined ? { text } : {}),
-			...(hasOptions ? { options } : {}),
+			...(hasOptions ? { options: parsedOptions } : {}),
 		};
 
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
-	getByTitle(
-		...args: UpdateArgsWithOptions<
-			Parameters<Page["getByTitle"]>[0],
-			Parameters<Page["getByTitle"]>[1],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>
-	) {
-		const [textOrOptionsOrConfig, optionsOrConfig, config] = args;
-		const optionsProvided =
-			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+	getByTitle(...args: UpdateArgsWithOptions<Parameters<Page["getByTitle"]>[0], Parameters<Page["getByTitle"]>[1]>) {
+		const [textOrOptions, options] = args;
 		const {
 			primary: text,
-			options,
-			config: registrationConfig,
+			options: parsedOptions,
 			hasOptions,
-		} = parseUpdateArguments<
-			Parameters<Page["getByTitle"]>[0],
-			Parameters<Page["getByTitle"]>[1],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>(textOrOptionsOrConfig, optionsOrConfig, config, optionsProvided);
+		} = parseUpdateArguments<Parameters<Page["getByTitle"]>[0], Parameters<Page["getByTitle"]>[1]>(
+			textOrOptions,
+			options,
+			args.length >= 2,
+		);
 
 		const definition: LocatorUpdate = {
 			type: "title",
 			...(text !== undefined ? { text } : {}),
-			...(hasOptions ? { options } : {}),
+			...(hasOptions ? { options: parsedOptions } : {}),
 		};
 
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
-	locator(
-		...args: UpdateArgsWithOptions<
-			Parameters<Page["locator"]>[0],
-			Parameters<Page["locator"]>[1],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>
-	) {
-		const [selectorOrOptionsOrConfig, optionsOrConfig, config] = args;
-		const optionsProvided =
-			args.length >= 2 && !isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(optionsOrConfig);
+	locator(...args: UpdateArgsWithOptions<Parameters<Page["locator"]>[0], Parameters<Page["locator"]>[1]>) {
+		const [selectorOrOptions, options] = args;
 		const {
 			primary: selector,
-			options,
-			config: registrationConfig,
+			options: parsedOptions,
 			hasOptions,
-		} = parseUpdateArguments<
-			Parameters<Page["locator"]>[0],
-			Parameters<Page["locator"]>[1],
-			LocatorSchemaPathType,
-			LocatorSubstring
-		>(selectorOrOptionsOrConfig, optionsOrConfig, config, optionsProvided);
+		} = parseUpdateArguments<Parameters<Page["locator"]>[0], Parameters<Page["locator"]>[1]>(
+			selectorOrOptions,
+			options,
+			args.length >= 2,
+		);
 
 		const definition: LocatorUpdate = {
 			type: "locator",
 			...(selector !== undefined ? { selector } : {}),
-			...(hasOptions ? { options } : {}),
+			...(hasOptions ? { options: parsedOptions } : {}),
 		};
 
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
-	frameLocator(
-		...args: UpdateArgsWithoutOptions<Parameters<Page["frameLocator"]>[0], LocatorSchemaPathType, LocatorSubstring>
-	) {
-		const [selectorOrConfig, config] = args;
-		const isConfigFirst = isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(selectorOrConfig);
-		const registrationConfig = (isConfigFirst ? selectorOrConfig : undefined) ?? config;
-		const selector = isConfigFirst ? undefined : selectorOrConfig;
+	frameLocator(...args: UpdateArgsWithoutOptions<Parameters<Page["frameLocator"]>[0]>) {
+		const [selector] = args;
 
 		const definition: LocatorUpdate = {
 			type: "frameLocator",
 			...(selector !== undefined ? { selector } : {}),
 		};
 
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
-	getByTestId(
-		...args: UpdateArgsWithoutOptions<Parameters<Page["getByTestId"]>[0], LocatorSchemaPathType, LocatorSubstring>
-	) {
-		const [testIdOrConfig, config] = args;
-		const isConfigFirst = isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(testIdOrConfig);
-		const registrationConfig = (isConfigFirst ? testIdOrConfig : undefined) ?? config;
-		const testId = isConfigFirst ? undefined : testIdOrConfig;
+	getByTestId(...args: UpdateArgsWithoutOptions<Parameters<Page["getByTestId"]>[0]>) {
+		const [testId] = args;
 
 		const definition: LocatorUpdate = {
 			type: "testId",
 			...(testId !== undefined ? { testId } : {}),
 		};
 
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
-	getById(...args: UpdateArgsWithoutOptions<string | RegExp, LocatorSchemaPathType, LocatorSubstring>) {
-		const [idOrConfig, config] = args;
-		const isConfigFirst = isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(idOrConfig);
-		const registrationConfig = (isConfigFirst ? idOrConfig : undefined) ?? config;
-		const id = isConfigFirst ? undefined : normalizeIdValue(idOrConfig);
+	getById(...args: UpdateArgsWithoutOptions<string | RegExp>) {
+		const [idValue] = args;
+		const id = idValue !== undefined ? normalizeIdValue(idValue) : undefined;
 
 		const definition: LocatorUpdate = {
 			type: "id",
 			...(id !== undefined ? { id } : {}),
 		};
 
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
-	getByDataCy(...args: UpdateArgsWithoutOptions<DataCyDefinition["value"], LocatorSchemaPathType, LocatorSubstring>) {
-		const [valueOrConfig, config] = args;
-		const isConfigFirst = isRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>(valueOrConfig);
-		const registrationConfig = (isConfigFirst ? valueOrConfig : undefined) ?? config;
-		const value = isConfigFirst ? undefined : valueOrConfig;
+	getByDataCy(...args: UpdateArgsWithoutOptions<DataCyDefinition["value"]>) {
+		const [value] = args;
 
 		const definition: LocatorUpdate = {
 			type: "dataCy",
 			...(value !== undefined ? { value } : {}),
 		};
 
-		return this.commit(definition, registrationConfig);
+		return this.commit(definition);
 	}
 
-	private commit(
-		definition: LocatorUpdate,
-		config?: LocatorRegistrationConfig<LocatorSchemaPathType, LocatorSubstring>,
-	) {
-		return this.parent.applyUpdate(this.subPath, definition, config);
+	private commit(definition: LocatorUpdate) {
+		return this.parent.applyUpdate(this.subPath, definition);
 	}
 }
 

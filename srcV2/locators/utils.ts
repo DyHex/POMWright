@@ -5,7 +5,6 @@ import type {
 	IndexSelector,
 	LocatorBuilderTarget,
 	LocatorOverrides,
-	LocatorRegistrationConfig,
 	LocatorStep,
 	LocatorStepOverride,
 	LocatorStrategyDefinition,
@@ -60,19 +59,6 @@ export const cssEscape = (value: string) => {
 	return value.replace(/([\\"'#.:;,?*+<>{}[\\]()])/g, "\\$1");
 };
 
-export const normalizeFilters = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
-	filters?:
-		| FilterDefinition<LocatorSchemaPathType, AllowedPaths>
-		| FilterDefinition<LocatorSchemaPathType, AllowedPaths>[],
-) => {
-	if (!filters) {
-		return undefined;
-	}
-	return Array.isArray(filters)
-		? ([...filters] as FilterDefinition<LocatorSchemaPathType, AllowedPaths>[])
-		: ([filters] as FilterDefinition<LocatorSchemaPathType, AllowedPaths>[]);
-};
-
 export const normalizeSteps = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
 	steps?: LocatorStep<LocatorSchemaPathType, AllowedPaths>[],
 ) => (steps ? steps.map((step) => ({ ...step })) : []);
@@ -115,22 +101,6 @@ export const normalizeOverrideSteps = <LocatorSchemaPathType extends string, All
 	return { steps, replaceIndex } as const;
 };
 
-export const stepsFromLegacyConfig = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
-	config?: LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>,
-) => {
-	const filters = normalizeFilters<LocatorSchemaPathType, AllowedPaths>(config?.filters) ?? [];
-	const steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[] = filters.map((filter) => ({
-		kind: "filter",
-		filter,
-	}));
-
-	if (config && "index" in config) {
-		steps.push({ kind: "index", index: config.index ?? null });
-	}
-
-	return steps;
-};
-
 export function normalizeIdValue(id: string): string;
 export function normalizeIdValue(id: RegExp): RegExp;
 export function normalizeIdValue(id: string | RegExp | undefined): string | RegExp | undefined;
@@ -149,30 +119,6 @@ export function normalizeIdValue(id: string | RegExp | undefined) {
 
 	return id;
 }
-
-export const isRegistrationConfig = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
-	value: unknown,
-): value is LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths> => {
-	if (!value || typeof value !== "object") {
-		return false;
-	}
-	return "filters" in value || "index" in value;
-};
-
-export const splitOptionsAndConfig = <OptionsType, LocatorSchemaPathType extends string, AllowedPaths extends string>(
-	optionsOrConfig?: OptionsType | LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>,
-	config?: LocatorRegistrationConfig<LocatorSchemaPathType, AllowedPaths>,
-) => {
-	const options = isRegistrationConfig<LocatorSchemaPathType, AllowedPaths>(optionsOrConfig)
-		? undefined
-		: (optionsOrConfig as OptionsType | undefined);
-	const hasOptions = optionsOrConfig !== undefined && !isRegistrationConfig(optionsOrConfig);
-	const registrationConfig =
-		(isRegistrationConfig<LocatorSchemaPathType, AllowedPaths>(optionsOrConfig) ? optionsOrConfig : undefined) ??
-		config;
-
-	return { options, config: registrationConfig, hasOptions };
-};
 
 export const stringifyForLog = (value: unknown) => {
 	const seen = new WeakSet();

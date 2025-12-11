@@ -227,8 +227,6 @@ export type LocatorSchemaRecord<
 	locatorSchemaPath: LocatorSchemaPathAlias<LocatorSchemaPathType>;
 	definition: LocatorStrategyDefinition;
 	steps?: LocatorStep<LocatorSchemaPathType, AllowedPaths>[];
-	filters?: FilterDefinition<LocatorSchemaPathType, AllowedPaths>[];
-	index?: IndexSelector | null;
 };
 
 type LocatorUpdateFor<Definition extends LocatorStrategyDefinition> = { type: Definition["type"] } & Partial<
@@ -264,13 +262,3 @@ export type LocatorOverrides<
 		| LocatorStepOverride<LocatorSchemaPathType, AllowedPaths>[]
 	>
 >;
-
-export type LocatorRegistrationConfig<
-	LocatorSchemaPathType extends string = string,
-	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
-> = {
-	filters?:
-		| FilterDefinition<LocatorSchemaPathType, AllowedPaths>
-		| FilterDefinition<LocatorSchemaPathType, AllowedPaths>[];
-	index?: IndexSelector | null;
-};

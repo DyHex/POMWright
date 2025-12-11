@@ -17,6 +17,7 @@ Use this file to keep an up-to-date picture of how v1 (src/intTest) and v2 (srcV
   - **Possible solutions:** Normalize user-provided path strings (trim and replace whitespace) before registering.
 - Requesting a locator path that ends on a `frameLocator` yields the owner locator pointing at the actual iframe (validate its presence) rather than the frame locator which you'd use to resolve/validate elements inside the iframe.
   - **Solution:** Invoke .contentFrame() on the returned locator in the test/step/method to reverse operation and you can use it to target elements inside the iframe again.
+- Locator registration and updates no longer accept `{ filters, index }` config objects on locator methods. Chain `.filter()`/`.nth()` to record ordered steps instead. A v1 compatibility shim will be used for legacy schemas rather than mixing the behaviors inside v2.
 
 ## Missing features/validation relative to v1
 

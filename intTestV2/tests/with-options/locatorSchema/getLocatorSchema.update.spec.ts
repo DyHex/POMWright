@@ -109,6 +109,23 @@ test("update preserves filters on the target sub-path", async ({ testFilters }) 
 	expect(`${locator}`).toEqual("locator('updated').filter({ hasText: 'hasText' })");
 });
 
+test("update patches definitions without altering chained filters or indices", async ({ testFilters }) => {
+	const updated = await testFilters
+		.getLocatorSchema("body.section.button")
+		.filter("body.section.button", { hasText: /Click me!/ })
+		.nth("body.section", "first")
+		.update("body.section.button")
+		.getByRole("button", { name: "Click me!" })
+		.getNestedLocator();
+
+	expect(`${updated}`).toEqual(
+		"locator('body').locator('section').first().getByRole('button', { name: 'Click me!' }).filter({ hasText: /Click me!/ })",
+	);
+
+	const untouched = await testFilters.getLocatorSchema("body.section.button").getNestedLocator();
+	expect(`${untouched}`).toEqual("locator('body').locator('section').getByRole('button')");
+});
+
 test("update can remove locator options filters", async ({ testFilters }) => {
 	const original = await testFilters.getNestedLocator("body.section@playground");
 	expect(`${original}`).toEqual("locator('body').locator('section').filter({ hasText: /Playground/i })");

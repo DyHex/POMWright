@@ -40,6 +40,42 @@ const schemaBuilder = getLocatorSchema("root").nth("root", 1);
 await schemaBuilder.getNestedLocator();
 ```
 
+## Chaining filters and indices
+
+Record filters and indices by chaining `.filter()` and `.nth()` in call order. This works during registration and when mutating a
+schema builder returned by `getLocatorSchema`:
+
+```ts
+registry
+  .add("list.item")
+  .getByRole("listitem", { name: /Row/ })
+  .filter({ hasText: "Row" })
+  .nth("last");
+
+const locator = await getLocatorSchema("list.item")
+  .filter("list", { hasText: "List" })
+  .nth("list", 0)
+  .filter("list.item", { hasText: "Row" })
+  .nth("list.item", 2)
+  .getNestedLocator();
+```
+
+Filters and indices apply exactly where they are chained, mirroring manual Playwright locator chaining.
+
+## Updating definitions without altering steps
+
+`update(path)` performs a PATCH-style merge of the locator definition only. To change filters or indices, chain `.filter()`,
+`.nth()`, or `.clearSteps()` on the query builder instead of passing optional config objects:
+
+```ts
+const updated = await getLocatorSchema("body.section.button")
+  .filter("body.section.button", { hasText: /Click me!/ })
+  .nth("body.section", "first")
+  .update("body.section.button")
+  .getByRole("button", { name: "Click me!" })
+  .getNestedLocator();
+```
+
 ## Error handling
 
 - Locator path validation happens at compile time via the factory signature; invalid unions surface as type errors when you

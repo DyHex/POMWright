@@ -18,7 +18,6 @@ export type {
 	LabelDefinition,
 	LocatorDefinition,
 	LocatorOverrides,
-	LocatorRegistrationConfig,
 	LocatorSchemaPathError,
 	LocatorSchemaPathErrors,
 	LocatorSchemaPathFormat,

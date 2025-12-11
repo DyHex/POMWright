@@ -276,7 +276,7 @@ packages:
     hasBin: true
 
   pomwright-v2@file:../pomwright-v2-2.0.0-alpha.0.tgz:
-    resolution: {integrity: sha512-nvqKMq2vxaNOG72THp20K3K3CliYOIVeriVyB2eJyGPOg+LyJtj4Ml9emUOj0/dhx6pQ+weRRsZ0fRub6bX29g==, tarball: file:../pomwright-v2-2.0.0-alpha.0.tgz}
+    resolution: {integrity: sha512-JijEjqd/uzWbB97S9/oQkm4ObknTKDKQjij2QB/bSIhxxAZ/Qx7KljqdAqngx8tHVNgvXitDnFaJzSSSobwwRw==, tarball: file:../pomwright-v2-2.0.0-alpha.0.tgz}
     version: 2.0.0-alpha.0
     peerDependencies:
       '@playwright/test': '>=1.41.0 <1.42.0 || >=1.43.0 <2.0.0'
