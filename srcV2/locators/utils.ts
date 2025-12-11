@@ -194,6 +194,65 @@ export const createLocator = (
 	}
 };
 
+export const cloneLocatorStrategyDefinition = (definition: LocatorStrategyDefinition): LocatorStrategyDefinition => {
+	switch (definition.type) {
+		case "role":
+			return {
+				type: "role",
+				role: definition.role,
+				...(definition.options ? { options: { ...definition.options } } : {}),
+			};
+		case "text":
+			return {
+				type: "text",
+				text: definition.text,
+				...(definition.options ? { options: { ...definition.options } } : {}),
+			};
+		case "label":
+			return {
+				type: "label",
+				text: definition.text,
+				...(definition.options ? { options: { ...definition.options } } : {}),
+			};
+		case "placeholder":
+			return {
+				type: "placeholder",
+				text: definition.text,
+				...(definition.options ? { options: { ...definition.options } } : {}),
+			};
+		case "altText":
+			return {
+				type: "altText",
+				text: definition.text,
+				...(definition.options ? { options: { ...definition.options } } : {}),
+			};
+		case "title":
+			return {
+				type: "title",
+				text: definition.text,
+				...(definition.options ? { options: { ...definition.options } } : {}),
+			};
+		case "locator":
+			return {
+				type: "locator",
+				selector: definition.selector,
+				...(definition.options ? { options: { ...definition.options } } : {}),
+			};
+		case "frameLocator":
+			return { type: "frameLocator", selector: definition.selector };
+		case "testId":
+			return { type: "testId", testId: definition.testId };
+		case "id":
+			return { type: "id", id: definition.id };
+		case "dataCy":
+			return { type: "dataCy", value: definition.value };
+		default: {
+			const exhaustive: never = definition;
+			return exhaustive;
+		}
+	}
+};
+
 export const isFrameLocatorDefinition = (definition: LocatorStrategyDefinition): definition is FrameLocatorDefinition =>
 	definition.type === "frameLocator";
 

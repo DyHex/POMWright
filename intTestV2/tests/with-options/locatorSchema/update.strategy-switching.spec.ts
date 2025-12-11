@@ -2,7 +2,10 @@ import { expect, test } from "@fixtures-v2/withOptions";
 
 const path = "body.section" as const;
 
-test("update can switch locator strategies while preserving filters and indices", async ({ page, testFilters }) => {
+test("update can switch locator strategies, caching all latest locator definitions and preserving state of filters and indices", async ({
+	page,
+	testFilters,
+}) => {
 	const schema = testFilters.getLocatorSchema(path);
 
 	const initialLocator = await schema.getNestedLocator();
@@ -61,7 +64,50 @@ test("update can switch locator strategies while preserving filters and indices"
 	const dataCy = await schema.update(path).getByDataCy("new-cy").getNestedLocator();
 	expect(`${dataCy}`).toEqual(`${manualDataCy}`);
 
-	const manualReset = page.locator("body").locator("section").filter({ hasText: "Text" }).first();
-	const reset = await schema.update(path).locator().getNestedLocator();
-	expect(`${reset}`).toEqual(`${manualReset}`);
+	const resetLocator = await schema.update(path).locator().getNestedLocator();
+	expect(`${resetLocator}`).toEqual(`${locator}`);
+
+	const resetRole = await schema.update(path).getByRole().getNestedLocator();
+	expect(`${resetRole}`).toEqual(`${role}`);
+
+	const resetText = await schema.update(path).getByText().getNestedLocator();
+	expect(`${resetText}`).toEqual(`${text}`);
+
+	const resetLabel = await schema.update(path).getByLabel().getNestedLocator();
+	expect(`${resetLabel}`).toEqual(`${label}`);
+
+	const resetPlaceholder = await schema.update(path).getByPlaceholder().getNestedLocator();
+	expect(`${resetPlaceholder}`).toEqual(`${placeholder}`);
+
+	const resetAltText = await schema.update(path).getByAltText().getNestedLocator();
+	expect(`${resetAltText}`).toEqual(`${altText}`);
+
+	const resetTitle = await schema.update(path).getByTitle().getNestedLocator();
+	expect(`${resetTitle}`).toEqual(`${title}`);
+
+	const resetFrameLocator = await schema.update(path).frameLocator().getNestedLocator();
+	expect(`${resetFrameLocator}`).toEqual(`${frameLocator}`);
+
+	const resetTestId = await schema.update(path).getByTestId().getNestedLocator();
+	expect(`${resetTestId}`).toEqual(`${testId}`);
+
+	const resetId = await schema.update(path).getById().getNestedLocator();
+	expect(`${resetId}`).toEqual(`${id}`);
+
+	const resetDataCy = await schema.update(path).getByDataCy().getNestedLocator();
+	expect(`${resetDataCy}`).toEqual(`${dataCy}`);
+
+	const resetLocatorAgain = await schema.update(path).locator().getNestedLocator();
+	expect(`${resetLocatorAgain}`).toEqual(`${locator}`);
+
+	const lastRoleClearSteps = await schema
+		.update(path)
+		.getByRole()
+		.clearSteps("body")
+		.clearSteps("body.section")
+		.getNestedLocator();
+	expect(`${lastRoleClearSteps}`).toEqual("locator('body').getByRole('region', { name: 'Now a region' })");
+
+	const stillNoFiltersAndIndicesOnAdditionalSwitch = await schema.update(path).locator().getNestedLocator();
+	expect(`${stillNoFiltersAndIndicesOnAdditionalSwitch}`).toEqual("locator('body').locator('newSelector')");
 });

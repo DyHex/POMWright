@@ -11,13 +11,17 @@ import type {
 	LocatorUpdate,
 	RegistryPath,
 } from "./types";
-import { expandSchemaPath, normalizeSteps } from "./utils";
+import { cloneLocatorStrategyDefinition, expandSchemaPath, normalizeSteps } from "./utils";
 
 export class LocatorQueryBuilder<
 	LocatorSchemaPathType extends string,
 	LocatorSubstring extends RegistryPath<LocatorSchemaPathType>,
 > {
 	private readonly definitions = new Map<string, LocatorStrategyDefinition>();
+	private readonly perPathTypeCache = new Map<
+		string,
+		Map<LocatorStrategyDefinition["type"], LocatorStrategyDefinition>
+	>();
 	private readonly steps = new Map<
 		string,
 		LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]
@@ -34,7 +38,9 @@ export class LocatorQueryBuilder<
 			if (!record) {
 				continue;
 			}
-			this.definitions.set(part, { ...record.definition });
+			const clonedDefinition = cloneLocatorStrategyDefinition(record.definition);
+			this.definitions.set(part, clonedDefinition);
+			this.ensureTypeCache(part, clonedDefinition);
 			const recordSteps = normalizeSteps<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>(
 				record.steps,
 			);
@@ -94,8 +100,12 @@ export class LocatorQueryBuilder<
 			throw new Error(`No locator schema registered for sub-path "${subPath}".`);
 		}
 		const baseline = this.registry.get(subPath as RegistryPath<LocatorSchemaPathType>).definition;
-		const merged = mergeLocatorDefinition(current, updates, subPath, baseline);
-		this.definitions.set(subPath, merged);
+		const cacheForPath = this.ensureTypeCache(subPath, cloneLocatorStrategyDefinition(baseline));
+		const cachedDefinition = cacheForPath.get(updates.type);
+		const merged = mergeLocatorDefinition(current, updates, subPath, cachedDefinition, baseline);
+		const mergedClone = cloneLocatorStrategyDefinition(merged);
+		cacheForPath.set(mergedClone.type, mergedClone);
+		this.definitions.set(subPath, mergedClone);
 		return this;
 	}
 
@@ -146,5 +156,18 @@ export class LocatorQueryBuilder<
 		overrides?: LocatorOverrides<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	) {
 		return this.registry.buildLocatorChain(this.path, this.definitions, this.steps, overrides);
+	}
+
+	private ensureTypeCache(subPath: string, baseline: LocatorStrategyDefinition) {
+		if (!this.perPathTypeCache.has(subPath)) {
+			this.perPathTypeCache.set(
+				subPath,
+				new Map<LocatorStrategyDefinition["type"], LocatorStrategyDefinition>([
+					[baseline.type, cloneLocatorStrategyDefinition(baseline)],
+				]),
+			);
+		}
+
+		return this.perPathTypeCache.get(subPath) as Map<LocatorStrategyDefinition["type"], LocatorStrategyDefinition>;
 	}
 }

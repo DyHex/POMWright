@@ -68,6 +68,7 @@ const mergeLocatorDefinition = (
 	current: LocatorStrategyDefinition,
 	updates: LocatorUpdate,
 	path: string,
+	preferredSource?: LocatorStrategyDefinition,
 	baseline?: LocatorStrategyDefinition,
 ): LocatorStrategyDefinition => {
 	if (!updates || typeof updates !== "object" || !("type" in updates)) {
@@ -77,6 +78,9 @@ const mergeLocatorDefinition = (
 	const source = <TType extends LocatorStrategyDefinition["type"]>(targetType: TType) => {
 		if (current.type === targetType) {
 			return current as Extract<LocatorStrategyDefinition, { type: TType }>;
+		}
+		if (preferredSource?.type === targetType) {
+			return preferredSource as Extract<LocatorStrategyDefinition, { type: TType }>;
 		}
 		if (baseline?.type === targetType) {
 			return baseline as Extract<LocatorStrategyDefinition, { type: TType }>;
