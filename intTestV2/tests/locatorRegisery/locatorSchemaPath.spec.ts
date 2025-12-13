@@ -1,12 +1,9 @@
-import type { Page } from "@playwright/test";
 import { expect, test } from "@fixtures-v2/withOptions";
-import { PlaywrightReportLogger, createRegistryWithAccessors } from "pomwright";
+import type { Page } from "@playwright/test";
+import { createRegistryWithAccessors } from "pomwright";
 import { formatLocatorSchemaPathForError } from "../../../srcV2/locators/utils.js";
 
-const createTestRegistry = <Paths extends string>(page: Page) => {
-	const logger = new PlaywrightReportLogger({ current: "debug", initial: "debug" }, [], "test-registry");
-	return createRegistryWithAccessors<Paths>(page, logger).registry;
-};
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
 test("flags invalid LocatorSchemaPaths at compile time and rejects them at runtime", async ({ page }) => {
 	type Paths =

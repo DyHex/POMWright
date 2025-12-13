@@ -109,7 +109,7 @@ export class LocatorQueryBuilder<
 		return this;
 	}
 
-	async getLocator() {
+	getLocator() {
 		const definition = this.definitions.get(this.path);
 
 		if (!definition) {
@@ -129,17 +129,17 @@ export class LocatorQueryBuilder<
 			],
 		]);
 
-		const { locator } = await this.registry.buildLocatorChain(this.path, definitions, steps);
+		const { locator } = this.registry.buildLocatorChain(this.path, definitions, steps);
 		if (!locator) {
 			throw new Error(`Unable to resolve direct locator for path "${this.path}".`);
 		}
 		return locator as Locator;
 	}
 
-	async getNestedLocator(
+	getNestedLocator(
 		overrides?: LocatorOverrides<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	) {
-		const { locator } = await this.resolve(overrides);
+		const { locator } = this.resolve(overrides);
 		if (!locator) {
 			throw new Error(`Unable to resolve nested locator for path "${this.path}".`);
 		}
@@ -152,7 +152,7 @@ export class LocatorQueryBuilder<
 		}
 	}
 
-	private async resolve(
+	private resolve(
 		overrides?: LocatorOverrides<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	) {
 		return this.registry.buildLocatorChain(this.path, this.definitions, this.steps, overrides);

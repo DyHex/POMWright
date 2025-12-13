@@ -1,7 +1,7 @@
 import { expect, test } from "@fixtures-v2/withOptions";
 
 test("filter adds an additional filter per sub-path", async ({ testFilters }) => {
-	const filtered = await testFilters
+	const filtered = testFilters
 		.getLocatorSchema("body.section")
 		.filter("body", { hasText: "Playground" })
 		.filter("body.section", { hasText: "Primary Colors Playground" })
@@ -13,9 +13,9 @@ test("filter adds an additional filter per sub-path", async ({ testFilters }) =>
 });
 
 test("filter with has locator", async ({ testFilters }) => {
-	const heading = await testFilters.getLocator("body.section.heading");
+	const heading = testFilters.getLocator("body.section.heading");
 
-	const filtered = await testFilters
+	const filtered = testFilters
 		.getLocatorSchema("fictional.filter@hasNotText")
 		.filter("fictional.filter@hasNotText", { has: heading })
 		.getNestedLocator();
@@ -26,21 +26,21 @@ test("filter with has locator", async ({ testFilters }) => {
 });
 
 test("filter chaining is non-destructive", async ({ testFilters }) => {
-	const base = await testFilters.getNestedLocator("body.section");
+	const base = testFilters.getNestedLocator("body.section");
 
-	const filtered = await testFilters
+	const filtered = testFilters
 		.getLocatorSchema("body.section")
 		.filter("body.section", { hasText: /Playground/i })
 		.getNestedLocator();
 
 	expect(`${filtered}`).toEqual("locator('body').locator('section').filter({ hasText: /Playground/i })");
 
-	const unchanged = await testFilters.getNestedLocator("body.section");
+	const unchanged = testFilters.getNestedLocator("body.section");
 	expect(`${unchanged}`).toEqual(`${base}`);
 });
 
 test("filter preserves call order when multiple filters target the same sub-path", async ({ testFilters }) => {
-	const locator = await testFilters
+	const locator = testFilters
 		.getLocatorSchema("body.section@playground.button@reset")
 		.filter("body.section@playground.button@reset", { hasText: /Reset/i })
 		.filter("body.section@playground.button@reset", { hasText: /Color/i })
@@ -52,7 +52,7 @@ test("filter preserves call order when multiple filters target the same sub-path
 });
 
 test("filter can layer ancestor and descendant filters simultaneously", async ({ testFilters }) => {
-	const locator = await testFilters
+	const locator = testFilters
 		.getLocatorSchema("body.section@playground.button@red")
 		.filter("body.section@playground.button@red", { hasText: /Red/i })
 		.filter("body", { hasText: /Playground/i })
@@ -65,7 +65,7 @@ test("filter can layer ancestor and descendant filters simultaneously", async ({
 });
 
 test("filter accepts locatorPath references for has/hasNot", async ({ testFilters }) => {
-	const locator = await testFilters
+	const locator = testFilters
 		.getLocatorSchema("body.section@playground.button@reset")
 		.filter("body.section@playground.button@reset", { has: { locatorPath: "body.section.heading" } })
 		.filter("body.section@playground.button@reset", {
@@ -79,7 +79,7 @@ test("filter accepts locatorPath references for has/hasNot", async ({ testFilter
 });
 
 test("filter accepts inline locator definitions for has/hasNot", async ({ testFilters }) => {
-	const locator = await testFilters
+	const locator = testFilters
 		.getLocatorSchema("body.section@playground")
 		.filter("body.section@playground", { has: { locator: { type: "locator", selector: "section" } } })
 		.filter("body.section@playground", {
@@ -95,18 +95,18 @@ test("filter accepts inline locator definitions for has/hasNot", async ({ testFi
 test("clearSteps clears existing filters for a sub-path", async ({ testFilters }) => {
 	const schema = testFilters.getLocatorSchema("fictional.filter@hasText");
 
-	const original = await schema.getNestedLocator();
+	const original = schema.getNestedLocator();
 	expect(`${original}`).toEqual("getByRole('button').filter({ hasText: 'hasText' })");
 
-	const noFilters = await schema.clearSteps("fictional.filter@hasText").getNestedLocator();
+	const noFilters = schema.clearSteps("fictional.filter@hasText").getNestedLocator();
 	expect(`${noFilters}`).toEqual("getByRole('button')");
 });
 
 test("clearSteps allows re-adding filters after clearing filters added through filter", async ({ testFilters }) => {
-	const original = await testFilters.getNestedLocator("fictional.filter@hasText");
+	const original = testFilters.getNestedLocator("fictional.filter@hasText");
 	expect(`${original}`).toEqual("getByRole('button').filter({ hasText: 'hasText' })");
 
-	const locator = await testFilters
+	const locator = testFilters
 		.getLocatorSchema("fictional.filter@hasText")
 		.filter("fictional.filter@hasText", { hasText: "this filter will be removed" })
 		.clearSteps("fictional.filter@hasText")
@@ -117,7 +117,7 @@ test("clearSteps allows re-adding filters after clearing filters added through f
 });
 
 test("clearSteps does not remove filters defined via locator options", async ({ testFilters }) => {
-	const locator = await testFilters
+	const locator = testFilters
 		.getLocatorSchema("body.section@playground")
 		.clearSteps("body.section@playground")
 		.getNestedLocator();
@@ -126,7 +126,7 @@ test("clearSteps does not remove filters defined via locator options", async ({ 
 });
 
 test("filter resolves both locatorPath and inline locators after clearing steps", async ({ testFilters }) => {
-	const locator = await testFilters
+	const locator = testFilters
 		.getLocatorSchema("fictional.filter@hasNotText")
 		.clearSteps("fictional.filter@hasNotText")
 		.filter("fictional.filter@hasNotText", { has: { locatorPath: "body.section.heading" } })

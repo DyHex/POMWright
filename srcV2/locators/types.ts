@@ -165,6 +165,19 @@ export type LocatorStrategyDefinition =
 	| IdDefinition
 	| DataCyDefinition;
 
+export type LocatorStrategyDefinitionPatch =
+	| { type: "role"; role?: RoleDefinition["role"]; options?: RoleDefinition["options"] }
+	| { type: "text"; text?: TextDefinition["text"]; options?: TextDefinition["options"] }
+	| { type: "label"; text?: LabelDefinition["text"]; options?: LabelDefinition["options"] }
+	| { type: "placeholder"; text?: PlaceholderDefinition["text"]; options?: PlaceholderDefinition["options"] }
+	| { type: "altText"; text?: AltTextDefinition["text"]; options?: AltTextDefinition["options"] }
+	| { type: "title"; text?: TitleDefinition["text"]; options?: TitleDefinition["options"] }
+	| { type: "locator"; selector?: LocatorDefinition["selector"]; options?: LocatorDefinition["options"] }
+	| { type: "frameLocator"; selector?: FrameLocatorDefinition["selector"] }
+	| { type: "testId"; testId?: TestIdDefinition["testId"] }
+	| { type: "id"; id?: IdDefinition["id"] }
+	| { type: "dataCy"; value?: DataCyDefinition["value"] };
+
 export type PlaywrightFilterDefinition = NonNullable<Parameters<Locator["filter"]>[0]>;
 export type ResolvedFilterDefinition = PlaywrightFilterDefinition;
 
@@ -174,6 +187,15 @@ export type LocatorStep<
 > =
 	| { kind: "filter"; filter: FilterDefinition<LocatorSchemaPathType, AllowedPaths> }
 	| { kind: "index"; index: IndexSelector | null };
+
+export type ReusableLocator<
+	LocatorSchemaPathType extends string = string,
+	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+> = {
+	type: LocatorStrategyDefinition["type"];
+	definition: LocatorStrategyDefinition;
+	steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[];
+};
 
 export type LocatorStepOverride<
 	LocatorSchemaPathType extends string = string,

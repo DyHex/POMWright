@@ -5,7 +5,7 @@ test("Should validate navigation using RegExp-based urlPath and fullUrl", async 
 
 	await testPath.expectThisPage();
 
-	const linkToColorPage = await testPath.getNestedLocator("body.link@color");
+	const linkToColorPage = testPath.getNestedLocator("body.link@color");
 	await linkToColorPage.waitFor({ state: "visible" });
 
 	await linkToColorPage.click();

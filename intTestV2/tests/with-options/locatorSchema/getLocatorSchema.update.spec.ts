@@ -1,10 +1,10 @@
 import { expect, test } from "@fixtures-v2/withOptions";
 
 test("update replaces intermediate definitions without mutating registry", async ({ testFilters }) => {
-	const original = await testFilters.getNestedLocator("body.section.heading");
+	const original = testFilters.getNestedLocator("body.section.heading");
 	expect(`${original}`).toEqual("locator('body').locator('section').getByRole('heading', { level: 2 })");
 
-	const replaced = await testFilters
+	const replaced = testFilters
 		.getLocatorSchema("body.section.heading")
 		.update("body.section")
 		.getByRole("heading", { level: 1 })
@@ -14,12 +14,12 @@ test("update replaces intermediate definitions without mutating registry", async
 		"locator('body').getByRole('heading', { level: 1 }).getByRole('heading', { level: 2 })",
 	);
 
-	const after = await testFilters.getNestedLocator("body.section.heading");
+	const after = testFilters.getNestedLocator("body.section.heading");
 	expect(`${after}`).toEqual(`${original}`);
 });
 
 test("update operations can be chained across sub-paths", async ({ testFilters }) => {
-	const chained = await testFilters
+	const chained = testFilters
 		.getLocatorSchema("body.section")
 		.update("body")
 		.locator("SOMEBODY")
@@ -31,7 +31,7 @@ test("update operations can be chained across sub-paths", async ({ testFilters }
 });
 
 test("update merges options without requiring full definitions", async ({ testFilters }) => {
-	const merged = await testFilters
+	const merged = testFilters
 		.getLocatorSchema("body.section.heading")
 		.update("body.section.heading")
 		.getByRole({ name: "HEADING TEXT" })
@@ -43,13 +43,13 @@ test("update merges options without requiring full definitions", async ({ testFi
 });
 
 test("update handles full and partial definitions from fresh builders", async ({ testFilters }) => {
-	const full = await testFilters
+	const full = testFilters
 		.getLocatorSchema("body.section.heading")
 		.update("body.section.heading")
 		.getByRole("heading", { level: 3 })
 		.getNestedLocator();
 
-	const partial = await testFilters
+	const partial = testFilters
 		.getLocatorSchema("body.section.heading")
 		.update("body.section.heading")
 		.getByRole({ level: 3 })
@@ -61,7 +61,7 @@ test("update handles full and partial definitions from fresh builders", async ({
 });
 
 test("update preserves registered filters on untouched segments", async ({ testFilters }) => {
-	const locator = await testFilters
+	const locator = testFilters
 		.getLocatorSchema("fictional.filter@hasNotText.filter@hasText")
 		.update("fictional.filter@hasNotText")
 		.getByRole("button", { name: "roleOptions" })
@@ -81,9 +81,9 @@ test("update rejects unknown sub-paths", ({ testFilters }) => {
 });
 
 test("update can mix ancestor and descendant changes without mutating registry", async ({ testFilters }) => {
-	const original = await testFilters.getNestedLocator("body.section.heading");
+	const original = testFilters.getNestedLocator("body.section.heading");
 
-	const chained = await testFilters
+	const chained = testFilters
 		.getLocatorSchema("body.section.heading")
 		.update("body")
 		.locator("SOMEBODY")
@@ -95,12 +95,12 @@ test("update can mix ancestor and descendant changes without mutating registry",
 		"locator('SOMEBODY').locator('section').getByRole('heading', { name: 'HEADING TEXT', level: 2 })",
 	);
 
-	const after = await testFilters.getNestedLocator("body.section.heading");
+	const after = testFilters.getNestedLocator("body.section.heading");
 	expect(`${after}`).toEqual(`${original}`);
 });
 
 test("update preserves filters on the target sub-path", async ({ testFilters }) => {
-	const locator = await testFilters
+	const locator = testFilters
 		.getLocatorSchema("fictional.filter@hasText")
 		.update("fictional.filter@hasText")
 		.locator("updated")
@@ -110,7 +110,7 @@ test("update preserves filters on the target sub-path", async ({ testFilters }) 
 });
 
 test("update patches definitions without altering chained filters or indices", async ({ testFilters }) => {
-	const updated = await testFilters
+	const updated = testFilters
 		.getLocatorSchema("body.section.button")
 		.filter("body.section.button", { hasText: /Click me!/ })
 		.nth("body.section", "first")
@@ -122,15 +122,15 @@ test("update patches definitions without altering chained filters or indices", a
 		"locator('body').locator('section').first().getByRole('button', { name: 'Click me!' }).filter({ hasText: /Click me!/ })",
 	);
 
-	const untouched = await testFilters.getLocatorSchema("body.section.button").getNestedLocator();
+	const untouched = testFilters.getLocatorSchema("body.section.button").getNestedLocator();
 	expect(`${untouched}`).toEqual("locator('body').locator('section').getByRole('button')");
 });
 
 test("update can remove locator options filters", async ({ testFilters }) => {
-	const original = await testFilters.getNestedLocator("body.section@playground");
+	const original = testFilters.getNestedLocator("body.section@playground");
 	expect(`${original}`).toEqual("locator('body').locator('section').filter({ hasText: /Playground/i })");
 
-	const locator = await testFilters
+	const locator = testFilters
 		.getLocatorSchema("body.section@playground")
 		.update("body.section@playground")
 		.locator(undefined, undefined)

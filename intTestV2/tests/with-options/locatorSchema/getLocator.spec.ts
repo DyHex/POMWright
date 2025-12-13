@@ -5,23 +5,23 @@ test.afterEach(async ({ testPage }) => {
 });
 
 test("getLocator should return the single locator the complete LocatorSchemaPath resolves to", async ({ testPage }) => {
-	const locator = await testPage.getLocator("topMenu.notifications.dropdown.item");
+	const locator = testPage.getLocator("topMenu.notifications.dropdown.item");
 	expect(locator).not.toBeNull();
 	expect(locator).not.toBeUndefined();
 	expect(`${locator}`).toEqual("locator('.w3-bar-item')");
 });
 
 test("should be able to manually chain locators returned by getLocator", async ({ testPage }) => {
-	const topMenu = await testPage.getLocator("topMenu");
+	const topMenu = testPage.getLocator("topMenu");
 
-	const topMenuNotifications = topMenu.locator(await testPage.getLocator("topMenu.notifications"));
+	const topMenuNotifications = topMenu.locator(testPage.getLocator("topMenu.notifications"));
 
 	const topMenuNotificationsDropdown = topMenuNotifications.locator(
-		await testPage.getLocator("topMenu.notifications.dropdown"),
+		testPage.getLocator("topMenu.notifications.dropdown"),
 	);
 
 	const topMenuNotificationsDropdownItem = topMenuNotificationsDropdown.locator(
-		await testPage.getLocator("topMenu.notifications.dropdown.item"),
+		testPage.getLocator("topMenu.notifications.dropdown.item"),
 	);
 
 	expect(topMenuNotificationsDropdownItem).not.toBeNull();
@@ -32,36 +32,56 @@ test("should be able to manually chain locators returned by getLocator", async (
 });
 
 test("getLocator fluent wrapper supports update and clearSteps", async ({ testFilters }) => {
-	const updated = await testFilters.getLocator("body.section.heading").update().getByRole("heading", { level: 3 });
+	const updated = testFilters
+		.getLocatorSchema("body.section.heading")
+		.update("body.section.heading")
+		.getByRole("heading", { level: 3 })
+		.getLocator();
 
 	expect(`${updated}`).toEqual("getByRole('heading', { level: 3 })");
 
-	const cleared = await testFilters.getLocator("fictional.filter@hasText").clearSteps();
+	const cleared = testFilters
+		.getLocatorSchema("fictional.filter@hasText")
+		.clearSteps("fictional.filter@hasText")
+		.getLocator();
 
 	expect(`${cleared}`).toEqual("getByRole('button')");
 });
 
 test("getLocator update accepts partial patch arguments", async ({ testFilters }) => {
-	const baseline = await testFilters.getLocator("body.section.heading");
+	const baseline = testFilters.getLocator("body.section.heading");
 
 	expect(`${baseline}`).toEqual("getByRole('heading', { level: 2 })");
 
-	const noArgs = await testFilters.getLocator("body.section.heading").update().getByRole();
+	const noArgs = testFilters
+		.getLocatorSchema("body.section.heading")
+		.update("body.section.heading")
+		.getByRole()
+		.getLocator();
 
 	expect(`${noArgs}`).toEqual("getByRole('heading', { level: 2 })");
 
-	const optionsOnly = await testFilters.getLocator("body.section.heading").update().getByRole({ level: 4 });
+	const optionsOnly = testFilters
+		.getLocatorSchema("body.section.heading")
+		.update("body.section.heading")
+		.getByRole({ level: 4 })
+		.getLocator();
 
 	expect(`${optionsOnly}`).toEqual("getByRole('heading', { level: 4 })");
 
-	const roleOnly = await testFilters.getLocator("body.section.heading").update().getByRole("heading");
+	const roleOnly = testFilters
+		.getLocatorSchema("body.section.heading")
+		.update("body.section.heading")
+		.getByRole("heading")
+		.getLocator();
 
 	expect(`${roleOnly}`).toEqual("getByRole('heading', { level: 2 })");
 
-	const roleAndOptions = await testFilters
-		.getLocator("body.section.heading")
-		.update()
-		.getByRole("heading", { level: 5 });
+	const roleAndOptions = testFilters
+		.getLocatorSchema("body.section.heading")
+		.update("body.section.heading")
+		.getByRole("heading", { level: 5 })
+		.getLocator();
 
 	expect(`${roleAndOptions}`).toEqual("getByRole('heading', { level: 5 })");
 });

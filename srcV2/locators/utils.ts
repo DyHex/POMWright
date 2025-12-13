@@ -1,13 +1,24 @@
 import type { Locator, Page } from "@playwright/test";
 import type {
+	AltTextDefinition,
+	DataCyDefinition,
 	FilterDefinition,
 	FrameLocatorDefinition,
+	IdDefinition,
 	IndexSelector,
+	LabelDefinition,
 	LocatorBuilderTarget,
+	LocatorDefinition,
 	LocatorOverrides,
 	LocatorStep,
 	LocatorStepOverride,
 	LocatorStrategyDefinition,
+	LocatorStrategyDefinitionPatch,
+	PlaceholderDefinition,
+	RoleDefinition,
+	TestIdDefinition,
+	TextDefinition,
+	TitleDefinition,
 } from "./types";
 
 // Used only at runtime for messages: escape all special chars so
@@ -248,6 +259,93 @@ export const cloneLocatorStrategyDefinition = (definition: LocatorStrategyDefini
 			return { type: "dataCy", value: definition.value };
 		default: {
 			const exhaustive: never = definition;
+			return exhaustive;
+		}
+	}
+};
+
+export const applyDefinitionPatch = (
+	seed: LocatorStrategyDefinition,
+	patch: LocatorStrategyDefinition | LocatorStrategyDefinitionPatch,
+): LocatorStrategyDefinition => {
+	const base = cloneLocatorStrategyDefinition(seed);
+
+	switch (patch.type) {
+		case "locator": {
+			const selector = patch.selector !== undefined ? patch.selector : (base as LocatorDefinition).selector;
+			const options =
+				patch.options || (base as LocatorDefinition).options
+					? { ...(base as LocatorDefinition).options, ...patch.options }
+					: undefined;
+			return { type: "locator", selector, ...(options ? { options } : {}) } satisfies LocatorDefinition;
+		}
+		case "role": {
+			const role = patch.role ?? (base as RoleDefinition).role;
+			const options =
+				patch.options || (base as RoleDefinition).options
+					? { ...(base as RoleDefinition).options, ...patch.options }
+					: undefined;
+			return { type: "role", role, ...(options ? { options } : {}) } satisfies RoleDefinition;
+		}
+		case "text": {
+			const text = patch.text ?? (base as TextDefinition).text;
+			const options =
+				patch.options || (base as TextDefinition).options
+					? { ...(base as TextDefinition).options, ...patch.options }
+					: undefined;
+			return { type: "text", text, ...(options ? { options } : {}) } satisfies TextDefinition;
+		}
+		case "label": {
+			const text = patch.text ?? (base as LabelDefinition).text;
+			const options =
+				patch.options || (base as LabelDefinition).options
+					? { ...(base as LabelDefinition).options, ...patch.options }
+					: undefined;
+			return { type: "label", text, ...(options ? { options } : {}) } satisfies LabelDefinition;
+		}
+		case "placeholder": {
+			const text = patch.text ?? (base as PlaceholderDefinition).text;
+			const options =
+				patch.options || (base as PlaceholderDefinition).options
+					? { ...(base as PlaceholderDefinition).options, ...patch.options }
+					: undefined;
+			return { type: "placeholder", text, ...(options ? { options } : {}) } satisfies PlaceholderDefinition;
+		}
+		case "altText": {
+			const text = patch.text ?? (base as AltTextDefinition).text;
+			const options =
+				patch.options || (base as AltTextDefinition).options
+					? { ...(base as AltTextDefinition).options, ...patch.options }
+					: undefined;
+			return { type: "altText", text, ...(options ? { options } : {}) } satisfies AltTextDefinition;
+		}
+		case "title": {
+			const text = patch.text ?? (base as TitleDefinition).text;
+			const options =
+				patch.options || (base as TitleDefinition).options
+					? { ...(base as TitleDefinition).options, ...patch.options }
+					: undefined;
+			return { type: "title", text, ...(options ? { options } : {}) } satisfies TitleDefinition;
+		}
+		case "frameLocator": {
+			const selector = patch.selector !== undefined ? patch.selector : (base as FrameLocatorDefinition).selector;
+			return { type: "frameLocator", selector } satisfies FrameLocatorDefinition;
+		}
+		case "testId": {
+			const testId = patch.testId !== undefined ? patch.testId : (base as TestIdDefinition).testId;
+			return { type: "testId", testId } satisfies TestIdDefinition;
+		}
+		case "id": {
+			const id =
+				patch.id !== undefined ? (normalizeIdValue(patch.id) ?? (base as IdDefinition).id) : (base as IdDefinition).id;
+			return { type: "id", id } satisfies IdDefinition;
+		}
+		case "dataCy": {
+			const value = patch.value ?? (base as DataCyDefinition).value;
+			return { type: "dataCy", value } satisfies DataCyDefinition;
+		}
+		default: {
+			const exhaustive: never = patch;
 			return exhaustive;
 		}
 	}

@@ -5,7 +5,7 @@ const expectedChain =
 	"getByRole('button').filter({ hasNotText: 'hasNotText' }).nth(2).getByRole('button').filter({ hasText: 'hasText' }).getByRole('button').filter({ hasNotText: 'hasNotText' }).getByRole('button').filter({ hasText: 'hasText' })";
 
 test("getNestedLocator applies index overrides", async ({ testFilters }) => {
-	const locator = await testFilters.getNestedLocator(fullPath, {
+	const locator = testFilters.getLocatorSchema(fullPath).getNestedLocator({
 		"fictional.filter@hasNotText": 2,
 	});
 
@@ -14,14 +14,14 @@ test("getNestedLocator applies index overrides", async ({ testFilters }) => {
 });
 
 test("getLocatorSchema.getNestedLocator applies overrides", async ({ testFilters }) => {
-	const locator = await testFilters.getLocatorSchema(fullPath).getNestedLocator({ "fictional.filter@hasNotText": 2 });
+	const locator = testFilters.getLocatorSchema(fullPath).getNestedLocator({ "fictional.filter@hasNotText": 2 });
 
 	expect(`${locator}`).toContain(".nth(2)");
 	expect(`${locator}`).toEqual(expectedChain);
 });
 
 test("getNestedLocator accepts ordered filter and index override arrays", async ({ testFilters }) => {
-	const locator = await testFilters.getNestedLocator("fictional.filter@hasText", {
+	const locator = testFilters.getLocatorSchema("fictional.filter@hasText").getNestedLocator({
 		"fictional.filter@hasText": [{ filter: { hasText: "extra" } }, { nth: 1 }, { filter: { hasNotText: "tail" } }],
 	});
 
@@ -31,7 +31,7 @@ test("getNestedLocator accepts ordered filter and index override arrays", async 
 });
 
 test("getNestedLocator maps negative indexes to last()", async ({ testFilters }) => {
-	const locator = await testFilters.getNestedLocator(fullPath, {
+	const locator = testFilters.getLocatorSchema(fullPath).getNestedLocator({
 		"fictional.filter@hasNotText": -1,
 	});
 
@@ -41,7 +41,7 @@ test("getNestedLocator maps negative indexes to last()", async ({ testFilters })
 });
 
 test('getNestedLocator accepts "first" and "last" overrides', async ({ testFilters }) => {
-	const locator = await testFilters.getNestedLocator(fullPath, {
+	const locator = testFilters.getLocatorSchema(fullPath).getNestedLocator({
 		"fictional.filter@hasNotText": "first",
 		"fictional.filter@hasNotText.filter@hasText.filter@hasNotText": "last",
 	});
@@ -51,25 +51,25 @@ test('getNestedLocator accepts "first" and "last" overrides', async ({ testFilte
 });
 
 test("getNestedLocator rejects overrides for unknown sub-paths", async ({ testFilters }) => {
-	await expect(async () => {
-		await testFilters.getNestedLocator(fullPath, { fictional: 1 });
-	}).rejects.toThrow(
+	expect(() => {
+		testFilters.getLocatorSchema(fullPath).getNestedLocator({ fictional: 1 });
+	}).toThrow(
 		'Missing locator definition for "fictional" while resolving "fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText".',
 	);
 });
 
 test("getLocatorSchema.getNestedLocator rejects overrides for unknown sub-paths", async ({ testFilters }) => {
-	await expect(async () => {
-		await testFilters.getLocatorSchema(fullPath).getNestedLocator({ fictional: 1 });
-	}).rejects.toThrow(
+	expect(() => {
+		testFilters.getLocatorSchema(fullPath).getNestedLocator({ fictional: 1 });
+	}).toThrow(
 		'Missing locator definition for "fictional" while resolving "fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText".',
 	);
 });
 
 test("getLocatorSchema.getNestedLocator rejects overrides for partially matching paths", async ({ testFilters }) => {
-	await expect(async () => {
-		await testFilters.getLocatorSchema(fullPath).getNestedLocator({ "fictional.filter@has": 1 });
-	}).rejects.toThrow(
+	expect(() => {
+		testFilters.getLocatorSchema(fullPath).getNestedLocator({ "fictional.filter@has": 1 });
+	}).toThrow(
 		'Missing locator definition for "fictional.filter@has" while resolving "fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText".',
 	);
 });

@@ -11,51 +11,89 @@ import type {
 	LocatorSchemaRecord,
 	LocatorStep,
 	LocatorStrategyDefinition,
+	LocatorStrategyDefinitionPatch,
 	PlaceholderDefinition,
 	RegistryPath,
 	RoleDefinition,
 	TextDefinition,
 	TitleDefinition,
 } from "./types";
-import { normalizeIdValue, normalizeSteps } from "./utils";
+import { applyDefinitionPatch, normalizeIdValue, normalizeSteps } from "./utils";
+
+export type LocatorRegistrationPostDefinitionBuilder<
+	LocatorSchemaPathType extends string,
+	Path extends RegistryPath<LocatorSchemaPathType>,
+> = {
+	filter: (
+		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
+	) => LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	nth: (index: IndexSelector) => LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+};
 
 export class LocatorRegistrationBuilder<
 	LocatorSchemaPathType extends string,
 	Path extends RegistryPath<LocatorSchemaPathType>,
+	Seeded extends boolean = false,
 > {
 	private steps: LocatorStep<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>[] = [];
 	private definition?: LocatorStrategyDefinition;
 	private registered = false;
+	private readonly reuseType?: LocatorStrategyDefinition["type"];
+	private readonly seededDefinition: boolean;
+	private overrideApplied = false;
+	private postDefinitionView?: LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 
 	constructor(
 		private readonly registry: LocatorRegistry<LocatorSchemaPathType>,
 		private readonly path: Path,
-	) {}
+		seed?: {
+			initialDefinition?: LocatorStrategyDefinition;
+			initialSteps?: LocatorStep<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>[];
+			reuseType?: LocatorStrategyDefinition["type"];
+		},
+	) {
+		if (seed?.initialSteps) {
+			this.steps = normalizeSteps<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>(seed.initialSteps);
+		}
 
-	filter(filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>) {
-		this.ensureDefinition();
-		this.steps.push({ kind: "filter", filter });
-		this.persist();
-		return this;
+		if (seed?.initialDefinition) {
+			this.definition = seed.initialDefinition;
+			this.persist();
+			this.seededDefinition = true;
+		} else {
+			this.seededDefinition = false;
+		}
+
+		this.reuseType = seed?.reuseType;
 	}
 
-	nth(index: IndexSelector) {
-		this.ensureDefinition();
-		this.steps.push({ kind: "index", index });
-		this.persist();
-		return this;
+	filter(
+		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+		this.applyFilter(filter);
+		return this.getPostDefinitionView();
+	}
+
+	nth(index: IndexSelector): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+		this.applyIndex(index);
+		return this.getPostDefinitionView();
 	}
 
 	getByRole(
 		role: RoleDefinition["role"],
 		options: RoleDefinition["options"],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByRole(role: RoleDefinition["role"]): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByRole(role: RoleDefinition["role"], options?: RoleDefinition["options"]) {
-		const definition =
-			options !== undefined
-				? ({ type: "role", role, options } as RoleDefinition)
-				: ({ type: "role", role } as RoleDefinition);
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByRole(role: RoleDefinition["role"]): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByRole(
+		options: Seeded extends true ? RoleDefinition["options"] : never,
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByRole(roleOrOptions: RoleDefinition["role"] | RoleDefinition["options"], options?: RoleDefinition["options"]) {
+		const definition: LocatorStrategyDefinitionPatch =
+			typeof roleOrOptions === "string"
+				? options !== undefined
+					? { type: "role", role: roleOrOptions, options }
+					: { type: "role", role: roleOrOptions }
+				: { type: "role", options: roleOrOptions };
 
 		return this.commit(definition);
 	}
@@ -63,13 +101,18 @@ export class LocatorRegistrationBuilder<
 	getByText(
 		text: string,
 		options: Parameters<Page["getByText"]>[1],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByText(text: string): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByText(text: string, options?: Parameters<Page["getByText"]>[1]) {
-		const definition =
-			options !== undefined
-				? ({ type: "text", text, options } as TextDefinition)
-				: ({ type: "text", text } as TextDefinition);
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByText(text: string): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByText(
+		options: Seeded extends true ? Parameters<Page["getByText"]>[1] : never,
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByText(textOrOptions: string | Parameters<Page["getByText"]>[1], options?: Parameters<Page["getByText"]>[1]) {
+		const definition: LocatorStrategyDefinitionPatch =
+			typeof textOrOptions === "string" || textOrOptions instanceof RegExp
+				? options !== undefined
+					? ({ type: "text", text: textOrOptions, options } as TextDefinition)
+					: ({ type: "text", text: textOrOptions } as TextDefinition)
+				: { type: "text", options: textOrOptions };
 
 		return this.commit(definition);
 	}
@@ -77,13 +120,18 @@ export class LocatorRegistrationBuilder<
 	getByLabel(
 		text: string,
 		options: Parameters<Page["getByLabel"]>[1],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByLabel(text: string): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByLabel(text: string, options?: Parameters<Page["getByLabel"]>[1]) {
-		const definition =
-			options !== undefined
-				? ({ type: "label", text, options } as LabelDefinition)
-				: ({ type: "label", text } as LabelDefinition);
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByLabel(text: string): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByLabel(
+		options: Seeded extends true ? Parameters<Page["getByLabel"]>[1] : never,
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByLabel(textOrOptions: string | Parameters<Page["getByLabel"]>[1], options?: Parameters<Page["getByLabel"]>[1]) {
+		const definition: LocatorStrategyDefinitionPatch =
+			typeof textOrOptions === "string"
+				? options !== undefined
+					? ({ type: "label", text: textOrOptions, options } as LabelDefinition)
+					: ({ type: "label", text: textOrOptions } as LabelDefinition)
+				: { type: "label", options: textOrOptions };
 
 		return this.commit(definition);
 	}
@@ -91,13 +139,21 @@ export class LocatorRegistrationBuilder<
 	getByPlaceholder(
 		text: string,
 		options: Parameters<Page["getByPlaceholder"]>[1],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByPlaceholder(text: string): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByPlaceholder(text: string, options?: Parameters<Page["getByPlaceholder"]>[1]) {
-		const definition =
-			options !== undefined
-				? ({ type: "placeholder", text, options } as PlaceholderDefinition)
-				: ({ type: "placeholder", text } as PlaceholderDefinition);
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByPlaceholder(text: string): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByPlaceholder(
+		options: Seeded extends true ? Parameters<Page["getByPlaceholder"]>[1] : never,
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByPlaceholder(
+		textOrOptions: string | Parameters<Page["getByPlaceholder"]>[1],
+		options?: Parameters<Page["getByPlaceholder"]>[1],
+	) {
+		const definition: LocatorStrategyDefinitionPatch =
+			typeof textOrOptions === "string"
+				? options !== undefined
+					? ({ type: "placeholder", text: textOrOptions, options } as PlaceholderDefinition)
+					: ({ type: "placeholder", text: textOrOptions } as PlaceholderDefinition)
+				: { type: "placeholder", options: textOrOptions };
 
 		return this.commit(definition);
 	}
@@ -105,13 +161,21 @@ export class LocatorRegistrationBuilder<
 	getByAltText(
 		text: string,
 		options: Parameters<Page["getByAltText"]>[1],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByAltText(text: string): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByAltText(text: string, options?: Parameters<Page["getByAltText"]>[1]) {
-		const definition =
-			options !== undefined
-				? ({ type: "altText", text, options } as AltTextDefinition)
-				: ({ type: "altText", text } as AltTextDefinition);
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByAltText(text: string): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByAltText(
+		options: Seeded extends true ? Parameters<Page["getByAltText"]>[1] : never,
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByAltText(
+		textOrOptions: string | Parameters<Page["getByAltText"]>[1],
+		options?: Parameters<Page["getByAltText"]>[1],
+	) {
+		const definition: LocatorStrategyDefinitionPatch =
+			typeof textOrOptions === "string"
+				? options !== undefined
+					? ({ type: "altText", text: textOrOptions, options } as AltTextDefinition)
+					: ({ type: "altText", text: textOrOptions } as AltTextDefinition)
+				: { type: "altText", options: textOrOptions };
 
 		return this.commit(definition);
 	}
@@ -119,13 +183,18 @@ export class LocatorRegistrationBuilder<
 	getByTitle(
 		text: string,
 		options: Parameters<Page["getByTitle"]>[1],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByTitle(text: string): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	getByTitle(text: string, options?: Parameters<Page["getByTitle"]>[1]) {
-		const definition =
-			options !== undefined
-				? ({ type: "title", text, options } as TitleDefinition)
-				: ({ type: "title", text } as TitleDefinition);
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByTitle(text: string): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByTitle(
+		options: Seeded extends true ? Parameters<Page["getByTitle"]>[1] : never,
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByTitle(textOrOptions: string | Parameters<Page["getByTitle"]>[1], options?: Parameters<Page["getByTitle"]>[1]) {
+		const definition: LocatorStrategyDefinitionPatch =
+			typeof textOrOptions === "string"
+				? options !== undefined
+					? ({ type: "title", text: textOrOptions, options } as TitleDefinition)
+					: ({ type: "title", text: textOrOptions } as TitleDefinition)
+				: { type: "title", options: textOrOptions };
 
 		return this.commit(definition);
 	}
@@ -133,37 +202,112 @@ export class LocatorRegistrationBuilder<
 	locator(
 		selector: Parameters<Page["locator"]>[0],
 		options: Parameters<Page["locator"]>[1],
-	): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	locator(selector: Parameters<Page["locator"]>[0]): LocatorRegistrationBuilder<LocatorSchemaPathType, Path>;
-	locator(selector: Parameters<Page["locator"]>[0], options?: Parameters<Page["locator"]>[1]) {
-		const definition =
-			options !== undefined
-				? ({ type: "locator", selector, options } as LocatorDefinition)
-				: ({ type: "locator", selector } as LocatorDefinition);
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	locator(
+		selector: Parameters<Page["locator"]>[0],
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	locator(
+		options: Seeded extends true ? Parameters<Page["locator"]>[1] : never,
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	locator(
+		selectorOrOptions: Parameters<Page["locator"]>[0] | Parameters<Page["locator"]>[1],
+		options?: Parameters<Page["locator"]>[1],
+	) {
+		const definition: LocatorStrategyDefinitionPatch =
+			typeof selectorOrOptions === "string"
+				? options !== undefined
+					? ({ type: "locator", selector: selectorOrOptions, options } as LocatorDefinition)
+					: ({ type: "locator", selector: selectorOrOptions } as LocatorDefinition)
+				: { type: "locator", options: selectorOrOptions };
 
 		return this.commit(definition);
 	}
 
-	frameLocator(selector: Parameters<Page["frameLocator"]>[0]) {
-		return this.commit({ type: "frameLocator", selector });
+	frameLocator(
+		selector: Seeded extends true
+			? Parameters<Page["frameLocator"]>[0] | undefined
+			: Parameters<Page["frameLocator"]>[0],
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+		const definition: LocatorStrategyDefinitionPatch = selector
+			? { type: "frameLocator", selector }
+			: { type: "frameLocator" };
+		return this.commit(definition);
 	}
 
-	getByTestId(testId: Parameters<Page["getByTestId"]>[0]) {
-		return this.commit({ type: "testId", testId });
+	getByTestId(
+		testId: Seeded extends true ? Parameters<Page["getByTestId"]>[0] | undefined : Parameters<Page["getByTestId"]>[0],
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+		const definition: LocatorStrategyDefinitionPatch = testId ? { type: "testId", testId } : { type: "testId" };
+		return this.commit(definition);
 	}
 
-	getById(id: string | RegExp) {
-		return this.commit({ type: "id", id: normalizeIdValue(id) as IdDefinition["id"] });
+	getById(
+		id: Seeded extends true ? string | RegExp | undefined : string | RegExp,
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+		const definition: LocatorStrategyDefinitionPatch = id
+			? { type: "id", id: normalizeIdValue(id) as IdDefinition["id"] }
+			: { type: "id" };
+		return this.commit(definition);
 	}
 
-	getByDataCy(value: DataCyDefinition["value"]) {
-		return this.commit({ type: "dataCy", value });
+	getByDataCy(
+		value: Seeded extends true ? DataCyDefinition["value"] | undefined : DataCyDefinition["value"],
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+		const definition: LocatorStrategyDefinitionPatch = value ? { type: "dataCy", value } : { type: "dataCy" };
+		return this.commit(definition);
 	}
 
-	private commit(definition: LocatorStrategyDefinition) {
-		this.definition = definition;
+	private commit(
+		definition: LocatorStrategyDefinition | LocatorStrategyDefinitionPatch,
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+		this.ensureDefinitionAllowed(definition as LocatorStrategyDefinition);
+		const mergedDefinition = this.seededDefinition
+			? applyDefinitionPatch(this.definition as LocatorStrategyDefinition, definition)
+			: (definition as LocatorStrategyDefinition);
+		this.definition = mergedDefinition;
+		if (this.reuseType && this.seededDefinition) {
+			this.overrideApplied = true;
+		}
 		this.persist();
-		return this;
+		return this.getPostDefinitionView();
+	}
+
+	private applyFilter(
+		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
+	) {
+		this.ensureDefinition();
+		this.steps.push({ kind: "filter", filter });
+		this.persist();
+	}
+
+	private applyIndex(index: IndexSelector) {
+		this.ensureDefinition();
+		this.steps.push({ kind: "index", index });
+		this.persist();
+	}
+
+	private ensureDefinitionAllowed(definition: LocatorStrategyDefinition) {
+		if (this.seededDefinition) {
+			if (definition.type !== this.reuseType) {
+				throw new Error(
+					`The locator definition for "${this.path}" must use the "${this.reuseType}" strategy when reusing a locator.`,
+				);
+			}
+
+			if (this.overrideApplied) {
+				throw new Error(
+					`A locator definition for "${this.path}" was already provided from reuse; only one matching override is allowed.`,
+				);
+			}
+
+			return;
+		}
+
+		if (this.definition) {
+			throw new Error(
+				`A locator definition for "${this.path}" has already been provided; only one locator type can be set for a registration.`,
+			);
+		}
 	}
 
 	private ensureDefinition() {
@@ -190,4 +334,73 @@ export class LocatorRegistrationBuilder<
 			this.registered = true;
 		}
 	}
+
+	private getPostDefinitionView(): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+		if (this.postDefinitionView) {
+			return this.postDefinitionView;
+		}
+
+		const view: LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> = {
+			filter: (filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>) => {
+				this.applyFilter(filter);
+				return view;
+			},
+			nth: (index: IndexSelector) => {
+				this.applyIndex(index);
+				return view;
+			},
+		};
+
+		this.postDefinitionView = view;
+		return view;
+	}
 }
+
+export type LocatorRegistrationPreDefinitionBuilder<
+	LocatorSchemaPathType extends string,
+	Path extends RegistryPath<LocatorSchemaPathType>,
+	Seeded extends boolean = false,
+> = LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> &
+	Pick<
+		LocatorRegistrationBuilder<LocatorSchemaPathType, Path, Seeded>,
+		| "getByRole"
+		| "getByText"
+		| "getByLabel"
+		| "getByPlaceholder"
+		| "getByAltText"
+		| "getByTitle"
+		| "locator"
+		| "frameLocator"
+		| "getByTestId"
+		| "getById"
+		| "getByDataCy"
+	>;
+
+type LocatorMethodForType<Type extends LocatorStrategyDefinition["type"]> = Type extends "role"
+	? "getByRole"
+	: Type extends "text"
+		? "getByText"
+		: Type extends "label"
+			? "getByLabel"
+			: Type extends "placeholder"
+				? "getByPlaceholder"
+				: Type extends "altText"
+					? "getByAltText"
+					: Type extends "title"
+						? "getByTitle"
+						: Type extends "locator"
+							? "locator"
+							: Type extends "frameLocator"
+								? "frameLocator"
+								: Type extends "testId"
+									? "getByTestId"
+									: Type extends "id"
+										? "getById"
+										: "getByDataCy";
+
+export type LocatorRegistrationSeededBuilderForType<
+	LocatorSchemaPathType extends string,
+	Path extends RegistryPath<LocatorSchemaPathType>,
+	SeededType extends LocatorStrategyDefinition["type"],
+> = LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> &
+	Pick<LocatorRegistrationBuilder<LocatorSchemaPathType, Path, true>, LocatorMethodForType<SeededType>>;

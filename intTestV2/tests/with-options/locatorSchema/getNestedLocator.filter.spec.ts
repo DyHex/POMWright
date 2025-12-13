@@ -58,7 +58,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 				}
 			})();
 
-			const nested = await query.getNestedLocator();
+			const nested = query.getNestedLocator();
 
 			expect(`${nested}`).toEqual(expected);
 		});
@@ -70,7 +70,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			.update("fictional.filter@hasNotText.filter@hasText")
 			.frameLocator('iframe[title="name"]');
 
-		const directFrameLocator = await frameTerminalBuilder.getLocator();
+		const directFrameLocator = frameTerminalBuilder.getLocator();
 		const manualFrame = page.frameLocator('iframe[title="name"]').owner();
 
 		expect(`${directFrameLocator}`).toEqual(`${manualFrame}`);
@@ -82,7 +82,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			.update("fictional.filter@hasNotText.filter@hasText.filter@hasNotText")
 			.getByRole("button", { name: "inside frame" });
 
-		const nested = await nestedBuilder.getNestedLocator();
+		const nested = nestedBuilder.getNestedLocator();
 		const manualNested = page
 			.getByRole("button")
 			.filter({ hasNotText: "hasNotText" })
@@ -94,7 +94,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	});
 
 	test("multiple nesting/chaining retains filters across the chain", async ({ testFilters }) => {
-		const multiChain = await testFilters
+		const multiChain = testFilters
 			.getLocatorSchema("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText")
 			.update("fictional.filter@hasNotText")
 			.getByRole("button", { name: "roleOptions" })
@@ -115,12 +115,12 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	});
 
 	test("filter definitions that omit options stay stable", async ({ testFilters }) => {
-		const nested = await testFilters.getNestedLocator("fictional.filter@optionsUndefined");
+		const nested = testFilters.getNestedLocator("fictional.filter@optionsUndefined");
 		expect(`${nested}`).toEqual("getByRole('button')");
 	});
 
 	test("schema filters resolve locatorPath references", async ({ testFilters, page }) => {
-		const nested = await testFilters.getNestedLocator("fictional.locatorAndOptionsWithfilter@allOptions");
+		const nested = testFilters.getNestedLocator("fictional.locatorAndOptionsWithfilter@allOptions");
 
 		const manual = page.getByRole("button", { name: "roleOptions" }).filter({
 			has: page.getByRole("heading", { level: 2 }),
@@ -149,7 +149,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	});
 
 	test("schema filters can inline locator definitions", async ({ testFilters }) => {
-		const nested = await testFilters.getNestedLocator("fictional.locatorWithfilter@allOptions");
+		const nested = testFilters.getNestedLocator("fictional.locatorWithfilter@allOptions");
 
 		expect(`${nested}`).toEqual(
 			"getByRole('button').filter({ hasText: 'hasText' }).filter({ hasNotText: 'hasNotText' }).filter({ has: locator('section') }).filter({ hasNot: locator('[data-cy=missing]') })",
@@ -157,18 +157,18 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	});
 
 	test("frame locator definitions are rejected inside filters", async ({ testFilters }) => {
-		await expect(
+		expect(() =>
 			testFilters
 				.getLocatorSchema("fictional.filter@hasNotText")
 				.filter("fictional.filter@hasNotText", {
 					has: { locator: { type: "frameLocator", selector: "iframe" } },
 				})
 				.getNestedLocator(),
-		).rejects.toThrow(/Frame locators cannot be used as filter locators/);
+		).toThrow(/Frame locators cannot be used as filter locators/);
 	});
 
 	test("getNestedLocator resolves has/hasNot locatorPath references", async ({ testFilters }) => {
-		const nested = await testFilters
+		const nested = testFilters
 			.getLocatorSchema("fictional.filter@hasNotText")
 			.filter("fictional.filter@hasNotText", { has: { locatorPath: "body.section.heading" } })
 			.filter("fictional.filter@hasNotText", { hasNot: { locatorPath: "body.section@playground.button@red" } })
@@ -180,7 +180,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	});
 
 	test("getNestedLocator resolves inline locator definitions for has/hasNot", async ({ testFilters }) => {
-		const nested = await testFilters
+		const nested = testFilters
 			.getLocatorSchema("fictional.filter@hasNotText")
 			.filter("fictional.filter@hasNotText", { has: { locator: { type: "locator", selector: "section" } } })
 			.filter("fictional.filter@hasNotText", {

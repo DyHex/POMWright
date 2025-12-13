@@ -35,6 +35,7 @@ export type {
 	TitleDefinition,
 } from "./locators";
 export {
+	type AddAccessor,
 	createRegistryWithAccessors,
 	type GetLocatorAccessor,
 	type GetLocatorSchemaAccessor,
@@ -42,6 +43,4 @@ export {
 	LocatorQueryBuilder,
 	LocatorRegistrationBuilder,
 	LocatorRegistry,
-	LocatorThenable,
-	NestedLocatorThenable,
 } from "./locators";
