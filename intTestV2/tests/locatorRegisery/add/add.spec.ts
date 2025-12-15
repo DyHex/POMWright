@@ -483,15 +483,46 @@ test("add reuse by path supports testId/dataCy/id patching", async ({ page }) =>
 });
 
 test("add reuse enforces matching locator type overrides", async ({ page }) => {
-	type LocatorSchemaPaths = "button";
+        type LocatorSchemaPaths = "button" | "button.reuseLocator" | "button.reusePath";
 
-	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+        const { registry } = createRegistryWithAccessors<LocatorSchemaPaths>(page);
 
-	const button = registry.createReusable.getByRole("button", { name: "Submit" });
+        const button = registry.createReusable.getByRole("button", { name: "Submit" });
 
-	expect(() => registry.add("button", { reuse: button }).getByText("Submit")).toThrowError(
-		'must use the "role" strategy',
-	);
+        expect(() => registry.add("button", { reuse: button }).getByText("text")).toThrowError(
+                'must use the "role" strategy',
+        );
+
+        registry.add("button", { reuse: button });
+
+        expect(registry.get("button")).toEqual({
+                definition: { role: "button", options: { name: "Submit" }, type: "role" },
+                locatorSchemaPath: "button",
+                steps: [],
+        });
+
+        expect(() => registry.add("button.reuseLocator", { reuse: button }).getById("Submit")).toThrowError(
+                'must use the "role" strategy',
+        );
+
+        expect(() => registry.add("button.reusePath", { reuse: "button" }).getByText("Submit")).toThrowError(
+                'must use the "role" strategy',
+        );
+
+        registry.add("button.reuseLocator", { reuse: button }).getByRole({ name: "Submit" });
+        registry.add("button.reusePath", { reuse: "button" }).getByRole({ name: "Submit" });
+
+        expect(registry.get("button.reuseLocator")).toEqual({
+                definition: { role: "button", options: { name: "Submit" }, type: "role" },
+                locatorSchemaPath: "button.reuseLocator",
+                steps: [],
+        });
+
+        expect(registry.get("button.reusePath")).toEqual({
+                definition: { role: "button", options: { name: "Submit" }, type: "role" },
+                locatorSchemaPath: "button.reusePath",
+                steps: [],
+        });
 });
 
 test("add reuse patches role options while preserving role value", async ({ page }) => {
@@ -534,16 +565,34 @@ test("add typing narrows locator methods after a definition is chosen", async ({
 });
 
 test("add reuse typing narrows override methods to the matching strategy", async ({ page }) => {
-	type LocatorSchemaPaths = "button";
+        type LocatorSchemaPaths = "button";
 
-	const registry = createTestRegistry<LocatorSchemaPaths>(page);
-	const button = registry.createReusable.getByRole("button", { name: "Submit" });
+        const registry = createTestRegistry<LocatorSchemaPaths>(page);
+        const button = registry.createReusable.getByRole("button", { name: "Submit" });
 	const builder = registry.add("button", { reuse: button });
 
 	// @ts-expect-error mismatched locator strategies are not exposed when reusing a locator
 	const _invalidOverrideMethod = builder.getByText;
 
-	builder.getByRole({ name: "Submit" });
+        builder.getByRole({ name: "Submit" });
+});
+
+test("add reuse typing narrows override methods for reused paths", async ({ page }) => {
+        type LocatorSchemaPaths = "button" | "button.copy";
+
+        const { registry } = createRegistryWithAccessors<
+                LocatorSchemaPaths,
+                { button: "role"; "button.copy": "role" }
+        >(page);
+
+        registry.add("button").getByRole("button");
+
+        const builder = registry.add("button.copy", { reuse: "button" });
+
+        // @ts-expect-error mismatched locator strategies are not exposed when reusing a path
+        const _invalidOverrideMethod = builder.getByText;
+
+        builder.getByRole();
 });
 
 test("add reuse allows only one matching locator override", async ({ page }) => {

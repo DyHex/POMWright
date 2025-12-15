@@ -191,9 +191,10 @@ export type LocatorStep<
 export type ReusableLocator<
 	LocatorSchemaPathType extends string = string,
 	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+	Type extends LocatorStrategyDefinition["type"] = LocatorStrategyDefinition["type"],
 > = {
-	type: LocatorStrategyDefinition["type"];
-	definition: LocatorStrategyDefinition;
+	type: Type;
+	definition: Extract<LocatorStrategyDefinition, { type: Type }>;
 	steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[];
 };
 

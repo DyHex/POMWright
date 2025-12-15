@@ -58,13 +58,19 @@ export class LocatorRegistrationBuilder<
 
 		if (seed?.initialDefinition) {
 			this.definition = seed.initialDefinition;
-			this.persist();
 			this.seededDefinition = true;
 		} else {
 			this.seededDefinition = false;
 		}
 
 		this.reuseType = seed?.reuseType;
+	}
+
+	persistSeededDefinition() {
+		if (this.seededDefinition && !this.registered) {
+			this.persist();
+		}
+		return this;
 	}
 
 	filter(
@@ -260,7 +266,7 @@ export class LocatorRegistrationBuilder<
 	private commit(
 		definition: LocatorStrategyDefinition | LocatorStrategyDefinitionPatch,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
-		this.ensureDefinitionAllowed(definition as LocatorStrategyDefinition);
+		this.ensureDefinitionAllowedWithRollback(definition as LocatorStrategyDefinition);
 		const mergedDefinition = this.seededDefinition
 			? applyDefinitionPatch(this.definition as LocatorStrategyDefinition, definition)
 			: (definition as LocatorStrategyDefinition);
@@ -286,9 +292,10 @@ export class LocatorRegistrationBuilder<
 		this.persist();
 	}
 
-	private ensureDefinitionAllowed(definition: LocatorStrategyDefinition) {
+	private ensureDefinitionAllowedWithRollback(definition: LocatorStrategyDefinition) {
 		if (this.seededDefinition) {
 			if (definition.type !== this.reuseType) {
+				this.rollbackSeededRegistration();
 				throw new Error(
 					`The locator definition for "${this.path}" must use the "${this.reuseType}" strategy when reusing a locator.`,
 				);
@@ -332,6 +339,13 @@ export class LocatorRegistrationBuilder<
 		} else {
 			this.registry.register(this.path, record);
 			this.registered = true;
+		}
+	}
+
+	private rollbackSeededRegistration() {
+		if (this.seededDefinition && this.registered) {
+			this.registry.unregister(this.path);
+			this.registered = false;
 		}
 	}
 
