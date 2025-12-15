@@ -34,17 +34,7 @@ import {
 	validateLocatorSchemaPath,
 } from "./utils";
 
-type LocatorTypeForPath<LocatorPathTypes, Path extends RegistryPath<string>> = NonNullable<
-	Path extends keyof LocatorPathTypes ? LocatorPathTypes[Path] : LocatorStrategyDefinition["type"]
->;
-
-export class LocatorRegistry<
-	LocatorSchemaPathType extends string,
-	LocatorPathTypes extends Partial<Record<LocatorSchemaPathType, LocatorStrategyDefinition["type"]>> = Record<
-		LocatorSchemaPathType,
-		LocatorStrategyDefinition["type"]
-	>,
-> {
+export class LocatorRegistry<LocatorSchemaPathType extends string> {
 	private readonly schemas = new Map<
 		RegistryPath<LocatorSchemaPathType>,
 		LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>
@@ -78,16 +68,6 @@ export class LocatorRegistry<
 	add(
 		path: RegistryPath<LocatorSchemaPathType>,
 	): LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>;
-	add<ReusePath extends RegistryPath<LocatorSchemaPathType>>(
-		path: RegistryPath<LocatorSchemaPathType>,
-		options: {
-			reuse: ReusePath;
-		},
-	): LocatorRegistrationSeededBuilderForType<
-		LocatorSchemaPathType,
-		RegistryPath<LocatorSchemaPathType>,
-		LocatorTypeForPath<LocatorPathTypes, ReusePath>
-	>;
 	add<
 		Reuse extends ReusableLocator<
 			LocatorSchemaPathType,
@@ -101,20 +81,18 @@ export class LocatorRegistry<
 	add(
 		path: RegistryPath<LocatorSchemaPathType>,
 		options?: {
-			reuse?:
-				| RegistryPath<LocatorSchemaPathType>
-				| ReusableLocator<
-						LocatorSchemaPathType,
-						RegistryPath<LocatorSchemaPathType>,
-						LocatorStrategyDefinition["type"]
-				  >;
+			reuse?: ReusableLocator<
+				LocatorSchemaPathType,
+				RegistryPath<LocatorSchemaPathType>,
+				LocatorStrategyDefinition["type"]
+			>;
 		},
 	):
 		| LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>
 		| LocatorRegistrationSeededBuilderForType<
 				LocatorSchemaPathType,
 				RegistryPath<LocatorSchemaPathType>,
-				LocatorTypeForPath<LocatorPathTypes, RegistryPath<LocatorSchemaPathType>>
+				LocatorStrategyDefinition["type"]
 		  > {
 		const reuse = options?.reuse;
 
@@ -125,19 +103,23 @@ export class LocatorRegistry<
 			);
 		}
 
+		if (typeof reuse === "string") {
+			throw new Error(
+				"Reusing locator schemas by path has been removed. Use registry.createReusable to seed locators instead.",
+			);
+		}
+
 		const reusedRecord: LocatorSchemaRecord<
 			LocatorSchemaPathType,
 			RegistryPath<LocatorSchemaPathType>
-		> = typeof reuse === "string"
-			? this.cloneRecordForReuse(this.get(reuse as RegistryPath<LocatorSchemaPathType>), path)
-			: this.cloneRecordForReuse(
-					{
-						locatorSchemaPath: path,
-						definition: reuse.definition,
-						steps: reuse.steps,
-					},
-					path,
-				);
+		> = this.cloneRecordForReuse(
+			{
+				locatorSchemaPath: path,
+				definition: reuse.definition,
+				steps: reuse.steps,
+			},
+			path,
+		);
 
 		return new LocatorRegistrationBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, true>(
 			this,
@@ -455,19 +437,11 @@ export type GetNestedLocatorAccessor<LocatorSchemaPathType extends string> = <
 	path: Path,
 ) => Locator;
 
-export const createRegistryWithAccessors = <
-	Paths extends string,
-	LocatorPathTypes extends Partial<Record<Paths, LocatorStrategyDefinition["type"]>> = Record<
-		Paths,
-		LocatorStrategyDefinition["type"]
-	>,
->(
-	page: Page,
-) => {
+export const createRegistryWithAccessors = <Paths extends string>(page: Page) => {
 	type PathErrors = LocatorSchemaPathErrors<Paths>;
 	const _assertValidPaths: PathErrors extends never ? true : never = true as PathErrors extends never ? true : never;
-	const registry = new LocatorRegistry<Paths, LocatorPathTypes>(page);
-	const add: LocatorRegistry<Paths, LocatorPathTypes>["add"] = registry.add.bind(registry);
+	const registry = new LocatorRegistry<Paths>(page);
+	const add: LocatorRegistry<Paths>["add"] = registry.add.bind(registry);
 	const getLocator: GetLocatorAccessor<Paths> = registry.getLocator.bind(registry);
 	const getNestedLocator: GetNestedLocatorAccessor<Paths> = registry.getNestedLocator.bind(registry);
 	const getLocatorSchema: GetLocatorSchemaAccessor<Paths> = registry.getLocatorSchema.bind(registry);

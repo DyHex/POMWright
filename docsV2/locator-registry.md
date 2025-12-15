@@ -80,16 +80,6 @@ registry.add("body.section.heading", { reuse: h2 });
 registry.add("body.section.firstHeading", { reuse: firstHeading }).filter({ hasText: "Intro" });
 ```
 
-You can also reuse an already-registered path by passing its locator schema path. The registered definition and steps
-are cloned before new steps are appended:
-
-```ts
-registry.add("error@message").locator("error-message");
-registry
-  .add("main.region.form@contactInfo.error@password", { reuse: "error@message" })
-  .locator({ hasText: /invalid password/ });
-```
-
 When `{ reuse }` is provided, locator-type calls behave like PATCH operations: omitted selector/role/text values are inherited
 from the reused definition, and provided fields merge with existing options instead of replacing them. Examples:
 
@@ -100,11 +90,11 @@ const seed = registry.createReusable.getByRole("heading", { level: 2 });
 registry.add("heading.summary", { reuse: seed }).getByRole({ name: "Summary" });
 
 // inherits the selector from the seed when only options are provided
-registry.add("main.error", { reuse: "error@message" }).locator({ hasText: /invalid password/ });
+registry.add("main.error", { reuse: seed }).locator({ hasText: /invalid password/ });
 
 // overrides selector while merging options
 registry
-  .add("main.errorOverride", { reuse: "error@message" })
+  .add("main.errorOverride", { reuse: seed })
   .locator("other-selector", { hasText: /invalid password/ });
 
 // getByRole patch keeps the seeded discriminant (role) and merges options

@@ -19,6 +19,7 @@ Use this file to keep an up-to-date picture of how v1 (src/intTest) and v2 (srcV
   - **Solution:** Invoke .contentFrame() on the returned locator in the test/step/method to reverse operation and you can use it to target elements inside the iframe again.
 - Locator registration and updates no longer accept `{ filters, index }` config objects on locator methods. Chain `.filter()`/`.nth()` to record ordered steps instead. A v1 compatibility shim will be used for legacy schemas rather than mixing the behaviors inside v2.
 - Locator registration now enforces a single locator-type call per `add` chain (with a single matching override allowed when reusing); attempts to chain another locator method throw instead of silently overwriting, and the fluent surface narrows to `filter`/`nth` after a locator is set.
+- `{ reuse }` no longer accepts locator schema paths; reusable locators must be created via `registry.createReusable` before seeding `add(path, { reuse })`.
 - `{ reuse }` overrides are PATCH-style in v2: missing selector/text/role values inherit from the reused locator, and provided options merge with existing ones instead of replacing the definition wholesale. This applies to every locator method (e.g., `locator`, `getByRole`, `getByText`, `getById`), so a reuse override can supply only the fields it wants to change while keeping the seeded discriminant/selector intact.
 - Shorthand `getLocator(path)` / `getNestedLocator(path)` now return Playwright `Locator` instances synchronously and no longer accept override arguments or fluent mutations; use `getLocatorSchema(path)` for filters/indices/updates. v1 supported optional override objects (e.g., index maps) and required `await` on the shorthand helpers.
 
@@ -28,7 +29,7 @@ Use this file to keep an up-to-date picture of how v1 (src/intTest) and v2 (srcV
 - DROPPED Custom selector engine utilities from `src/utils` (e.g., `selectorEngines`) are not present in v2.
 - DROPPED v1 exposes a `GetBy` helper for schema construction; v2 expects direct registry builder usage without a dedicated helper wrapper.
 - LocatorRegistry no longer emits `PlaywrightReportLogger` output in v2, and `createRegistryWithAccessors` no longer accepts a logger parameter. v1-style registry logging would need to be layered via a compatibility shim if required.
-- Added support for reusable locator definitions (`registry.createReusable`) and reusing registered paths via `add(path, { reuse })`, covering v1 `LocatorSchemaWithoutPath` use cases.
+- Added support for reusable locator definitions (`registry.createReusable`) to cover v1 `LocatorSchemaWithoutPath` use cases.
 
 ## Potential migration issues
 
