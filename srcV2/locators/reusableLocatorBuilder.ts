@@ -24,14 +24,18 @@ export class ReusableLocatorBuilder<
 	Type extends LocatorStrategyDefinition["type"] = LocatorStrategyDefinition["type"],
 > implements ReusableLocator<LocatorSchemaPathType, AllowedPaths, Type>
 {
-	private readonly stepsList: LocatorStep<LocatorSchemaPathType, AllowedPaths>[] = [];
+	private readonly stepsList: LocatorStep<LocatorSchemaPathType, AllowedPaths>[];
 	private readonly definitionValue: Extract<LocatorStrategyDefinition, { type: Type }>;
 
 	readonly type: Type;
 
-	constructor(definition: Extract<LocatorStrategyDefinition, { type: Type }>) {
+	constructor(
+		definition: Extract<LocatorStrategyDefinition, { type: Type }>,
+		steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[] = [],
+	) {
 		this.definitionValue = definition;
 		this.type = definition.type;
+		this.stepsList = normalizeSteps<LocatorSchemaPathType, AllowedPaths>(steps);
 	}
 
 	filter(filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, AllowedPaths>) {

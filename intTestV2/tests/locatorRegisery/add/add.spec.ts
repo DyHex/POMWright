@@ -260,19 +260,7 @@ test("reusable builder yields the same locator chain as a direct definition", as
 	const direct = registry.getLocator("heading");
 	const reused = registry.getLocator("heading.reused");
 
-	expect(`${await reused}`).toEqual(`${await direct}`);
-});
-
-test("add rejects reuse by locator schema path", async ({ page }) => {
-	type LocatorSchemaPaths = "seed" | "copy";
-
-	const registry = createTestRegistry<LocatorSchemaPaths>(page);
-	registry.add("seed").locator("error-message");
-
-	// @ts-expect-error reuse by path is not supported
-	expect(() => registry.add("copy", { reuse: "seed" })).toThrowError(
-		/reusing locator schemas by path has been removed/i,
-	);
+	expect(`${reused}`).toEqual(`${direct}`);
 });
 
 test("add reuse by reusable locator patches options while preserving selector", async ({ page }) => {
@@ -353,6 +341,7 @@ test("add reuse enforces matching locator type overrides", async ({ page }) => {
 
 	const button = registry.createReusable.getByRole("button", { name: "Submit" });
 
+	// @ts-expect-error mismatched locator strategies are not allowed when reusing a locator (getByText attempt on role locator)
 	expect(() => registry.add("button", { reuse: button }).getByText("text")).toThrowError(
 		'must use the "role" strategy',
 	);
@@ -365,6 +354,7 @@ test("add reuse enforces matching locator type overrides", async ({ page }) => {
 		steps: [],
 	});
 
+	// @ts-expect-error mismatched locator strategies are not allowed when reusing a locator (getById attempt on role locator)
 	expect(() => registry.add("button.reuseLocator", { reuse: button }).getById("Submit")).toThrowError(
 		'must use the "role" strategy',
 	);
@@ -441,6 +431,64 @@ test("add reuse allows only one matching locator override", async ({ page }) => 
 	builder.getByRole("heading", { name: "Summary" });
 
 	expect(() => builder.getByRole("heading", { name: "Other" })).toThrowError("only one matching override is allowed");
+});
+
+test("add reuses with existing record by path does not have chainable methods", async ({ page }) => {
+	type LocatorSchemaPaths = "button" | "button.copy";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.add("button").getByRole("button", { name: "Submit" }).filter({ hasText: "Submit" });
+
+	const builder = registry.add("button.copy", { reuse: "button" });
+
+	expect(builder).toBeUndefined();
+	expect(registry.get("button.copy")).toEqual({
+		definition: { role: "button", options: { name: "Submit" }, type: "role" },
+		locatorSchemaPath: "button.copy",
+		steps: [{ filter: { hasText: "Submit" }, kind: "filter" }],
+	});
+});
+
+test("add reuse by path clones records so mutations do not leak", async ({ page }) => {
+	type LocatorSchemaPaths = "button" | "button.copy";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.add("button").getByRole("button", { name: "Submit" }).filter({ hasText: "Submit" });
+
+	registry.add("button.copy", { reuse: "button" });
+
+	const updated = registry.get("button.copy");
+	// @ts-expect-error mutating the steps array for test purposes
+	updated.steps.push({ kind: "filter", filter: { hasText: "Copy" } });
+
+	registry.replace("button.copy", updated);
+
+	expect(registry.get("button.copy")).toEqual({
+		definition: { role: "button", options: { name: "Submit" }, type: "role" },
+		locatorSchemaPath: "button.copy",
+		steps: [
+			{ filter: { hasText: "Submit" }, kind: "filter" },
+			{ filter: { hasText: "Copy" }, kind: "filter" },
+		],
+	});
+
+	expect(registry.get("button")).toEqual({
+		definition: { role: "button", options: { name: "Submit" }, type: "role" },
+		locatorSchemaPath: "button",
+		steps: [{ filter: { hasText: "Submit" }, kind: "filter" }],
+	});
+});
+
+test("add reuse by path throws when the source path is missing", async ({ page }) => {
+	type LocatorSchemaPaths = "button" | "button.copy";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	expect(() => registry.add("button.copy", { reuse: "button" })).toThrowError(
+		'No locator schema registered for path "button".',
+	);
 });
 
 test("A LocatorSchemaPath can only be added once", async ({ page }) => {

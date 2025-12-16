@@ -68,6 +68,7 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 	add(
 		path: RegistryPath<LocatorSchemaPathType>,
 	): LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>;
+	add(path: RegistryPath<LocatorSchemaPathType>, options: { reuse: RegistryPath<LocatorSchemaPathType> }): void;
 	add<
 		Reuse extends ReusableLocator<
 			LocatorSchemaPathType,
@@ -81,11 +82,9 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 	add(
 		path: RegistryPath<LocatorSchemaPathType>,
 		options?: {
-			reuse?: ReusableLocator<
-				LocatorSchemaPathType,
-				RegistryPath<LocatorSchemaPathType>,
-				LocatorStrategyDefinition["type"]
-			>;
+			reuse?:
+				| ReusableLocator<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, LocatorStrategyDefinition["type"]>
+				| RegistryPath<LocatorSchemaPathType>;
 		},
 	):
 		| LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>
@@ -93,7 +92,8 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 				LocatorSchemaPathType,
 				RegistryPath<LocatorSchemaPathType>,
 				LocatorStrategyDefinition["type"]
-		  > {
+		  >
+		| undefined {
 		const reuse = options?.reuse;
 
 		if (!reuse) {
@@ -104,9 +104,11 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		}
 
 		if (typeof reuse === "string") {
-			throw new Error(
-				"Reusing locator schemas by path has been removed. Use registry.createReusable to seed locators instead.",
-			);
+			const sourceRecord = this.get(reuse as RegistryPath<LocatorSchemaPathType>);
+			const cloned = this.cloneRecordForReuse(sourceRecord, path);
+
+			this.register(path, cloned);
+			return undefined;
 		}
 
 		const reusedRecord: LocatorSchemaRecord<
