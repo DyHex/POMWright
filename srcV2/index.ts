@@ -42,5 +42,6 @@ export {
 	type GetNestedLocatorAccessor,
 	LocatorQueryBuilder,
 	LocatorRegistrationBuilder,
-	LocatorRegistry,
+	type LocatorRegistry,
+	LocatorRegistryInternal,
 } from "./locators";

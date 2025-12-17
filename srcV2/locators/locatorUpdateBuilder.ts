@@ -205,6 +205,111 @@ const mergeLocatorDefinition = (
 		}
 	}
 };
+
+const buildReplacementDefinition = (updates: LocatorUpdate, path: string): LocatorStrategyDefinition => {
+	if (!updates || typeof updates !== "object" || !("type" in updates)) {
+		throw new Error(`Locator replace for "${path}" requires a "type" property.`);
+	}
+
+	switch (updates.type) {
+		case "role": {
+			const { role, options } = updates;
+			if (role === undefined) {
+				throw new Error(`Locator replace for "${path}" of type "role" requires a "role" value.`);
+			}
+			return options !== undefined
+				? ({ type: "role", role, options } as RoleDefinition)
+				: ({ type: "role", role } as RoleDefinition);
+		}
+		case "text": {
+			const { text, options } = updates;
+			if (text === undefined) {
+				throw new Error(`Locator replace for "${path}" of type "text" requires a "text" value.`);
+			}
+			return options !== undefined
+				? ({ type: "text", text, options } as LocatorStrategyDefinition)
+				: ({ type: "text", text } as LocatorStrategyDefinition);
+		}
+		case "label": {
+			const { text, options } = updates;
+			if (text === undefined) {
+				throw new Error(`Locator replace for "${path}" of type "label" requires a "text" value.`);
+			}
+			return options !== undefined
+				? ({ type: "label", text, options } as LocatorStrategyDefinition)
+				: ({ type: "label", text } as LocatorStrategyDefinition);
+		}
+		case "placeholder": {
+			const { text, options } = updates;
+			if (text === undefined) {
+				throw new Error(`Locator replace for "${path}" of type "placeholder" requires a "text" value.`);
+			}
+			return options !== undefined
+				? ({ type: "placeholder", text, options } as LocatorStrategyDefinition)
+				: ({ type: "placeholder", text } as LocatorStrategyDefinition);
+		}
+		case "altText": {
+			const { text, options } = updates;
+			if (text === undefined) {
+				throw new Error(`Locator replace for "${path}" of type "altText" requires a "text" value.`);
+			}
+			return options !== undefined
+				? ({ type: "altText", text, options } as LocatorStrategyDefinition)
+				: ({ type: "altText", text } as LocatorStrategyDefinition);
+		}
+		case "title": {
+			const { text, options } = updates;
+			if (text === undefined) {
+				throw new Error(`Locator replace for "${path}" of type "title" requires a "text" value.`);
+			}
+			return options !== undefined
+				? ({ type: "title", text, options } as LocatorStrategyDefinition)
+				: ({ type: "title", text } as LocatorStrategyDefinition);
+		}
+		case "locator": {
+			const { selector, options } = updates;
+			if (selector === undefined) {
+				throw new Error(`Locator replace for "${path}" of type "locator" requires a "selector" value.`);
+			}
+			return options !== undefined
+				? ({ type: "locator", selector, options } as LocatorStrategyDefinition)
+				: ({ type: "locator", selector } as LocatorStrategyDefinition);
+		}
+		case "frameLocator": {
+			const { selector } = updates;
+			if (selector === undefined) {
+				throw new Error(`Locator replace for "${path}" of type "frameLocator" requires a "selector" value.`);
+			}
+			return { type: "frameLocator", selector } as LocatorStrategyDefinition;
+		}
+		case "testId": {
+			const { testId } = updates;
+			if (testId === undefined) {
+				throw new Error(`Locator replace for "${path}" of type "testId" requires a "testId" value.`);
+			}
+			return { type: "testId", testId } as LocatorStrategyDefinition;
+		}
+		case "id": {
+			const rawId = updates.id;
+			const id = normalizeIdValue(rawId);
+			if (id === undefined) {
+				throw new Error(`Locator replace for "${path}" of type "id" requires an "id" value.`);
+			}
+			return { type: "id", id } as LocatorStrategyDefinition;
+		}
+		case "dataCy": {
+			const { value } = updates;
+			if (value === undefined) {
+				throw new Error(`Locator replace for "${path}" of type "dataCy" requires a "value" value.`);
+			}
+			return { type: "dataCy", value } as LocatorStrategyDefinition;
+		}
+		default: {
+			const exhaustive: never = updates;
+			return exhaustive;
+		}
+	}
+};
 export class LocatorUpdateBuilder<
 	LocatorSchemaPathType extends string,
 	LocatorSubstring extends RegistryPath<LocatorSchemaPathType>,
@@ -213,6 +318,7 @@ export class LocatorUpdateBuilder<
 	constructor(
 		private readonly parent: LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>,
 		private readonly subPath: SubPath,
+		private readonly mode: "update" | "replace" = "update",
 	) {}
 
 	getByRole(...args: UpdateArgsWithOptions<RoleDefinition["role"], RoleDefinition["options"]>) {
@@ -412,8 +518,10 @@ export class LocatorUpdateBuilder<
 	}
 
 	private commit(definition: LocatorUpdate) {
-		return this.parent.applyUpdate(this.subPath, definition);
+		return this.mode === "replace"
+			? this.parent.applyReplacement(this.subPath, definition)
+			: this.parent.applyUpdate(this.subPath, definition);
 	}
 }
 
-export { mergeLocatorDefinition };
+export { buildReplacementDefinition, mergeLocatorDefinition };

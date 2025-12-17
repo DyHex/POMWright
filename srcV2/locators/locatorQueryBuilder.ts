@@ -1,6 +1,6 @@
 import type { Locator } from "@playwright/test";
-import type { LocatorRegistry } from "./locatorRegistry";
-import { LocatorUpdateBuilder, mergeLocatorDefinition } from "./locatorUpdateBuilder";
+import type { LocatorRegistryInternal } from "./locatorRegistry";
+import { buildReplacementDefinition, LocatorUpdateBuilder, mergeLocatorDefinition } from "./locatorUpdateBuilder";
 import type {
 	FilterDefinition,
 	IndexSelector,
@@ -26,9 +26,10 @@ export class LocatorQueryBuilder<
 		string,
 		LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]
 	>();
+	private readonly tombstones = new Set<string>();
 
 	constructor(
-		private readonly registry: LocatorRegistry<LocatorSchemaPathType>,
+		private readonly registry: LocatorRegistryInternal<LocatorSchemaPathType>,
 		private readonly path: LocatorSubstring,
 	) {
 		const chain = expandSchemaPath(path);
@@ -95,6 +96,14 @@ export class LocatorQueryBuilder<
 		updates: LocatorUpdate,
 	) {
 		this.ensureSubPath(subPath);
+		if (!this.definitions.has(subPath) && this.tombstones.has(subPath)) {
+			const baseline = this.registry.get(subPath as RegistryPath<LocatorSchemaPathType>).definition;
+			const baselineClone = cloneLocatorStrategyDefinition(baseline);
+			this.definitions.set(subPath, baselineClone);
+			this.steps.set(subPath, []);
+			this.tombstones.delete(subPath);
+		}
+
 		const current = this.definitions.get(subPath);
 		if (!current) {
 			throw new Error(`No locator schema registered for sub-path "${subPath}".`);
@@ -106,6 +115,37 @@ export class LocatorQueryBuilder<
 		const mergedClone = cloneLocatorStrategyDefinition(merged);
 		cacheForPath.set(mergedClone.type, mergedClone);
 		this.definitions.set(subPath, mergedClone);
+		return this;
+	}
+
+	replace<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(subPath: SubPath) {
+		this.ensureSubPath(subPath);
+		return new LocatorUpdateBuilder<LocatorSchemaPathType, LocatorSubstring, SubPath>(this, subPath, "replace");
+	}
+
+	applyReplacement<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
+		subPath: SubPath,
+		updates: LocatorUpdate,
+	) {
+		this.ensureSubPath(subPath);
+		if (this.tombstones.has(subPath) && !this.definitions.has(subPath)) {
+			this.steps.set(subPath, []);
+			this.tombstones.delete(subPath);
+		}
+		const nextDefinition = buildReplacementDefinition(updates, subPath);
+		const cloned = cloneLocatorStrategyDefinition(nextDefinition);
+		const cacheForPath = this.ensureTypeCache(subPath, cloned);
+		cacheForPath.set(cloned.type, cloneLocatorStrategyDefinition(cloned));
+		this.definitions.set(subPath, cloned);
+		return this;
+	}
+
+	remove<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(subPath: SubPath) {
+		this.ensureSubPath(subPath);
+		this.definitions.delete(subPath);
+		this.steps.delete(subPath);
+		this.perPathTypeCache.delete(subPath);
+		this.tombstones.add(subPath);
 		return this;
 	}
 
@@ -129,7 +169,7 @@ export class LocatorQueryBuilder<
 			],
 		]);
 
-		const { locator } = this.registry.buildLocatorChain(this.path, definitions, steps);
+		const { locator } = this.registry.buildLocatorChain(this.path, definitions, steps, undefined, this.tombstones);
 		if (!locator) {
 			throw new Error(`Unable to resolve direct locator for path "${this.path}".`);
 		}
@@ -147,7 +187,7 @@ export class LocatorQueryBuilder<
 	}
 
 	private ensureSubPath(subPath: string) {
-		if (!this.definitions.has(subPath)) {
+		if (!this.definitions.has(subPath) && !this.tombstones.has(subPath)) {
 			throw new Error(`"${subPath}" is not a valid sub-path of "${this.path}".`);
 		}
 	}
@@ -155,7 +195,7 @@ export class LocatorQueryBuilder<
 	private resolve(
 		overrides?: LocatorOverrides<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	) {
-		return this.registry.buildLocatorChain(this.path, this.definitions, this.steps, overrides);
+		return this.registry.buildLocatorChain(this.path, this.definitions, this.steps, overrides, this.tombstones);
 	}
 
 	private ensureTypeCache(subPath: string, baseline: LocatorStrategyDefinition) {

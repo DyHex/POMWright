@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import type { LocatorRegistry } from "./locatorRegistry";
+import type { LocatorRegistryInternal } from "./locatorRegistry";
 import type {
 	AltTextDefinition,
 	DataCyDefinition,
@@ -44,7 +44,7 @@ export class LocatorRegistrationBuilder<
 	private postDefinitionView?: LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 
 	constructor(
-		private readonly registry: LocatorRegistry<LocatorSchemaPathType>,
+		private readonly registry: LocatorRegistryInternal<LocatorSchemaPathType>,
 		private readonly path: Path,
 		seed?: {
 			initialDefinition?: LocatorStrategyDefinition;

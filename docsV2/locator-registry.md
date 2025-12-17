@@ -20,6 +20,10 @@ and tests.
 override arguments. Use `getLocatorSchema(path)` when you need to patch definitions, add filters/indices, or supply override
 steps for nested chains.
 
+> Note: the `registry` returned from the factory exposes only the public surface (`add`, `createReusable`, and the locator
+> getters/builders). Internal methods such as `get`, `replace`, `register`, and `unregister` are intentionally omitted from the
+> factory return type so end users cannot call them directly.
+
 ## Standalone usage (outside BasePageV2)
 
 Call the factory with your Playwright `page` and destructure what you need:
@@ -133,6 +137,24 @@ const updated = getLocatorSchema("body.section.button")
   .update("body.section.button")
   .getByRole("button", { name: "Click me!" })
   .getNestedLocator();
+```
+
+## Replacing or removing definitions without altering registry state
+
+- `replace(subPath)` performs a POST-style overwrite of the definition for the given subpath on the query builder’s cloned data.
+- `remove(subPath)` performs a soft delete: it clears the definition/steps/cache for that subpath on the builder clone. Non-terminal removals are skipped during resolution; terminal removals throw unless you repopulate the subpath with `update`/`replace` later in the chain.
+
+Examples:
+
+```ts
+getLocatorSchema("section.button")
+  .replace("section.button")
+  .getByRole("button", { name: "Submit" })
+  .getNestedLocator();
+
+const builder = getLocatorSchema("section.button");
+builder.remove("section.button");
+expect(() => builder.getNestedLocator()).toThrowError('No locator schema registered for path "section.button".');
 ```
 
 ## Error handling

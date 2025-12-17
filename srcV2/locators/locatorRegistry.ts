@@ -34,7 +34,7 @@ import {
 	validateLocatorSchemaPath,
 } from "./utils";
 
-export class LocatorRegistry<LocatorSchemaPathType extends string> {
+export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	private readonly schemas = new Map<
 		RegistryPath<LocatorSchemaPathType>,
 		LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>
@@ -271,17 +271,6 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		return new LocatorQueryBuilder<LocatorSchemaPathType, Path>(this, path);
 	}
 
-	/**
-	 * Creates a bound accessor that returns a LocatorQueryBuilder for a given path.
-	 * This mirrors BasePage ergonomics and can be attached to any consumer.
-	 */
-	createGetLocatorSchema() {
-		const registry = this;
-		return function getLocatorSchema<Path extends RegistryPath<LocatorSchemaPathType>>(path: Path) {
-			return registry.getLocatorSchema(path);
-		};
-	}
-
 	getLocator<Path extends RegistryPath<LocatorSchemaPathType>>(path: Path): Locator {
 		return this.getLocatorSchema(path).getLocator();
 	}
@@ -295,11 +284,12 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		definitions: Map<string, LocatorStrategyDefinition>,
 		steps: Map<string, LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]>,
 		overrides?: LocatorOverrides<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
+		tombstones?: Set<string>,
 	) {
 		const chain = expandSchemaPath(path);
 		const registeredChain = chain.filter((part) => definitions.has(part));
 
-		if (!definitions.has(path)) {
+		if (tombstones?.has(path) || !definitions.has(path)) {
 			throw new Error(`No locator schema registered for path "${path}".`);
 		}
 
@@ -324,7 +314,15 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 		const lastIndex = registeredChain.length - 1;
 
 		for (const [index, part] of registeredChain.entries()) {
+			const isTerminalStep = index === lastIndex;
 			const definition = definitions.get(part);
+			if (tombstones?.has(part)) {
+				if (isTerminalStep) {
+					throw new Error(`No locator schema registered for path "${path}".`);
+				}
+				continue;
+			}
+
 			if (!definition) {
 				throw new Error(`Missing locator definition for "${part}" while resolving "${path}".`);
 			}
@@ -396,27 +394,6 @@ export class LocatorRegistry<LocatorSchemaPathType extends string> {
 
 		return { locator: lastLocator, steps: debugSteps };
 	}
-
-	/**
-	 * Creates a bound accessor that returns the resolved terminal locator for a given path.
-	 * The returned function mirrors BasePage ergonomics while being attachable to any consumer.
-	 */
-	createGetLocator() {
-		const registry = this;
-		return function getLocator<Path extends RegistryPath<LocatorSchemaPathType>>(path: Path) {
-			return registry.getLocator(path);
-		};
-	}
-
-	/**
-	 * Creates a bound accessor that returns the resolved nested locator chain for a given path.
-	 */
-	createGetNestedLocator() {
-		const registry = this;
-		return function getNestedLocator<Path extends RegistryPath<LocatorSchemaPathType>>(path: Path) {
-			return registry.getNestedLocator(path);
-		};
-	}
 }
 
 export type GetLocatorAccessor<LocatorSchemaPathType extends string> = <
@@ -425,7 +402,7 @@ export type GetLocatorAccessor<LocatorSchemaPathType extends string> = <
 	path: Path,
 ) => Locator;
 
-export type AddAccessor<LocatorSchemaPathType extends string> = LocatorRegistry<LocatorSchemaPathType>["add"];
+export type AddAccessor<LocatorSchemaPathType extends string> = LocatorRegistryInternal<LocatorSchemaPathType>["add"];
 
 export type GetLocatorSchemaAccessor<LocatorSchemaPathType extends string> = <
 	Path extends RegistryPath<LocatorSchemaPathType>,
@@ -439,13 +416,19 @@ export type GetNestedLocatorAccessor<LocatorSchemaPathType extends string> = <
 	path: Path,
 ) => Locator;
 
+export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
+	LocatorRegistryInternal<LocatorSchemaPathType>,
+	"add" | "createReusable" | "getLocator" | "getLocatorSchema" | "getNestedLocator"
+>;
+
 export const createRegistryWithAccessors = <Paths extends string>(page: Page) => {
 	type PathErrors = LocatorSchemaPathErrors<Paths>;
 	const _assertValidPaths: PathErrors extends never ? true : never = true as PathErrors extends never ? true : never;
-	const registry = new LocatorRegistry<Paths>(page);
-	const add: LocatorRegistry<Paths>["add"] = registry.add.bind(registry);
-	const getLocator: GetLocatorAccessor<Paths> = registry.getLocator.bind(registry);
-	const getNestedLocator: GetNestedLocatorAccessor<Paths> = registry.getNestedLocator.bind(registry);
-	const getLocatorSchema: GetLocatorSchemaAccessor<Paths> = registry.getLocatorSchema.bind(registry);
+	const registryInstance = new LocatorRegistryInternal<Paths>(page);
+	const add: LocatorRegistryInternal<Paths>["add"] = registryInstance.add.bind(registryInstance);
+	const getLocator: GetLocatorAccessor<Paths> = registryInstance.getLocator.bind(registryInstance);
+	const getNestedLocator: GetNestedLocatorAccessor<Paths> = registryInstance.getNestedLocator.bind(registryInstance);
+	const getLocatorSchema: GetLocatorSchemaAccessor<Paths> = registryInstance.getLocatorSchema.bind(registryInstance);
+	const registry: LocatorRegistry<Paths> = registryInstance;
 	return { registry, add, getLocator, getNestedLocator, getLocatorSchema } as const;
 };

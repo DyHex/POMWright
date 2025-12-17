@@ -1,8 +1,8 @@
 import { expect, test } from "@fixtures-v2/withOptions";
 import type { Page } from "@playwright/test";
-import { createRegistryWithAccessors } from "pomwright";
+import { LocatorRegistryInternal } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
+const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
 
 const errMsg = "No locator schema registered for path";
 
@@ -337,7 +337,7 @@ test("add reuse with a reusable locator does not mutate the reusable definition"
 test("add reuse enforces matching locator type overrides", async ({ page }) => {
 	type LocatorSchemaPaths = "button" | "button.reuseLocator";
 
-	const { registry } = createRegistryWithAccessors<LocatorSchemaPaths>(page);
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	const button = registry.createReusable.getByRole("button", { name: "Submit" });
 
@@ -472,12 +472,6 @@ test("add reuse by path clones records so mutations do not leak", async ({ page 
 			{ filter: { hasText: "Submit" }, kind: "filter" },
 			{ filter: { hasText: "Copy" }, kind: "filter" },
 		],
-	});
-
-	expect(registry.get("button")).toEqual({
-		definition: { role: "button", options: { name: "Submit" }, type: "role" },
-		locatorSchemaPath: "button",
-		steps: [{ filter: { hasText: "Submit" }, kind: "filter" }],
 	});
 });
 

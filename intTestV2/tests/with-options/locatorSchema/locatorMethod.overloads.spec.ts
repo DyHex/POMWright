@@ -1,9 +1,9 @@
 import { expect, test } from "@fixtures-v2/withOptions";
-import { LocatorRegistry } from "pomwright";
+import { LocatorRegistryInternal } from "pomwright";
 
-test("add getByRole overloads accept optional options and support chained steps", async ({ page, log }) => {
+test("add getByRole overloads accept optional options and support chained steps", async ({ page }) => {
 	type LocalPath = "root" | "root.options" | "root.minimal";
-	const registry = new LocatorRegistry<LocalPath>(page, log);
+	const registry = new LocatorRegistryInternal<LocalPath>(page);
 
 	registry.add("root").locator("body");
 
@@ -26,9 +26,9 @@ test("add getByRole overloads accept optional options and support chained steps"
 	});
 });
 
-test("update getByRole overloads preserve patch semantics without undefined placeholders", async ({ page, log }) => {
+test("update getByRole overloads preserve patch semantics without undefined placeholders", async ({ page }) => {
 	type LocalPath = "overload" | "overload.target";
-	const registry = new LocatorRegistry<LocalPath>(page, log);
+	const registry = new LocatorRegistryInternal<LocalPath>(page);
 
 	registry.add("overload").locator("body");
 	registry.add("overload.target").getByRole("button", { name: "initial" }).filter({ hasText: "initial" }).nth(0);
@@ -56,10 +56,10 @@ test("update getByRole overloads preserve patch semantics without undefined plac
 	expect(`${withOptionsOnly}`).toContain("first()");
 });
 
-test("add overloads support other strategies with options and chained steps", async ({ page, log }) => {
+test("add overloads support other strategies with options and chained steps", async ({ page }) => {
 	type LocalPath = "root.text" | "root.locator" | "root.frame";
 
-	const registry = new LocatorRegistry<LocalPath>(page, log);
+	const registry = new LocatorRegistryInternal<LocalPath>(page);
 
 	registry.add("root.text").getByText("needle", { exact: true }).filter({ hasText: "filtered" }).nth(0);
 	registry.add("root.locator").locator(".selector", { hasText: "opt" }).filter({ hasText: "filtered" }).nth(0);
@@ -90,9 +90,9 @@ test("add overloads support other strategies with options and chained steps", as
 	});
 });
 
-test("update overloads cover multiple strategies and retain filter/index steps", async ({ page, log }) => {
+test("update overloads cover multiple strategies and retain filter/index steps", async ({ page }) => {
 	type LocalPath = "update.text" | "update.locator" | "update.frame";
-	const registry = new LocatorRegistry<LocalPath>(page, log);
+	const registry = new LocatorRegistryInternal<LocalPath>(page);
 
 	registry.add("update.text").getByText("seed");
 	registry.add("update.locator").locator(".seed");
