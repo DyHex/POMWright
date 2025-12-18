@@ -1,3 +1,4 @@
+export type { LocatorQueryBuilderPublic } from "./locatorQueryBuilder";
 export { LocatorQueryBuilder } from "./locatorQueryBuilder";
 export { LocatorRegistrationBuilder } from "./locatorRegistrationBuilder";
 export type {

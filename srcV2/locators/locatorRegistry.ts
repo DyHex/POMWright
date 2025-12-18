@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { LocatorQueryBuilder } from "./locatorQueryBuilder";
+import { LocatorQueryBuilder, type LocatorQueryBuilderPublic } from "./locatorQueryBuilder";
 import {
 	LocatorRegistrationBuilder,
 	type LocatorRegistrationPreDefinitionBuilder,
@@ -267,7 +267,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 
 	getLocatorSchema<Path extends RegistryPath<LocatorSchemaPathType>>(
 		path: Path,
-	): LocatorQueryBuilder<LocatorSchemaPathType, Path> {
+	): LocatorQueryBuilderPublic<LocatorSchemaPathType, Path> {
 		return new LocatorQueryBuilder<LocatorSchemaPathType, Path>(this, path);
 	}
 
@@ -408,7 +408,7 @@ export type GetLocatorSchemaAccessor<LocatorSchemaPathType extends string> = <
 	Path extends RegistryPath<LocatorSchemaPathType>,
 >(
 	path: Path,
-) => LocatorQueryBuilder<LocatorSchemaPathType, Path>;
+) => LocatorQueryBuilderPublic<LocatorSchemaPathType, Path>;
 
 export type GetNestedLocatorAccessor<LocatorSchemaPathType extends string> = <
 	Path extends RegistryPath<LocatorSchemaPathType>,

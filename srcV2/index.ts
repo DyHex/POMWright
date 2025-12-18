@@ -41,6 +41,7 @@ export {
 	type GetLocatorSchemaAccessor,
 	type GetNestedLocatorAccessor,
 	LocatorQueryBuilder,
+	type LocatorQueryBuilderPublic,
 	LocatorRegistrationBuilder,
 	type LocatorRegistry,
 	LocatorRegistryInternal,

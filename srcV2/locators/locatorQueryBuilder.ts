@@ -13,6 +13,14 @@ import type {
 } from "./types";
 import { cloneLocatorStrategyDefinition, expandSchemaPath, normalizeSteps } from "./utils";
 
+export type LocatorQueryBuilderPublic<
+	LocatorSchemaPathType extends string,
+	LocatorSubstring extends RegistryPath<LocatorSchemaPathType>,
+> = Pick<
+	LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>,
+	"filter" | "clearSteps" | "nth" | "update" | "replace" | "remove" | "getLocator" | "getNestedLocator"
+>;
+
 export class LocatorQueryBuilder<
 	LocatorSchemaPathType extends string,
 	LocatorSubstring extends RegistryPath<LocatorSchemaPathType>,
@@ -91,6 +99,7 @@ export class LocatorQueryBuilder<
 		return this;
 	}
 
+	/** @internal */
 	applyUpdate<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
 		updates: LocatorUpdate,
@@ -123,6 +132,7 @@ export class LocatorQueryBuilder<
 		return new LocatorUpdateBuilder<LocatorSchemaPathType, LocatorSubstring, SubPath>(this, subPath, "replace");
 	}
 
+	/** @internal */
 	applyReplacement<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
 		updates: LocatorUpdate,
