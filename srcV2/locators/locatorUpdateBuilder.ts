@@ -321,6 +321,19 @@ export class LocatorUpdateBuilder<
 		private readonly mode: "update" | "replace" = "update",
 	) {}
 
+	/**
+	 * Defines or patches a `getByRole` locator strategy for the target subpath. In `update` mode the
+	 * `role` and `options` arguments are optional (PATCH semantics); in `replace` mode they follow
+	 * Playwright requirements (POST semantics) and `role` is required.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("form.button")
+	 *   .update("form.button")
+	 *   .getByRole({ name: "Save" })
+	 *   .getNestedLocator();
+	 * ```
+	 */
 	getByRole(...args: UpdateArgsWithOptions<RoleDefinition["role"], RoleDefinition["options"]>) {
 		const [roleOrOptions, options] = args;
 		const {
@@ -342,6 +355,18 @@ export class LocatorUpdateBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Defines or patches a `getByText` locator strategy for the target subpath. In `update` mode,
+	 * text/options are optional; in `replace` mode text is required.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("banner.message")
+	 *   .replace("banner.message")
+	 *   .getByText(/Updated/, { exact: false })
+	 *   .getNestedLocator();
+	 * ```
+	 */
 	getByText(...args: UpdateArgsWithOptions<Parameters<Page["getByText"]>[0], Parameters<Page["getByText"]>[1]>) {
 		const [textOrOptions, options] = args;
 		const {
@@ -363,6 +388,15 @@ export class LocatorUpdateBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Defines or patches a `getByLabel` locator strategy for the target subpath. In `update` mode the
+	 * label text/options are optional; in `replace` mode text is required.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("form.email").update("form.email").getByLabel({ exact: true }).getNestedLocator();
+	 * ```
+	 */
 	getByLabel(...args: UpdateArgsWithOptions<Parameters<Page["getByLabel"]>[0], Parameters<Page["getByLabel"]>[1]>) {
 		const [textOrOptions, options] = args;
 		const {
@@ -384,6 +418,15 @@ export class LocatorUpdateBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Defines or patches a `getByPlaceholder` locator strategy for the target subpath. In `update`
+	 * mode text/options are optional; in `replace` mode text is required.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("form.search").update("form.search").getByPlaceholder({ exact: true }).getNestedLocator();
+	 * ```
+	 */
 	getByPlaceholder(
 		...args: UpdateArgsWithOptions<Parameters<Page["getByPlaceholder"]>[0], Parameters<Page["getByPlaceholder"]>[1]>
 	) {
@@ -407,6 +450,15 @@ export class LocatorUpdateBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Defines or patches a `getByAltText` locator strategy for the target subpath. In `update` mode
+	 * text/options are optional; in `replace` mode text is required.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("image.logo").replace("image.logo").getByAltText("Logo").getNestedLocator();
+	 * ```
+	 */
 	getByAltText(
 		...args: UpdateArgsWithOptions<Parameters<Page["getByAltText"]>[0], Parameters<Page["getByAltText"]>[1]>
 	) {
@@ -430,6 +482,15 @@ export class LocatorUpdateBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Defines or patches a `getByTitle` locator strategy for the target subpath. In `update` mode
+	 * text/options are optional; in `replace` mode text is required.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("icon.info").update("icon.info").getByTitle({ exact: true }).getNestedLocator();
+	 * ```
+	 */
 	getByTitle(...args: UpdateArgsWithOptions<Parameters<Page["getByTitle"]>[0], Parameters<Page["getByTitle"]>[1]>) {
 		const [textOrOptions, options] = args;
 		const {
@@ -451,6 +512,19 @@ export class LocatorUpdateBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Defines or patches a `locator` strategy for the target subpath. In `update` mode selector and
+	 * options are optional and merge with the existing definition; in `replace` mode selector is
+	 * required.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("list.items")
+	 *   .replace("list.items")
+	 *   .locator("ul > li", { hasText: /Row/ })
+	 *   .getNestedLocator();
+	 * ```
+	 */
 	locator(...args: UpdateArgsWithOptions<Parameters<Page["locator"]>[0], Parameters<Page["locator"]>[1]>) {
 		const [selectorOrOptions, options] = args;
 		const {
@@ -472,6 +546,16 @@ export class LocatorUpdateBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Defines or patches a `frameLocator` strategy for the target subpath. In `update` mode the
+	 * selector is optional and, when omitted, inherits the existing selector; in `replace` mode the
+	 * selector is required.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("frame.login").replace("frame.login").frameLocator("iframe.auth").getNestedLocator();
+	 * ```
+	 */
 	frameLocator(...args: UpdateArgsWithoutOptions<Parameters<Page["frameLocator"]>[0]>) {
 		const [selector] = args;
 
@@ -483,6 +567,15 @@ export class LocatorUpdateBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Defines or patches a `getByTestId` locator strategy for the target subpath. In `update` mode
+	 * `testId` is optional and merges with existing options; in `replace` mode it is required.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("card.title").update("card.title").getByTestId().getNestedLocator();
+	 * ```
+	 */
 	getByTestId(...args: UpdateArgsWithoutOptions<Parameters<Page["getByTestId"]>[0]>) {
 		const [testId] = args;
 
@@ -494,6 +587,15 @@ export class LocatorUpdateBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Defines or patches an `id` locator strategy for the target subpath. In `update` mode the id is
+	 * optional and will be normalized if provided; in `replace` mode the id is required.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("modal.close").update("modal.close").getById().getNestedLocator();
+	 * ```
+	 */
 	getById(...args: UpdateArgsWithoutOptions<string | RegExp>) {
 		const [idValue] = args;
 		const id = idValue !== undefined ? normalizeIdValue(idValue) : undefined;
@@ -506,6 +608,15 @@ export class LocatorUpdateBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Defines or patches a `data-cy` locator strategy for the target subpath. In `update` mode the
+	 * value is optional; in `replace` mode the value is required.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("form.submit").replace("form.submit").getByDataCy("submit-btn").getNestedLocator();
+	 * ```
+	 */
 	getByDataCy(...args: UpdateArgsWithoutOptions<DataCyDefinition["value"]>) {
 		const [value] = args;
 

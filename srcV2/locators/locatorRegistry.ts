@@ -40,6 +40,18 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>
 	>();
 
+	/**
+	 * Factory for reusable locator seeds that capture a locator strategy plus any chained
+	 * `filter`/`nth` steps without registering them. Pass the resulting seed to
+	 * {@link LocatorRegistryInternal.add} via `{ reuse }` to register a path that inherits the
+	 * stored definition and steps.
+	 *
+	 * @example
+	 * ```ts
+	 * const seed = registry.createReusable.getByRole("heading", { level: 2 }).filter({ hasText: /Summary/ });
+	 * registry.add("hero.title", { reuse: seed }).getByRole({ name: "Summary" });
+	 * ```
+	 */
 	readonly createReusable: ReusableLocatorFactory<LocatorSchemaPathType>;
 
 	constructor(private readonly page: Page) {
@@ -65,6 +77,22 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
 	}
 
+	/**
+	 * Registers a locator schema at the provided dot-delimited path.
+	 * Accepts exactly one locator strategy (`getByRole`, `locator`, etc.) and any number of
+	 * `filter`/`nth` steps chained in call order. When `{ reuse }` is supplied, the seeded
+	 * definition is applied first and one matching override is allowed as a PATCH of the seed;
+	 * otherwise, calling multiple locator strategies will throw.
+	 *
+	 * @example
+	 * ```ts
+	 * registry
+	 *   .add("list.item")
+	 *   .getByRole("listitem", { name: /Row/ })
+	 *   .filter({ hasText: "Row" })
+	 *   .nth("last");
+	 * ```
+	 */
 	add(
 		path: RegistryPath<LocatorSchemaPathType>,
 	): LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>;
@@ -265,16 +293,50 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		return resolved;
 	}
 
+	/**
+	 * Returns a mutable query builder clone for the provided path. Use the builder to add or clear
+	 * `filter`/`nth` steps, or to `update`/`replace` locator definitions before resolving locators.
+	 * Changes affect only the builder clone; the registry’s stored schema remains untouched.
+	 *
+	 * @example
+	 * ```ts
+	 * const builder = registry
+	 *   .getLocatorSchema("section.button")
+	 *   .filter("section.button", { hasText: /Save/ })
+	 *   .nth("section", 0);
+	 * const locator = builder.getNestedLocator();
+	 * ```
+	 */
 	getLocatorSchema<Path extends RegistryPath<LocatorSchemaPathType>>(
 		path: Path,
 	): LocatorQueryBuilderPublic<LocatorSchemaPathType, Path> {
 		return new LocatorQueryBuilder<LocatorSchemaPathType, Path>(this, path);
 	}
 
+	/**
+	 * Resolves the Playwright {@link Locator} for the provided path, applying only the terminal
+	 * definition and its recorded steps (no ancestor chaining). Throws if the path is not registered.
+	 *
+	 * @example
+	 * ```ts
+	 * const button = registry.getLocator("form.submit");
+	 * await button.click();
+	 * ```
+	 */
 	getLocator<Path extends RegistryPath<LocatorSchemaPathType>>(path: Path): Locator {
 		return this.getLocatorSchema(path).getLocator();
 	}
 
+	/**
+	 * Resolves a chained Playwright {@link Locator} for a nested path, traversing each registered
+	 * segment and applying their steps in order. Throws if any segment in the chain is missing.
+	 *
+	 * @example
+	 * ```ts
+	 * const nested = registry.getNestedLocator("list.item");
+	 * await expect(nested).toBeVisible();
+	 * ```
+	 */
 	getNestedLocator<Path extends RegistryPath<LocatorSchemaPathType>>(path: Path): Locator {
 		return this.getLocatorSchema(path).getNestedLocator();
 	}
@@ -421,6 +483,24 @@ export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
 	"add" | "createReusable" | "getLocator" | "getLocatorSchema" | "getNestedLocator"
 >;
 
+/**
+ * Creates a v2 locator registry bound to a Playwright {@link Page} and returns the registry plus
+ * pre-bound helpers for ergonomic use in page objects and tests. Path unions are validated at
+ * compile time and runtime. The returned `add`/`getLocator`/`getNestedLocator`/`getLocatorSchema`
+ * accessors are pre-bound to the registry instance for dependency injection.
+ *
+ * @example
+ * ```ts
+ * const { registry, add, getNestedLocator, getLocatorSchema } =
+ *   createRegistryWithAccessors<"root" | "root.child">(page);
+ *
+ * registry.add("root").locator("section");
+ * registry.add("root.child").getByRole("heading", { level: 2 });
+ *
+ * const nested = getNestedLocator("root.child");
+ * const patched = getLocatorSchema("root.child").filter("root.child", { hasText: /Docs/ }).getNestedLocator();
+ * ```
+ */
 export const createRegistryWithAccessors = <Paths extends string>(page: Page) => {
 	type PathErrors = LocatorSchemaPathErrors<Paths>;
 	const _assertValidPaths: PathErrors extends never ? true : never = true as PathErrors extends never ? true : never;

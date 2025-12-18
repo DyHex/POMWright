@@ -73,6 +73,16 @@ export class LocatorRegistrationBuilder<
 		return this;
 	}
 
+	/**
+	 * Records a Playwright-style filter on the locator being registered. Filters are applied in the
+	 * order they are chained and can include `has`/`hasNot` locator references. Requires that a
+	 * locator strategy has already been set for this registration.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("list.item").locator("li").filter({ hasText: /Row/ });
+	 * ```
+	 */
 	filter(
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
@@ -80,11 +90,29 @@ export class LocatorRegistrationBuilder<
 		return this.getPostDefinitionView();
 	}
 
+	/**
+	 * Adds an index selector for the locator being registered. Indices are applied in the order they
+	 * are chained and require a locator definition to have been set first.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("table.rows").locator("tr").nth(0);
+	 * ```
+	 */
 	nth(index: IndexSelector): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
 		this.applyIndex(index);
 		return this.getPostDefinitionView();
 	}
 
+	/**
+	 * Uses Playwright `getByRole` semantics to define the locator strategy. Accepts a role and
+	 * optional options; when seeded via `{ reuse }`, an options-only call patches the seeded role.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("nav.home").getByRole("link", { name: "Home" });
+	 * ```
+	 */
 	getByRole(
 		role: RoleDefinition["role"],
 		options: RoleDefinition["options"],
@@ -104,6 +132,15 @@ export class LocatorRegistrationBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Uses Playwright `getByText` semantics to define the locator strategy. Accepts string/RegExp
+	 * text and optional options; when seeded, an options-only call patches the seeded text.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("alert.error").getByText(/failed/i);
+	 * ```
+	 */
 	getByText(
 		text: string,
 		options: Parameters<Page["getByText"]>[1],
@@ -123,6 +160,15 @@ export class LocatorRegistrationBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Uses Playwright `getByLabel` semantics to define the locator strategy. Accepts label text and
+	 * optional options; when seeded, an options-only call patches the seeded text.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("form.email").getByLabel("Email", { exact: true });
+	 * ```
+	 */
 	getByLabel(
 		text: string,
 		options: Parameters<Page["getByLabel"]>[1],
@@ -142,6 +188,15 @@ export class LocatorRegistrationBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Uses Playwright `getByPlaceholder` semantics to define the locator strategy. Accepts placeholder
+	 * text and optional options; when seeded, an options-only call patches the seeded text.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("form.search").getByPlaceholder("Search", { exact: true });
+	 * ```
+	 */
 	getByPlaceholder(
 		text: string,
 		options: Parameters<Page["getByPlaceholder"]>[1],
@@ -164,6 +219,15 @@ export class LocatorRegistrationBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Uses Playwright `getByAltText` semantics to define the locator strategy. Accepts alt text and
+	 * optional options; when seeded, an options-only call patches the seeded text.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("image.logo").getByAltText(/brand/);
+	 * ```
+	 */
 	getByAltText(
 		text: string,
 		options: Parameters<Page["getByAltText"]>[1],
@@ -186,6 +250,15 @@ export class LocatorRegistrationBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Uses Playwright `getByTitle` semantics to define the locator strategy. Accepts title text and
+	 * optional options; when seeded, an options-only call patches the seeded text.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("icon.info").getByTitle("Info");
+	 * ```
+	 */
 	getByTitle(
 		text: string,
 		options: Parameters<Page["getByTitle"]>[1],
@@ -205,6 +278,16 @@ export class LocatorRegistrationBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Uses Playwright `locator` semantics to define the locator strategy. Accepts a selector and
+	 * optional options; when seeded, an options-only call patches the seeded selector by merging
+	 * options while inheriting the selector.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("list.items").locator("ul > li");
+	 * ```
+	 */
 	locator(
 		selector: Parameters<Page["locator"]>[0],
 		options: Parameters<Page["locator"]>[1],
@@ -229,6 +312,16 @@ export class LocatorRegistrationBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Uses Playwright `frameLocator` semantics to define the locator strategy, entering the targeted
+	 * frame for subsequent chained locators. When seeded, `selector` may be omitted to retain the
+	 * existing selector while overriding options elsewhere.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("frame.login").frameLocator("iframe.auth");
+	 * ```
+	 */
 	frameLocator(
 		selector: Seeded extends true
 			? Parameters<Page["frameLocator"]>[0] | undefined
@@ -240,6 +333,15 @@ export class LocatorRegistrationBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Uses Playwright `getByTestId` semantics to define the locator strategy. When seeded, omitting
+	 * the argument inherits the seeded `testId` while allowing options from other overrides.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("card.title").getByTestId("card-title");
+	 * ```
+	 */
 	getByTestId(
 		testId: Seeded extends true ? Parameters<Page["getByTestId"]>[0] | undefined : Parameters<Page["getByTestId"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
@@ -247,6 +349,15 @@ export class LocatorRegistrationBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Targets elements by `id`, normalizing string or RegExp input. When seeded, the argument can be
+	 * omitted to inherit the seeded id.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("modal.close").getById("close-modal");
+	 * ```
+	 */
 	getById(
 		id: Seeded extends true ? string | RegExp | undefined : string | RegExp,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
@@ -256,6 +367,15 @@ export class LocatorRegistrationBuilder<
 		return this.commit(definition);
 	}
 
+	/**
+	 * Targets elements using the custom `data-cy` selector engine. When seeded, the argument can be
+	 * omitted to inherit the seeded value.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("form.submit").getByDataCy("submit-btn");
+	 * ```
+	 */
 	getByDataCy(
 		value: Seeded extends true ? DataCyDefinition["value"] | undefined : DataCyDefinition["value"],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {

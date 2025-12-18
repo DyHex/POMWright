@@ -58,17 +58,41 @@ export class LocatorQueryBuilder<
 				hasTerminal = true;
 			}
 		}
-
 		if (!hasTerminal) {
 			throw new Error(`No locator schema registered for path "${path}".`);
 		}
 	}
 
+	/**
+	 * Starts a PATCH-style update for the locator definition at the given `subPath` within this
+	 * builder. Returns a builder exposing the same locator-type methods as `registry.add`, with all
+	 * arguments optional to merge with the existing definition. The registry remains unchanged until
+	 * you resolve with `getLocator`/`getNestedLocator`.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("form.button")
+	 *   .update("form.button")
+	 *   .getByRole({ name: "Submit" })
+	 *   .getNestedLocator();
+	 * ```
+	 */
 	update<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(subPath: SubPath) {
 		this.ensureSubPath(subPath);
 		return new LocatorUpdateBuilder<LocatorSchemaPathType, LocatorSubstring, SubPath>(this, subPath);
 	}
 
+	/**
+	 * Records a Playwright-style filter for the specified `subPath` within this builder. Unlike
+	 * `registry.add`, `subPath` must be provided to indicate which segment receives the filter.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("list.item")
+	 *   .filter("list", { hasText: "List" })
+	 *   .filter("list.item", { hasText: "Row" });
+	 * ```
+	 */
 	filter<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
@@ -80,6 +104,15 @@ export class LocatorQueryBuilder<
 		return this;
 	}
 
+	/**
+	 * Clears all recorded `filter`/`nth` steps for the specified `subPath` in this builder, leaving
+	 * the locator definition intact.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("list.item").clearSteps("list.item").getNestedLocator();
+	 * ```
+	 */
 	clearSteps<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
 	) {
@@ -88,6 +121,15 @@ export class LocatorQueryBuilder<
 		return this;
 	}
 
+	/**
+	 * Records an index selector for the specified `subPath` in this builder. Indices are applied in
+	 * the order they are chained and require that the subPath already exists on the builder.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("list.item").nth("list.item", 2).getNestedLocator();
+	 * ```
+	 */
 	nth<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
 		index: IndexSelector,
@@ -127,6 +169,20 @@ export class LocatorQueryBuilder<
 		return this;
 	}
 
+	/**
+	 * Starts a POST-style replacement for the locator definition at the given `subPath` within this
+	 * builder. Returns a builder exposing the same locator-type methods as `registry.add`, requiring
+	 * primary arguments where Playwright does. Registry state is unchanged; the replacement applies
+	 * to the builder clone when resolved.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("section.button")
+	 *   .replace("section.button")
+	 *   .getByRole("button", { name: "Save" })
+	 *   .getNestedLocator();
+	 * ```
+	 */
 	replace<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(subPath: SubPath) {
 		this.ensureSubPath(subPath);
 		return new LocatorUpdateBuilder<LocatorSchemaPathType, LocatorSubstring, SubPath>(this, subPath, "replace");
@@ -150,6 +206,18 @@ export class LocatorQueryBuilder<
 		return this;
 	}
 
+	/**
+	 * Soft-deletes the definition and steps for the given `subPath` on this builder clone, adding a
+	 * tombstone. Non-terminal removals are skipped during resolution; terminal removals throw unless
+	 * repopulated with `update`/`replace` before resolving.
+	 *
+	 * @example
+	 * ```ts
+	 * const builder = getLocatorSchema("section.button");
+	 * builder.remove("section.button");
+	 * expect(() => builder.getNestedLocator()).toThrow();
+	 * ```
+	 */
 	remove<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(subPath: SubPath) {
 		this.ensureSubPath(subPath);
 		this.definitions.delete(subPath);
@@ -159,6 +227,16 @@ export class LocatorQueryBuilder<
 		return this;
 	}
 
+	/**
+	 * Resolves and returns the Playwright {@link Locator} for the terminal path of this builder,
+	 * applying only the terminal definition and its steps. Throws if the terminal path has been
+	 * removed or is otherwise missing.
+	 *
+	 * @example
+	 * ```ts
+	 * const locator = getLocatorSchema("form.submit").getLocator();
+	 * ```
+	 */
 	getLocator() {
 		const definition = this.definitions.get(this.path);
 
@@ -186,6 +264,18 @@ export class LocatorQueryBuilder<
 		return locator as Locator;
 	}
 
+	/**
+	 * Resolves the chained Playwright {@link Locator} for this builder’s root path, traversing each
+	 * registered segment and applying steps/overrides. Optional overrides can supply per-segment
+	 * filters or indices. Throws if any required segment is missing.
+	 *
+	 * @example
+	 * ```ts
+	 * const nested = getLocatorSchema("list.item")
+	 *   .filter("list", { hasText: "List" })
+	 *   .getNestedLocator();
+	 * ```
+	 */
 	getNestedLocator(
 		overrides?: LocatorOverrides<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	) {
