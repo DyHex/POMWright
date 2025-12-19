@@ -262,7 +262,7 @@ describe("GetLocatorBase", () => {
 		expect(locatorSchema).toBeTypeOf("object");
 
 		const propertiesCount = Object.keys(locatorSchema).length;
-		expect(propertiesCount).toBe(28);
+		expect(propertiesCount).toBe(27);
 
 		expect(locatorSchema).toHaveProperty("locatorMethod");
 		expect(locatorSchema.locatorMethod).toBe(schema1.locatorMethod);
@@ -337,9 +337,6 @@ describe("GetLocatorBase", () => {
 		expect(locatorSchema).toHaveProperty("update");
 		expect(locatorSchema.update).toBeInstanceOf(Function);
 
-		expect(locatorSchema).toHaveProperty("updates");
-		expect(locatorSchema.updates).toBeInstanceOf(Function);
-
 		expect(locatorSchema).toHaveProperty("getNestedLocator");
 		expect(locatorSchema.getNestedLocator).toBeInstanceOf(Function);
 
@@ -362,7 +359,7 @@ describe("GetLocatorBase", () => {
 		expect(schema0inMap?.locatorMethod).toBe(schema0.locatorMethod);
 		expect(schema0inMap?.locatorSchemaPath).toBe(path0);
 		const retrievedSchema0 = instance.getLocatorSchema(path0);
-		expect(Object.keys(retrievedSchema0).length).toBe(10);
+		expect(Object.keys(retrievedSchema0).length).toBe(9);
 		expect(retrievedSchema0).containSubset(schema0inMap);
 		expect(retrievedSchema0).toBe(retrievedSchema0.schemasMap.get(path0));
 	});
@@ -401,12 +398,14 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema = instance.getLocatorSchema(path);
 		expect(locatorSchema).toBeTruthy();
-		expect(Object.keys(locatorSchema).length).toBe(10);
+		expect(Object.keys(locatorSchema).length).toBe(9);
 		expect(locatorSchema).containSubset({ ...schema, locatorSchemaPath: path }); // should reflect test data
 		expect(locatorSchema.schemasMap.get(path)).toEqual(locatorSchema); // should reference itself
 
 		// Calling .update() should return an updated locatorSchemaWithMethods object and still contain a reference to itself in its schemasMap
-		const newLocatorSchemaWeAlterWithUpdate = instance.getLocatorSchema(path).update({ locator: ".newSubClass" });
+		const newLocatorSchemaWeAlterWithUpdate = instance
+			.getLocatorSchema(path)
+			.update(path, { locator: ".newSubClass" });
 		expect(newLocatorSchemaWeAlterWithUpdate).toBeTruthy();
 		expect(newLocatorSchemaWeAlterWithUpdate.locator).toBe(".newSubClass");
 		expect(newLocatorSchemaWeAlterWithUpdate.schemasMap.get(path)?.locator).toBe(".newSubClass");
@@ -427,12 +426,12 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema = instance.getLocatorSchema(path);
 		expect(locatorSchema).toBeTruthy();
-		expect(Object.keys(locatorSchema).length).toBe(10);
+		expect(Object.keys(locatorSchema).length).toBe(9);
 		expect(locatorSchema).containSubset({ ...schema, locatorSchemaPath: path }); // should reflect test data
 		expect(locatorSchema.schemasMap.get(path)).toEqual(locatorSchema); // should reference itself
 
 		// Calling .update() should update the previously created locatorSchemaWithMethods object and still contain a reference to itself in its schemasMap
-		locatorSchema.update({ locator: ".newSubClass" });
+		locatorSchema.update(path, { locator: ".newSubClass" });
 		expect(locatorSchema).toBeTruthy();
 		expect(locatorSchema.locator).toBe(".newSubClass");
 		expect(locatorSchema.schemasMap.get(path)?.locator).toBe(".newSubClass");
@@ -461,12 +460,12 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema_A = instance.getLocatorSchema(path1);
 		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(10);
+		expect(Object.keys(locatorSchema_A).length).toBe(9);
 		expect(locatorSchema_A).containSubset({ ...schema1, locatorSchemaPath: path1 }); // should reflect test data
 		expect(locatorSchema_A.schemasMap.get(path1)).toEqual(locatorSchema_A); // should reference itself
 
 		// Calling getLocatorSchema().update() should return a new altered locatorSchemaWithMethods object and still contain a reference to itself in its schemasMap
-		const locatorSchema_B = instance.getLocatorSchema(path1).update({ locator: ".newSubClass" });
+		const locatorSchema_B = instance.getLocatorSchema(path1).update(path1, { locator: ".newSubClass" });
 		expect(locatorSchema_B).toBeTruthy();
 		expect(locatorSchema_B.locator).toBe(".newSubClass");
 		expect(locatorSchema_B.schemasMap.get(path1)?.locator).toBe(".newSubClass");
@@ -486,14 +485,14 @@ describe("GetLocatorBase", () => {
 		// Check that the original locatorSchema in getLocatorBase.locatorSchemas is still the same
 		const locatorSchema_C = instance.getLocatorSchema(path1);
 		expect(locatorSchema_C).toBeTruthy();
-		expect(Object.keys(locatorSchema_C).length).toBe(10);
+		expect(Object.keys(locatorSchema_C).length).toBe(9);
 		expect(locatorSchema_C).containSubset({ ...schema1, locatorSchemaPath: path1 }); // should reflect test data
 		expect(locatorSchema_C.schemasMap.get(path1)).toEqual(locatorSchema_C); // should reference itself
 
 		// Check that we can call .update() again and that the locatorSchema is updated correctly, again
-		locatorSchema_B.update({ locator: ".subClass" });
+		locatorSchema_B.update(path1, { locator: ".subClass" });
 		expect(locatorSchema_B).toBeTruthy();
-		expect(Object.keys(locatorSchema_B).length).toBe(10);
+		expect(Object.keys(locatorSchema_B).length).toBe(9);
 		expect(locatorSchema_B).containSubset({ ...schema1, locatorSchemaPath: path1 });
 		expect(locatorSchema_B.schemasMap.get(path1)).toEqual(locatorSchema_B);
 	});
@@ -511,7 +510,7 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema_A = instance.getLocatorSchema(path);
 		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(9);
+		expect(Object.keys(locatorSchema_A).length).toBe(8);
 		expect(locatorSchema_A).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema_A.schemasMap.get(path)).toEqual(locatorSchema_A);
 
@@ -541,90 +540,17 @@ describe("GetLocatorBase", () => {
 			locatorMethod: GetByMethod.locator,
 		};
 
-		locatorSchema_A.update(newSchema);
-		expect(Object.keys(locatorSchema_A).length).toBe(28);
+		locatorSchema_A.update(path, newSchema);
+		expect(Object.keys(locatorSchema_A).length).toBe(27);
 		expect(locatorSchema_A).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema_A.schemasMap.get(path)).toEqual(locatorSchema_A);
 
-		const locatorSchema_B = instance.getLocatorSchema(path).update(newSchema);
-		expect(Object.keys(locatorSchema_B).length).toBe(28);
+		const locatorSchema_B = instance.getLocatorSchema(path).update(path, newSchema);
+		expect(Object.keys(locatorSchema_B).length).toBe(27);
 		expect(locatorSchema_B).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema_B.schemasMap.get(path)).toEqual(locatorSchema_B);
 	});
-
-	test("updates() should alter the last locatorSchema in the chain e.g. the LocatorSchemaWithMethods the full LocatorSchemaPath resolves to the same way update does", () => {
-		const instance = new GetLocatorBase(pageObjectClass, mockLog);
-
-		const path0 = "the" as LocatorSchemaPath;
-		const schema0: LocatorSchemaWithoutPath = {
-			locator: ".mainClass",
-			locatorMethod: GetByMethod.locator,
-		};
-
-		const path1 = "the.path" as LocatorSchemaPath;
-		const schema1: LocatorSchemaWithoutPath = {
-			locator: ".subClass",
-			locatorMethod: GetByMethod.locator,
-		};
-
-		instance.addSchema(path0, schema0);
-		instance.addSchema(path1, schema1);
-
-		// Check that the locatorSchema is as expected
-		const locatorSchema_A = instance.getLocatorSchema(path1);
-		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(10);
-		expect(locatorSchema_A).containSubset({ ...schema1, locatorSchemaPath: path1 }); // should reflect test data
-		expect(locatorSchema_A.schemasMap.get(path1)).toEqual(locatorSchema_A); // should reference itself
-
-		// Calling .update() should return an updated locatorSchemaWithMethods object and still contain a reference to itself in its schemasMap
-		const locatorSchema_B = instance.getLocatorSchema(path1).updates({ 1: { locator: ".newSubClass" } });
-		expect(locatorSchema_B).toBeTruthy();
-		expect(locatorSchema_B.locator).toBe(".newSubClass");
-		expect(locatorSchema_B.schemasMap.get(path1)?.locator).toBe(".newSubClass");
-		expect(locatorSchema_B.schemasMap.get(path1)).toEqual(locatorSchema_B);
-
-		// Check that the first LocatorSchema in the chain ("the") is still the same
-		expect(locatorSchema_B.schemasMap.get(path0)).toEqual(locatorSchema_A.schemasMap.get(path0));
-		expect(locatorSchema_B.schemasMap.get(path0)).not.toBe(locatorSchema_A.schemasMap.get(path0));
-	});
-
-	test("updates() should be callable on the LocatorSchemaWithMethods object after it has been assigned to a const with getLocatorSchema", () => {
-		const instance = new GetLocatorBase(pageObjectClass, mockLog);
-
-		const path0 = "the" as LocatorSchemaPath;
-		const schema0: LocatorSchemaWithoutPath = {
-			locator: ".mainClass",
-			locatorMethod: GetByMethod.locator,
-		};
-
-		const path1 = "the.path" as LocatorSchemaPath;
-		const schema1: LocatorSchemaWithoutPath = {
-			locator: ".subClass",
-			locatorMethod: GetByMethod.locator,
-		};
-
-		instance.addSchema(path0, schema0);
-		instance.addSchema(path1, schema1);
-
-		// Check that the locatorSchema is as expected
-		const locatorSchema = instance.getLocatorSchema(path1);
-		expect(locatorSchema).toBeTruthy();
-		expect(Object.keys(locatorSchema).length).toBe(10);
-		expect(locatorSchema).containSubset({ ...schema1, locatorSchemaPath: path1 }); // should reflect test data
-		expect(locatorSchema.schemasMap.get(path1)).toEqual(locatorSchema); // should reference itself
-
-		// Calling .updates() should update the previously created locatorSchemaWithMethods object and still contain a reference to itself in its schemasMap
-		locatorSchema.updates({ 1: { locator: ".newSubClass" } });
-		expect(locatorSchema).toBeTruthy();
-		expect(locatorSchema.locator).toBe(".newSubClass");
-		expect(locatorSchema.schemasMap.get(path1)?.locator).toBe(".newSubClass");
-		expect(locatorSchema.schemasMap.get(path1)).toEqual(locatorSchema);
-		expect(locatorSchema).not.containSubset({ ...schema1, locatorSchemaPath: path1 });
-		expect(locatorSchema.schemasMap.get(path0)).toEqual({ ...schema0, locatorSchemaPath: path0 });
-	});
-
-	test("updates() should be able to alter any locatorSchema in the chain by referencing them through index", () => {
+	test("update() should be able to alter any locatorSchema in the chain by referencing them through sub paths", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path0 = "zero" as LocatorSchemaPath;
@@ -680,21 +606,20 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema = instance.getLocatorSchema(path6);
 		expect(locatorSchema).toBeTruthy();
-		expect(Object.keys(locatorSchema).length).toBe(10);
+		expect(Object.keys(locatorSchema).length).toBe(9);
 		expect(locatorSchema).containSubset({ ...schema6, locatorSchemaPath: path6 }); // should reflect test data
 		expect(locatorSchema.schemasMap.get(path6)).toEqual(locatorSchema); // should reference itself
 		expect(locatorSchema.schemasMap.size).toBe(7);
 
-		// Should be able to update all LocatorSchema in schemasMap and the LocatorSchemaWithMethods containing it through .updates()
-		locatorSchema.updates({
-			0: { locator: "#0" },
-			1: { locator: "#1" },
-			2: { locator: "#2" },
-			3: { locator: "#3" },
-			4: { locator: "#4" },
-			5: { locator: "#5" },
-			6: { locator: "#6" },
-		});
+		locatorSchema
+			.update(path0, { locator: "#0" })
+			.update(path1, { locator: "#1" })
+			.update(path2, { locator: "#2" })
+			.update(path3, { locator: "#3" })
+			.update(path4, { locator: "#4" })
+			.update(path5, { locator: "#5" })
+			.update(path6, { locator: "#6" });
+
 		expect(locatorSchema).toBeTruthy();
 		expect(locatorSchema.locator).toBe("#6");
 		expect(locatorSchema.schemasMap.get(path0)?.locator).toBe("#0");
@@ -723,93 +648,6 @@ describe("GetLocatorBase", () => {
 		expect(locatorSchema.schemasMap.get(path6)?.locatorSchemaPath).toEqual(path6);
 	});
 
-	test("updates() should be able to set any undefined Partial<LocatorSchema> property", () => {
-		const instance = new GetLocatorBase(pageObjectClass, mockLog);
-
-		const path0 = "minimum" as LocatorSchemaPath;
-		const schema0: LocatorSchemaWithoutPath = {
-			locatorMethod: GetByMethod.locator,
-		};
-
-		const path1 = "minimum.minimum" as LocatorSchemaPath;
-		const schema1: LocatorSchemaWithoutPath = {
-			locatorMethod: GetByMethod.locator,
-		};
-
-		instance.addSchema(path0, schema0);
-		instance.addSchema(path1, schema1);
-
-		// Check that the locatorSchema is as expected
-		const locatorSchema_A = instance.getLocatorSchema(path1);
-		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(9);
-		let path0LocatorSchema_A = locatorSchema_A.schemasMap.get(path0);
-		if (path0LocatorSchema_A) {
-			expect(Object.keys(path0LocatorSchema_A).length).toBe(2);
-		} else {
-			throw new Error("path0LocatorSchema is undefined");
-		}
-		expect(locatorSchema_A).containSubset({ ...schema0, locatorSchemaPath: path1 });
-		expect(locatorSchema_A.schemasMap.get(path1)).toEqual(locatorSchema_A);
-
-		const locator = {} as Locator;
-
-		const newSchema: LocatorSchemaWithoutPath = {
-			role: "button",
-			roleOptions: {
-				name: "button",
-				exact: true,
-				checked: true,
-				disabled: true,
-				expanded: true,
-				includeHidden: true,
-				level: 1,
-				pressed: true,
-				selected: true,
-			},
-			text: "text",
-			textOptions: { exact: true },
-			label: "label",
-			labelOptions: { exact: true },
-			placeholder: "placeholder",
-			placeholderOptions: { exact: true },
-			altText: "altText",
-			altTextOptions: { exact: true },
-			title: "title",
-			titleOptions: { exact: true },
-			locator: ".class",
-			locatorOptions: { has: locator, hasNot: locator, hasText: "yesText", hasNotText: "noText" },
-			frameLocator: 'iframe[title="frame"]',
-			testId: "testId",
-			dataCy: "dataCy",
-			id: "id",
-			locatorMethod: GetByMethod.locator,
-		};
-
-		locatorSchema_A.updates({ 0: newSchema, 1: newSchema });
-		expect(Object.keys(locatorSchema_A).length).toBe(27);
-		expect(locatorSchema_A).containSubset({ ...schema1, locatorSchemaPath: path1 });
-		expect(locatorSchema_A.schemasMap.get(path1)).toEqual(locatorSchema_A);
-		expect(locatorSchema_A.schemasMap.get(path0)).containSubset({ ...schema0, locatorSchemaPath: path0 });
-		path0LocatorSchema_A = locatorSchema_A.schemasMap.get(path0);
-		if (path0LocatorSchema_A) {
-			expect(Object.keys(path0LocatorSchema_A).length).toBe(20);
-		} else {
-			throw new Error("path0LocatorSchema is undefined");
-		}
-
-		const locatorSchema_B = instance.getLocatorSchema(path1).updates({ 0: newSchema, 1: newSchema });
-		expect(Object.keys(locatorSchema_B).length).toBe(27);
-		expect(locatorSchema_B).containSubset({ ...schema1, locatorSchemaPath: path1 });
-		expect(locatorSchema_B.schemasMap.get(path1)).toEqual(locatorSchema_B);
-		const path0LocatorSchema_B = locatorSchema_B.schemasMap.get(path0);
-		if (path0LocatorSchema_B) {
-			expect(Object.keys(path0LocatorSchema_B).length).toBe(20);
-		} else {
-			throw new Error("path0LocatorSchema is undefined");
-		}
-	});
-
 	test("should be able to chain update()", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
@@ -825,12 +663,14 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema_A = instance.getLocatorSchema(path);
 		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(11);
+		expect(Object.keys(locatorSchema_A).length).toBe(10);
 		expect(locatorSchema_A).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema_A.schemasMap.get(path)).toEqual(locatorSchema_A);
 
 		// Should be able to chain update() calls on an existing object
-		locatorSchema_A.update({ role: "radio" }).update({ roleOptions: { name: "Agree", exact: false } });
+		locatorSchema_A
+			.update(path, { role: "radio" })
+			.update(path, { roleOptions: { name: "Agree", exact: false } });
 
 		expect(locatorSchema_A.role).toBe("radio");
 		expect(locatorSchema_A.roleOptions).toEqual({ name: "Agree", exact: false });
@@ -838,13 +678,13 @@ describe("GetLocatorBase", () => {
 		// Should be able to chain update() calls directly when calling getLocatorSchema
 		const locatorSchema_B = instance
 			.getLocatorSchema(path)
-			.update({ role: "radio" })
-			.update({ roleOptions: { name: "Agree", exact: false } });
+			.update(path, { role: "radio" })
+			.update(path, { roleOptions: { name: "Agree", exact: false } });
 		expect(locatorSchema_B.role).toBe("radio");
 		expect(locatorSchema_B.roleOptions).toEqual({ name: "Agree", exact: false });
 	});
 
-	test("should be able to chain updates()", () => {
+	test("should be able to chain update() across sub paths", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path0 = "region" as LocatorSchemaPath;
@@ -867,20 +707,15 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema_A = instance.getLocatorSchema(path1);
 		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(11);
+		expect(Object.keys(locatorSchema_A).length).toBe(10);
 		expect(locatorSchema_A).containSubset({ ...schema1, locatorSchemaPath: path1 });
 		expect(locatorSchema_A.schemasMap.get(path1)).toEqual(locatorSchema_A);
 
-		// Should be able to chain updates() calls on an existing object
 		locatorSchema_A
-			.updates({
-				0: { role: "radio" },
-				1: { roleOptions: { name: "Agree", exact: false } },
-			})
-			.updates({
-				0: { roleOptions: { name: "Enable something" } },
-				1: { role: "checkbox" },
-			});
+			.update(path0, { role: "radio" })
+			.update(path1, { roleOptions: { name: "Agree", exact: false } })
+			.update(path0, { roleOptions: { name: "Enable something" } })
+			.update(path1, { role: "checkbox" });
 
 		expect(locatorSchema_A.role).toBe("checkbox");
 		expect(locatorSchema_A.roleOptions).toEqual({ name: "Agree", exact: false });
@@ -890,41 +725,7 @@ describe("GetLocatorBase", () => {
 		expect(locatorSchema_A.schemasMap.get(path0)?.roleOptions).toEqual({ name: "Enable something", exact: true });
 	});
 
-	test("should be able to chain update() and updates()", () => {
-		const instance = new GetLocatorBase(pageObjectClass, mockLog);
-
-		const path = "button" as LocatorSchemaPath;
-		const schema: LocatorSchemaWithoutPath = {
-			role: "button",
-			roleOptions: { name: "button", exact: true },
-			locatorMethod: GetByMethod.role,
-		};
-
-		instance.addSchema(path, schema);
-
-		// Check that the locatorSchema is as expected
-		const locatorSchema_A = instance.getLocatorSchema(path);
-		expect(locatorSchema_A).toBeTruthy();
-		expect(Object.keys(locatorSchema_A).length).toBe(11);
-		expect(locatorSchema_A).containSubset({ ...schema, locatorSchemaPath: path });
-		expect(locatorSchema_A.schemasMap.get(path)).toEqual(locatorSchema_A);
-
-		// Should be able to chain update() and updates() calls on an existing object
-		locatorSchema_A
-			.update({ role: "radio" })
-			.updates({
-				0: { roleOptions: { name: "Agree" } },
-			})
-			.update({ roleOptions: { exact: false } })
-			.updates({ 0: { locator: ".class" } });
-
-		expect(locatorSchema_A.role).toBe("radio");
-		expect(locatorSchema_A.roleOptions).toEqual({ name: "Agree", exact: false });
-		expect(locatorSchema_A.locator).toBe(".class");
-		expect(locatorSchema_A.schemasMap.get(path)).toEqual(locatorSchema_A);
-	});
-
-	test("should not be able to change LocatorSchemaPath through update or updates", () => {
+	test("should not be able to change LocatorSchemaPath through update", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path = "button" as LocatorSchemaPath;
@@ -939,27 +740,20 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema = instance.getLocatorSchema(path);
 		expect(locatorSchema).toBeTruthy();
-		expect(Object.keys(locatorSchema).length).toBe(11);
+		expect(Object.keys(locatorSchema).length).toBe(10);
 		expect(locatorSchema).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema.schemasMap.get(path)).toEqual(locatorSchema);
 
 		// Should not be able to change the LocatorSchemaPath
 		expect(() => {
 			// @ts-ignore Object literal may only specify known properties, and 'locatorSchemaPath' does not exist in type 'Partial<UpdatableLocatorSchemaProperties>'.ts(2353)
-			locatorSchema.update({ locatorSchemaPath: "newPath" });
-		}).toThrowError(
-			"[POC] Invalid property: 'locatorSchemaPath' cannot be updated. Attempted to update LocatorSchemaPath from 'button' to 'newPath'.",
-		);
-
-		expect(() => {
-			// @ts-ignore Object literal may only specify known properties, and 'locatorSchemaPath' does not exist in type 'Partial<UpdatableLocatorSchemaProperties>'.ts(2353)
-			locatorSchema.updates({ 0: { locatorSchemaPath: "newPath" } });
+			locatorSchema.update(path, { locatorSchemaPath: "newPath" });
 		}).toThrowError(
 			"[POC] Invalid property: 'locatorSchemaPath' cannot be updated. Attempted to update LocatorSchemaPath from 'button' to 'newPath'.",
 		);
 	});
 
-	test("last update/updates should take precedence over previous ones", () => {
+	test("last update should take precedence over previous ones", () => {
 		const instance = new GetLocatorBase(pageObjectClass, mockLog);
 
 		const path = "button" as LocatorSchemaPath;
@@ -974,17 +768,16 @@ describe("GetLocatorBase", () => {
 		// Check that the locatorSchema is as expected
 		const locatorSchema = instance.getLocatorSchema(path);
 		expect(locatorSchema).toBeTruthy();
-		expect(Object.keys(locatorSchema).length).toBe(11);
+		expect(Object.keys(locatorSchema).length).toBe(10);
 		expect(locatorSchema).containSubset({ ...schema, locatorSchemaPath: path });
 		expect(locatorSchema.schemasMap.get(path)).toEqual(locatorSchema);
 
-		// Should not be able to change the LocatorSchemaPath
-		locatorSchema.update({ role: "radio" }).updates({ 0: { role: "checkbox" } });
+		locatorSchema.update(path, { role: "radio" }).update(path, { role: "checkbox" });
 
 		expect(locatorSchema.role).toBe("checkbox");
 		expect(locatorSchema.schemasMap.get(path)).toEqual(locatorSchema);
 
-		locatorSchema.updates({ 0: { role: "checkbox" } }).update({ role: "radio" });
+		locatorSchema.update(path, { role: "checkbox" }).update(path, { role: "radio" });
 		expect(locatorSchema.role).toBe("radio");
 		expect(locatorSchema.schemasMap.get(path)).toEqual(locatorSchema);
 	});

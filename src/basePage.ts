@@ -193,24 +193,6 @@ export abstract class BasePage<
 	): Promise<Locator>;
 
 	/**
-	 * @deprecated Use { SubPaths: index } instead of {4:2}, i.e. subPath-based keys instead of indices, see example.
-	 *
-	 * Deprecated short-hand wrapper method for calling .getLocatorSchema(LocatorSchemaPath).getNestedLocator(subPathIndices?)
-	 *
-	 * @example
-	 * // New Usage:
-	 * const something = await poc.getNestedLocator("main.form.item.something", {
-	 *     "main.form": 0, // locator.first() / locator.nth(0)
-	 *     "main.form.item": 1, // locator.nth(1)
-	 *   });
-	 * await something.click();
-	 */
-	public async getNestedLocator(
-		locatorSchemaPath: LocatorSchemaPathType,
-		indices?: { [key: number]: number | null } | null,
-	): Promise<Locator>;
-
-	/**
 	 * Implementation of getNestedLocator.
 	 */
 	public async getNestedLocator(
@@ -396,13 +378,8 @@ class WithSubPathValidation<
 		subPathIndices?: { [K in SubPaths<LocatorSchemaPathType, ValidatedPath>]?: number | null },
 	): Promise<Locator>;
 
-	/**
-	 * Legacy overload (deprecated).
-	 */
-	public async getNestedLocator(indices?: { [key: number]: number | null }): Promise<Locator>;
-
 	public async getNestedLocator(
-		arg?: { [K in SubPaths<LocatorSchemaPathType, ValidatedPath>]?: number | null } | { [key: number]: number | null },
+		arg?: { [K in SubPaths<LocatorSchemaPathType, ValidatedPath>]?: number | null },
 	): Promise<Locator> {
 		return await this.pageObjectClass.getLocatorSchema(this.locatorSchemaPath).getNestedLocator(arg);
 	}

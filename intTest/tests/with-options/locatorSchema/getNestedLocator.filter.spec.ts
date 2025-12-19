@@ -51,7 +51,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 		test(`GetByMethod.${getByMethod}: should apply filter `, async ({ testFilters }) => {
 			const undefinedFilter = await testFilters
 				.getLocatorSchema("fictional.filter@undefined")
-				.update({ locatorMethod: GetByMethod[getByMethod] })
+				.update("fictional.filter@undefined", { locatorMethod: GetByMethod[getByMethod] })
 				.getNestedLocator();
 
 			expect(`${undefinedFilter}`).toEqual(expected);
@@ -61,7 +61,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	test("GetByMethod.frameLocator: should NOT apply filter", async ({ testFilters }) => {
 		const chainWithFilter = testFilters
 			.getLocatorSchema("fictional.filter@hasNotText.filter@hasText")
-			.update({ locatorMethod: GetByMethod.frameLocator });
+			.update("fictional.filter@hasNotText.filter@hasText", { locatorMethod: GetByMethod.frameLocator });
 
 		expect.soft(chainWithFilter.filter.hasText).toEqual("hasText");
 
@@ -75,11 +75,11 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	test("multiple nesting/chaining", async ({ testFilters }) => {
 		const multiChainWithFilter = await testFilters
 			.getLocatorSchema("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText")
-			.updates({
-				1: { locatorMethod: GetByMethod.role },
-				2: { locatorMethod: GetByMethod.locator },
-				3: { locatorMethod: GetByMethod.testId },
-				4: { locatorMethod: GetByMethod.label },
+			.update("fictional.filter@hasNotText", { locatorMethod: GetByMethod.role })
+			.update("fictional.filter@hasNotText.filter@hasText", { locatorMethod: GetByMethod.locator })
+			.update("fictional.filter@hasNotText.filter@hasText.filter@hasNotText", { locatorMethod: GetByMethod.testId })
+			.update("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText", {
+				locatorMethod: GetByMethod.label,
 			})
 			.getNestedLocator();
 
@@ -93,7 +93,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 
 		const multiChainWithFilter = await testFilters
 			.getLocatorSchema("fictional.filter@hasNotText")
-			.update({ locatorMethod: GetByMethod.role, filter: { has: heading } })
+			.update("fictional.filter@hasNotText", { locatorMethod: GetByMethod.role, filter: { has: heading } })
 			.getNestedLocator();
 
 		expect(`${multiChainWithFilter}`).toEqual(
