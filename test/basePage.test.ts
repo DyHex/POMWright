@@ -215,7 +215,6 @@ const baseExpectedProperties = [
 	"locatorSchemaPath",
 	"schemasMap",
 	"update",
-	"updates",
 	"addFilter",
 	"filterMap",
 	"getNestedLocator",
@@ -357,7 +356,6 @@ describe("BasePage: PageObjectModel.getLocatorSchema", () => {
 
 			const hasMethods =
 				typeof locatorSchemaWithMethods.update === "function" &&
-				typeof locatorSchemaWithMethods.updates === "function" &&
 				typeof locatorSchemaWithMethods.addFilter === "function" &&
 				typeof locatorSchemaWithMethods.getNestedLocator === "function" &&
 				typeof locatorSchemaWithMethods.getLocator === "function";

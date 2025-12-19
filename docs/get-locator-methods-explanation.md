@@ -137,8 +137,6 @@ test("specify index for nested locators", async ({ profile }) => {
 });
 ```
 
-> Legacy numeric indices are still supported but will be removed in a future major version. Prefer keyed sub paths as shown above.
-
 ## Building chains with `getLocatorSchema()`
 
 `getLocatorSchema(path)` returns a deep copy of every schema that makes up the `path` plus chainable helpers for refining the locator. All manipulations happen on the copy, so the original definitions inside the page object stay immutable.
@@ -247,20 +245,6 @@ await editButtonUpdated.click();
 
 // Calling profile.getLocatorSchema("content.region.details.button.edit") again
 // returns a fresh deep copy of the original schema chain.
-```
-
-## Migrating from deprecated helpers
-
-Earlier versions exposed index-based helpers. They continue to work but are deprecated in favour of the sub-path syntax described above.
-
-```ts
-// old
-await profile.getNestedLocator("content.region.details.button.save", { 4: 2 });
-
-// new
-await profile.getNestedLocator("content.region.details.button.save", {
-  "content.region.details.button.save": 2
-});
 ```
 
 Switching to sub-path keys makes updates easier when `LocatorSchemaPath` strings change, and TypeScript will warn you if you mistype a path. While improving readability.
