@@ -1,5 +1,19 @@
 # pomwright
 
+## 1.4.0
+
+### Minor Changes
+
+- [#36](https://github.com/DyHex/POMWright/pull/36) [`e307d0e`](https://github.com/DyHex/POMWright/commit/e307d0e871bce4b69f12fa17fa673af3dad8f874) Thanks [@DyHex](https://github.com/DyHex)! - # v1.4.0
+
+  ## Removed
+
+  - Dropped deprecated locator schema helpers (legacy numeric indexing and update/updates overloads). Use sub-path keyed indices and `update(subPath, updates)` instead.
+
+  ## Changed
+
+  - Simplified nested locator debug logging to count-only checks to avoid CSP-restricted pages failing when `evaluateAll` is blocked.
+
 ## 1.3.0
 
 ### Minor Changes
