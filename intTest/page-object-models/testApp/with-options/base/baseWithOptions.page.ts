@@ -1,5 +1,5 @@
 import type { Page, TestInfo } from "@playwright/test";
-import { BasePageV1toV2, type BasePageOptions, type ExtractUrlPathType, type PlaywrightReportLogger } from "pomwright";
+import { type BasePageOptions, BasePageV1toV2, type ExtractUrlPathType, type PlaywrightReportLogger } from "pomwright";
 
 // BaseWithOptions extends BasePage and enforces baseUrlType as string
 export default abstract class BaseWithOptions<

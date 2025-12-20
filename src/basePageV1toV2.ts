@@ -1,9 +1,4 @@
 import { type Locator, type Page, type Selectors, selectors, type TestInfo } from "@playwright/test";
-import type { BasePage } from "./basePage";
-import { GetLocatorBase, type SubPaths } from "./helpers/getLocatorBase";
-import type { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
-import { SessionStorage } from "./helpers/sessionStorage.actions";
-import { createCypressIdEngine } from "./utils/selectorEngines";
 import {
 	type AddAccessor,
 	createRegistryWithAccessors,
@@ -12,6 +7,11 @@ import {
 	type GetNestedLocatorAccessor,
 	type LocatorRegistry,
 } from "../srcV2/locators";
+import type { BasePage } from "./basePage";
+import { GetLocatorBase, type SubPaths } from "./helpers/getLocatorBase";
+import type { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
+import { SessionStorage } from "./helpers/sessionStorage.actions";
+import { createCypressIdEngine } from "./utils/selectorEngines";
 
 /**
  * BasePageOptions can define optional patterns for baseUrl and urlPath.
