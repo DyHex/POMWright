@@ -1,4 +1,4 @@
-import { GetByMethod, type GetLocatorBase } from "pomwright";
+import { GetByMethod, type GetLocatorBase, type LocatorRegistry } from "pomwright";
 
 export type LocatorSchemaPath = "body" | "body.link@color";
 
@@ -15,4 +15,9 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
 		},
 		locatorMethod: GetByMethod.role,
 	});
+}
+
+export function defineLocators(registry: LocatorRegistry<LocatorSchemaPath>) {
+	registry.add("body").locator("body");
+	registry.add("body.link@color").getByRole("link", { name: "Random Color Link" });
 }

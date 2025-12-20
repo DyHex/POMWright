@@ -30,3 +30,7 @@ export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>)
 
 	locators.add("topMenu.myAccount").getByTitle("My Account");
 }
+
+export function defineLocators(locators: LocatorRegistry<LocatorSchemaPath>) {
+	initLocatorSchemas(locators);
+}

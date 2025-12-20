@@ -1,5 +1,6 @@
 import {
 	type LocatorSchemaPath,
+	defineLocators,
 	initLocatorSchemas,
 } from "@page-object-models/testApp/without-options/pages/testPage.locatorSchema"; // same page, same locator schema
 import type { Page, TestInfo } from "@playwright/test";
@@ -14,6 +15,10 @@ export default class TestPage extends BaseWithOptions<LocatorSchemaPath> {
 
 	protected initLocatorSchemas() {
 		initLocatorSchemas(this.locators);
+	}
+
+	protected defineLocators() {
+		defineLocators(this.locatorRegistry);
 	}
 
 	// add your helper methods here...

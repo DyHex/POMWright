@@ -7,6 +7,9 @@ import {
 } from "./src/basePage";
 export { BasePage, type BasePageOptions, type ExtractBaseUrlType, type ExtractFullUrlType, type ExtractUrlPathType };
 
+import { BasePageV1toV2 } from "./src/basePageV1toV2";
+export { BasePageV1toV2 };
+
 import { test } from "./src/fixture/base.fixtures";
 export { test };
 
@@ -21,3 +24,6 @@ export { GetLocatorBase, type LocatorSchemaWithoutPath };
 
 import { BaseApi } from "./src/api/baseApi";
 export { BaseApi };
+
+import { createRegistryWithAccessors, type LocatorRegistry } from "./srcV2/locators";
+export { createRegistryWithAccessors, type LocatorRegistry };

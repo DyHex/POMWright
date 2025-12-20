@@ -7,3 +7,7 @@ export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>)
 
 	locators.add("body.link@color").getByRole("link", { name: "Random Color Link" });
 }
+
+export function defineLocators(locators: LocatorRegistry<LocatorSchemaPath>) {
+	initLocatorSchemas(locators);
+}

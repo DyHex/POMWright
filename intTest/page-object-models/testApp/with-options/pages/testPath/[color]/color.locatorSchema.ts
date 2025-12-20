@@ -1,4 +1,4 @@
-import { GetByMethod, type GetLocatorBase } from "pomwright";
+import { GetByMethod, type GetLocatorBase, type LocatorRegistry } from "pomwright";
 
 /**
  * The following locatorSchema implementation is total overkill for the Color POC, but serves as one possible
@@ -78,5 +78,25 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
 			role: "cell",
 			locatorMethod: GetByMethod.role,
 		});
+	}
+}
+
+export function defineLocators(registry: LocatorRegistry<LocatorSchemaPath>) {
+	registry.add("body").locator("body");
+	registry.add("body.heading").getByRole("heading", { name: "Your Random Color is:" });
+
+	const tableLocatorMap = new Map<LocatorSchemaPath, { role: AllowedRoles; roleOptions?: { name: string } }>([
+		["body.table", { role: "table" }],
+		["body.table@hexCode", { role: "table", roleOptions: { name: "Hex Code Information" } }],
+	]);
+
+	for (const [locatorPath, schema] of tableLocatorMap) {
+		registry.add(locatorPath).getByRole(schema.role, schema.roleOptions);
+	}
+
+	for (const tableVariant of tableVariants) {
+		registry.add(`${tableVariant}.row`).getByRole("row");
+		registry.add(`${tableVariant}.row.rowheader`).getByRole("rowheader");
+		registry.add(`${tableVariant}.row.cell`).getByRole("cell");
 	}
 }

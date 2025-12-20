@@ -112,3 +112,7 @@ export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>)
 		.getByRole("button")
 		.filter({ hasText: "hasText" });
 }
+
+export function defineLocators(locators: LocatorRegistry<LocatorSchemaPath>) {
+	initLocatorSchemas(locators);
+}

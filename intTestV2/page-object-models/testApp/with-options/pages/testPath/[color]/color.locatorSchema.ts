@@ -27,3 +27,7 @@ export function initLocatorSchemas(locators: LocatorRegistry<ColorLocatorSchemaP
 		locators.add(`${tableVariant}.row.cell`).getByRole("cell");
 	}
 }
+
+export function defineLocators(locators: LocatorRegistry<ColorLocatorSchemaPath>) {
+	initLocatorSchemas(locators);
+}

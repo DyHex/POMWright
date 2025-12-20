@@ -1,11 +1,11 @@
 import type { Page, TestInfo } from "@playwright/test";
-import { BasePage, type BasePageOptions, type ExtractUrlPathType, type PlaywrightReportLogger } from "pomwright";
+import { BasePageV1toV2, type BasePageOptions, type ExtractUrlPathType, type PlaywrightReportLogger } from "pomwright";
 
 // BaseWithOptions extends BasePage and enforces baseUrlType as string
 export default abstract class BaseWithOptions<
 	LocatorSchemaPathType extends string,
 	Options extends BasePageOptions = { urlOptions: { baseUrlType: string; urlPathType: string } },
-> extends BasePage<
+> extends BasePageV1toV2<
 	LocatorSchemaPathType,
 	{ urlOptions: { baseUrlType: string; urlPathType: ExtractUrlPathType<Options> } }
 > {

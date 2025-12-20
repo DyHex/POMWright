@@ -22,3 +22,7 @@ export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>)
 	locators.add("sectionB.frame.innerFrame").frameLocator("#iframeC");
 	locators.add("sectionB.frame.innerFrame.toggle").getByTestId("toggle-c");
 }
+
+export function defineLocators(locators: LocatorRegistry<LocatorSchemaPath>) {
+	initLocatorSchemas(locators);
+}

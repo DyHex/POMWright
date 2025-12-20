@@ -1,5 +1,7 @@
 import { type Locator, test } from "@playwright/test";
 import type { BasePage, BasePageOptions } from "../basePage";
+import type { LocatorRegistry } from "../../srcV2/locators";
+import { addV1SchemaToV2Registry } from "../../srcV2/locators/v1SchemaTranslator";
 import { GetBy } from "./getBy.locator";
 import { GetByMethod, getLocatorSchemaDummy, type LocatorSchema } from "./locatorSchema.interface";
 import type { PlaywrightReportLogger } from "./playwrightReportLogger";
@@ -439,6 +441,12 @@ export class GetLocatorBase<
 		}
 
 		this.locatorSchemas.set(locatorSchemaPath, () => newLocatorSchema);
+
+		const v2Registry = (this.pageObjectClass as { locatorRegistry?: LocatorRegistry<LocatorSchemaPathType> })
+			.locatorRegistry;
+		if (v2Registry) {
+			addV1SchemaToV2Registry(v2Registry, newLocatorSchema);
+		}
 	}
 
 	/**
