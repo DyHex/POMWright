@@ -1,7 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import type {
 	AltTextDefinition,
-	DataCyDefinition,
 	FilterDefinition,
 	FrameLocatorDefinition,
 	IdDefinition,
@@ -196,8 +195,6 @@ export const createLocator = (
 			const safePattern = cssEscape(pattern);
 			return target.locator(`[id*="${safePattern}"]`);
 		}
-		case "dataCy":
-			return target.locator(`data-cy=${definition.value}`);
 		default: {
 			const exhaustive: never = definition;
 			return exhaustive;
@@ -255,8 +252,6 @@ export const cloneLocatorStrategyDefinition = (definition: LocatorStrategyDefini
 			return { type: "testId", testId: definition.testId };
 		case "id":
 			return { type: "id", id: definition.id };
-		case "dataCy":
-			return { type: "dataCy", value: definition.value };
 		default: {
 			const exhaustive: never = definition;
 			return exhaustive;
@@ -339,10 +334,6 @@ export const applyDefinitionPatch = (
 			const id =
 				patch.id !== undefined ? (normalizeIdValue(patch.id) ?? (base as IdDefinition).id) : (base as IdDefinition).id;
 			return { type: "id", id } satisfies IdDefinition;
-		}
-		case "dataCy": {
-			const value = patch.value ?? (base as DataCyDefinition).value;
-			return { type: "dataCy", value } satisfies DataCyDefinition;
 		}
 		default: {
 			const exhaustive: never = patch;

@@ -38,21 +38,6 @@ test("add getByAltText to registry", async ({ page }) => {
 	});
 });
 
-test("add getByDataCy to registry", async ({ page }) => {
-	type LocatorSchemaPaths = "elementByDataCy";
-
-	const registry = createTestRegistry<LocatorSchemaPaths>(page);
-
-	expect(() => registry.get("elementByDataCy")).toThrowError(`${errMsg} "elementByDataCy".`);
-
-	registry.add("elementByDataCy").getByDataCy("data-cy-value");
-	expect(registry.get("elementByDataCy")).toEqual({
-		definition: { value: "data-cy-value", type: "dataCy" },
-		locatorSchemaPath: "elementByDataCy",
-		steps: [],
-	});
-});
-
 test("add getById to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "stringId" | "stringId.#stringId" | "regExpId";
 

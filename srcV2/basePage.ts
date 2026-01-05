@@ -1,6 +1,5 @@
 import { type Page, type Selectors, selectors, type TestInfo } from "@playwright/test";
 import { SessionStorage } from "../src/helpers/sessionStorage.actions";
-import { createCypressIdEngine } from "../src/utils/selectorEngines";
 import type { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 import {
 	type AddAccessor,
@@ -29,8 +28,6 @@ export type ExtractFullUrlType<T extends BasePageOptions> = T["urlOptions"] exte
 	| { urlPathType: RegExp }
 	? RegExp
 	: string;
-
-let selectorEngineRegistered = false;
 
 export abstract class BasePageV2<
 	LocatorSchemaPathType extends string,
@@ -77,11 +74,6 @@ export abstract class BasePageV2<
 		this.sessionStorage = new SessionStorage(page, pocName);
 
 		this.defineLocators();
-
-		if (!selectorEngineRegistered) {
-			selectors.register("data-cy", createCypressIdEngine);
-			selectorEngineRegistered = true;
-		}
 	}
 
 	protected abstract defineLocators(): void;

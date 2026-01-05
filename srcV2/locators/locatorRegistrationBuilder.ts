@@ -2,7 +2,6 @@ import type { Page } from "@playwright/test";
 import type { LocatorRegistryInternal } from "./locatorRegistry";
 import type {
 	AltTextDefinition,
-	DataCyDefinition,
 	FilterDefinition,
 	IdDefinition,
 	IndexSelector,
@@ -367,22 +366,6 @@ export class LocatorRegistrationBuilder<
 		return this.commit(definition);
 	}
 
-	/**
-	 * Targets elements using the custom `data-cy` selector engine. When seeded, the argument can be
-	 * omitted to inherit the seeded value.
-	 *
-	 * @example
-	 * ```ts
-	 * registry.add("form.submit").getByDataCy("submit-btn");
-	 * ```
-	 */
-	getByDataCy(
-		value: Seeded extends true ? DataCyDefinition["value"] | undefined : DataCyDefinition["value"],
-	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
-		const definition: LocatorStrategyDefinitionPatch = value ? { type: "dataCy", value } : { type: "dataCy" };
-		return this.commit(definition);
-	}
-
 	private commit(
 		definition: LocatorStrategyDefinition | LocatorStrategyDefinitionPatch,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
@@ -507,7 +490,6 @@ export type LocatorRegistrationPreDefinitionBuilder<
 		| "frameLocator"
 		| "getByTestId"
 		| "getById"
-		| "getByDataCy"
 	>;
 
 type LocatorMethodForType<Type extends LocatorStrategyDefinition["type"]> = Type extends "role"
@@ -530,7 +512,7 @@ type LocatorMethodForType<Type extends LocatorStrategyDefinition["type"]> = Type
 									? "getByTestId"
 									: Type extends "id"
 										? "getById"
-										: "getByDataCy";
+										: never;
 
 export type LocatorRegistrationSeededBuilderForType<
 	LocatorSchemaPathType extends string,

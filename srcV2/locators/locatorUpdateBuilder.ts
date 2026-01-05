@@ -1,7 +1,6 @@
 import type { Page } from "@playwright/test";
 import type { LocatorQueryBuilder } from "./locatorQueryBuilder";
 import type {
-	DataCyDefinition,
 	LocatorChainPaths,
 	LocatorStrategyDefinition,
 	LocatorUpdate,
@@ -191,14 +190,6 @@ const mergeLocatorDefinition = (
 			}
 			return { type: "id", id } as LocatorStrategyDefinition;
 		}
-		case "dataCy": {
-			const valueSource = source("dataCy");
-			const value = updates.value ?? valueSource?.value;
-			if (value === undefined) {
-				throw new Error(`Locator update for "${path}" of type "dataCy" requires a "value" value.`);
-			}
-			return { type: "dataCy", value } as LocatorStrategyDefinition;
-		}
 		default: {
 			const exhaustive: never = updates;
 			return exhaustive;
@@ -296,13 +287,6 @@ const buildReplacementDefinition = (updates: LocatorUpdate, path: string): Locat
 				throw new Error(`Locator replace for "${path}" of type "id" requires an "id" value.`);
 			}
 			return { type: "id", id } as LocatorStrategyDefinition;
-		}
-		case "dataCy": {
-			const { value } = updates;
-			if (value === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "dataCy" requires a "value" value.`);
-			}
-			return { type: "dataCy", value } as LocatorStrategyDefinition;
 		}
 		default: {
 			const exhaustive: never = updates;
@@ -603,26 +587,6 @@ export class LocatorUpdateBuilder<
 		const definition: LocatorUpdate = {
 			type: "id",
 			...(id !== undefined ? { id } : {}),
-		};
-
-		return this.commit(definition);
-	}
-
-	/**
-	 * Defines or patches a `data-cy` locator strategy for the target subpath. In `update` mode the
-	 * value is optional; in `replace` mode the value is required.
-	 *
-	 * @example
-	 * ```ts
-	 * getLocatorSchema("form.submit").replace("form.submit").getByDataCy("submit-btn").getNestedLocator();
-	 * ```
-	 */
-	getByDataCy(...args: UpdateArgsWithoutOptions<DataCyDefinition["value"]>) {
-		const [value] = args;
-
-		const definition: LocatorUpdate = {
-			type: "dataCy",
-			...(value !== undefined ? { value } : {}),
 		};
 
 		return this.commit(definition);

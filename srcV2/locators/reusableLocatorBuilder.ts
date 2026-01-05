@@ -1,7 +1,6 @@
 import type { Page } from "@playwright/test";
 import type {
 	AltTextDefinition,
-	DataCyDefinition,
 	FilterDefinition,
 	IdDefinition,
 	IndexSelector,
@@ -174,10 +173,6 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 
 	getById(id: string | RegExp) {
 		return this.create({ type: "id", id: normalizeIdValue(id) as IdDefinition["id"] });
-	}
-
-	getByDataCy(value: DataCyDefinition["value"]) {
-		return this.create({ type: "dataCy", value });
 	}
 
 	private create<Type extends LocatorStrategyDefinition["type"]>(

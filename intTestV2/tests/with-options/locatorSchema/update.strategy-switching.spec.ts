@@ -60,12 +60,12 @@ test("update can switch locator strategies, caching all latest locator definitio
 	const id = schema.update(path).getById("new-id").getNestedLocator();
 	expect(`${id}`).toEqual(`${manualId}`);
 
-	const manualDataCy = page.locator("body").locator("data-cy=new-cy").filter({ hasText: "Text" }).first();
-	const dataCy = schema.update(path).getByDataCy("new-cy").getNestedLocator();
+	const manualDataCy = page.locator("body").locator('[data-cy="new-cy"]').filter({ hasText: "Text" }).first();
+	const dataCy = schema.update(path).locator('[data-cy="new-cy"]').getNestedLocator();
 	expect(`${dataCy}`).toEqual(`${manualDataCy}`);
 
 	const resetLocator = schema.update(path).locator().getNestedLocator();
-	expect(`${resetLocator}`).toEqual(`${locator}`);
+	expect(`${resetLocator}`).toEqual(`${dataCy}`);
 
 	const resetRole = schema.update(path).getByRole().getNestedLocator();
 	expect(`${resetRole}`).toEqual(`${role}`);
@@ -94,11 +94,8 @@ test("update can switch locator strategies, caching all latest locator definitio
 	const resetId = schema.update(path).getById().getNestedLocator();
 	expect(`${resetId}`).toEqual(`${id}`);
 
-	const resetDataCy = schema.update(path).getByDataCy().getNestedLocator();
-	expect(`${resetDataCy}`).toEqual(`${dataCy}`);
-
 	const resetLocatorAgain = schema.update(path).locator().getNestedLocator();
-	expect(`${resetLocatorAgain}`).toEqual(`${locator}`);
+	expect(`${resetLocatorAgain}`).toEqual(`${dataCy}`);
 
 	const lastRoleClearSteps = schema
 		.update(path)
@@ -109,5 +106,5 @@ test("update can switch locator strategies, caching all latest locator definitio
 	expect(`${lastRoleClearSteps}`).toEqual("locator('body').getByRole('region', { name: 'Now a region' })");
 
 	const stillNoFiltersAndIndicesOnAdditionalSwitch = schema.update(path).locator().getNestedLocator();
-	expect(`${stillNoFiltersAndIndicesOnAdditionalSwitch}`).toEqual("locator('body').locator('newSelector')");
+	expect(`${stillNoFiltersAndIndicesOnAdditionalSwitch}`).toEqual("locator('body').locator('[data-cy=\"new-cy\"]')");
 });

@@ -147,11 +147,6 @@ export type IdDefinition = {
 	id: string | RegExp;
 };
 
-export type DataCyDefinition = {
-	type: "dataCy";
-	value: string;
-};
-
 export type LocatorStrategyDefinition =
 	| RoleDefinition
 	| TextDefinition
@@ -162,8 +157,7 @@ export type LocatorStrategyDefinition =
 	| LocatorDefinition
 	| FrameLocatorDefinition
 	| TestIdDefinition
-	| IdDefinition
-	| DataCyDefinition;
+	| IdDefinition;
 
 export type LocatorStrategyDefinitionPatch =
 	| { type: "role"; role?: RoleDefinition["role"]; options?: RoleDefinition["options"] }
@@ -175,8 +169,7 @@ export type LocatorStrategyDefinitionPatch =
 	| { type: "locator"; selector?: LocatorDefinition["selector"]; options?: LocatorDefinition["options"] }
 	| { type: "frameLocator"; selector?: FrameLocatorDefinition["selector"] }
 	| { type: "testId"; testId?: TestIdDefinition["testId"] }
-	| { type: "id"; id?: IdDefinition["id"] }
-	| { type: "dataCy"; value?: DataCyDefinition["value"] };
+	| { type: "id"; id?: IdDefinition["id"] };
 
 export type PlaywrightFilterDefinition = NonNullable<Parameters<Locator["filter"]>[0]>;
 export type ResolvedFilterDefinition = PlaywrightFilterDefinition;
@@ -266,8 +259,7 @@ export type LocatorUpdate =
 	| LocatorUpdateFor<LocatorDefinition>
 	| LocatorUpdateFor<FrameLocatorDefinition>
 	| LocatorUpdateFor<TestIdDefinition>
-	| LocatorUpdateFor<IdDefinition>
-	| LocatorUpdateFor<DataCyDefinition>;
+	| LocatorUpdateFor<IdDefinition>;
 
 export type IndexSelector = number | "first" | "last";
 

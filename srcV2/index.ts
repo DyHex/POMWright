@@ -9,7 +9,6 @@ export { test } from "./fixture/base.fixtures";
 export { type LogEntry, type LogLevel, PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 export type {
 	AltTextDefinition,
-	DataCyDefinition,
 	FilterDefinition,
 	FilterLocatorReference,
 	FrameLocatorDefinition,

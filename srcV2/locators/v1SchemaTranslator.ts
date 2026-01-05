@@ -56,7 +56,6 @@ export const addV1SchemaToV2Registry = <LocatorSchemaPathType extends string>(
 		| ReturnType<typeof registration.locator>
 		| ReturnType<typeof registration.frameLocator>
 		| ReturnType<typeof registration.getByTestId>
-		| ReturnType<typeof registration.getByDataCy>
 		| ReturnType<typeof registration.getById>
 		| null = null;
 
@@ -142,7 +141,7 @@ export const addV1SchemaToV2Registry = <LocatorSchemaPathType extends string>(
 				logMissingDefinition(path, "dataCy");
 				return;
 			}
-			postDefinition = registration.getByDataCy(locatorSchema.dataCy);
+			postDefinition = registration.locator(`[data-cy="${locatorSchema.dataCy}"]`);
 			break;
 		}
 		case GetByMethod.id: {

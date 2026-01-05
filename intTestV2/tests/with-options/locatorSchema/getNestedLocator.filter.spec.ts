@@ -20,7 +20,6 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 		{ label: "altText", definition: { type: "altText", text: "altText" }, expected: "getByAltText('altText')" },
 		{ label: "title", definition: { type: "title", text: "title" }, expected: "getByTitle('title')" },
 		{ label: "locator", definition: { type: "locator", selector: "locator" }, expected: "locator('locator')" },
-		{ label: "dataCy", definition: { type: "dataCy", value: "dataCy" }, expected: "locator('data-cy=dataCy')" },
 		{ label: "testId", definition: { type: "testId", testId: "testId" }, expected: "getByTestId('testId')" },
 		{ label: "id", definition: { type: "id", id: "id" }, expected: "locator('#id')" },
 	];
@@ -45,8 +44,6 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 						return builder.getByTitle(definition.text, definition.options);
 					case "locator":
 						return builder.locator(definition.selector, definition.options);
-					case "dataCy":
-						return builder.getByDataCy(definition.value);
 					case "testId":
 						return builder.getByTestId(definition.testId);
 					case "id":
