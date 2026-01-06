@@ -11,7 +11,6 @@ import type {
 	FilterLocatorReference,
 	IndexSelector,
 	LocatorBuilderTarget,
-	LocatorOverrides,
 	LocatorSchemaPathErrors,
 	LocatorSchemaRecord,
 	LocatorStep,
@@ -28,7 +27,6 @@ import {
 	expandSchemaPath,
 	isFrameLocatorDefinition,
 	isLocatorInstance,
-	normalizeOverrideSteps,
 	normalizeSteps,
 	stringifyForLog,
 	validateLocatorSchemaPath,
@@ -345,7 +343,6 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		path: RegistryPath<LocatorSchemaPathType>,
 		definitions: Map<string, LocatorStrategyDefinition>,
 		steps: Map<string, LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]>,
-		overrides?: LocatorOverrides<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 		tombstones?: Set<string>,
 	) {
 		const chain = expandSchemaPath(path);
@@ -353,14 +350,6 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 
 		if (tombstones?.has(path) || !definitions.has(path)) {
 			throw new Error(`No locator schema registered for path "${path}".`);
-		}
-
-		if (overrides) {
-			for (const overrideKey of Object.keys(overrides)) {
-				if (!definitions.has(overrideKey)) {
-					throw new Error(`Missing locator definition for "${overrideKey}" while resolving "${path}".`);
-				}
-			}
 		}
 
 		let currentTarget: LocatorBuilderTarget = this.page;
@@ -408,29 +397,12 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 
 			const locatorResult = createLocator(currentTarget, definition) as Locator;
 			const recordedSteps = steps.get(part) ?? [];
-			const overrideValue = (overrides as Record<string, unknown> | undefined)?.[part] as
-				| LocatorOverrides<
-						RegistryPath<LocatorSchemaPathType>,
-						RegistryPath<LocatorSchemaPathType>
-				  >[RegistryPath<LocatorSchemaPathType>]
-				| undefined;
-			const { steps: overrideSteps, replaceIndex } = normalizeOverrideSteps<
-				RegistryPath<LocatorSchemaPathType>,
-				RegistryPath<LocatorSchemaPathType>
-			>(overrideValue);
-			const effectiveSteps =
-				overrideSteps.length === 0
-					? recordedSteps
-					: [
-							...(replaceIndex ? recordedSteps.filter((step) => step.kind !== "index") : recordedSteps),
-							...overrideSteps,
-						];
 
 			let resolvedLocator = locatorResult;
 			const appliedFilters: ResolvedFilterDefinition[] = [];
 			let appliedIndex: IndexSelector | null | undefined;
 
-			for (const step of effectiveSteps) {
+			for (const step of recordedSteps) {
 				if (step.kind === "filter") {
 					const [resolvedFilter] = this.resolveFiltersForTarget([step.filter], resolvedLocator);
 					if (resolvedFilter) {
@@ -450,7 +422,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				definition,
 				appliedFilters,
 				index: appliedIndex,
-				recordedSteps: effectiveSteps,
+				recordedSteps,
 			});
 		}
 

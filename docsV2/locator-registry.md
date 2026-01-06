@@ -17,8 +17,8 @@ You still define locators in `defineLocators()` and use `this.getLocator(...)` /
 and tests.
 
 `getLocator(path)` and `getNestedLocator(path)` now return Playwright `Locator` instances synchronously and do **not** accept
-override arguments. Use `getLocatorSchema(path)` when you need to patch definitions, add filters/indices, or supply override
-steps for nested chains.
+override arguments. Use `getLocatorSchema(path)` when you need to patch definitions or add filters/indices to nested chains
+through the fluent builder.
 
 > Note: the `registry` returned from the factory exposes only the public surface (`add`, `createReusable`, and the locator
 > getters/builders). Internal methods such as `get`, `replace`, `register`, and `unregister` are intentionally omitted from the
@@ -128,13 +128,15 @@ registry
 ## Updating definitions without altering steps
 
 `update(path)` performs a PATCH-style merge of the locator definition only. To change filters or indices, chain `.filter()`,
-`.nth()`, or `.clearSteps()` on the query builder instead of passing optional config objects:
+`.nth()`, or `.clearSteps()` on the query builder instead of passing optional config objects. When you omit `subPath` on any of
+these chainable methods (`update`, `filter`, `clearSteps`, `nth`, `replace`, `remove`), the terminal path supplied to
+`getLocatorSchema` is used automatically:
 
 ```ts
 const updated = getLocatorSchema("body.section.button")
-  .filter("body.section.button", { hasText: /Click me!/ })
-  .nth("body.section", "first")
-  .update("body.section.button")
+  .filter({ hasText: /Click me!/ })
+  .nth("first")
+  .update()
   .getByRole("button", { name: "Click me!" })
   .getNestedLocator();
 ```

@@ -191,14 +191,6 @@ export type ReusableLocator<
 	steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[];
 };
 
-export type LocatorStepOverride<
-	LocatorSchemaPathType extends string = string,
-	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
-> =
-	| { nth: IndexSelector | null }
-	| { filter: FilterDefinition<LocatorSchemaPathType, AllowedPaths> }
-	| FilterDefinition<LocatorSchemaPathType, AllowedPaths>;
-
 export type FilterLocatorReference<
 	LocatorSchemaPathType extends string,
 	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
@@ -264,16 +256,3 @@ export type LocatorUpdate =
 export type IndexSelector = number | "first" | "last";
 
 export type PathIndexMap = Partial<Record<string, IndexSelector | null | undefined>>;
-
-export type LocatorOverrides<
-	LocatorSchemaPathType extends string = string,
-	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
-> = Partial<
-	Record<
-		AllowedPaths,
-		| IndexSelector
-		| null
-		| LocatorStepOverride<LocatorSchemaPathType, AllowedPaths>
-		| LocatorStepOverride<LocatorSchemaPathType, AllowedPaths>[]
-	>
->;

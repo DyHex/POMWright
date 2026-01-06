@@ -1,16 +1,13 @@
 import type { Locator, Page } from "@playwright/test";
 import type {
 	AltTextDefinition,
-	FilterDefinition,
 	FrameLocatorDefinition,
 	IdDefinition,
 	IndexSelector,
 	LabelDefinition,
 	LocatorBuilderTarget,
 	LocatorDefinition,
-	LocatorOverrides,
 	LocatorStep,
-	LocatorStepOverride,
 	LocatorStrategyDefinition,
 	LocatorStrategyDefinitionPatch,
 	PlaceholderDefinition,
@@ -72,44 +69,6 @@ export const cssEscape = (value: string) => {
 export const normalizeSteps = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
 	steps?: LocatorStep<LocatorSchemaPathType, AllowedPaths>[],
 ) => (steps ? steps.map((step) => ({ ...step })) : []);
-
-export const normalizeOverrideSteps = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
-	value?:
-		| LocatorOverrides<LocatorSchemaPathType, AllowedPaths>[keyof LocatorOverrides<LocatorSchemaPathType, AllowedPaths>]
-		| undefined,
-) => {
-	if (value === undefined) {
-		return { steps: [] as LocatorStep<LocatorSchemaPathType, AllowedPaths>[], replaceIndex: false };
-	}
-
-	if (typeof value === "number" || value === "first" || value === "last" || value === null) {
-		return {
-			steps: [{ kind: "index", index: value }] as LocatorStep<LocatorSchemaPathType, AllowedPaths>[],
-			replaceIndex: true,
-		};
-	}
-
-	const entries = Array.isArray(value) ? value : [value];
-	const steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[] = [];
-	let replaceIndex = false;
-
-	for (const entry of entries as LocatorStepOverride<LocatorSchemaPathType, AllowedPaths>[]) {
-		if (entry && typeof entry === "object" && "nth" in entry) {
-			steps.push({ kind: "index", index: entry.nth ?? null });
-			replaceIndex = true;
-			continue;
-		}
-
-		if (entry && typeof entry === "object" && "filter" in entry) {
-			steps.push({ kind: "filter", filter: entry.filter });
-			continue;
-		}
-
-		steps.push({ kind: "filter", filter: entry as FilterDefinition<LocatorSchemaPathType, AllowedPaths> });
-	}
-
-	return { steps, replaceIndex } as const;
-};
 
 export function normalizeIdValue(id: string): string;
 export function normalizeIdValue(id: RegExp): RegExp;

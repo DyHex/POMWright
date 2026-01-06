@@ -17,12 +17,14 @@ test("getNestedLocator should support index overrides", async ({ testPage }) => 
 
 	const secondNotification = testPage
 		.getLocatorSchema("topMenu.notifications.dropdown.item")
-		.getNestedLocator({ "topMenu.notifications.dropdown.item": 1 });
+		.nth("topMenu.notifications.dropdown.item", 1)
+		.getNestedLocator();
 	await expect(secondNotification).toHaveText("John Doe posted on your wall");
 
 	const lastNotification = testPage
 		.getLocatorSchema("topMenu.notifications.dropdown.item")
-		.getNestedLocator({ "topMenu.notifications.dropdown.item": "last" });
+		.nth("topMenu.notifications.dropdown.item", "last")
+		.getNestedLocator();
 	await expect(lastNotification).toHaveText("Jane likes your post");
 });
 
