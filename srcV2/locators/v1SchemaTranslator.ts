@@ -14,12 +14,16 @@ const getRegistryLookup = <LocatorSchemaPathType extends string>(
 ): RegistryWithLookup<LocatorSchemaPathType> => registry as RegistryWithLookup<LocatorSchemaPathType>;
 
 const logMissingDefinition = (path: string, field: string) => {
-	console.info(`[POMWright] Skipping v2 translation for "${path}" because "${field}" is missing.`);
+	console.warn(
+		`[POMWright] Skipping v2 translation for "${path}" because "${field}" is missing. ` +
+			"Rewrite this locator in defineLocators() using the v2 registry.",
+	);
 };
 
 const logLocatorInstanceWarning = (path: string) => {
-	console.info(
-		`[POMWright] Skipping v2 translation for "${path}" because v1 LocatorSchema.locator is a Locator instance.`,
+	console.warn(
+		`[POMWright] Skipping v2 translation for "${path}" because v1 LocatorSchema.locator is a Locator instance. ` +
+			"Rewrite this path in defineLocators() to avoid runtime gaps during migration.",
 	);
 };
 

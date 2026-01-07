@@ -10,28 +10,28 @@ import {
 	type LocatorRegistry,
 } from "./locators";
 
-export type BasePageOptions = {
+export type PageObjectOptions = {
 	urlOptions?: {
 		baseUrlType?: string | RegExp;
 		urlPathType?: string | RegExp;
 	};
 };
 
-export type ExtractBaseUrlType<T extends BasePageOptions> = T["urlOptions"] extends { baseUrlType: RegExp }
+export type ExtractBaseUrlType<T extends PageObjectOptions> = T["urlOptions"] extends { baseUrlType: RegExp }
 	? RegExp
 	: string;
-export type ExtractUrlPathType<T extends BasePageOptions> = T["urlOptions"] extends { urlPathType: RegExp }
+export type ExtractUrlPathType<T extends PageObjectOptions> = T["urlOptions"] extends { urlPathType: RegExp }
 	? RegExp
 	: string;
-export type ExtractFullUrlType<T extends BasePageOptions> = T["urlOptions"] extends
+export type ExtractFullUrlType<T extends PageObjectOptions> = T["urlOptions"] extends
 	| { baseUrlType: RegExp }
 	| { urlPathType: RegExp }
 	? RegExp
 	: string;
 
-export abstract class BasePageV2<
+export abstract class PageObject<
 	LocatorSchemaPathType extends string,
-	Options extends BasePageOptions = { urlOptions: { baseUrlType: string; urlPathType: string } },
+	Options extends PageObjectOptions = { urlOptions: { baseUrlType: string; urlPathType: string } },
 > {
 	readonly page: Page;
 	readonly testInfo: TestInfo;

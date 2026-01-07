@@ -141,14 +141,19 @@ export class LocatorRegistrationBuilder<
 	 * ```
 	 */
 	getByText(
-		text: string,
+		text: Parameters<Page["getByText"]>[0],
 		options: Parameters<Page["getByText"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	getByText(text: string): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByText(
+		text: Parameters<Page["getByText"]>[0],
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByText(
 		options: Seeded extends true ? Parameters<Page["getByText"]>[1] : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	getByText(textOrOptions: string | Parameters<Page["getByText"]>[1], options?: Parameters<Page["getByText"]>[1]) {
+	getByText(
+		textOrOptions: Parameters<Page["getByText"]>[0] | Parameters<Page["getByText"]>[1],
+		options?: Parameters<Page["getByText"]>[1],
+	) {
 		const definition: LocatorStrategyDefinitionPatch =
 			typeof textOrOptions === "string" || textOrOptions instanceof RegExp
 				? options !== undefined
@@ -169,16 +174,21 @@ export class LocatorRegistrationBuilder<
 	 * ```
 	 */
 	getByLabel(
-		text: string,
+		text: Parameters<Page["getByLabel"]>[0],
 		options: Parameters<Page["getByLabel"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	getByLabel(text: string): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByLabel(
+		text: Parameters<Page["getByLabel"]>[0],
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByLabel(
 		options: Seeded extends true ? Parameters<Page["getByLabel"]>[1] : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	getByLabel(textOrOptions: string | Parameters<Page["getByLabel"]>[1], options?: Parameters<Page["getByLabel"]>[1]) {
+	getByLabel(
+		textOrOptions: Parameters<Page["getByLabel"]>[0] | Parameters<Page["getByLabel"]>[1],
+		options?: Parameters<Page["getByLabel"]>[1],
+	) {
 		const definition: LocatorStrategyDefinitionPatch =
-			typeof textOrOptions === "string"
+			typeof textOrOptions === "string" || textOrOptions instanceof RegExp
 				? options !== undefined
 					? ({ type: "label", text: textOrOptions, options } as LabelDefinition)
 					: ({ type: "label", text: textOrOptions } as LabelDefinition)
@@ -197,19 +207,21 @@ export class LocatorRegistrationBuilder<
 	 * ```
 	 */
 	getByPlaceholder(
-		text: string,
+		text: Parameters<Page["getByPlaceholder"]>[0],
 		options: Parameters<Page["getByPlaceholder"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	getByPlaceholder(text: string): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByPlaceholder(
+		text: Parameters<Page["getByPlaceholder"]>[0],
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByPlaceholder(
 		options: Seeded extends true ? Parameters<Page["getByPlaceholder"]>[1] : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByPlaceholder(
-		textOrOptions: string | Parameters<Page["getByPlaceholder"]>[1],
+		textOrOptions: Parameters<Page["getByPlaceholder"]>[0] | Parameters<Page["getByPlaceholder"]>[1],
 		options?: Parameters<Page["getByPlaceholder"]>[1],
 	) {
 		const definition: LocatorStrategyDefinitionPatch =
-			typeof textOrOptions === "string"
+			typeof textOrOptions === "string" || textOrOptions instanceof RegExp
 				? options !== undefined
 					? ({ type: "placeholder", text: textOrOptions, options } as PlaceholderDefinition)
 					: ({ type: "placeholder", text: textOrOptions } as PlaceholderDefinition)
@@ -228,19 +240,21 @@ export class LocatorRegistrationBuilder<
 	 * ```
 	 */
 	getByAltText(
-		text: string,
+		text: Parameters<Page["getByAltText"]>[0],
 		options: Parameters<Page["getByAltText"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	getByAltText(text: string): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByAltText(
+		text: Parameters<Page["getByAltText"]>[0],
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByAltText(
 		options: Seeded extends true ? Parameters<Page["getByAltText"]>[1] : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByAltText(
-		textOrOptions: string | Parameters<Page["getByAltText"]>[1],
+		textOrOptions: Parameters<Page["getByAltText"]>[0] | Parameters<Page["getByAltText"]>[1],
 		options?: Parameters<Page["getByAltText"]>[1],
 	) {
 		const definition: LocatorStrategyDefinitionPatch =
-			typeof textOrOptions === "string"
+			typeof textOrOptions === "string" || textOrOptions instanceof RegExp
 				? options !== undefined
 					? ({ type: "altText", text: textOrOptions, options } as AltTextDefinition)
 					: ({ type: "altText", text: textOrOptions } as AltTextDefinition)
@@ -259,16 +273,21 @@ export class LocatorRegistrationBuilder<
 	 * ```
 	 */
 	getByTitle(
-		text: string,
+		text: Parameters<Page["getByTitle"]>[0],
 		options: Parameters<Page["getByTitle"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	getByTitle(text: string): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByTitle(
+		text: Parameters<Page["getByTitle"]>[0],
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByTitle(
 		options: Seeded extends true ? Parameters<Page["getByTitle"]>[1] : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	getByTitle(textOrOptions: string | Parameters<Page["getByTitle"]>[1], options?: Parameters<Page["getByTitle"]>[1]) {
+	getByTitle(
+		textOrOptions: Parameters<Page["getByTitle"]>[0] | Parameters<Page["getByTitle"]>[1],
+		options?: Parameters<Page["getByTitle"]>[1],
+	) {
 		const definition: LocatorStrategyDefinitionPatch =
-			typeof textOrOptions === "string"
+			typeof textOrOptions === "string" || textOrOptions instanceof RegExp
 				? options !== undefined
 					? ({ type: "title", text: textOrOptions, options } as TitleDefinition)
 					: ({ type: "title", text: textOrOptions } as TitleDefinition)

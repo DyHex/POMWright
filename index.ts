@@ -27,3 +27,6 @@ export { BaseApi };
 
 import { createRegistryWithAccessors, type LocatorRegistry } from "./srcV2/locators";
 export { createRegistryWithAccessors, type LocatorRegistry };
+
+import { PageObject } from "./srcV2/pageObject";
+export { PageObject };

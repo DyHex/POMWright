@@ -74,11 +74,13 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	}
 
 	getByText(
-		text: string,
+		text: Parameters<Page["getByText"]>[0],
 		options: Parameters<Page["getByText"]>[1],
 	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "text">;
-	getByText(text: string): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "text">;
-	getByText(text: string, options?: Parameters<Page["getByText"]>[1]) {
+	getByText(
+		text: Parameters<Page["getByText"]>[0],
+	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "text">;
+	getByText(text: Parameters<Page["getByText"]>[0], options?: Parameters<Page["getByText"]>[1]) {
 		const definition =
 			options !== undefined
 				? ({ type: "text", text, options } as TextDefinition)
@@ -88,11 +90,13 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	}
 
 	getByLabel(
-		text: string,
+		text: Parameters<Page["getByLabel"]>[0],
 		options: Parameters<Page["getByLabel"]>[1],
 	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "label">;
-	getByLabel(text: string): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "label">;
-	getByLabel(text: string, options?: Parameters<Page["getByLabel"]>[1]) {
+	getByLabel(
+		text: Parameters<Page["getByLabel"]>[0],
+	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "label">;
+	getByLabel(text: Parameters<Page["getByLabel"]>[0], options?: Parameters<Page["getByLabel"]>[1]) {
 		const definition =
 			options !== undefined
 				? ({ type: "label", text, options } as LabelDefinition)
@@ -102,13 +106,13 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	}
 
 	getByPlaceholder(
-		text: string,
+		text: Parameters<Page["getByPlaceholder"]>[0],
 		options: Parameters<Page["getByPlaceholder"]>[1],
 	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "placeholder">;
 	getByPlaceholder(
-		text: string,
+		text: Parameters<Page["getByPlaceholder"]>[0],
 	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "placeholder">;
-	getByPlaceholder(text: string, options?: Parameters<Page["getByPlaceholder"]>[1]) {
+	getByPlaceholder(text: Parameters<Page["getByPlaceholder"]>[0], options?: Parameters<Page["getByPlaceholder"]>[1]) {
 		const definition =
 			options !== undefined
 				? ({ type: "placeholder", text, options } as PlaceholderDefinition)
@@ -118,13 +122,13 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	}
 
 	getByAltText(
-		text: string,
+		text: Parameters<Page["getByAltText"]>[0],
 		options: Parameters<Page["getByAltText"]>[1],
 	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "altText">;
 	getByAltText(
-		text: string,
+		text: Parameters<Page["getByAltText"]>[0],
 	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "altText">;
-	getByAltText(text: string, options?: Parameters<Page["getByAltText"]>[1]) {
+	getByAltText(text: Parameters<Page["getByAltText"]>[0], options?: Parameters<Page["getByAltText"]>[1]) {
 		const definition =
 			options !== undefined
 				? ({ type: "altText", text, options } as AltTextDefinition)
@@ -134,11 +138,13 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	}
 
 	getByTitle(
-		text: string,
+		text: Parameters<Page["getByTitle"]>[0],
 		options: Parameters<Page["getByTitle"]>[1],
 	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "title">;
-	getByTitle(text: string): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "title">;
-	getByTitle(text: string, options?: Parameters<Page["getByTitle"]>[1]) {
+	getByTitle(
+		text: Parameters<Page["getByTitle"]>[0],
+	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "title">;
+	getByTitle(text: Parameters<Page["getByTitle"]>[0], options?: Parameters<Page["getByTitle"]>[1]) {
 		const definition =
 			options !== undefined
 				? ({ type: "title", text, options } as TitleDefinition)

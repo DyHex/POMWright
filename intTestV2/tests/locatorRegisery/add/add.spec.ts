@@ -173,6 +173,65 @@ test("add getByTitle to registry", async ({ page }) => {
 	});
 });
 
+test("add regex-driven getBy* registrations to registry", async ({ page }) => {
+	type LocatorSchemaPaths =
+		| "regex.text"
+		| "regex.label"
+		| "regex.placeholder"
+		| "regex.altText"
+		| "regex.title"
+		| "regex.reuse.text"
+		| "regex.reusePath.text";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.add("regex.text").getByText(/Welcome/i);
+	registry.add("regex.label").getByLabel(/Username/i);
+	registry.add("regex.placeholder").getByPlaceholder(/Enter your name/i);
+	registry.add("regex.altText").getByAltText(/Sample Image/i);
+	registry.add("regex.title").getByTitle(/Home Page/i);
+
+	const reusableText = registry.createReusable.getByText(/Seeded/i);
+	registry.add("regex.reuse.text", { reuse: reusableText }).getByText({ exact: true });
+	registry.add("regex.reusePath.text", { reuse: "regex.text" });
+
+	expect(registry.get("regex.text")).toEqual({
+		definition: { text: /Welcome/i, type: "text" },
+		locatorSchemaPath: "regex.text",
+		steps: [],
+	});
+	expect(registry.get("regex.label")).toEqual({
+		definition: { text: /Username/i, type: "label" },
+		locatorSchemaPath: "regex.label",
+		steps: [],
+	});
+	expect(registry.get("regex.placeholder")).toEqual({
+		definition: { text: /Enter your name/i, type: "placeholder" },
+		locatorSchemaPath: "regex.placeholder",
+		steps: [],
+	});
+	expect(registry.get("regex.altText")).toEqual({
+		definition: { text: /Sample Image/i, type: "altText" },
+		locatorSchemaPath: "regex.altText",
+		steps: [],
+	});
+	expect(registry.get("regex.title")).toEqual({
+		definition: { text: /Home Page/i, type: "title" },
+		locatorSchemaPath: "regex.title",
+		steps: [],
+	});
+	expect(registry.get("regex.reuse.text")).toEqual({
+		definition: { text: /Seeded/i, options: { exact: true }, type: "text" },
+		locatorSchemaPath: "regex.reuse.text",
+		steps: [],
+	});
+	expect(registry.get("regex.reusePath.text")).toEqual({
+		definition: { text: /Welcome/i, type: "text" },
+		locatorSchemaPath: "regex.reusePath.text",
+		steps: [],
+	});
+});
+
 test("add locator to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "body";
 
@@ -236,10 +295,8 @@ test("reusable builder yields the same locator chain as a direct definition", as
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	const reusable = registry.createReusable.getByRole("heading", { level: 2 }).filter({ hasText: "Intro" }).nth(1);
-	console.log(reusable);
 
 	registry.add("heading").getByRole("heading", { level: 2 }).filter({ hasText: "Intro" }).nth(1);
-	console.log(registry.get("heading"));
 	registry.add("heading.reused", { reuse: reusable });
 
 	const direct = registry.getLocator("heading");

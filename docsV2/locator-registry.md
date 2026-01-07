@@ -4,9 +4,12 @@ v2 exposes a single registry factory, `createRegistryWithAccessors(page)`, which
 **and** the bound helpers (`getLocator`, `getNestedLocator`, `getLocatorSchema`). No logger is required; the registry no
 longer emits PlaywrightReportLogger entries when resolving locators.
 
-## BasePageV2 wiring
+- **Preferred base class:** Extend `PageObject` for v2 work. Use the deprecated `BasePageV1toV2` bridge only for short-lived
+  staged migrations and plan to remove it before 2.0.0.
 
-`BasePageV2` threads the accessors onto the page object:
+## PageObject wiring
+
+`PageObject` threads the accessors onto the page object:
 
 ```ts
 const { registry, add, getLocator, getNestedLocator, getLocatorSchema } =
@@ -24,7 +27,7 @@ through the fluent builder.
 > getters/builders). Internal methods such as `get`, `replace`, `register`, and `unregister` are intentionally omitted from the
 > factory return type so end users cannot call them directly.
 
-## Standalone usage (outside BasePageV2)
+## Standalone usage (outside PageObject)
 
 Call the factory with your Playwright `page` and destructure what you need:
 

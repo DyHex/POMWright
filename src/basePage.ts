@@ -30,6 +30,10 @@ export type ExtractFullUrlType<T extends BasePageOptions> = T["urlOptions"] exte
 let selectorRegistered = false;
 
 /**
+ * @deprecated BasePage will be removed in 2.0.0. Migrate to v2, preferably directly
+ * to PageObject or through the transitional bridge BasePageV1toV2.
+ * v1.5.0 is the final v1 release.
+ *
  * BasePage:
  * The foundational class for all Page Object Classes.
  *
@@ -105,6 +109,12 @@ export abstract class BasePage<
 		this.pocName = pocName;
 
 		this.log = pwrl.getNewChildLogger(pocName);
+
+		const classDeprecationMessage =
+			"[POMWright] BasePage is depricated and will be removed in 2.0.0. Migrate to v2, preferably directly " +
+			"to PageObject or through the transitional bridge BasePageV1toV2 and then to PageObject.";
+		console.warn(classDeprecationMessage);
+		this.log.warn(classDeprecationMessage);
 
 		// Instantiate GetLocatorBase following the minimal POC pattern.
 		this.locators = new GetLocatorBase<LocatorSchemaPathType, LocatorSubstring>(

@@ -1,10 +1,3 @@
-export {
-	type BasePageOptions,
-	BasePageV2,
-	type ExtractBaseUrlType,
-	type ExtractFullUrlType,
-	type ExtractUrlPathType,
-} from "./basePage";
 export { test } from "./fixture/base.fixtures";
 export { type LogEntry, type LogLevel, PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 export type {
@@ -43,3 +36,10 @@ export {
 	type LocatorRegistry,
 	LocatorRegistryInternal,
 } from "./locators";
+export {
+	type ExtractBaseUrlType,
+	type ExtractFullUrlType,
+	type ExtractUrlPathType,
+	PageObject,
+	type PageObjectOptions,
+} from "./pageObject";

@@ -4,6 +4,8 @@ Use this file to keep an up-to-date picture of how v1 (src/intTest) and v2 (srcV
 
 ## Known breaking changes (with migration ideas)
 
+- `BasePageV2` has been renamed to `PageObject`; `BasePageV1toV2` is now a v2-only accessor bridge with deprecated `initLocatorSchemas` translation and will be removed in 2.0.0.
+  - **Possible solutions:** Migrate directly to `PageObject` when possible; only use `BasePageV1toV2` as a short-lived bridge and remove `initLocatorSchemas` definitions.
 - Locator definitions moved from v1 object schemas (e.g., `addSchema` with `LocatorSchemaWithoutPath`) to the v2 fluent registry DSL (`locators.add(path).getByRole(...)`, `getByText(...)`, etc.).
   - **Possible solutions:** Maintain a small translation helper that converts v1 schema objects into v2 builder calls, or author new locators directly in the registry DSL for clearer intent.
 - Update/filter chaining changed: v1 uses `update`/`addFilter` on schema objects, whereas v2 records ordered filter/index steps on the fluent builder returned by `getLocatorSchema`.
@@ -24,6 +26,7 @@ Use this file to keep an up-to-date picture of how v1 (src/intTest) and v2 (srcV
 - `{ reuse }` overrides are PATCH-style in v2: missing selector/text/role values inherit from the reused locator, and provided options merge with existing ones instead of replacing the definition wholesale. This applies to every locator method (e.g., `locator`, `getByRole`, `getByText`, `getById`), so a reuse override can supply only the fields it wants to change while keeping the seeded discriminant/selector intact.
 - Shorthand `getLocator(path)` / `getNestedLocator(path)` now return Playwright `Locator` instances synchronously and no longer accept override arguments or fluent mutations; use `getLocatorSchema(path)` for filters/indices/updates. v1 supported optional override objects (e.g., index maps) and required `await` on the shorthand helpers.
 - Built-in `getByDataCy` support and automatic `data-cy` selector engine registration were removed from v2. Migration: translate `getByDataCy("value")` to `locator('[data-cy="value"]')` and register any custom selector engines directly through Playwright fixtures if needed.
+- Translator gaps remain: v1 schemas using `Locator` instances or missing selector fields are logged and skipped during auto-registration into the v2 registry.
 
 ## Missing features/validation relative to v1
 
@@ -36,8 +39,8 @@ Use this file to keep an up-to-date picture of how v1 (src/intTest) and v2 (srcV
 
 - Teams with large v1 schema maps must translate both definitions and chained update/filter calls to the v2 filter/index chaining model, which may affect shared locator utilities.
 - Tests that assume permissive re-registration of locator paths will fail under v2’s duplicate-path errors; ensure registration order is deterministic.
+- Bridge usage requires a second migration hop (bridge ➜ `PageObject`) and retaining deprecated `initLocatorSchemas` definitions; plan a removal window to avoid drift.
 - Frame-only paths may resolve differently because v2 returns the owner locator when the frame is terminal, which can break assertions expecting a frame locator.
 - v2 treats `.` as the only special character in locator paths; paths containing `#`, `@`, or other symbols are valid segments but cannot contain consecutive dots or start/end with a dot or be an empty string. This should be the same behavior as in v1. But v2 is stricter as it also does not allow any whitespace characters in a path.
 
 ## Known or suspected v2 bugs
-
