@@ -1,5 +1,5 @@
 import { expect, test } from "@fixtures-v2/withOptions";
-import { LocatorRegistryInternal } from "pomwright";
+import { LocatorRegistryInternal } from "../../../../srcV2/locators";
 
 test("add getByRole overloads accept optional options and support chained steps", async ({ page }) => {
 	type LocalPath = "root" | "root.options" | "root.minimal";

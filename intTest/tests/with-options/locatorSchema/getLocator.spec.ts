@@ -11,15 +11,6 @@ test("getLocator should return the single locator the complete LocatorSchemaPath
 	expect(`${locator}`).toEqual("locator('.w3-bar-item')");
 });
 
-test("getLocator should return the single locator the complete LocatorSchemaPath resolves to - V2", async ({
-	testPage,
-}) => {
-	const locator = testPage.getLocatorV2("topMenu.notifications.dropdown.item");
-	expect(locator).not.toBeNull();
-	expect(locator).not.toBeUndefined();
-	expect(`${locator}`).toEqual("locator('.w3-bar-item')");
-});
-
 test("should be able to manually chain locators returned by getLocator", async ({ testPage }) => {
 	const topMenu = await testPage.getLocator("topMenu");
 
@@ -41,16 +32,16 @@ test("should be able to manually chain locators returned by getLocator", async (
 });
 
 test("should be able to manually chain locators returned by getLocator -V2", async ({ testPage }) => {
-	const topMenu = testPage.getLocatorV2("topMenu");
+	const topMenu = await testPage.getLocator("topMenu");
 
-	const topMenuNotifications = topMenu.locator(testPage.getLocatorV2("topMenu.notifications"));
+	const topMenuNotifications = topMenu.locator(await testPage.getLocator("topMenu.notifications"));
 
 	const topMenuNotificationsDropdown = topMenuNotifications.locator(
-		testPage.getLocatorV2("topMenu.notifications.dropdown"),
+		await testPage.getLocator("topMenu.notifications.dropdown"),
 	);
 
 	const topMenuNotificationsDropdownItem = topMenuNotificationsDropdown.locator(
-		testPage.getLocatorV2("topMenu.notifications.dropdown.item"),
+		await testPage.getLocator("topMenu.notifications.dropdown.item"),
 	);
 
 	expect(topMenuNotificationsDropdownItem).not.toBeNull();

@@ -25,8 +25,8 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0
       pomwright:
-        specifier: ^1.4.0
-        version: 1.4.0(@playwright/test@1.57.0)
+        specifier: file:../pomwright-1.4.0.tgz
+        version: file:../pomwright-1.4.0.tgz(@playwright/test@1.57.0)
 
 packages:
 
@@ -272,8 +272,9 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  pomwright@1.4.0:
-    resolution: {integrity: sha512-8rD9mfqQCQ8T8pHBm82JdbDsWGfgFtQnMiBuyiWF4WFE2LWNRxOk5pKv6uATI5wvDA7Dg6F6/mcigv/PLXoasQ==}
+  pomwright@file:../pomwright-1.4.0.tgz:
+    resolution: {integrity: sha512-xkLz2SRLnm2cSurOsjyFwtcSKo24a+fB5t06VOiKWfIFQmvnZ5TFIMlaGW8lkxJ2znFIjHpcAiZz5wrEjE0DnA==, tarball: file:../pomwright-1.4.0.tgz}
+    version: 1.4.0
     peerDependencies:
       '@playwright/test': '>=1.41.0 <1.42.0 || >=1.43.0 <2.0.0'
 
@@ -616,7 +617,7 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.2
 
-  pomwright@1.4.0(@playwright/test@1.57.0):
+  pomwright@file:../pomwright-1.4.0.tgz(@playwright/test@1.57.0):
     dependencies:
       '@playwright/test': 1.57.0
 

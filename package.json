@@ -19,8 +19,6 @@
 	"types": "dist/index.d.ts",
 	"scripts": {
 		"build": "tsup index.ts --format cjs,esm --dts",
-		"build:v2": "tsup srcV2/index.ts --format cjs,esm --dts --out-dir srcV2/dist",
-		"build:all": "pnpm build && pnpm build:v2",
 		"release": "pnpm run build && changeset publish",
 		"lint": "biome check ./src",
 		"lint:v2": "biome check ./srcV2",

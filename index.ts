@@ -13,8 +13,8 @@ export { BasePageV1toV2 };
 import { test } from "./src/fixture/base.fixtures";
 export { test };
 
-import { PlaywrightReportLogger } from "./src/helpers/playwrightReportLogger";
-export { PlaywrightReportLogger };
+import { type LogEntry, type LogLevel, PlaywrightReportLogger } from "./src/helpers/playwrightReportLogger";
+export { type LogEntry, type LogLevel, PlaywrightReportLogger };
 
 import { type AriaRoleType, GetByMethod, type LocatorSchema } from "./src/helpers/locatorSchema.interface";
 export { GetByMethod, type LocatorSchema, type AriaRoleType };
@@ -28,5 +28,5 @@ export { BaseApi };
 import { createRegistryWithAccessors, type LocatorRegistry } from "./srcV2/locators";
 export { createRegistryWithAccessors, type LocatorRegistry };
 
-import { PageObject } from "./srcV2/pageObject";
-export { PageObject };
+import { PageObject, type PageObjectOptions } from "./srcV2/pageObject";
+export { PageObject, type PageObjectOptions };

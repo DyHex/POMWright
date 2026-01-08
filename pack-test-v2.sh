@@ -1,7 +1,6 @@
 #!/bin/bash
 
 TEST_DIR="intTestV2"
-PACKAGE_DIR="srcV2"
 
 cleanup() {
     if [[ $(basename "$PWD") != "$TEST_DIR" ]]; then
@@ -22,18 +21,13 @@ trap cleanup EXIT
 
 set -e
 
-VERSION=$(node -pe "require('./$PACKAGE_DIR/package.json').version")
+VERSION=$(node -pe "require('./package.json').version")
 
-pnpm i --frozen-lockfile || { echo "Installation failed"; exit 1; }
-pnpm build:v2 || { echo "Build failed"; exit 1; }
-(
-    cd $PACKAGE_DIR || { echo "Changing directory failed"; exit 1; }
-    pnpm pack --pack-destination .. || { echo "Packaging failed"; exit 1; }
-)
+./pack-build.sh
 
 cd $TEST_DIR || { echo "Changing directory failed"; exit 1; }
 
-pnpm i -D "pomwright@../pomwright-v2-$VERSION.tgz" || { echo "Local package installation failed"; exit 1; }
+pnpm i -D "../pomwright-$VERSION.tgz" || { echo "Local package installation failed"; exit 1; }
 
 pnpm i --frozen-lockfile || { echo "Installation failed"; exit 1; }
 pnpm playwright install --with-deps || { echo "Playwright dependencies installation failed"; exit 1; }

@@ -2,7 +2,8 @@
 
 ## Default path: PageObject
 
-`PageObject` is the preferred base class. Define locators in `defineLocators` and use the v2 accessors:
+`PageObject` is the preferred base class. v1.5 ships v1 and v2 APIs from the same `pomwright` package, so v2 consumers
+continue to import from `pomwright` while migrating. Define locators in `defineLocators` and use the v2 accessors:
 
 ```ts
 import { PageObject } from "pomwright";
