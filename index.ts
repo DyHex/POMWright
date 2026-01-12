@@ -30,3 +30,6 @@ export { createRegistryWithAccessors, type LocatorRegistry };
 
 import { PageObject, type PageObjectOptions } from "./srcV2/pageObject";
 export { PageObject, type PageObjectOptions };
+
+import { step } from "./srcV2/helpers/stepDecorator";
+export { step };

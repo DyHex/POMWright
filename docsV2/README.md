@@ -23,6 +23,32 @@ Recommended checklist for one-step migrations:
 - The update syntax of methods `getLocator`, `getNestedLocator`, and `getLocatorSchema` in code.
 - Delete any `initLocatorSchemas` blocks.
 
+## Playwright step decorator
+
+POMWright v2 exports a `step` decorator that wraps methods in Playwright `test.step` calls. The decorator reuses the
+Playwright `test.step` parameters and defaults the title to `ClassName.methodName` when no title is provided.
+
+```ts
+import { step } from "pomwright";
+
+class AccountPage {
+  @step
+  async openAccount() {
+    await this.page.goto("/account");
+  }
+
+  @step("Fill profile", { box: true })
+  async fillProfile() {
+    await this.page.fill("#firstName", "Ada");
+  }
+
+  @step({ timeout: 5000 })
+  async saveProfile() {
+    await this.page.click("button[type='submit']");
+  }
+}
+```
+
 ## Bridge option (short-lived)
 
 `BasePageV1toV2` still accepts v1 `addSchema` definitions via `initLocatorSchemas`, translating them into the v2 registry while
