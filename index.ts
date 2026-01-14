@@ -1,3 +1,16 @@
+/*
+ * V1 Exports
+ */
+
+import { type AriaRoleType, GetByMethod, type LocatorSchema } from "./src/helpers/locatorSchema.interface";
+export { GetByMethod, type LocatorSchema, type AriaRoleType };
+
+import { type LogEntry, type LogLevel, PlaywrightReportLogger } from "./src/helpers/playwrightReportLogger";
+export { type LogEntry, type LogLevel, PlaywrightReportLogger };
+
+import { BaseApi } from "./src/api/baseApi";
+export { BaseApi };
+
 import {
 	BasePage,
 	type BasePageOptions,
@@ -7,23 +20,18 @@ import {
 } from "./src/basePage";
 export { BasePage, type BasePageOptions, type ExtractBaseUrlType, type ExtractFullUrlType, type ExtractUrlPathType };
 
+import { GetLocatorBase, type LocatorSchemaWithoutPath } from "./src/helpers/getLocatorBase";
+export { GetLocatorBase, type LocatorSchemaWithoutPath };
+
 import { BasePageV1toV2 } from "./src/basePageV1toV2";
 export { BasePageV1toV2 };
 
 import { test } from "./src/fixture/base.fixtures";
 export { test };
 
-import { type LogEntry, type LogLevel, PlaywrightReportLogger } from "./src/helpers/playwrightReportLogger";
-export { type LogEntry, type LogLevel, PlaywrightReportLogger };
-
-import { type AriaRoleType, GetByMethod, type LocatorSchema } from "./src/helpers/locatorSchema.interface";
-export { GetByMethod, type LocatorSchema, type AriaRoleType };
-
-import { GetLocatorBase, type LocatorSchemaWithoutPath } from "./src/helpers/getLocatorBase";
-export { GetLocatorBase, type LocatorSchemaWithoutPath };
-
-import { BaseApi } from "./src/api/baseApi";
-export { BaseApi };
+/*
+ * V2 Exports
+ */
 
 import { createRegistryWithAccessors, type LocatorRegistry } from "./srcV2/locators";
 export { createRegistryWithAccessors, type LocatorRegistry };
@@ -33,3 +41,6 @@ export { PageObject, type PageObjectOptions };
 
 import { step } from "./srcV2/helpers/stepDecorator";
 export { step };
+
+import { SessionStorage } from "./srcV2/helpers/sessionStorage";
+export { SessionStorage };

@@ -11,7 +11,7 @@ export default class ColorV2 extends BaseWithOptionsV2<
 > {
 	constructor(page: Page, testInfo: TestInfo, pwrl: PlaywrightReportLogger) {
 		const urlPathRegex = /\/testpath\/([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-		super(page, testInfo, urlPathRegex, ColorV2.name, pwrl);
+		super(page, testInfo, urlPathRegex, pwrl);
 	}
 
 	protected defineLocators(): void {

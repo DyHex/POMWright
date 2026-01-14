@@ -6,7 +6,7 @@ import { initLocatorSchemas, type LocatorSchemaPath } from "./testPath.locatorSc
 
 export default class TestPathV2 extends BaseWithOptionsV2<LocatorSchemaPath> {
 	constructor(page: Page, testInfo: TestInfo, pwrl: PlaywrightReportLogger) {
-		super(page, testInfo, "/testpath", TestPathV2.name, pwrl);
+		super(page, testInfo, "/testpath", pwrl);
 	}
 
 	protected defineLocators(): void {

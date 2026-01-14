@@ -12,9 +12,9 @@ export default abstract class BaseWithOptionsV2<
 		page: Page,
 		testInfo: TestInfo,
 		urlPath: ExtractUrlPathType<{ urlOptions: { urlPathType: ExtractUrlPathType<Options> } }>,
-		pocName: string,
 		pwrl: PlaywrightReportLogger,
+		options?: { label?: string },
 	) {
-		super(page, testInfo, "http://localhost:8080", urlPath, pocName, pwrl);
+		super(page, testInfo, "http://localhost:8080", urlPath, pwrl, options);
 	}
 }

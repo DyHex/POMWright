@@ -1,6 +1,6 @@
 import { type Page, type Selectors, selectors, type TestInfo } from "@playwright/test";
-import { SessionStorage } from "../src/helpers/sessionStorage.actions";
 import type { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
+import { SessionStorage } from "./helpers/sessionStorage";
 import {
 	type AddAccessor,
 	createRegistryWithAccessors,
@@ -39,7 +39,7 @@ export abstract class PageObject<
 	readonly baseUrl: ExtractBaseUrlType<Options>;
 	readonly urlPath: ExtractUrlPathType<Options>;
 	readonly fullUrl: ExtractFullUrlType<Options>;
-	readonly pocName: string;
+	readonly label: string;
 	readonly sessionStorage: SessionStorage;
 	protected readonly log: PlaywrightReportLogger;
 	protected readonly locatorRegistry: LocatorRegistry<LocatorSchemaPathType>;
@@ -53,8 +53,8 @@ export abstract class PageObject<
 		testInfo: TestInfo,
 		baseUrl: ExtractBaseUrlType<Options>,
 		urlPath: ExtractUrlPathType<Options>,
-		pocName: string,
 		playwrightReportLogger: PlaywrightReportLogger,
+		options?: { label?: string },
 	) {
 		this.page = page;
 		this.testInfo = testInfo;
@@ -62,8 +62,9 @@ export abstract class PageObject<
 		this.baseUrl = baseUrl;
 		this.urlPath = urlPath;
 		this.fullUrl = this.composeFullUrl(baseUrl, urlPath);
-		this.pocName = pocName;
-		this.log = playwrightReportLogger.getNewChildLogger(pocName);
+		const label = options?.label ?? this.constructor.name;
+		this.label = label;
+		this.log = playwrightReportLogger.getNewChildLogger(label);
 		const { registry, add, getLocator, getNestedLocator, getLocatorSchema } =
 			createRegistryWithAccessors<LocatorSchemaPathType>(page);
 		this.locatorRegistry = registry;
@@ -71,7 +72,7 @@ export abstract class PageObject<
 		this.getLocator = getLocator;
 		this.getLocatorSchema = getLocatorSchema;
 		this.getNestedLocator = getNestedLocator;
-		this.sessionStorage = new SessionStorage(page, pocName);
+		this.sessionStorage = new SessionStorage(page, { label });
 
 		this.defineLocators();
 	}

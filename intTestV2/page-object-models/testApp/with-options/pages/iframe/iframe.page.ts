@@ -5,7 +5,7 @@ import { initLocatorSchemas, type LocatorSchemaPath } from "./iframe.locatorSche
 
 export default class IframePage extends BaseWithOptionsV2<LocatorSchemaPath> {
 	constructor(page: Page, testInfo: TestInfo, pwrl: PlaywrightReportLogger) {
-		super(page, testInfo, "/iframe", IframePage.name, pwrl);
+		super(page, testInfo, "/iframe", pwrl);
 	}
 
 	protected defineLocators(): void {

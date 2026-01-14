@@ -19,6 +19,8 @@ Use this file to keep an up-to-date picture of how v1 (src/intTest) and v2 (srcV
   - **Possible solutions:** Normalize user-provided path strings (trim and replace whitespace) before registering.
 - Requesting a locator path that ends on a `frameLocator` yields the owner locator pointing at the actual iframe (validate its presence) rather than the frame locator which you'd use to resolve/validate elements inside the iframe.
   - **Solution:** Invoke .contentFrame() on the returned locator in the test/step/method to reverse operation and you can use it to target elements inside the iframe again.
+- `PageObject` now accepts an optional `label` (defaulting to the class name) instead of a required `pocName` constructor argument.
+  - **Possible solutions:** Remove the explicit `pocName` argument and pass `{ label: "YourLabel" }` as the final constructor parameter only when you want to override the default.
 - Locator registration and updates no longer accept `{ filters, index }` config objects on locator methods. Chain `.filter()`/`.nth()` to record ordered steps instead. A v1 compatibility shim will be used for legacy schemas rather than mixing the behaviors inside v2.
 - Locator registration now enforces a single locator-type call per `add` chain (with a single matching override allowed when reusing); attempts to chain another locator method throw instead of silently overwriting, and the fluent surface narrows to `filter`/`nth` after a locator is set.
 - Query-builder mutations (`update`, `replace`, `filter`, `nth`, `clearSteps`, `remove`) accept omitted `subPath` values, defaulting to the terminal path supplied to `getLocatorSchema`; provide explicit subpaths to target ancestor segments.
@@ -27,10 +29,11 @@ Use this file to keep an up-to-date picture of how v1 (src/intTest) and v2 (srcV
 - Shorthand `getLocator(path)` / `getNestedLocator(path)` now return Playwright `Locator` instances synchronously and no longer accept override arguments or fluent mutations; use `getLocatorSchema(path)` for filters/indices/updates. v1 supported optional override objects (e.g., index maps) and required `await` on the shorthand helpers.
 - Built-in `getByDataCy` support and automatic `data-cy` selector engine registration were removed from v2. Migration: translate `getByDataCy("value")` to `locator('[data-cy="value"]')` and register any custom selector engines directly through Playwright fixtures if needed.
 - Translator gaps remain: v1 schemas using `Locator` instances or missing selector fields are logged and skipped during auto-registration into the v2 registry.
+- `SessionStorage` has a v2-only helper with updated signatures: `set(states, { reload, waitForContext })` replaces the boolean reload arg, `get`/`clear` accept `{ waitForContext }`, and `clear` can target specific keys. `setOnNextNavigation` waits for the next main-frame navigation. When no execution context is available, `set`/`get`/`clear` throw unless `waitForContext` is true. Step titles can be prefixed via the helper label (defaults to the page object class name when constructed by `PageObject`).
+  - **Possible solutions:** Update v2 call sites to pass `{ reload: true }` or `{ waitForContext: true }` when needed, and supply keys to `clear` if you only want to remove specific entries.
 
 ## Missing features/validation relative to v1
 
-- TODO Session storage helpers (`SessionStorage` in v1) have not been fully ported to v2 helpers.
 - DROPPED v1 exposes a `GetBy` helper for schema construction; v2 expects direct registry builder usage without a dedicated helper wrapper.
 - LocatorRegistry no longer emits `PlaywrightReportLogger` output in v2, and `createRegistryWithAccessors` no longer accepts a logger parameter. v1-style registry logging would need to be layered via a compatibility shim if required.
 - Added support for reusable locator definitions (`registry.createReusable`) to cover v1 `LocatorSchemaWithoutPath` use cases.
