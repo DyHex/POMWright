@@ -6,6 +6,7 @@ import type {
 	IndexSelector,
 	LabelDefinition,
 	LocatorDefinition,
+	LocatorDescription,
 	LocatorStep,
 	LocatorStrategyDefinition,
 	PlaceholderDefinition,
@@ -25,6 +26,7 @@ export class ReusableLocatorBuilder<
 {
 	private readonly stepsList: LocatorStep<LocatorSchemaPathType, AllowedPaths>[];
 	private readonly definitionValue: Extract<LocatorStrategyDefinition, { type: Type }>;
+	private descriptionValue?: LocatorDescription;
 
 	readonly type: Type;
 
@@ -47,12 +49,21 @@ export class ReusableLocatorBuilder<
 		return this;
 	}
 
+	describe(description: LocatorDescription) {
+		this.descriptionValue = description;
+		return this;
+	}
+
 	get definition() {
 		return this.definitionValue;
 	}
 
 	get steps() {
 		return normalizeSteps<LocatorSchemaPathType, AllowedPaths>(this.stepsList);
+	}
+
+	get description() {
+		return this.descriptionValue;
 	}
 }
 

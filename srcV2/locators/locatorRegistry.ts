@@ -11,6 +11,7 @@ import type {
 	FilterLocatorReference,
 	IndexSelector,
 	LocatorBuilderTarget,
+	LocatorDescription,
 	LocatorSchemaPathErrors,
 	LocatorSchemaRecord,
 	LocatorStep,
@@ -61,6 +62,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			locatorSchemaPath: record.locatorSchemaPath,
 			definition: record.definition,
 			steps: normalizeSteps<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>(record.steps),
+			...(record.description !== undefined ? { description: record.description } : {}),
 		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
 	}
 
@@ -72,6 +74,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			locatorSchemaPath: path,
 			definition: cloneLocatorStrategyDefinition(record.definition),
 			steps: normalizeSteps<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>(record.steps),
+			...(record.description !== undefined ? { description: record.description } : {}),
 		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
 	}
 
@@ -145,6 +148,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				locatorSchemaPath: path,
 				definition: reuse.definition,
 				steps: reuse.steps,
+				description: reuse.description,
 			},
 			path,
 		);
@@ -156,6 +160,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				initialDefinition: reusedRecord.definition,
 				initialSteps: reusedRecord.steps,
 				reuseType: reusedRecord.definition.type,
+				initialDescription: reusedRecord.description,
 			},
 		).persistSeededDefinition();
 	}
@@ -201,6 +206,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			locatorSchemaPath: record.locatorSchemaPath,
 			definition: record.definition,
 			steps: normalizeSteps(record.steps),
+			...(record.description !== undefined ? { description: record.description } : {}),
 		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
 	}
 
@@ -220,6 +226,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			locatorSchemaPath: record.locatorSchemaPath,
 			definition: record.definition,
 			steps: normalizeSteps(record.steps),
+			...(record.description !== undefined ? { description: record.description } : {}),
 		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
 	}
 
@@ -344,6 +351,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		definitions: Map<string, LocatorStrategyDefinition>,
 		steps: Map<string, LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]>,
 		tombstones?: Set<string>,
+		terminalDescription?: LocatorDescription,
 	) {
 		const chain = expandSchemaPath(path);
 		const registeredChain = chain.filter((part) => definitions.has(part));
@@ -391,6 +399,11 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 					lastLocator = frameLocator as unknown as Locator;
 				}
 
+				if (isTerminalStep && terminalDescription && isLocatorInstance(lastLocator)) {
+					lastLocator = lastLocator.describe(terminalDescription);
+					currentTarget = lastLocator;
+				}
+
 				debugSteps.push({ path: part, definition, appliedFilters: [], recordedSteps: [] });
 				continue;
 			}
@@ -413,6 +426,10 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 					appliedIndex = step.index ?? null;
 					resolvedLocator = applyIndexSelector(resolvedLocator, appliedIndex ?? undefined);
 				}
+			}
+
+			if (isTerminalStep && terminalDescription) {
+				resolvedLocator = resolvedLocator.describe(terminalDescription);
 			}
 
 			currentTarget = resolvedLocator;

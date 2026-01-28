@@ -5,6 +5,7 @@ import type {
 	FilterDefinition,
 	IndexSelector,
 	LocatorChainPaths,
+	LocatorDescription,
 	LocatorStep,
 	LocatorStrategyDefinition,
 	LocatorUpdate,
@@ -17,7 +18,7 @@ export type LocatorQueryBuilderPublic<
 	LocatorSubstring extends RegistryPath<LocatorSchemaPathType>,
 > = Pick<
 	LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>,
-	"filter" | "clearSteps" | "nth" | "update" | "replace" | "remove" | "getLocator" | "getNestedLocator"
+	"filter" | "clearSteps" | "nth" | "describe" | "update" | "replace" | "remove" | "getLocator" | "getNestedLocator"
 >;
 
 export class LocatorQueryBuilder<
@@ -33,6 +34,7 @@ export class LocatorQueryBuilder<
 		string,
 		LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]
 	>();
+	private readonly descriptions = new Map<string, LocatorDescription>();
 	private readonly tombstones = new Set<string>();
 
 	constructor(
@@ -53,6 +55,9 @@ export class LocatorQueryBuilder<
 				record.steps,
 			);
 			this.steps.set(part, recordSteps);
+			if (record.description !== undefined) {
+				this.descriptions.set(part, record.description);
+			}
 			if (part === path) {
 				hasTerminal = true;
 			}
@@ -199,6 +204,23 @@ export class LocatorQueryBuilder<
 		return this;
 	}
 
+	/**
+	 * Adds or overrides the description for the terminal path of this builder. The description is
+	 * applied only to the resolved terminal locator and does not mutate registry state.
+	 *
+	 * @example
+	 * ```ts
+	 * getLocatorSchema("section.button")
+	 *   .describe("Save button")
+	 *   .getNestedLocator();
+	 * ```
+	 */
+	describe(description: LocatorDescription) {
+		this.ensureSubPath(this.path);
+		this.descriptions.set(this.path, description);
+		return this;
+	}
+
 	/** @internal */
 	applyUpdate<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
@@ -307,6 +329,7 @@ export class LocatorQueryBuilder<
 		this.definitions.delete(resolvedSubPath);
 		this.steps.delete(resolvedSubPath);
 		this.perPathTypeCache.delete(resolvedSubPath);
+		this.descriptions.delete(resolvedSubPath);
 		this.tombstones.add(resolvedSubPath);
 		return this;
 	}
@@ -341,7 +364,13 @@ export class LocatorQueryBuilder<
 			],
 		]);
 
-		const { locator } = this.registry.buildLocatorChain(this.path, definitions, steps, this.tombstones);
+		const { locator } = this.registry.buildLocatorChain(
+			this.path,
+			definitions,
+			steps,
+			this.tombstones,
+			this.descriptions.get(this.path),
+		);
 		if (!locator) {
 			throw new Error(`Unable to resolve direct locator for path "${this.path}".`);
 		}
@@ -374,7 +403,13 @@ export class LocatorQueryBuilder<
 	}
 
 	private resolve() {
-		return this.registry.buildLocatorChain(this.path, this.definitions, this.steps, this.tombstones);
+		return this.registry.buildLocatorChain(
+			this.path,
+			this.definitions,
+			this.steps,
+			this.tombstones,
+			this.descriptions.get(this.path),
+		);
 	}
 
 	private ensureTypeCache(subPath: string, baseline: LocatorStrategyDefinition) {

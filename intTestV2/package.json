@@ -9,7 +9,7 @@
 	},
 	"keywords": [],
 	"devDependencies": {
-		"@playwright/test": "1.57.0",
+		"@playwright/test": "1.58.0",
 		"@types/express": "^5.0.3",
 		"@types/node": "^24.5.2",
 		"express": "^5.1.0",

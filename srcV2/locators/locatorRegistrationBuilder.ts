@@ -7,6 +7,7 @@ import type {
 	IndexSelector,
 	LabelDefinition,
 	LocatorDefinition,
+	LocatorDescription,
 	LocatorSchemaRecord,
 	LocatorStep,
 	LocatorStrategyDefinition,
@@ -27,6 +28,7 @@ export type LocatorRegistrationPostDefinitionBuilder<
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	) => LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	nth: (index: IndexSelector) => LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	describe: (description: LocatorDescription) => LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 };
 
 export class LocatorRegistrationBuilder<
@@ -36,6 +38,7 @@ export class LocatorRegistrationBuilder<
 > {
 	private steps: LocatorStep<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>[] = [];
 	private definition?: LocatorStrategyDefinition;
+	private description?: LocatorDescription;
 	private registered = false;
 	private readonly reuseType?: LocatorStrategyDefinition["type"];
 	private readonly seededDefinition: boolean;
@@ -49,6 +52,7 @@ export class LocatorRegistrationBuilder<
 			initialDefinition?: LocatorStrategyDefinition;
 			initialSteps?: LocatorStep<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>[];
 			reuseType?: LocatorStrategyDefinition["type"];
+			initialDescription?: LocatorDescription;
 		},
 	) {
 		if (seed?.initialSteps) {
@@ -63,6 +67,7 @@ export class LocatorRegistrationBuilder<
 		}
 
 		this.reuseType = seed?.reuseType;
+		this.description = seed?.initialDescription;
 	}
 
 	persistSeededDefinition() {
@@ -100,6 +105,12 @@ export class LocatorRegistrationBuilder<
 	 */
 	nth(index: IndexSelector): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
 		this.applyIndex(index);
+		return this.getPostDefinitionView();
+	}
+
+	describe(description: LocatorDescription): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+		this.description = description;
+		this.persist();
 		return this.getPostDefinitionView();
 	}
 
@@ -454,6 +465,7 @@ export class LocatorRegistrationBuilder<
 			locatorSchemaPath: this.path,
 			definition: this.definition,
 			steps: normalizeSteps<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>(this.steps),
+			...(this.description !== undefined ? { description: this.description } : {}),
 		};
 
 		if (this.registered) {
@@ -483,6 +495,11 @@ export class LocatorRegistrationBuilder<
 			},
 			nth: (index: IndexSelector) => {
 				this.applyIndex(index);
+				return view;
+			},
+			describe: (description: LocatorDescription) => {
+				this.description = description;
+				this.persist();
 				return view;
 			},
 		};

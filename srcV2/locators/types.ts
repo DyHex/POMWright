@@ -173,6 +173,7 @@ export type LocatorStrategyDefinitionPatch =
 
 export type PlaywrightFilterDefinition = NonNullable<Parameters<Locator["filter"]>[0]>;
 export type ResolvedFilterDefinition = PlaywrightFilterDefinition;
+export type LocatorDescription = Parameters<Locator["describe"]>[0];
 
 export type LocatorStep<
 	LocatorSchemaPathType extends string = string,
@@ -189,6 +190,7 @@ export type ReusableLocator<
 	type: Type;
 	definition: Extract<LocatorStrategyDefinition, { type: Type }>;
 	steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[];
+	description?: LocatorDescription;
 };
 
 export type FilterLocatorReference<
@@ -235,6 +237,7 @@ export type LocatorSchemaRecord<
 	locatorSchemaPath: LocatorSchemaPathAlias<LocatorSchemaPathType>;
 	definition: LocatorStrategyDefinition;
 	steps?: LocatorStep<LocatorSchemaPathType, AllowedPaths>[];
+	description?: LocatorDescription;
 };
 
 type LocatorUpdateFor<Definition extends LocatorStrategyDefinition> = { type: Definition["type"] } & Partial<

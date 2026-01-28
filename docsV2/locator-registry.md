@@ -67,6 +67,30 @@ const locator = getLocatorSchema("list.item")
 
 Filters and indices apply exactly where they are chained, mirroring manual Playwright locator chaining.
 
+## Descriptions
+
+Use `.describe()` to attach a Playwright locator description to a registered path. Descriptions apply only to the terminal
+path you resolve: `getNestedLocator("a")` will use the description on `a`, while `getNestedLocator("a.b")` ignores `a` and
+applies only the description on `a.b`.
+
+```ts
+registry.add("list").locator("ul.list").describe("List container");
+registry.add("list.item").getByRole("listitem").describe("List item");
+
+const list = getNestedLocator("list");
+const item = getNestedLocator("list.item");
+// list.description() === "List container"
+// item.description() === "List item"
+```
+
+You can override the terminal description on a query builder without mutating the registry:
+
+```ts
+const locator = getLocatorSchema("list.item")
+  .describe("List item (override)")
+  .getNestedLocator();
+```
+
 ## Reusable locators
 
 Build a locator once and reuse it across multiple paths without registering it immediately. The registry exposes
@@ -78,6 +102,7 @@ set:
 const h2 = registry.createReusable.getByRole("heading", { level: 2 }).filter({ hasText: /Summary/ });
 const firstHeading = registry.createReusable.getByRole("heading", { level: 1 }).nth(0);
 const sectionWithText = registry.createReusable.locator("section").filter({ hasText: "someText" });
+const summaryHeading = registry.createReusable.getByRole("heading", { level: 2 }).describe("Summary heading");
 ```
 
 Register a path with a reusable locator by passing `{ reuse }` to `add`:
