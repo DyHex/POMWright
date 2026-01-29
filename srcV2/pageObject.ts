@@ -1,5 +1,4 @@
-import { type Page, type Selectors, selectors, type TestInfo } from "@playwright/test";
-import type { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
+import type { Page } from "@playwright/test";
 import { SessionStorage } from "./helpers/sessionStorage";
 import {
 	type AddAccessor,
@@ -10,20 +9,26 @@ import {
 	type LocatorRegistry,
 } from "./locators";
 
-export type PageObjectOptions = {
+/**
+ * UrlTypeOptions define types for baseUrl and urlPath.
+ * string is the default type; The types can be overridden to RegExp, using the Extract...Type utility types. If either
+ * baseUrlType or urlPathType is set to RegExp, then fullUrlType will also be RegExp and can't be used for navigation,
+ * only validation through URL matching.
+ */
+export type UrlTypeOptions = {
 	urlOptions?: {
 		baseUrlType?: string | RegExp;
 		urlPathType?: string | RegExp;
 	};
 };
 
-export type ExtractBaseUrlType<T extends PageObjectOptions> = T["urlOptions"] extends { baseUrlType: RegExp }
+export type ExtractBaseUrlType<T extends UrlTypeOptions> = T["urlOptions"] extends { baseUrlType: RegExp }
 	? RegExp
 	: string;
-export type ExtractUrlPathType<T extends PageObjectOptions> = T["urlOptions"] extends { urlPathType: RegExp }
+export type ExtractUrlPathType<T extends UrlTypeOptions> = T["urlOptions"] extends { urlPathType: RegExp }
 	? RegExp
 	: string;
-export type ExtractFullUrlType<T extends PageObjectOptions> = T["urlOptions"] extends
+export type ExtractFullUrlType<T extends UrlTypeOptions> = T["urlOptions"] extends
 	| { baseUrlType: RegExp }
 	| { urlPathType: RegExp }
 	? RegExp
@@ -31,17 +36,14 @@ export type ExtractFullUrlType<T extends PageObjectOptions> = T["urlOptions"] ex
 
 export abstract class PageObject<
 	LocatorSchemaPathType extends string,
-	Options extends PageObjectOptions = { urlOptions: { baseUrlType: string; urlPathType: string } },
+	Options extends UrlTypeOptions = { urlOptions: { baseUrlType: string; urlPathType: string } },
 > {
 	readonly page: Page;
-	readonly testInfo: TestInfo;
-	readonly selector: Selectors;
 	readonly baseUrl: ExtractBaseUrlType<Options>;
 	readonly urlPath: ExtractUrlPathType<Options>;
 	readonly fullUrl: ExtractFullUrlType<Options>;
 	readonly label: string;
 	readonly sessionStorage: SessionStorage;
-	protected readonly log: PlaywrightReportLogger;
 	protected readonly locatorRegistry: LocatorRegistry<LocatorSchemaPathType>;
 	public readonly add: AddAccessor<LocatorSchemaPathType>;
 	public readonly getLocator: GetLocatorAccessor<LocatorSchemaPathType>;
@@ -50,21 +52,16 @@ export abstract class PageObject<
 
 	protected constructor(
 		page: Page,
-		testInfo: TestInfo,
 		baseUrl: ExtractBaseUrlType<Options>,
 		urlPath: ExtractUrlPathType<Options>,
-		playwrightReportLogger: PlaywrightReportLogger,
 		options?: { label?: string },
 	) {
 		this.page = page;
-		this.testInfo = testInfo;
-		this.selector = selectors;
 		this.baseUrl = baseUrl;
 		this.urlPath = urlPath;
 		this.fullUrl = this.composeFullUrl(baseUrl, urlPath);
 		const label = options?.label ?? this.constructor.name;
 		this.label = label;
-		this.log = playwrightReportLogger.getNewChildLogger(label);
 		const { registry, add, getLocator, getNestedLocator, getLocatorSchema } =
 			createRegistryWithAccessors<LocatorSchemaPathType>(page);
 		this.locatorRegistry = registry;

@@ -21,6 +21,8 @@ Use this file to keep an up-to-date picture of how v1 (src/intTest) and v2 (srcV
   - **Solution:** Invoke .contentFrame() on the returned locator in the test/step/method to reverse operation and you can use it to target elements inside the iframe again.
 - `PageObject` now accepts an optional `label` (defaulting to the class name) instead of a required `pocName` constructor argument.
   - **Possible solutions:** Remove the explicit `pocName` argument and pass `{ label: "YourLabel" }` as the final constructor parameter only when you want to override the default.
+- `PageObject` no longer stores `PlaywrightReportLogger` or Playwright `TestInfo`. Logging is now a standalone fixture; if you need `log` or `testInfo` on a page object, store them in your own subclass instead.
+  - **Possible solutions:** Create custom page object constructors that accept `log`/`testInfo` and store them locally, or use the `log` fixture directly inside tests.
 - Locator registration and updates no longer accept `{ filters, index }` config objects on locator methods. Chain `.filter()`/`.nth()` to record ordered steps instead. A v1 compatibility shim will be used for legacy schemas rather than mixing the behaviors inside v2.
 - Locator registration now enforces a single locator-type call per `add` chain (with a single matching override allowed when reusing); attempts to chain another locator method throw instead of silently overwriting, and the fluent surface narrows to `filter`/`nth` after a locator is set.
 - Locator descriptions can be set via `.describe()` on registry builders, reusable locators, or query builders; when resolving nested locators, only the terminal path’s description is applied.

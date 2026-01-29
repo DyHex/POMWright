@@ -1,11 +1,11 @@
-import { expect, type Page, type TestInfo } from "@playwright/test";
-import { type PlaywrightReportLogger, step } from "pomwright";
+import { expect, type Page } from "@playwright/test";
+import { step } from "pomwright";
 import BaseWithOptionsV2 from "../base/baseWithOptions.page";
 import { initLocatorSchemas, type LocatorSchemaPath } from "./testPage.locatorSchema";
 
 export default class TestPageV2 extends BaseWithOptionsV2<LocatorSchemaPath> {
-	constructor(page: Page, testInfo: TestInfo, pwrl: PlaywrightReportLogger) {
-		super(page, testInfo, "/", pwrl);
+	constructor(page: Page) {
+		super(page, "/");
 	}
 
 	protected defineLocators(): void {

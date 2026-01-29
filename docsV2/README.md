@@ -23,6 +23,42 @@ Recommended checklist for one-step migrations:
 - The update syntax of methods `getLocator`, `getNestedLocator`, and `getLocatorSchema` in code.
 - Delete any `initLocatorSchemas` blocks.
 
+## PageObjectOptions and URL typing
+
+`PageObjectOptions` is a **type-level** helper that controls the *types* of `baseUrl`, `urlPath`, and `fullUrl`
+(string vs `RegExp`). It is **not** the runtime `options` argument passed to the constructor; the constructor only
+accepts `{ label?: string }` for label overrides.
+
+Example (type-level URL typing using a `Paths` union):
+
+```ts
+import type { Page } from "@playwright/test";
+import { PageObject, type ExtractUrlPathType, type PageObjectOptions } from "pomwright";
+
+type Paths = "main.order" | "main.order.submit";
+
+export class OrderPage extends PageObject<
+  Paths,
+  { urlOptions: { baseUrlType: string; urlPathType: RegExp } }
+> {
+  constructor(page: Page, urlPath: ExtractUrlPathType<{ urlOptions: { urlPathType: RegExp } }>) {
+    super(page, "https://example.com", urlPath, { label: "ProductOrderPage" });
+  }
+
+  protected defineLocators(): void {
+    this.add("main.order").locator("main");
+    this.add("main.order.submit").getByRole("button", { name: "Submit" });
+  }
+}
+```
+
+## Logging and TestInfo are opt-in
+
+`PageObject` no longer stores `PlaywrightReportLogger` or `TestInfo` by default. Keep logging as a standalone fixture and
+opt into `log`/`testInfo` on your own page objects when needed.
+
+See: [Logging and TestInfo (v2)](./logging.md)
+
 ## Playwright step decorator
 
 POMWright v2 exports a `step` decorator that wraps methods in Playwright `test.step` calls. The decorator reuses the

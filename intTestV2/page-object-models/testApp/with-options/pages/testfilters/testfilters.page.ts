@@ -1,12 +1,10 @@
-import { test } from "@fixtures-v2/withOptions";
-import type { Page, TestInfo } from "@playwright/test";
-import type { PlaywrightReportLogger } from "pomwright";
+import { type Page, test } from "@playwright/test";
 import BaseWithOptionsV2 from "../../base/baseWithOptions.page";
 import { initLocatorSchemas, type LocatorSchemaPath } from "./testfilters.locatorSchema";
 
 export default class TestFiltersV2 extends BaseWithOptionsV2<LocatorSchemaPath> {
-	constructor(page: Page, testInfo: TestInfo, pwrl: PlaywrightReportLogger) {
-		super(page, testInfo, "/testfilters", pwrl);
+	constructor(page: Page) {
+		super(page, "/testfilters");
 	}
 
 	protected defineLocators(): void {

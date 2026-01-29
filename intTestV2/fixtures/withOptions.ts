@@ -15,27 +15,27 @@ type Fixtures = {
 };
 
 const test = base.extend<Fixtures>({
-	iframePage: async ({ page, log }, use, testInfo) => {
-		const iframePage = new IframePage(page, testInfo, log);
+	iframePage: async ({ page }, use) => {
+		const iframePage = new IframePage(page);
 		await use(iframePage);
 	},
-	testPage: async ({ page, log }, use, testInfo) => {
-		const testPage = new TestPage(page, testInfo, log);
+	testPage: async ({ page }, use) => {
+		const testPage = new TestPage(page);
 		await use(testPage);
 	},
 
-	testPath: async ({ page, log }, use, testInfo) => {
-		const testPath = new TestPath(page, testInfo, log);
+	testPath: async ({ page }, use) => {
+		const testPath = new TestPath(page);
 		await use(testPath);
 	},
 
-	color: async ({ page, log }, use, testInfo) => {
-		const color = new Color(page, testInfo, log);
+	color: async ({ page }, use) => {
+		const color = new Color(page);
 		await use(color);
 	},
 
-	testFilters: async ({ page, log }, use, testInfo) => {
-		const testFilters = new TestFilters(page, testInfo, log);
+	testFilters: async ({ page }, use) => {
+		const testFilters = new TestFilters(page);
 		await use(testFilters);
 	},
 });

@@ -2,7 +2,8 @@
 
 `PageObject` exposes a `sessionStorage` helper that wraps common operations on `window.sessionStorage`. Each method
 records a Playwright `test.step` for reporting, and the v2 API uses options objects for configuration. When a label is
-provided, step titles are prefixed as `Label.SessionStorage.method`.
+provided (via `PageObject` options or direct instantiation), step titles are prefixed as
+`Label.SessionStorage.method`.
 
 ## set(states, options?)
 
