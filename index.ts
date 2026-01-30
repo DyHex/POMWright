@@ -8,8 +8,13 @@ export { GetByMethod, type LocatorSchema, type AriaRoleType };
 import { BaseApi } from "./src/api/baseApi";
 export { BaseApi };
 
-import { BasePage, type BasePageOptions } from "./src/basePage";
-export { BasePage, type BasePageOptions, type ExtractBaseUrlType, type ExtractFullUrlType, type ExtractUrlPathType };
+export {
+	BasePage,
+	type BasePageOptions,
+	type ExtractBaseUrlType,
+	type ExtractFullUrlType,
+	type ExtractUrlPathType,
+} from "./src/basePage";
 
 import { GetLocatorBase, type LocatorSchemaWithoutPath } from "./src/helpers/getLocatorBase";
 export { GetLocatorBase, type LocatorSchemaWithoutPath };
@@ -25,19 +30,28 @@ import { createRegistryWithAccessors, type LocatorRegistry } from "./srcV2/locat
 export { createRegistryWithAccessors, type LocatorRegistry };
 
 import {
-	type ExtractBaseUrlType,
-	type ExtractFullUrlType,
-	type ExtractUrlPathType,
+	type BaseUrlTypeFromOptions,
+	type FullUrlTypeFromOptions,
 	PageObject,
+	type UrlPathTypeFromOptions,
 	type UrlTypeOptions,
 } from "./srcV2/pageObject";
-export { PageObject, type UrlTypeOptions };
+export {
+	PageObject,
+	type BaseUrlTypeFromOptions,
+	type FullUrlTypeFromOptions,
+	type UrlPathTypeFromOptions,
+	type UrlTypeOptions,
+};
 
 import { test } from "./srcV2/fixture/base.fixtures";
 export { test };
 
 import { step } from "./srcV2/helpers/stepDecorator";
 export { step };
+
+import { type NavigationOptions } from "./srcV2/helpers/navigation";
+export { type NavigationOptions };
 
 import { SessionStorage } from "./srcV2/helpers/sessionStorage";
 export { SessionStorage };

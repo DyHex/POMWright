@@ -23,41 +23,42 @@ Recommended checklist for one-step migrations:
 - The update syntax of methods `getLocator`, `getNestedLocator`, and `getLocatorSchema` in code.
 - Delete any `initLocatorSchemas` blocks.
 
-## PageObjectOptions and URL typing
+## UrlTypeOptions and URL typing
 
-`PageObjectOptions` is a **type-level** helper that controls the *types* of `baseUrl`, `urlPath`, and `fullUrl`
-(string vs `RegExp`). It is **not** the runtime `options` argument passed to the constructor; the constructor only
-accepts `{ label?: string }` for label overrides.
+`UrlTypeOptions` is a **type-level** helper that controls the *types* of `baseUrl`, `urlPath`, and `fullUrl`
+(string vs `RegExp`). It is **not** the runtime `options` argument passed to the constructor; the constructor accepts
+`{ label?: string; navOptions?: NavigationOptions }` for label overrides and navigation defaults.
 
 Example (type-level URL typing using a `Paths` union):
 
 ```ts
 import type { Page } from "@playwright/test";
-import { PageObject, type ExtractUrlPathType, type PageObjectOptions } from "pomwright";
+import { PageObject, type UrlPathTypeFromOptions, type UrlTypeOptions } from "pomwright";
 
-type Paths = "main.order" | "main.order.submit";
+type Paths = "main" | "main.receipt" | "main.receipt.total";
 
-export class OrderPage extends PageObject<
+export class ReceiptPage extends PageObject<
   Paths,
-  { urlOptions: { baseUrlType: string; urlPathType: RegExp } }
+  { baseUrlType: string; urlPathType: RegExp }
 > {
-  constructor(page: Page, urlPath: ExtractUrlPathType<{ urlOptions: { urlPathType: RegExp } }>) {
-    super(page, "https://example.com", urlPath, { label: "ProductOrderPage" });
+  constructor(page: Page) {
+    super(page, "https://examplestore.com", /\/order\/^[A-Za-z0-9]{12}$/, { label: "Receipt" });
   }
 
   protected defineLocators(): void {
-    this.add("main.order").locator("main");
-    this.add("main.order.submit").getByRole("button", { name: "Submit" });
+    this.add("main").locator("main")
+    this.add("main.receipt").locator(".receipt");
+    this.add("main.receipt.total").locator(".total").filter({ hasText: "Total:" });
   }
 }
 ```
 
-## Logging and TestInfo are opt-in
+## Navigation helper (v2)
 
-`PageObject` no longer stores `PlaywrightReportLogger` or `TestInfo` by default. Keep logging as a standalone fixture and
-opt into `log`/`testInfo` on your own page objects when needed.
+`PageObject` exposes a `navigation` helper for common navigation and URL validation flows. Defaults are configurable
+per Page Object through `{ navOptions }`, and available methods are derived from `fullUrl` (string vs `RegExp`). The helper uses the `PageObject` label (defaults to the class name) to prefix Playwright step titles for navigation calls.
 
-See: [Logging and TestInfo (v2)](./logging.md)
+See: [Navigation helper (v2)](./navigation.md)
 
 ## Playwright step decorator
 

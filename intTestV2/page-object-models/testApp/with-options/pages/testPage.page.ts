@@ -4,12 +4,22 @@ import BaseWithOptionsV2 from "../base/baseWithOptions.page";
 import { initLocatorSchemas, type LocatorSchemaPath } from "./testPage.locatorSchema";
 
 export default class TestPageV2 extends BaseWithOptionsV2<LocatorSchemaPath> {
+	readonly navigationActionCount = { value: 0 };
+
 	constructor(page: Page) {
 		super(page, "/");
 	}
 
 	protected defineLocators(): void {
 		initLocatorSchemas(this.locatorRegistry);
+	}
+
+	protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {
+		return [
+			async () => {
+				this.navigationActionCount.value += 1;
+			},
+		];
 	}
 
 	@step

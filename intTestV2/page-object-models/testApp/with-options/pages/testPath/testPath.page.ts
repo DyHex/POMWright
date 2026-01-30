@@ -11,6 +11,10 @@ export default class TestPathV2 extends BaseWithOptionsV2<LocatorSchemaPath> {
 		initLocatorSchemas(this.locatorRegistry);
 	}
 
+	protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {
+		return [];
+	}
+
 	async expectThisPage() {
 		await test.step(`Expect Page: ${this.urlPath}`, async () => {
 			await this.page.waitForURL(this.fullUrl);

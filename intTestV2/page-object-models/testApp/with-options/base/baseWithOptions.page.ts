@@ -1,17 +1,19 @@
 import type { Page } from "@playwright/test";
-import { type ExtractUrlPathType, PageObject, type UrlTypeOptions } from "pomwright";
+import { PageObject, type NavigationOptions, type UrlPathTypeFromOptions, type UrlTypeOptions } from "pomwright";
+
+type BaseOptions<Options extends UrlTypeOptions> = {
+	baseUrlType: string;
+	urlPathType: UrlPathTypeFromOptions<Options>;
+};
 
 export default abstract class BaseWithOptionsV2<
 	LocatorSchemaPathType extends string,
-	Options extends UrlTypeOptions = { urlOptions: { baseUrlType: string; urlPathType: string } },
-> extends PageObject<
-	LocatorSchemaPathType,
-	{ urlOptions: { baseUrlType: string; urlPathType: ExtractUrlPathType<Options> } }
-> {
+	Options extends UrlTypeOptions = { baseUrlType: string; urlPathType: string },
+> extends PageObject<LocatorSchemaPathType, BaseOptions<Options>> {
 	protected constructor(
 		page: Page,
-		urlPath: ExtractUrlPathType<{ urlOptions: { urlPathType: ExtractUrlPathType<Options> } }>,
-		options?: { label?: string },
+		urlPath: UrlPathTypeFromOptions<BaseOptions<Options>>,
+		options?: { label?: string; navOptions?: NavigationOptions },
 	) {
 		super(page, "http://localhost:8080", urlPath, options);
 	}

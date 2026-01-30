@@ -10,4 +10,8 @@ export default class IframePage extends BaseWithOptionsV2<LocatorSchemaPath> {
 	protected defineLocators(): void {
 		initLocatorSchemas(this.locatorRegistry);
 	}
+
+	protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {
+		return [];
+	}
 }

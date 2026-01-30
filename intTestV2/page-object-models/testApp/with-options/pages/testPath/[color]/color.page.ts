@@ -4,7 +4,7 @@ import { type ColorLocatorSchemaPath, initLocatorSchemas } from "./color.locator
 
 export default class ColorV2 extends BaseWithOptionsV2<
 	ColorLocatorSchemaPath,
-	{ urlOptions: { urlPathType: RegExp } }
+	{ urlPathType: RegExp }
 > {
 	constructor(page: Page) {
 		const urlPathRegex = /\/testpath\/([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
@@ -13,6 +13,10 @@ export default class ColorV2 extends BaseWithOptionsV2<
 
 	protected defineLocators(): void {
 		initLocatorSchemas(this.locatorRegistry);
+	}
+
+	protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {
+		return [];
 	}
 
 	async expectThisPage() {

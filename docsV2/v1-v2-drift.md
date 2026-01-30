@@ -21,6 +21,10 @@ Use this file to keep an up-to-date picture of how v1 (src/intTest) and v2 (srcV
   - **Solution:** Invoke .contentFrame() on the returned locator in the test/step/method to reverse operation and you can use it to target elements inside the iframe again.
 - `PageObject` now accepts an optional `label` (defaulting to the class name) instead of a required `pocName` constructor argument.
   - **Possible solutions:** Remove the explicit `pocName` argument and pass `{ label: "YourLabel" }` as the final constructor parameter only when you want to override the default.
+- `UrlTypeOptions` is now flattened in v2 (`{ baseUrlType, urlPathType }`), and v2 URL helper types are renamed to `BaseUrlTypeFromOptions`, `UrlPathTypeFromOptions`, and `FullUrlTypeFromOptions` to avoid clashing with v1 exports.
+  - **Possible solutions:** Update v2 type definitions to the flattened options shape, and replace `Extract...Type` usages with the new `...FromOptions` names. v1 `Extract...Type` helpers remain unchanged.
+- `PageObject` now exposes a `navigation` helper and requires the POC to implement a `pageActionsToPerformAfterNavigation()` method. Navigation defaults can be configured via `navOptions` (defaulting to `"load"` for both `waitUntil` and `waitForLoadState`).
+  - **Possible solutions:** Implement `pageActionsToPerformAfterNavigation()` in each v2 page object (return `[]` or `null` if no actions), and set `navOptions` when you need custom navigation wait behavior, e.g. faster resolution using `domcontentloaded` etc.
 - `PageObject` no longer stores `PlaywrightReportLogger` or Playwright `TestInfo`. Logging is now a standalone fixture; if you need `log` or `testInfo` on a page object, store them in your own subclass instead.
   - **Possible solutions:** Create custom page object constructors that accept `log`/`testInfo` and store them locally, or use the `log` fixture directly inside tests.
 - Locator registration and updates no longer accept `{ filters, index }` config objects on locator methods. Chain `.filter()`/`.nth()` to record ordered steps instead. A v1 compatibility shim will be used for legacy schemas rather than mixing the behaviors inside v2.
