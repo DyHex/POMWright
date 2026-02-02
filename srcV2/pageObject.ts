@@ -22,7 +22,7 @@ export type UrlTypeOptions = {
 };
 
 export type BaseUrlTypeFromOptions<T extends UrlTypeOptions> = T extends { baseUrlType: RegExp } ? RegExp : string;
-export type UrlPathTypeFromOptions<T extends UrlTypeOptions> = T extends { urlPathType: RegExp } ? RegExp : string;
+export type UrlPathTypeFromOptions<T extends UrlTypeOptions> = T extends { urlPathType: RegExp } ? RegExp : "" | string;
 export type FullUrlTypeFromOptions<T extends UrlTypeOptions> = T extends
 	| { baseUrlType: RegExp }
 	| { urlPathType: RegExp }
