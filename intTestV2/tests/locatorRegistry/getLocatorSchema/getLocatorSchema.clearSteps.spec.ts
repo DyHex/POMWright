@@ -2,6 +2,52 @@ import { expect, test } from "@fixtures-v2/withOptions";
 
 const terminalPath = "body.section.button" as const;
 
+test("clearSteps clears existing filters for a sub-path", async ({ testFilters }) => {
+	const schema = testFilters.getLocatorSchema("fictional.filter@hasText");
+
+	const original = schema.getNestedLocator();
+	expect(`${original}`).toEqual("getByRole('button').filter({ hasText: 'hasText' })");
+
+	const noFilters = schema.clearSteps("fictional.filter@hasText").getNestedLocator();
+	expect(`${noFilters}`).toEqual("getByRole('button')");
+});
+
+test("clearSteps allows re-adding filters after clearing filters added through filter", async ({ testFilters }) => {
+	const original = testFilters.getNestedLocator("fictional.filter@hasText");
+	expect(`${original}`).toEqual("getByRole('button').filter({ hasText: 'hasText' })");
+
+	const locator = testFilters
+		.getLocatorSchema("fictional.filter@hasText")
+		.filter("fictional.filter@hasText", { hasText: "this filter will be removed" })
+		.clearSteps("fictional.filter@hasText")
+		.filter("fictional.filter@hasText", { hasText: /Re-added/i })
+		.getNestedLocator();
+
+	expect(`${locator}`).toEqual("getByRole('button').filter({ hasText: /Re-added/i })");
+});
+
+test("clearSteps does not remove filters defined via locator options", async ({ testFilters }) => {
+	const locator = testFilters
+		.getLocatorSchema("body.section@playground")
+		.clearSteps("body.section@playground")
+		.getNestedLocator();
+
+	expect(`${locator}`).toEqual("locator('body').locator('section').filter({ hasText: /Playground/i })");
+});
+
+test("filter resolves both locatorPath and inline locators after clearing steps", async ({ testFilters }) => {
+	const locator = testFilters
+		.getLocatorSchema("fictional.filter@hasNotText")
+		.clearSteps("fictional.filter@hasNotText")
+		.filter("fictional.filter@hasNotText", { has: { locatorPath: "body.section.heading" } })
+		.filter("fictional.filter@hasNotText", { hasNot: { locator: { type: "locator", selector: ".missing" } } })
+		.getNestedLocator();
+
+	expect(`${locator}`).toEqual(
+		"getByRole('button').filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: locator('.missing') })",
+	);
+});
+
 test("nth defaults to the terminal path when subPath is omitted", async ({ testFilters }) => {
 	const explicit = testFilters.getLocatorSchema(terminalPath).nth(terminalPath, 0).getNestedLocator();
 	const implicit = testFilters.getLocatorSchema(terminalPath).nth(0).getNestedLocator();

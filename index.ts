@@ -50,8 +50,8 @@ export { test };
 import { step } from "./srcV2/helpers/stepDecorator";
 export { step };
 
-import { type NavigationOptions } from "./srcV2/helpers/navigation";
-export { type NavigationOptions };
+import type { NavigationOptions } from "./srcV2/helpers/navigation";
+export type { NavigationOptions };
 
 import { SessionStorage } from "./srcV2/helpers/sessionStorage";
 export { SessionStorage };

@@ -1,7 +1,7 @@
 import { expect, test } from "@fixtures-v2/withOptions";
 import type { Page } from "@playwright/test";
 import { createRegistryWithAccessors } from "pomwright";
-import { formatLocatorSchemaPathForError } from "../../../srcV2/locators/utils.js";
+import { formatLocatorSchemaPathForError } from "../../../../srcV2/locators/utils.js";
 
 const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 

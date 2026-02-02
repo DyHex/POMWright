@@ -1,0 +1,66 @@
+import { expect, test } from "@fixtures-v2/withOptions";
+import type { Page } from "@playwright/test";
+import { LocatorRegistryInternal } from "../../../../srcV2/locators";
+
+const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+
+test("add reuses with existing record by path does not have chainable methods", async ({ page }) => {
+	type LocatorSchemaPaths = "button" | "button.copy";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.add("button").getByRole("button", { name: "Submit" }).filter({ hasText: "Submit" });
+
+	const builder = registry.add("button.copy", { reuse: "button" });
+
+	expect(builder).toBeUndefined();
+	expect(registry.get("button.copy")).toEqual({
+		definition: { role: "button", options: { name: "Submit" }, type: "role" },
+		locatorSchemaPath: "button.copy",
+		steps: [{ filter: { hasText: "Submit" }, kind: "filter" }],
+	});
+});
+
+test("add reuse by path clones records so mutations do not leak", async ({ page }) => {
+	type LocatorSchemaPaths = "button" | "button.copy";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.add("button").getByRole("button", { name: "Submit" }).filter({ hasText: "Submit" });
+
+	registry.add("button.copy", { reuse: "button" });
+
+	expect(registry.get("button.copy")).toEqual({
+		definition: { role: "button", options: { name: "Submit" }, type: "role" },
+		locatorSchemaPath: "button.copy",
+		steps: [{ filter: { hasText: "Submit" }, kind: "filter" }],
+	});
+
+	registry.replace("button.copy", {
+		definition: { role: "link", options: { name: "Copy" }, type: "role" },
+		locatorSchemaPath: "button.copy",
+		steps: [{ filter: { hasText: "Copy" }, kind: "filter" }],
+	});
+
+	expect(registry.get("button.copy")).toEqual({
+		definition: { role: "link", options: { name: "Copy" }, type: "role" },
+		locatorSchemaPath: "button.copy",
+		steps: [{ filter: { hasText: "Copy" }, kind: "filter" }],
+	});
+
+	expect(registry.get("button")).toEqual({
+		definition: { role: "button", options: { name: "Submit" }, type: "role" },
+		locatorSchemaPath: "button",
+		steps: [{ filter: { hasText: "Submit" }, kind: "filter" }],
+	});
+});
+
+test("add reuse by path throws when the source path is missing", async ({ page }) => {
+	type LocatorSchemaPaths = "button" | "button.copy";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	expect(() => registry.add("button.copy", { reuse: "button" })).toThrowError(
+		'No locator schema registered for path "button".',
+	);
+});
