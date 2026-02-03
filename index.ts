@@ -26,8 +26,22 @@ export { BasePageV1toV2 };
  * V2 Exports
  */
 
-import { createRegistryWithAccessors, type LocatorRegistry } from "./srcV2/locators";
-export { createRegistryWithAccessors, type LocatorRegistry };
+import {
+	type AddAccessor,
+	createRegistryWithAccessors,
+	type GetLocatorAccessor,
+	type GetLocatorSchemaAccessor,
+	type GetNestedLocatorAccessor,
+	type LocatorRegistry,
+} from "./srcV2/locators";
+export {
+	createRegistryWithAccessors,
+	type LocatorRegistry,
+	type AddAccessor,
+	type GetLocatorAccessor,
+	type GetLocatorSchemaAccessor,
+	type GetNestedLocatorAccessor,
+};
 
 import {
 	type BaseUrlTypeFromOptions,
