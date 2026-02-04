@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { PageObject, type NavigationOptions, type UrlPathTypeFromOptions, type UrlTypeOptions } from "pomwright";
+import { type NavigationOptions, PageObject, type UrlPathTypeFromOptions, type UrlTypeOptions } from "pomwright";
 
 type BaseOptions<Options extends UrlTypeOptions> = {
 	baseUrlType: string;
