@@ -18,7 +18,7 @@ test("replace updates definition while retaining recorded steps", async ({ page 
 		.filter("root.target", { hasText: "patched" })
 		.getNestedLocator();
 
-	expect(`${await locator}`).toEqual(
+	expect(`${locator}`).toEqual(
 		"locator('div.root').getByRole('button', { name: 'New' }).filter({ hasText: 'old' }).filter({ hasText: 'patched' })",
 	);
 });

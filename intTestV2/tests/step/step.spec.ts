@@ -1,5 +1,7 @@
 import { expect, test } from "@fixtures-v2/withOptions";
 
+// These tests need to be verified manually by checking the test report
+
 test("stepNoArgs should return the expected message", async ({ testPage }) => {
 	await expect(testPage.stepNoArgs()).resolves.toBe("Hello, World!");
 });

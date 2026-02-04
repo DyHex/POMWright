@@ -77,7 +77,11 @@ test("update preserves registered filters on untouched segments", async ({ testF
 
 test("update rejects unknown sub-paths", ({ testFilters }) => {
 	expect(() =>
-		testFilters.getLocatorSchema("body.section.heading").update("body.section.missing").locator("noop"),
+		testFilters
+			.getLocatorSchema("body.section.heading")
+			// @ts-expect-error Testing invalid path handling
+			.update("body.section.missing")
+			.locator("noop"),
 	).toThrow('"body.section.missing" is not a valid sub-path of "body.section.heading"');
 });
 
@@ -134,7 +138,7 @@ test("update can remove locator options filters", async ({ testFilters }) => {
 	const locator = testFilters
 		.getLocatorSchema("body.section@playground")
 		.update("body.section@playground")
-		.locator(undefined, undefined)
+		.locator({ hasText: undefined })
 		.getNestedLocator();
 
 	expect(`${locator}`).toEqual("locator('body').locator('section')");

@@ -28,5 +28,5 @@ test("remove on non-terminal skips the segment while allowing resolution", async
 
 	const locator = getLocatorSchema("root.child").remove("root").getNestedLocator();
 
-	expect(`${await locator}`).toEqual("getByRole('button', { name: 'Submit' })");
+	expect(`${locator}`).toEqual("getByRole('button', { name: 'Submit' })");
 });

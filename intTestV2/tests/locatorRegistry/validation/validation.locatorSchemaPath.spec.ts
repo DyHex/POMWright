@@ -55,16 +55,20 @@ test("flags invalid LocatorSchemaPaths at compile time and rejects them at runti
 
 	// --- Runtime errors for non-whitespace structural rules ---
 
+	// @ts-expect-error: testing compile-time validation
 	expect(() => registry.add("").locator("invalid")).toThrow("LocatorSchemaPath string cannot be empty");
 
+	// @ts-expect-error: testing compile-time validation
 	expect(() => registry.add(".leading").locator("invalid")).toThrow(
 		"LocatorSchemaPath string cannot start with a dot: .leading",
 	);
 
+	// @ts-expect-error: testing compile-time validation
 	expect(() => registry.add("a..b").locator("invalid")).toThrow(
 		"LocatorSchemaPath string cannot contain consecutive dots: a..b",
 	);
 
+	// @ts-expect-error: testing compile-time validation
 	expect(() => registry.add("trailing.").locator("invalid")).toThrow(
 		"LocatorSchemaPath string cannot end with a dot: trailing.",
 	);
@@ -103,7 +107,8 @@ test("flags invalid LocatorSchemaPaths at compile time and rejects them at runti
 
 	for (const path of whitespacePaths) {
 		const escaped = formatLocatorSchemaPathForError(path);
-		expect(() => registry.add(path as Paths).locator("invalid")).toThrow(
+		// @ts-expect-error: testing compile-time validation of whitespace in paths
+		expect(() => registry.add(path).locator("invalid")).toThrow(
 			`LocatorSchemaPath string cannot contain whitespace chars: ${escaped}`,
 		);
 	}

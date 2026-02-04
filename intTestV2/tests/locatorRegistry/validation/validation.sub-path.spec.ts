@@ -7,6 +7,7 @@ test.describe("sub-path validation", () => {
 		expect(() =>
 			testFilters
 				.getLocatorSchema("fictional.filter@hasNotText.filter@hasText")
+				// @ts-expect-error Testing invalid path handling
 				.filter("fictional", { hasText: "nope" }),
 		).toThrow('"fictional" is not a valid sub-path of "fictional.filter@hasNotText.filter@hasText".');
 	});
@@ -15,6 +16,7 @@ test.describe("sub-path validation", () => {
 		expect(() =>
 			testFilters
 				.getLocatorSchema(chainedPath)
+				// @ts-expect-error Testing invalid path handling
 				.filter("fictional.filter@hasNotText.filter@missing", { hasText: "nope" }),
 		).toThrow(
 			'"fictional.filter@hasNotText.filter@missing" is not a valid sub-path of "fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText".',
@@ -25,6 +27,7 @@ test.describe("sub-path validation", () => {
 		expect(() =>
 			testFilters
 				.getLocatorSchema("fictional.filter@hasNotText.filter@hasText")
+				// @ts-expect-error Testing invalid path handling
 				.update("fictional.filter@missing")
 				.getByText("nope"),
 		).toThrow('"fictional.filter@missing" is not a valid sub-path of "fictional.filter@hasNotText.filter@hasText".');
@@ -32,7 +35,11 @@ test.describe("sub-path validation", () => {
 
 	test("update rejects a valid LocatorSchemaPath when it's an invalid subPath", ({ testFilters }) => {
 		expect(() =>
-			testFilters.getLocatorSchema("body.section.heading").update("body.section.button").locator("noop"),
+			testFilters
+				.getLocatorSchema("body.section.heading")
+				// @ts-expect-error Testing invalid path handling
+				.update("body.section.button")
+				.locator("noop"),
 		).toThrow('"body.section.button" is not a valid sub-path of "body.section.heading"');
 	});
 });
