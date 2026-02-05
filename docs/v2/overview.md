@@ -94,7 +94,7 @@ test("login flow", async ({ loginPage, testData }) => {
 });
 ```
 
-### 2.2 Typed locator registry: `createRegistryWithAccessors` and `LocatorRegistry`
+### 2.2 Typed locator registry: `createRegistryWithAccessors`, `LocatorRegistry` and accessor types
 
 Use this when you want the registry without `PageObject` (e.g., for custom POCs or functional helpers).
 
@@ -368,6 +368,7 @@ class LoginPage {
   }
 }
 ```
+
 @step supports all the same arguments as playwright test.step
 
 ### 2.11 Logging: `PlaywrightReportLogger` and `test` fixture

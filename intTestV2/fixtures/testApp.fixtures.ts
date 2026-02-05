@@ -1,8 +1,8 @@
-import IframePage from "@page-object-models-v2/testApp/with-options/pages/iframe/iframe.page";
-import TestFilters from "@page-object-models-v2/testApp/with-options/pages/testfilters/testfilters.page";
-import TestPage from "@page-object-models-v2/testApp/with-options/pages/testPage.page";
-import Color from "@page-object-models-v2/testApp/with-options/pages/testPath/[color]/color.page";
-import TestPath from "@page-object-models-v2/testApp/with-options/pages/testPath/testPath.page";
+import IframePage from "@page-object-models-v2/testApp/pages/iframe/iframe.page";
+import TestFilters from "@page-object-models-v2/testApp/pages/testfilters/testfilters.page";
+import TestPage from "@page-object-models-v2/testApp/pages/testPage.page";
+import Color from "@page-object-models-v2/testApp/pages/testPath/[color]/color.page";
+import TestPath from "@page-object-models-v2/testApp/pages/testPath/testPath.page";
 import { expect } from "@playwright/test";
 import { test as base } from "pomwright";
 

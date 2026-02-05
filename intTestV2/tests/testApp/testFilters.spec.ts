@@ -1,4 +1,4 @@
-import { expect, test } from "@fixtures-v2/withOptions";
+import { expect, test } from "@fixtures-v2/testApp.fixtures";
 
 test("locator definitions with options should resolve playground interactions", async ({ testFilters }) => {
 	await testFilters.page.goto(testFilters.fullUrl);

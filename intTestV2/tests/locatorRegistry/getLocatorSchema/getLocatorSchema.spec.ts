@@ -1,4 +1,4 @@
-import { expect, test } from "@fixtures-v2/withOptions";
+import { expect, test } from "@fixtures-v2/testApp.fixtures";
 
 test("shorthand getLocator returns the same none-nested locator as getLocatorSchema.getLocator", async ({
 	testPage,

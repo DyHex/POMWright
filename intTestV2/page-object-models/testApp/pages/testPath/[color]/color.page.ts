@@ -1,18 +1,15 @@
 import { expect, type Page, test } from "@playwright/test";
-import BaseWithOptionsV2 from "../../../base/baseWithOptions.page";
-import { type ColorLocatorSchemaPath, initLocatorSchemas } from "./color.locatorSchema";
+import TestApp from "../../../testApp.base";
+import { defineLocators, type Paths } from "./color.locatorSchema";
 
-export default class ColorV2 extends BaseWithOptionsV2<
-	ColorLocatorSchemaPath,
-	{ urlPathType: RegExp }
-> {
+export default class ColorV2 extends TestApp<Paths, { urlPathType: RegExp }> {
 	constructor(page: Page) {
 		const urlPathRegex = /\/testpath\/([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
 		super(page, urlPathRegex);
 	}
 
 	protected defineLocators(): void {
-		initLocatorSchemas(this.locatorRegistry);
+		defineLocators(this.locatorRegistry);
 	}
 
 	protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {

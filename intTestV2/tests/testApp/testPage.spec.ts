@@ -1,4 +1,4 @@
-import { expect, test } from "@fixtures-v2/withOptions";
+import { expect, test } from "@fixtures-v2/testApp.fixtures";
 import { SessionStorage } from "pomwright";
 
 test("navigation.gotoThisPage runs post-navigation actions", async ({ testPage }) => {
@@ -33,7 +33,9 @@ test.describe("getLocator helpers on web app", () => {
 		await testPage.page.goto(testPage.fullUrl);
 	});
 
-	test("getLocator should return the single locator the complete LocatorSchemaPath resolves to", async ({ testPage }) => {
+	test("getLocator should return the single locator the complete LocatorSchemaPath resolves to", async ({
+		testPage,
+	}) => {
 		const locator = testPage.getLocator("topMenu.notifications.dropdown.item");
 		expect(locator).not.toBeNull();
 		expect(locator).not.toBeUndefined();

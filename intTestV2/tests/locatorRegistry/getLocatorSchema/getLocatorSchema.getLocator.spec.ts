@@ -1,4 +1,4 @@
-import { expect, test } from "@fixtures-v2/withOptions";
+import { expect, test } from "@fixtures-v2/testApp.fixtures";
 
 test("getLocator fluent wrapper supports update and clearSteps", async ({ testFilters }) => {
 	const updated = testFilters

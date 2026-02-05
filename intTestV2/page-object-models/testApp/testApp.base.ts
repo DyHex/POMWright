@@ -6,10 +6,10 @@ type BaseOptions<Options extends UrlTypeOptions> = {
 	urlPathType: UrlPathTypeFromOptions<Options>;
 };
 
-export default abstract class BaseWithOptionsV2<
-	LocatorSchemaPathType extends string,
+export default abstract class TestApp<
+	Paths extends string,
 	Options extends UrlTypeOptions = { baseUrlType: string; urlPathType: string },
-> extends PageObject<LocatorSchemaPathType, BaseOptions<Options>> {
+> extends PageObject<Paths, BaseOptions<Options>> {
 	protected constructor(
 		page: Page,
 		urlPath: UrlPathTypeFromOptions<BaseOptions<Options>>,

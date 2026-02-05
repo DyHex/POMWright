@@ -1,6 +1,6 @@
 import type { LocatorRegistry } from "pomwright";
 
-export type LocatorSchemaPath =
+export type Paths =
 	| "one"
 	| "one.two"
 	| "body"
@@ -27,30 +27,30 @@ export type LocatorSchemaPath =
 	| "fictional.filter@hasNotText.filter@hasText.filter@hasNotText"
 	| "fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText";
 
-export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>) {
-	locators.add("one").locator("div.one");
+export function defineLocators(registry: LocatorRegistry<Paths>) {
+	registry.add("one").locator("div.one");
 
-	locators.add("one.two").locator("div.two").filter({ hasText: "two" }).nth(0);
+	registry.add("one.two").locator("div.two").filter({ hasText: "two" }).nth(0);
 
-	locators.add("body").locator("body");
+	registry.add("body").locator("body");
 
-	locators.add("body.section").locator("section");
+	registry.add("body.section").locator("section");
 
-	locators.add("body.section.heading").getByRole("heading", { level: 2 });
+	registry.add("body.section.heading").getByRole("heading", { level: 2 });
 
-	locators.add("body.section.button").getByRole("button");
+	registry.add("body.section.button").getByRole("button");
 
-	locators.add("body.section@playground").locator("section", { hasText: /Playground/i });
+	registry.add("body.section@playground").locator("section", { hasText: /Playground/i });
 
-	locators
+	registry
 		.add("body.section@playground.heading")
 		.getByRole("heading", { name: "Primary Colors Playground", level: 2, exact: true });
 
-	locators.add("body.section@playground.button").getByRole("button");
+	registry.add("body.section@playground.button").getByRole("button");
 
-	locators.add("body.section@playground.button@red").getByRole("button", { name: "Red" });
+	registry.add("body.section@playground.button@red").getByRole("button", { name: "Red" });
 
-	locators.add("body.section@playground.button@reset").getByRole("button", { name: "Reset Color" });
+	registry.add("body.section@playground.button@reset").getByRole("button", { name: "Reset Color" });
 
 	/** --------------------------- Fictional LocatorSchema ---------------------------
 	 * The following LocatorSchema DO NOT exist in the DOM of the /testfilters page
@@ -59,14 +59,14 @@ export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>)
 	 * produces correct locator selector strings for LocatorSchema with/without filter.
 	 */
 
-	locators.add("fictional.filter@undefined").getByRole("button");
+	registry.add("fictional.filter@undefined").getByRole("button");
 
-	locators
+	registry
 		.add("fictional.filter@optionsUndefined")
 		.getByRole("button")
 		.filter({ has: undefined, hasNot: undefined, hasText: undefined, hasNotText: undefined });
 
-	locators
+	registry
 		.add("fictional.locatorWithfilter@allOptions")
 		.getByRole("button")
 		.filter({
@@ -76,7 +76,7 @@ export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>)
 			hasNotText: "hasNotText",
 		});
 
-	locators
+	registry
 		.add("fictional.locatorAndOptionsWithfilter@allOptions")
 		.getByRole("button", { name: "roleOptions" })
 		.filter({
@@ -86,33 +86,29 @@ export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>)
 			hasNotText: "hasNotText",
 		});
 
-	locators
+	registry
 		.add("fictional.filter@has")
 		.getByRole("button")
 		.filter({ has: { locatorPath: "body.section.heading" } });
 
-	locators
+	registry
 		.add("fictional.filter@hasNot")
 		.getByRole("button")
 		.filter({ hasNot: { locatorPath: "body.section.button" } });
 
-	locators.add("fictional.filter@hasText").getByRole("button").filter({ hasText: "hasText" });
+	registry.add("fictional.filter@hasText").getByRole("button").filter({ hasText: "hasText" });
 
-	locators.add("fictional.filter@hasNotText").getByRole("button").filter({ hasNotText: "hasNotText" });
+	registry.add("fictional.filter@hasNotText").getByRole("button").filter({ hasNotText: "hasNotText" });
 
-	locators.add("fictional.filter@hasNotText.filter@hasText").getByRole("button").filter({ hasText: "hasText" });
+	registry.add("fictional.filter@hasNotText.filter@hasText").getByRole("button").filter({ hasText: "hasText" });
 
-	locators
+	registry
 		.add("fictional.filter@hasNotText.filter@hasText.filter@hasNotText")
 		.getByRole("button")
 		.filter({ hasNotText: "hasNotText" });
 
-	locators
+	registry
 		.add("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText")
 		.getByRole("button")
 		.filter({ hasText: "hasText" });
-}
-
-export function defineLocators(locators: LocatorRegistry<LocatorSchemaPath>) {
-	initLocatorSchemas(locators);
 }

@@ -1,4 +1,4 @@
-import { expect, test } from "@fixtures-v2/withOptions";
+import { expect, test } from "@fixtures-v2/testApp.fixtures";
 import type { LocatorStrategyDefinition } from "../../../../srcV2/locators";
 
 test("filter adds an additional filter per sub-path", async ({ testFilters }) => {

@@ -1,4 +1,4 @@
-import { expect, test } from "@fixtures-v2/withOptions";
+import { expect, test } from "@fixtures-v2/testApp.fixtures";
 
 test("navigation.goto prefixes baseUrl for URL paths", async ({ testPath }) => {
 	await testPath.navigation.goto("/testpath");

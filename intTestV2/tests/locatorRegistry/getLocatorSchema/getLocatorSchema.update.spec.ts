@@ -1,4 +1,4 @@
-import { expect, test } from "@fixtures-v2/withOptions";
+import { expect, test } from "@fixtures-v2/testApp.fixtures";
 import { LocatorRegistryInternal } from "../../../../srcV2/locators";
 
 test("update replaces intermediate definitions without mutating registry", async ({ testFilters }) => {

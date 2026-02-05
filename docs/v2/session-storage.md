@@ -26,7 +26,7 @@ const storage = new SessionStorage(page, { label: "LoginPage" });
 
 Step titles are generated as:
 
-```
+```html
 <label>.SessionStorage.<method>:
 ```
 
@@ -42,7 +42,7 @@ Writes key/value pairs to session storage. Optionally reloads the page after wri
 await storage.set({ token: "abc", theme: "dark" }, { reload: true });
 ```
 
-**Options**
+#### **Options**
 
 - `reload?: boolean` – reload the page after setting values.
 - `waitForContext?: boolean` – wait for a main-frame execution context if not available.
@@ -77,7 +77,7 @@ const all = await storage.get();
 const subset = await storage.get(["token", "theme"]);
 ```
 
-**Options**
+#### **Options**
 
 - `waitForContext?: boolean` – wait for a main-frame execution context if not available.
 
@@ -97,7 +97,7 @@ await storage.clear({ waitForContext: true });
 await storage.clear(["token"], { waitForContext: true });
 ```
 
-**Options**
+#### **Options**
 
 - `waitForContext?: boolean` – wait for a main-frame execution context if not available.
 
@@ -145,7 +145,7 @@ Internally, `SessionStorage` checks for a main-frame execution context by evalua
 
 If you omit `waitForContext` and no context exists, the helper throws with:
 
-```
+```text
 SessionStorage context is not available.
 ```
 

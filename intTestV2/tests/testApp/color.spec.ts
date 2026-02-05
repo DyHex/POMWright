@@ -1,4 +1,4 @@
-import { test } from "@fixtures-v2/withOptions";
+import { test } from "@fixtures-v2/testApp.fixtures";
 
 test("Should validate navigation using RegExp-based urlPath and fullUrl", async ({ testPath, color }) => {
 	await testPath.page.goto(testPath.fullUrl);

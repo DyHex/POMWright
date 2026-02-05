@@ -1,4 +1,4 @@
-import { expect, test } from "@fixtures-v2/withOptions";
+import { expect, test } from "@fixtures-v2/testApp.fixtures";
 
 const chainedPath = "fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText" as const;
 

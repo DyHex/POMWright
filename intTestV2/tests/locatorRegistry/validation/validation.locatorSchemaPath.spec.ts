@@ -1,4 +1,4 @@
-import { expect, test } from "@fixtures-v2/withOptions";
+import { expect, test } from "@fixtures-v2/testApp.fixtures.js";
 import type { Page } from "@playwright/test";
 import { createRegistryWithAccessors } from "pomwright";
 import { formatLocatorSchemaPathForError } from "../../../../srcV2/locators/utils.js";

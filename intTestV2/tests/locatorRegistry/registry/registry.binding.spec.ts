@@ -1,4 +1,4 @@
-import { expect, test } from "@fixtures-v2/withOptions";
+import { expect, test } from "@fixtures-v2/testApp.fixtures";
 import type { Page } from "@playwright/test";
 import { createRegistryWithAccessors } from "pomwright";
 

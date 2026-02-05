@@ -1,6 +1,6 @@
 import type { LocatorRegistry } from "pomwright";
 
-export type LocatorSchemaPath =
+export type Paths =
 	| "sectionA"
 	| "sectionA.frame"
 	| "sectionA.frame.toggle"
@@ -10,7 +10,7 @@ export type LocatorSchemaPath =
 	| "sectionB.frame.innerFrame"
 	| "sectionB.frame.innerFrame.toggle";
 
-export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>) {
+export function defineLocators(locators: LocatorRegistry<Paths>) {
 	locators.add("sectionA").locator("#sectionA");
 	locators.add("sectionA.frame").frameLocator("#iframeA");
 	locators.add("sectionA.frame.toggle").getByTestId("toggle-a");
@@ -21,8 +21,4 @@ export function initLocatorSchemas(locators: LocatorRegistry<LocatorSchemaPath>)
 
 	locators.add("sectionB.frame.innerFrame").frameLocator("#iframeC");
 	locators.add("sectionB.frame.innerFrame.toggle").getByTestId("toggle-c");
-}
-
-export function defineLocators(locators: LocatorRegistry<LocatorSchemaPath>) {
-	initLocatorSchemas(locators);
 }

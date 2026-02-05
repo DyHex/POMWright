@@ -1,9 +1,9 @@
 import { expect, type Page } from "@playwright/test";
 import { step } from "pomwright";
-import BaseWithOptionsV2 from "../base/baseWithOptions.page";
-import { initLocatorSchemas, type LocatorSchemaPath } from "./testPage.locatorSchema";
+import TestApp from "../testApp.base";
+import { defineLocators, type Paths } from "./testPage.locatorSchema";
 
-export default class TestPageV2 extends BaseWithOptionsV2<LocatorSchemaPath> {
+export default class TestPageV2 extends TestApp<Paths> {
 	readonly navigationActionCount = { value: 0 };
 
 	constructor(page: Page) {
@@ -11,7 +11,7 @@ export default class TestPageV2 extends BaseWithOptionsV2<LocatorSchemaPath> {
 	}
 
 	protected defineLocators(): void {
-		initLocatorSchemas(this.locatorRegistry);
+		defineLocators(this.locatorRegistry);
 	}
 
 	protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {

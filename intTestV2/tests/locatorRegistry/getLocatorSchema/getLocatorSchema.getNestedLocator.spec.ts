@@ -1,4 +1,4 @@
-import { expect, test } from "@fixtures-v2/withOptions";
+import { expect, test } from "@fixtures-v2/testApp.fixtures";
 
 test("getNestedLocator fluent wrapper records filters and indices in call order", async ({ testFilters }) => {
 	const chained = testFilters

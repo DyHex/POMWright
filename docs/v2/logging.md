@@ -130,9 +130,39 @@ class LoginPageWithLogging extends LoginPage {
 
 ---
 
+## Custom log fixture with Playwright test
+
+If you want to use `@playwright/test` directly (instead of `pomwright`'s exported `test`), you can still create the log
+fixture yourself:
+
+```ts
+import { test as base } from "@playwright/test";
+import { PlaywrightReportLogger, type LogEntry, type LogLevel } from "pomwright";
+
+type Fixtures = { log: PlaywrightReportLogger };
+
+export const test = base.extend<Fixtures>({
+  log: async ({}, use, testInfo) => {
+    const sharedLogEntry: LogEntry[] = [];
+    const sharedLogLevel: { current: LogLevel; initial: LogLevel } =
+      testInfo.retry === 0
+        ? { current: "warn", initial: "warn" }
+        : { current: "debug", initial: "debug" };
+
+    const log = new PlaywrightReportLogger(sharedLogLevel, sharedLogEntry, "TestCase");
+    await use(log);
+    log.attachLogsToTest(testInfo);
+  },
+});
+```
+
+---
+
 ## v1 to v2 differences
 
 - v1 BasePage embedded a logger automatically; v2 does not.
 - v2 provides logging as a Playwright fixture and a standalone logger class.
 
 For migration guidance, see `docs/v1-to-v2-migration`.
+
+---
