@@ -5,6 +5,8 @@ import { SessionStorage } from "./helpers/sessionStorage.actions";
 import { createCypressIdEngine } from "./utils/selectorEngines";
 
 /**
+ * @deprecated BasePageOptions will be removed in v2, see docs/v1-to-v2-migration
+ *
  * BasePageOptions can define optional patterns for baseUrl and urlPath.
  * Defaults assume they are strings if not specified.
  */
@@ -15,12 +17,21 @@ export type BasePageOptions = {
 	};
 };
 
+/**
+ * @deprecated ExtractBaseUrlType will be replaced by BaseUrlTypeFromOptions in v2, see docs/v1-to-v2-migration
+ */
 export type ExtractBaseUrlType<T extends BasePageOptions> = T["urlOptions"] extends { baseUrlType: RegExp }
 	? RegExp
 	: string;
+/**
+ * @deprecated ExtractUrlPathType will be replaced by UrlPathTypeFromOptions in v2, see docs/v1-to-v2-migration
+ */
 export type ExtractUrlPathType<T extends BasePageOptions> = T["urlOptions"] extends { urlPathType: RegExp }
 	? RegExp
 	: string;
+/**
+ * @deprecated ExtractFullUrlType will be replaced by FullUrlTypeFromOptions in v2, see docs/v1-to-v2-migration
+ */
 export type ExtractFullUrlType<T extends BasePageOptions> = T["urlOptions"] extends
 	| { baseUrlType: RegExp }
 	| { urlPathType: RegExp }
@@ -30,9 +41,7 @@ export type ExtractFullUrlType<T extends BasePageOptions> = T["urlOptions"] exte
 let selectorRegistered = false;
 
 /**
- * @deprecated BasePage will be removed in 2.0.0. Migrate to v2, preferably directly
- * to PageObject or through the transitional bridge BasePageV1toV2.
- * v1.5.0 is the final v1 release.
+ * @deprecated BasePage will be replaced by PageObject in v2, see docs/v1-to-v2-migration.
  *
  * BasePage:
  * The foundational class for all Page Object Classes.

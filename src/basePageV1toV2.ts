@@ -36,8 +36,8 @@ export type ExtractFullUrlType<T extends BasePageOptions> = T["urlOptions"] exte
 	: string;
 
 /**
- * @deprecated Transitional bridge for migrating from v1. This class will be removed in 2.0.0.
- * Switch to PageObject and the v2 registry DSL. v1.5.0 is the final v1 release.
+ * @deprecated Transitional bridge for migrating from v1 to v2. This class will be removed in v2.
+ * Switch to PageObject and the v2 registry DSL, see docs/v1-to-v2-migration
  *
  * BasePageV1toV2:
  * Migration-friendly BasePage that maintains v1 schema ingestion while exposing v2 registries.

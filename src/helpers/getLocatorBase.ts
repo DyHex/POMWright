@@ -44,6 +44,8 @@ export type SubPaths<
 	: never;
 
 /**
+ * @deprecated LocatorSchemaWithMethods will be replaced by LocatorRegistry.createReusable in v2, see docs/v1-to-v2-migration
+ *
  * UpdatableLocatorSchemaProperties represent the properties of LocatorSchema that can be changed by update,
  * excluding the locatorSchemaPath itself, which remains immutable.
  */
@@ -266,6 +268,8 @@ export type LocatorSchemaWithMethods<
 };
 
 /**
+ * @deprecated GetLocatorBase will be replaced by LocatorRegistry in v2, see docs/v1-to-v2-migration
+ *
  * GetLocatorBase:
  * The foundational class for managing and constructing nested locators based on LocatorSchemas.
  *

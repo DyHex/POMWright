@@ -8,13 +8,14 @@ export { GetByMethod, type LocatorSchema, type AriaRoleType };
 import { BaseApi } from "./src/api/baseApi";
 export { BaseApi };
 
-export {
+import {
 	BasePage,
 	type BasePageOptions,
 	type ExtractBaseUrlType,
 	type ExtractFullUrlType,
 	type ExtractUrlPathType,
 } from "./src/basePage";
+export { BasePage, type BasePageOptions, type ExtractBaseUrlType, type ExtractFullUrlType, type ExtractUrlPathType };
 
 import { GetLocatorBase, type LocatorSchemaWithoutPath } from "./src/helpers/getLocatorBase";
 export { GetLocatorBase, type LocatorSchemaWithoutPath };
