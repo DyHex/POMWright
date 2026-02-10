@@ -196,12 +196,7 @@ export type ReusableLocator<
 export type FilterLocatorReference<
 	LocatorSchemaPathType extends string,
 	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
-> =
-	| Locator
-	| LocatorStrategyDefinition
-	| { locator: LocatorStrategyDefinition }
-	| { locatorPath: AllowedPaths }
-	| AllowedPaths;
+> = Locator | AllowedPaths;
 
 export type FilterDefinition<
 	LocatorSchemaPathType extends string,

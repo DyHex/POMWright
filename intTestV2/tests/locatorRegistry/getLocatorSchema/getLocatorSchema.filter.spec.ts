@@ -1,5 +1,10 @@
 import { expect, test } from "@fixtures-v2/testApp.fixtures";
-import type { LocatorStrategyDefinition } from "../../../../srcV2/locators";
+import type { Page } from "@playwright/test";
+import {
+	type FilterDefinition,
+	LocatorRegistryInternal,
+	type LocatorStrategyDefinition,
+} from "../../../../srcV2/locators";
 
 test("filter adds an additional filter per sub-path", async ({ testFilters }) => {
 	const filtered = testFilters
@@ -65,12 +70,12 @@ test("filter can layer ancestor and descendant filters simultaneously", async ({
 	);
 });
 
-test("filter accepts locatorPath references for has/hasNot", async ({ testFilters }) => {
+test("filter accepts registry path strings for has/hasNot", async ({ testFilters }) => {
 	const locator = testFilters
 		.getLocatorSchema("body.section@playground.button@reset")
-		.filter("body.section@playground.button@reset", { has: { locatorPath: "body.section.heading" } })
+		.filter("body.section@playground.button@reset", { has: "body.section.heading" })
 		.filter("body.section@playground.button@reset", {
-			hasNot: { locatorPath: "body.section@playground.button@red" },
+			hasNot: "body.section@playground.button@red",
 		})
 		.getNestedLocator();
 
@@ -79,29 +84,35 @@ test("filter accepts locatorPath references for has/hasNot", async ({ testFilter
 	);
 });
 
-test("filter accepts inline locator definitions for has/hasNot", async ({ testFilters }) => {
+test("filter accepts Playwright locators for has/hasNot", async ({ testFilters }) => {
+	const hasLocator = testFilters.getLocator("body.section.heading");
+	const hasNotLocator = testFilters.getLocator("body.section@playground.button@red");
+
 	const locator = testFilters
 		.getLocatorSchema("body.section@playground")
-		.filter("body.section@playground", { has: { locator: { type: "locator", selector: "section" } } })
-		.filter("body.section@playground", {
-			hasNot: { locator: { type: "locator", selector: "[data-cy=missing]" } },
-		})
+		.filter("body.section@playground", { has: hasLocator })
+		.filter("body.section@playground", { hasNot: hasNotLocator })
 		.getNestedLocator();
 
 	expect(`${locator}`).toEqual(
-		"locator('body').locator('section').filter({ hasText: /Playground/i }).filter({ has: locator('section') }).filter({ hasNot: locator('[data-cy=missing]') })",
+		"locator('body').locator('section').filter({ hasText: /Playground/i }).filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('button', { name: 'Red' }) })",
 	);
 });
 
-test("framelocator definitions are rejected inside filters", async ({ testFilters }) => {
-	expect(() =>
-		testFilters
-			.getLocatorSchema("fictional.filter@hasNotText")
-			.filter("fictional.filter@hasNotText", {
-				has: { locator: { type: "frameLocator", selector: "iframe" } },
-			})
-			.getNestedLocator(),
-	).toThrow(/Frame locators cannot be used as filter locators/);
+test("filters accept frame owner locators for has/hasNot", async ({ testFilters }) => {
+	const locator = testFilters
+		.getLocatorSchema("fictional.filter@hasNotText")
+		.filter("fictional.filter@hasNotText", {
+			has: testFilters.page.frameLocator("iframe").owner(),
+		})
+		.getNestedLocator();
+
+	const manual = testFilters.page.getByRole("button").filter({
+		hasNotText: "hasNotText",
+		has: testFilters.page.frameLocator("iframe").owner(),
+	});
+
+	expect(`${locator}`).toEqual(`${manual}`);
 });
 
 test("multiple nesting/chaining retains filters across the chain", async ({ testFilters }) => {
@@ -130,7 +141,7 @@ test("filter definitions that omit options stay stable", async ({ testFilters })
 	expect(`${nested}`).toEqual("getByRole('button')");
 });
 
-test("schema filters resolve locatorPath references", async ({ testFilters, page }) => {
+test("schema filters resolve path string references", async ({ testFilters, page }) => {
 	const nested = testFilters.getNestedLocator("fictional.locatorAndOptionsWithfilter@allOptions");
 
 	const manual = page.getByRole("button", { name: "roleOptions" }).filter({
@@ -156,14 +167,6 @@ test("schema filters resolve locatorPath references", async ({ testFilters, page
 
 	expect(`${nested}`).toEqual(
 		"getByRole('button', { name: 'roleOptions' }).filter({ hasText: 'hasText' }).filter({ hasNotText: 'hasNotText' }).filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('button') })",
-	);
-});
-
-test("schema filters can inline locator definitions", async ({ testFilters }) => {
-	const nested = testFilters.getNestedLocator("fictional.locatorWithfilter@allOptions");
-
-	expect(`${nested}`).toEqual(
-		"getByRole('button').filter({ hasText: 'hasText' }).filter({ hasNotText: 'hasNotText' }).filter({ has: locator('section') }).filter({ hasNot: locator('[data-cy=missing]') })",
 	);
 });
 
@@ -255,4 +258,111 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			expect(`${nested}`).toEqual(expected);
 		});
 	}
+});
+
+const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+
+test("getLocatorSchema.filter supports Playwright Locator instances for has/hasNot", async ({ page }) => {
+	type LocatorSchemaPaths = "item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.add("item").getByRole("button");
+
+	const locator = registry
+		.getLocatorSchema("item")
+		.filter({ has: page.getByRole("heading", { level: 2 }) })
+		.filter({ hasNot: page.getByRole("heading", { level: 3 }) })
+		.getLocator();
+
+	expect(`${locator}`).toEqual(
+		"getByRole('button').filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('heading', { level: 3 }) })",
+	);
+});
+
+test("getLocatorSchema.filter supports registry path strings for has/hasNot", async ({ page }) => {
+	type LocatorSchemaPaths = "item" | "heading.primary" | "heading.secondary";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.add("heading.primary").getByRole("heading", { level: 2 });
+	registry.add("heading.secondary").getByRole("heading", { level: 3 });
+	registry.add("item").getByRole("button");
+
+	const locator = registry
+		.getLocatorSchema("item")
+		.filter({ has: "heading.primary" })
+		.filter({ hasNot: "heading.secondary" })
+		.getLocator();
+
+	expect(`${locator}`).toEqual(
+		"getByRole('button').filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('heading', { level: 3 }) })",
+	);
+});
+
+test("getLocatorSchema.filter rejects inline locator strategy definitions for has/hasNot", async ({ page }) => {
+	type LocatorSchemaPaths = "item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.add("item").getByRole("button");
+	registry.getLocatorSchema("item");
+	// @ts-expect-error inline locator definitions are no longer supported
+	registry.getLocatorSchema("item").filter({ has: { type: "locator", selector: "section" } });
+
+	const unsafeFilter = {
+		has: { type: "locator", selector: "section" },
+	} as unknown as FilterDefinition<LocatorSchemaPaths, LocatorSchemaPaths>;
+
+	expect(() => registry.getLocatorSchema("item").filter(unsafeFilter).getLocator()).toThrow(
+		/Unsupported filter reference/,
+	);
+});
+
+test("getLocatorSchema.filter rejects locator wrappers for has/hasNot", async ({ page }) => {
+	type LocatorSchemaPaths = "item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.add("item").getByRole("button");
+	// @ts-expect-error locator wrapper is no longer supported
+	registry.getLocatorSchema("item").filter({ has: { locator: { type: "locator", selector: "section" } } });
+
+	const unsafeFilter = {
+		has: { locator: { type: "locator", selector: "section" } },
+	} as unknown as FilterDefinition<LocatorSchemaPaths, LocatorSchemaPaths>;
+
+	expect(() => registry.getLocatorSchema("item").filter(unsafeFilter).getLocator()).toThrow(
+		/Unsupported filter reference/,
+	);
+});
+
+test("getLocatorSchema.filter rejects locatorPath wrappers for has/hasNot", async ({ page }) => {
+	type LocatorSchemaPaths = "item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.add("item").getByRole("button");
+	// @ts-expect-error locatorPath wrapper is no longer supported
+	registry.getLocatorSchema("item").filter({ has: { locatorPath: "item" } });
+
+	const unsafeFilter = {
+		has: { locatorPath: "item" },
+	} as unknown as FilterDefinition<LocatorSchemaPaths, LocatorSchemaPaths>;
+
+	expect(() => registry.getLocatorSchema("item").filter(unsafeFilter).getLocator()).toThrow(
+		/Unsupported filter reference/,
+	);
+});
+
+test("getLocatorSchema.filter supports visible true/false", async ({ page }) => {
+	type LocatorSchemaPaths = "item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.add("item").getByRole("button");
+
+	const locator = registry.getLocatorSchema("item").filter({ visible: true }).filter({ visible: false }).getLocator();
+
+	expect(`${locator}`).toEqual("getByRole('button').filter({ visible: true }).filter({ visible: false })");
 });

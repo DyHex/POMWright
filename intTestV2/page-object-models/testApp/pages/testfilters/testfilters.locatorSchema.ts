@@ -70,8 +70,8 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 		.add("fictional.locatorWithfilter@allOptions")
 		.getByRole("button")
 		.filter({
-			has: { locator: { type: "locator", selector: "section" } },
-			hasNot: { locator: { type: "locator", selector: "[data-cy=missing]" } },
+			has: "body.section",
+			hasNot: "body.section.button",
 			hasText: "hasText",
 			hasNotText: "hasNotText",
 		});
@@ -80,8 +80,8 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 		.add("fictional.locatorAndOptionsWithfilter@allOptions")
 		.getByRole("button", { name: "roleOptions" })
 		.filter({
-			has: { locatorPath: "body.section.heading" },
-			hasNot: { locatorPath: "body.section.button" },
+			has: "body.section.heading",
+			hasNot: "body.section.button",
 			hasText: "hasText",
 			hasNotText: "hasNotText",
 		});
@@ -89,12 +89,12 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 	registry
 		.add("fictional.filter@has")
 		.getByRole("button")
-		.filter({ has: { locatorPath: "body.section.heading" } });
+		.filter({ has: "body.section.heading" });
 
 	registry
 		.add("fictional.filter@hasNot")
 		.getByRole("button")
-		.filter({ hasNot: { locatorPath: "body.section.button" } });
+		.filter({ hasNot: "body.section.button" });
 
 	registry.add("fictional.filter@hasText").getByRole("button").filter({ hasText: "hasText" });
 

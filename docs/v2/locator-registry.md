@@ -23,7 +23,7 @@
     3. [Examples](#examples)
 7. [`filter` deep dive](#filter-deep-dive)
     1. [Accepted `has`/`hasNot` reference forms](#accepted-hashasnot-reference-forms)
-    2. [Path and inline-locator examples](#path-and-inline-locator-examples)
+2. [Path examples](#path-examples)
     3. [Frame-locator restrictions in filters](#frame-locator-restrictions-in-filters)
 8. [Resolution APIs](#resolution-apis)
     1. [`getLocator(path)`](#getlocatorpath)
@@ -304,13 +304,24 @@ For `filter({ has })` and `filter({ hasNot })`, v2 accepts:
 
 1. A Playwright `Locator`
 2. A registry path string (e.g. `"main.section.heading"`)
-3. `{ locatorPath: "main.section.heading" }`
-4. An inline strategy definition (`{ type: "locator", selector: "..." }`, etc.)
-5. `{ locator: <inline strategy definition> }`
 
 Also supports standard Playwright `hasText` / `hasNotText` options.
 
-### Path and inline-locator examples
+> **Tip:** Because `filter` accepts Playwright `Locator` instances, you can also pass locators returned from
+> `registry.getLocator(path)`, `registry.getNestedLocator(path)`, or
+> `registry.getLocatorSchema(path)...getLocator()` / `getNestedLocator()` in addition to `page.locator(...)`
+> and `page.getBy...(...)` calls.
+
+When you pass a **path string**, the registry resolves that path directly by building a locator for the terminal
+definition and its own recorded steps (`filter(...)`, `nth(...)`) only. Ancestor segments are **not** chained. If you
+want ancestor chaining, pass a Playwright `Locator` built from `registry.getNestedLocator(path)` or from a query
+builder `registry.getNestedLocator(path)...getNestedLocator()` which also resolves the chain.
+
+Be careful to avoid **cyclic filter references** (for example, when `pathA` uses `filter({ has: "pathB" })` and `pathB`
+eventually filters back to `pathA`). Cycles are detected and throw with:
+`Detected cyclic filter reference while resolving "${context.rootPath}": "${path}".`
+
+### Path examples
 
 ```ts
 registry.add("main").locator("main");
@@ -321,15 +332,15 @@ registry
     .add("main.section.warning")
     .locator(".warning")
     .filter({ has: "main.section.heading" })
-    .filter({ hasNot: { locator: { type: "locator", selector: ".dismissed" } } })
+    .filter({ hasNot: "main.section" })
     .filter({ hasText: /Warning/i });
 ```
 
 ### Frame-locator restrictions in filters
 
-Frame locator definitions are not valid filter locators. Attempting to use a frame definition in `has`/`hasNot` throws:
-
-- `Frame locators cannot be used as filter locators.`
+Inline frame locator definitions are not supported as filter references. If you need to target a frame, resolve a
+registry path so it yields the frame **owner locator** (the iframe element) or pass a Playwright
+`page.frameLocator(...).owner()` locator to `has`/`hasNot`.
 
 ---
 
@@ -620,6 +631,8 @@ Common errors and what they usually mean:
   - More than one seeded strategy override attempted.
 - `Frame locators cannot be used as filter locators.`
   - Inline filter `has`/`hasNot` passed a frame locator definition.
+- `Detected cyclic filter reference while resolving "...": "...".`
+  - A `has`/`hasNot` path reference re-entered an active filter resolution; break/fix the loop or pass a resolved locator.
 
 Troubleshooting checklist:
 

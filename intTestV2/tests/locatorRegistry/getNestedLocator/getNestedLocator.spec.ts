@@ -222,7 +222,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 		expect(`${nested}`).toEqual("getByRole('button')");
 	});
 
-	test("schema filters resolve locatorPath references", async ({ page }) => {
+	test("schema filters resolve path string references", async ({ page }) => {
 		type LocatorSchemaPaths =
 			| "body.section.heading"
 			| "body.section.button"
@@ -236,8 +236,8 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			.add("fictional.locatorAndOptionsWithfilter@allOptions")
 			.getByRole("button", { name: "roleOptions" })
 			.filter({
-				has: { locatorPath: "body.section.heading" },
-				hasNot: { locatorPath: "body.section.button" },
+				has: "body.section.heading",
+				hasNot: "body.section.button",
 				hasText: "hasText",
 				hasNotText: "hasNotText",
 			});
@@ -257,46 +257,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 		);
 	});
 
-	test("schema filters can inline locator definitions", async ({ page }) => {
-		type LocatorSchemaPaths = "fictional.locatorWithfilter@allOptions";
-
-		const registry = createTestRegistry<LocatorSchemaPaths>(page);
-
-		registry
-			.add("fictional.locatorWithfilter@allOptions")
-			.getByRole("button")
-			.filter({
-				has: { locator: { type: "locator", selector: "section" } },
-				hasNot: { locator: { type: "locator", selector: "[data-cy=missing]" } },
-				hasText: "hasText",
-				hasNotText: "hasNotText",
-			});
-
-		const nested = registry.getNestedLocator("fictional.locatorWithfilter@allOptions");
-
-		expect(`${nested}`).toEqual(
-			"getByRole('button').filter({ hasText: 'hasText' }).filter({ hasNotText: 'hasNotText' }).filter({ has: locator('section') }).filter({ hasNot: locator('[data-cy=missing]') })",
-		);
-	});
-
-	test("frame locator definitions are rejected inside filters", async ({ page }) => {
-		type LocatorSchemaPaths = "fictional.filter@hasNotText";
-
-		const registry = createTestRegistry<LocatorSchemaPaths>(page);
-
-		registry
-			.add("fictional.filter@hasNotText")
-			.getByRole("button")
-			.filter({
-				has: { locator: { type: "frameLocator", selector: "iframe" } },
-			});
-
-		expect(() => registry.getNestedLocator("fictional.filter@hasNotText")).toThrow(
-			/Frame locators cannot be used as filter locators/,
-		);
-	});
-
-	test("getNestedLocator resolves has/hasNot locatorPath references", async ({ page }) => {
+	test("getNestedLocator resolves has/hasNot path string references", async ({ page }) => {
 		type LocatorSchemaPaths =
 			| "body.section.heading"
 			| "body.section@playground.button@red"
@@ -310,8 +271,8 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			.add("fictional.filter@hasNotText")
 			.getByRole("button")
 			.filter({ hasNotText: "hasNotText" })
-			.filter({ has: { locatorPath: "body.section.heading" } })
-			.filter({ hasNot: { locatorPath: "body.section@playground.button@red" } });
+			.filter({ has: "body.section.heading" })
+			.filter({ hasNot: "body.section@playground.button@red" });
 
 		const nested = registry.getNestedLocator("fictional.filter@hasNotText");
 
@@ -320,24 +281,6 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 		);
 	});
 
-	test("getNestedLocator resolves inline locator definitions for has/hasNot", async ({ page }) => {
-		type LocatorSchemaPaths = "fictional.filter@hasNotText";
-
-		const registry = createTestRegistry<LocatorSchemaPaths>(page);
-
-		registry
-			.add("fictional.filter@hasNotText")
-			.getByRole("button")
-			.filter({ hasNotText: "hasNotText" })
-			.filter({ has: { locator: { type: "locator", selector: "section" } } })
-			.filter({ hasNot: { locator: { type: "locator", selector: "[data-cy=missing]" } } });
-
-		const nested = registry.getNestedLocator("fictional.filter@hasNotText");
-
-		expect(`${nested}`).toEqual(
-			"getByRole('button').filter({ hasNotText: 'hasNotText' }).filter({ has: locator('section') }).filter({ hasNot: locator('[data-cy=missing]') })",
-		);
-	});
 });
 
 const fullPath = "fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText" as const;

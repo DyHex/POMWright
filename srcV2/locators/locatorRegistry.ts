@@ -232,34 +232,67 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 
 	private resolveFilterLocator(
 		locatorReference: FilterLocatorReference<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
-		target: LocatorBuilderTarget,
+		context: {
+			rootPath: RegistryPath<LocatorSchemaPathType>;
+			resolvingPaths: Set<string>;
+		},
 	) {
 		if (isLocatorInstance(locatorReference)) {
 			return locatorReference;
 		}
 
 		if (typeof locatorReference === "string") {
-			return this.getLocator(locatorReference as RegistryPath<LocatorSchemaPathType>);
+			return this.getLocatorWithContext(locatorReference as RegistryPath<LocatorSchemaPathType>, context);
 		}
 
-		if ("locatorPath" in locatorReference) {
-			return this.getLocator(locatorReference.locatorPath as RegistryPath<LocatorSchemaPathType>);
+		throw new Error(
+			`Unsupported filter reference while resolving "${context.rootPath}". ` +
+				"Filter has/hasNot supports Playwright Locator instances or registry path strings.",
+		);
+	}
+
+	private createResolutionContext(rootPath: RegistryPath<LocatorSchemaPathType>) {
+		return {
+			rootPath,
+			resolvingPaths: new Set<string>(),
+		};
+	}
+
+	private getLocatorWithContext(
+		path: RegistryPath<LocatorSchemaPathType>,
+		context: {
+			rootPath: RegistryPath<LocatorSchemaPathType>;
+			resolvingPaths: Set<string>;
+		},
+	) {
+		if (context.resolvingPaths.has(path)) {
+			throw new Error(`Detected cyclic filter reference while resolving "${context.rootPath}": "${path}".`);
 		}
 
-		const definition = "locator" in locatorReference ? locatorReference.locator : locatorReference;
-
-		if (isFrameLocatorDefinition(definition)) {
-			throw new Error("Frame locators cannot be used as filter locators.");
+		context.resolvingPaths.add(path);
+		try {
+			const record = this.get(path);
+			const definitions = new Map<string, LocatorStrategyDefinition>([[path, record.definition]]);
+			const steps = new Map<
+				string,
+				LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]
+			>([[path, normalizeSteps(record.steps)]]);
+			const { locator } = this.buildLocatorChain(path, definitions, steps, undefined, record.description, context);
+			if (!locator) {
+				throw new Error(`Unable to resolve direct locator for path "${path}".`);
+			}
+			return locator as Locator;
+		} finally {
+			context.resolvingPaths.delete(path);
 		}
-
-		const isFrameTarget = "owner" in target && typeof (target as { owner?: unknown }).owner === "function";
-		const filterTarget = isFrameTarget ? target : this.page;
-		return createLocator(filterTarget, definition) as Locator;
 	}
 
 	private resolveFiltersForTarget(
 		filters: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[] | undefined,
-		target: LocatorBuilderTarget,
+		context: {
+			rootPath: RegistryPath<LocatorSchemaPathType>;
+			resolvingPaths: Set<string>;
+		},
 	) {
 		if (!filters || filters.length === 0) {
 			return [] as ResolvedFilterDefinition[];
@@ -281,11 +314,11 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				} as ResolvedFilterDefinition;
 
 				if (has !== undefined) {
-					normalizedFilter.has = this.resolveFilterLocator(has, target);
+					normalizedFilter.has = this.resolveFilterLocator(has, context);
 				}
 
 				if (hasNot !== undefined) {
-					normalizedFilter.hasNot = this.resolveFilterLocator(hasNot, target);
+					normalizedFilter.hasNot = this.resolveFilterLocator(hasNot, context);
 				}
 
 				resolved.push(normalizedFilter);
@@ -352,7 +385,12 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		steps: Map<string, LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]>,
 		tombstones?: Set<string>,
 		terminalDescription?: LocatorDescription,
+		context?: {
+			rootPath: RegistryPath<LocatorSchemaPathType>;
+			resolvingPaths: Set<string>;
+		},
 	) {
+		const resolutionContext = context ?? this.createResolutionContext(path);
 		const chain = expandSchemaPath(path);
 		const registeredChain = chain.filter((part) => definitions.has(part));
 
@@ -417,7 +455,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 
 			for (const step of recordedSteps) {
 				if (step.kind === "filter") {
-					const [resolvedFilter] = this.resolveFiltersForTarget([step.filter], resolvedLocator);
+					const [resolvedFilter] = this.resolveFiltersForTarget([step.filter], resolutionContext);
 					if (resolvedFilter) {
 						resolvedLocator = resolvedLocator.filter(resolvedFilter);
 						appliedFilters.push(resolvedFilter);

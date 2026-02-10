@@ -35,12 +35,12 @@ test("clearSteps does not remove filters defined via locator options", async ({ 
 	expect(`${locator}`).toEqual("locator('body').locator('section').filter({ hasText: /Playground/i })");
 });
 
-test("filter resolves both locatorPath and inline locators after clearing steps", async ({ testFilters }) => {
+test("filter resolves path string and locator references after clearing steps", async ({ testFilters }) => {
 	const locator = testFilters
 		.getLocatorSchema("fictional.filter@hasNotText")
 		.clearSteps("fictional.filter@hasNotText")
-		.filter("fictional.filter@hasNotText", { has: { locatorPath: "body.section.heading" } })
-		.filter("fictional.filter@hasNotText", { hasNot: { locator: { type: "locator", selector: ".missing" } } })
+		.filter("fictional.filter@hasNotText", { has: "body.section.heading" })
+		.filter("fictional.filter@hasNotText", { hasNot: testFilters.page.locator(".missing") })
 		.getNestedLocator();
 
 	expect(`${locator}`).toEqual(

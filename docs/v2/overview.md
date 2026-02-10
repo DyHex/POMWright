@@ -221,6 +221,10 @@ test("schema builder", async ({ loginPage }) => {
 });
 ```
 
+> **Tip:** `filter` accepts Playwright `Locator` instances. That means you can pass locators returned from
+> `getLocator(path)`, `getNestedLocator(path)`, or `getLocatorSchema(path)...getLocator/getNestedLocator`, in addition to
+> `page.locator(...)` and `page.getBy...(...)`.
+
 ### 2.6 `update` vs `replace` vs `remove` on the schema builder
 
 - `update(subPath?)` patches an existing definition (PATCH semantics).

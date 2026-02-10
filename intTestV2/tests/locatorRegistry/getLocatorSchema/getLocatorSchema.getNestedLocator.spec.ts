@@ -77,11 +77,11 @@ test("getNestedLocator update accepts partial patch arguments", async ({ testFil
 	expect(`${roleAndOptions}`).toEqual("locator('body').locator('section').getByRole('heading', { level: 5 })");
 });
 
-test("getNestedLocator resolves has/hasNot locatorPath references", async ({ testFilters }) => {
+test("getNestedLocator resolves has/hasNot path string references", async ({ testFilters }) => {
 	const nested = testFilters
 		.getLocatorSchema("fictional.filter@hasNotText")
-		.filter("fictional.filter@hasNotText", { has: { locatorPath: "body.section.heading" } })
-		.filter("fictional.filter@hasNotText", { hasNot: { locatorPath: "body.section@playground.button@red" } })
+		.filter("fictional.filter@hasNotText", { has: "body.section.heading" })
+		.filter("fictional.filter@hasNotText", { hasNot: "body.section@playground.button@red" })
 		.getNestedLocator();
 
 	expect(`${nested}`).toEqual(
@@ -89,13 +89,14 @@ test("getNestedLocator resolves has/hasNot locatorPath references", async ({ tes
 	);
 });
 
-test("getNestedLocator resolves inline locator definitions for has/hasNot", async ({ testFilters }) => {
+test("getNestedLocator resolves Playwright locators for has/hasNot", async ({ testFilters }) => {
+	const sectionLocator = testFilters.page.locator("section");
+	const missingLocator = testFilters.page.locator("[data-cy=missing]");
+
 	const nested = testFilters
 		.getLocatorSchema("fictional.filter@hasNotText")
-		.filter("fictional.filter@hasNotText", { has: { locator: { type: "locator", selector: "section" } } })
-		.filter("fictional.filter@hasNotText", {
-			hasNot: { locator: { type: "locator", selector: "[data-cy=missing]" } },
-		})
+		.filter("fictional.filter@hasNotText", { has: sectionLocator })
+		.filter("fictional.filter@hasNotText", { hasNot: missingLocator })
 		.getNestedLocator();
 
 	expect(`${nested}`).toEqual(

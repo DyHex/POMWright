@@ -1,6 +1,6 @@
 import { expect, test } from "@fixtures-v2/testApp.fixtures";
 import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../../srcV2/locators";
+import { type FilterDefinition, LocatorRegistryInternal } from "../../../../srcV2/locators";
 
 const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
 
@@ -190,4 +190,122 @@ test("add reuse allows only one matching locator override", async ({ page }) => 
 	builder.getByRole("heading", { name: "Summary" });
 
 	expect(() => builder.getByRole("heading", { name: "Other" })).toThrowError("only one matching override is allowed");
+});
+
+test("createReusable.filter supports Playwright Locator instances for has/hasNot", async ({ page }) => {
+	type LocatorSchemaPaths = "item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	const seed = registry.createReusable
+		.getByRole("button")
+		.filter({ has: page.getByRole("heading", { level: 2 }) })
+		.filter({ hasNot: page.getByRole("heading", { level: 3 }) });
+
+	registry.add("item", { reuse: seed });
+
+	const locator = registry.getLocator("item");
+
+	expect(`${locator}`).toEqual(
+		"getByRole('button').filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('heading', { level: 3 }) })",
+	);
+});
+
+test("createReusable.filter supports registry path strings for has/hasNot", async ({ page }) => {
+	type LocatorSchemaPaths = "item" | "heading.primary" | "heading.secondary";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.add("heading.primary").getByRole("heading", { level: 2 });
+	registry.add("heading.secondary").getByRole("heading", { level: 3 });
+
+	const seed = registry.createReusable
+		.getByRole("button")
+		.filter({ has: "heading.primary" })
+		.filter({ hasNot: "heading.secondary" });
+
+	registry.add("item", { reuse: seed });
+
+	const locator = registry.getLocator("item");
+
+	expect(`${locator}`).toEqual(
+		"getByRole('button').filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('heading', { level: 3 }) })",
+	);
+});
+
+test("createReusable.filter rejects inline locator strategy definitions for has/hasNot", async ({ page }) => {
+	type LocatorSchemaPaths = "item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.createReusable
+		.getByRole("button")
+		// @ts-expect-error inline locator definitions are no longer supported
+		.filter({ has: { type: "locator", selector: "section" } });
+
+	const unsafeFilter = {
+		has: { type: "locator", selector: "section" },
+	} as unknown as FilterDefinition<LocatorSchemaPaths, LocatorSchemaPaths>;
+
+	const unsafeSeed = registry.createReusable.getByRole("button").filter(unsafeFilter);
+
+	registry.add("item", { reuse: unsafeSeed });
+
+	expect(() => registry.getLocator("item")).toThrow(/Unsupported filter reference/);
+});
+
+test("createReusable.filter rejects locator wrappers for has/hasNot", async ({ page }) => {
+	type LocatorSchemaPaths = "item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.createReusable
+		.getByRole("button")
+		// @ts-expect-error locator wrapper is no longer supported
+		.filter({ has: { locator: { type: "locator", selector: "section" } } });
+
+	const unsafeFilter = {
+		has: { locator: { type: "locator", selector: "section" } },
+	} as unknown as FilterDefinition<LocatorSchemaPaths, LocatorSchemaPaths>;
+
+	const unsafeSeed = registry.createReusable.getByRole("button").filter(unsafeFilter);
+
+	registry.add("item", { reuse: unsafeSeed });
+
+	expect(() => registry.getLocator("item")).toThrow(/Unsupported filter reference/);
+});
+
+test("createReusable.filter rejects locatorPath wrappers for has/hasNot", async ({ page }) => {
+	type LocatorSchemaPaths = "item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	registry.createReusable
+		.getByRole("button")
+		// @ts-expect-error locatorPath wrapper is no longer supported
+		.filter({ has: { locatorPath: "item" } });
+
+	const unsafeFilter = {
+		has: { locatorPath: "item" },
+	} as unknown as FilterDefinition<LocatorSchemaPaths, LocatorSchemaPaths>;
+
+	const unsafeSeed = registry.createReusable.getByRole("button").filter(unsafeFilter);
+
+	registry.add("item", { reuse: unsafeSeed });
+
+	expect(() => registry.getLocator("item")).toThrow(/Unsupported filter reference/);
+});
+
+test("createReusable.filter supports visible true/false", async ({ page }) => {
+	type LocatorSchemaPaths = "item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	const seed = registry.createReusable.getByRole("button").filter({ visible: true }).filter({ visible: false });
+
+	registry.add("item", { reuse: seed });
+
+	const locator = registry.getLocator("item");
+
+	expect(`${locator}`).toEqual("getByRole('button').filter({ visible: true }).filter({ visible: false })");
 });
