@@ -163,6 +163,7 @@ export class LoginPage extends PageObject<Paths> {
 **Tip:** If a Page Object grows large with many Paths and this.add(...) calls, move the locator definitions into a companion file (e.g., login.page.ts + login.locators.ts) to keep the class focused on behavior while keeping the registry definitions centralized and reusable. Simmilarily you can move all Paths and add calls for locator definitions common to all POMs for a given domain into a common.locators.ts file to share across your POMs.
 
 ```ts
+// login.locators.ts
 import type { LocatorRegistry } from "pomwright";
 import { Paths as common, defineLocators as addCommon } from "common.locators"; // errors, dialogs, navbar, main, etc.
 
@@ -173,7 +174,7 @@ export type Paths =
   | "main.form@login.input@password"
   | "main.button@login";
 
-export function defineLoginLocators(registry: LocatorRegistry<Paths>) {
+export function defineLocators(registry: LocatorRegistry<Paths>) {
   addCommon(registry);
   registry.add("main.form@login").getByRole("form", { name: "Login" });
   registry.add("main.form@login.input@username").getByLabel("Username");
@@ -183,6 +184,7 @@ export function defineLoginLocators(registry: LocatorRegistry<Paths>) {
 ```
 
 ```ts
+// login.page.ts
 import { type Page } from "@playwright/test";
 import { PageObject, step } from "pomwright";
 import { Paths, defineLocators } from "login.locators.ts";

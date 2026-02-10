@@ -1,4 +1,5 @@
 import type { APIRequestContext } from "@playwright/test";
+import { warnDeprecationOncePerTest } from "../helpers/deprecationWarnings";
 import type { PlaywrightReportLogger } from "../helpers/playwrightReportLogger";
 
 /**
@@ -16,5 +17,10 @@ export class BaseApi {
 		this.apiName = apiName;
 		this.log = pwrl.getNewChildLogger(apiName);
 		this.request = context;
+
+		const classDeprecationMessage =
+			"[POMWright] BaseApi is depricated and will be removed in 2.0.0 with no replacement. If you need a base API " +
+			"class, you can use the v1 pomwright/src/api/baseApi.ts implementation for reference to implement your own.";
+		warnDeprecationOncePerTest(`${this.constructor.name}-class-deprecation`, classDeprecationMessage, this.log);
 	}
 }

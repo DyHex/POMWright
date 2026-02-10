@@ -1,4 +1,5 @@
 import { type Locator, type Page, type Selectors, selectors, type TestInfo } from "@playwright/test";
+import { warnDeprecationOncePerTest } from "./helpers/deprecationWarnings";
 import { GetLocatorBase, type SubPaths } from "./helpers/getLocatorBase";
 import type { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 import { SessionStorage } from "./helpers/sessionStorage.actions";
@@ -122,8 +123,7 @@ export abstract class BasePage<
 		const classDeprecationMessage =
 			"[POMWright] BasePage is depricated and will be removed in 2.0.0. Migrate to v2, preferably directly " +
 			"to PageObject or through the transitional bridge BasePageV1toV2 and then to PageObject.";
-		console.warn(classDeprecationMessage);
-		this.log.warn(classDeprecationMessage);
+		warnDeprecationOncePerTest(`${this.constructor.name}-class-deprecation`, classDeprecationMessage, this.log);
 
 		// Instantiate GetLocatorBase following the minimal POC pattern.
 		this.locators = new GetLocatorBase<LocatorSchemaPathType, LocatorSubstring>(

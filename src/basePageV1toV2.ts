@@ -8,6 +8,7 @@ import {
 	type LocatorRegistry,
 } from "../srcV2/locators";
 import type { BasePage } from "./basePage";
+import { warnDeprecationOncePerTest } from "./helpers/deprecationWarnings";
 import { GetLocatorBase } from "./helpers/getLocatorBase";
 import type { PlaywrightReportLogger } from "./helpers/playwrightReportLogger";
 import { SessionStorage } from "./helpers/sessionStorage.actions";
@@ -114,8 +115,7 @@ export abstract class BasePageV1toV2<
 		const classDeprecationMessage =
 			"[POMWright] BasePageV1toV2 is a transitional bridge and will be removed in 2.0.0. " +
 			"Prefer PageObject for new work and migrate existing classes to PageObject.";
-		console.warn(classDeprecationMessage);
-		this.log.warn(classDeprecationMessage);
+		warnDeprecationOncePerTest(`${this.constructor.name}-class-deprecation`, classDeprecationMessage, this.log);
 
 		const { registry, add, getLocator, getNestedLocator, getLocatorSchema } =
 			createRegistryWithAccessors<LocatorSchemaPathType>(page);
@@ -138,8 +138,11 @@ export abstract class BasePageV1toV2<
 		const initLocatorSchemasDeprecationMessage =
 			"[POMWright] initLocatorSchemas is deprecated and will be removed in 2.0.0. " +
 			"Define locators with the v2 registry DSL in defineLocators instead.";
-		console.warn(initLocatorSchemasDeprecationMessage);
-		this.log.warn(initLocatorSchemasDeprecationMessage);
+		warnDeprecationOncePerTest(
+			`${this.constructor.name}-initLocatorSchemas-deprecation`,
+			initLocatorSchemasDeprecationMessage,
+			this.log,
+		);
 		this.initLocatorSchemas();
 
 		this.sessionStorage = new SessionStorage(this.page, this.pocName);
