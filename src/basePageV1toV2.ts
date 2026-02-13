@@ -59,6 +59,9 @@ export abstract class BasePageV1toV2<
 	/** Playwright TestInfo contains information about currently running test, available to any test function */
 	testInfo: TestInfo;
 
+	/** Selectors can be used to install custom selector engines.*/
+	selector: Selectors;
+
 	/** The base URL of the Page Object Class */
 	baseUrl: ExtractBaseUrlType<Options>;
 
@@ -79,10 +82,11 @@ export abstract class BasePageV1toV2<
 
 	/**
 	 * locators:
-	 * Narrowed to `addSchema` only so v1 definitions can be ingested and translated.
-	 * All v1-style querying/mutation helpers are intentionally hidden.
+	 * An instance of GetLocatorBase that handles schema management and provides getLocatorSchema calls.
+	 * Initially, LocatorSubstring is undefined. Once getLocatorSchema(path) is called,
+	 * we get a chainable object typed with LocatorSubstring = P.
 	 */
-	protected locators: Pick<GetLocatorBase<LocatorSchemaPathType, LocatorSubstring>, "addSchema">;
+	protected locators: GetLocatorBase<LocatorSchemaPathType, LocatorSubstring>;
 
 	/**
 	 * v2 locator registry and accessors, used for migration to the fluent registry DSL.
@@ -104,6 +108,7 @@ export abstract class BasePageV1toV2<
 	) {
 		this.page = page;
 		this.testInfo = testInfo;
+		this.selector = selectors;
 
 		this.baseUrl = baseUrl;
 		this.urlPath = urlPath;
@@ -128,12 +133,11 @@ export abstract class BasePageV1toV2<
 		this.defineLocators();
 
 		// Instantiate GetLocatorBase following the minimal POC pattern.
-		const locatorBase = new GetLocatorBase<LocatorSchemaPathType, LocatorSubstring>(
+		this.locators = new GetLocatorBase<LocatorSchemaPathType, LocatorSubstring>(
 			this as unknown as BasePage<LocatorSchemaPathType, BasePageOptions, LocatorSubstring>,
 			this.log.getNewChildLogger("GetLocator"),
 			locatorSubstring,
 		);
-		this.locators = locatorBase as Pick<typeof locatorBase, "addSchema">;
 
 		const initLocatorSchemasDeprecationMessage =
 			"[POMWright] initLocatorSchemas is deprecated and will be removed in 2.0.0. " +
