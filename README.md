@@ -165,10 +165,10 @@ export class LoginPage extends PageObject<Paths> {
 ```ts
 // login.locators.ts
 import type { LocatorRegistry } from "pomwright";
-import { Paths as common, defineLocators as addCommon } from "common.locators"; // errors, dialogs, navbar, main, etc.
+import { Paths as Common, defineLocators as addCommon } from "../common.locators"; // errors, dialogs, navbar, main, etc.
 
 export type Paths =
-  | common
+  | Common
   | "main.form@login"
   | "main.form@login.input@username"
   | "main.form@login.input@password"
@@ -187,7 +187,7 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 // login.page.ts
 import { type Page } from "@playwright/test";
 import { PageObject, step } from "pomwright";
-import { Paths, defineLocators } from "login.locators.ts";
+import { type Paths, defineLocators } from "./login.locators.ts";
 
 export class LoginPage extends PageObject<Paths> {
   constructor(page: Page) {
@@ -201,6 +201,7 @@ export class LoginPage extends PageObject<Paths> {
   protected pageActionsToPerformAfterNavigation() {
     return [
       async () => {
+        await this.getNestedLocator("common.nav.logo").waitFor({ state: "visible" });
         await this.getNestedLocator("main.form@login").waitFor({ state: "visible" });
       },
     ];
@@ -310,6 +311,7 @@ npm install --save-dev pomwright
 - [v2 Overview](./docs/v2/overview.md)
 - [v2 PageObject](./docs/v2/PageObject.md)
 - [v2 Locator Registry](./docs/v2/locator-registry.md)
+- [v2 Composing Locator Modules](./docs/v2/composing-locator-modules.md)
 - [v2 Session Storage](./docs/v2/session-storage.md)
 - [v2 Logging](./docs/v2/logging.md)
 
