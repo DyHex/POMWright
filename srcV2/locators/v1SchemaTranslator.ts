@@ -42,7 +42,7 @@ export const addV1SchemaToV2Registry = <LocatorSchemaPathType extends string>(
 
 	console.info(
 		`[POMWright] LocatorSchemaPath "${path}" is not registered in the v2 registry. ` +
-			"Registering v1 schema for migration; update this path to use registry.add in defineLocators().",
+			"Translating and adding v1 schema to v2 Locator Registry; update this path to use registry.add in defineLocators().",
 	);
 
 	const registration = registry.add(path as RegistryPath<LocatorSchemaPathType>);

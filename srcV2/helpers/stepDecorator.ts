@@ -1,23 +1,29 @@
 import { test } from "@playwright/test";
 
-type AnyMethod = (...args: unknown[]) => unknown;
+type AnyMethod<This = unknown, Args extends unknown[] = unknown[], Return = unknown> = (
+	this: This,
+	...args: Args
+) => Return;
 
 type StepTitle = Parameters<typeof test.step>[0];
 type StepOptions = Parameters<typeof test.step>[2];
 
 type StepDecoratorArgs = [] | [StepTitle] | [StepOptions] | [StepTitle, StepOptions];
 
-type LegacyMethodDecoratorArgs<T extends AnyMethod> = [object, string | symbol, TypedPropertyDescriptor<T>];
+type LegacyMethodDecoratorArgs<T extends AnyMethod = AnyMethod> = [object, string | symbol, TypedPropertyDescriptor<T>];
 
-type Stage3MethodDecoratorArgs<T extends AnyMethod> = [T, ClassMethodDecoratorContext];
+type Stage3MethodDecoratorArgs<T extends AnyMethod = AnyMethod> = [T, ClassMethodDecoratorContext<unknown, T>];
 
 interface StepDecoratorFactory {
-	<T extends AnyMethod>(value: T, context: ClassMethodDecoratorContext): T | undefined;
-	<T extends AnyMethod>(
+	<This, Args extends unknown[], Return>(
+		value: AnyMethod<This, Args, Return>,
+		context: ClassMethodDecoratorContext<This, AnyMethod<This, Args, Return>>,
+	): AnyMethod<This, Args, Return> | undefined;
+	<This, Args extends unknown[], Return>(
 		target: object,
 		propertyKey: string | symbol,
-		descriptor: TypedPropertyDescriptor<T>,
-	): TypedPropertyDescriptor<T> | undefined;
+		descriptor: TypedPropertyDescriptor<AnyMethod<This, Args, Return>>,
+	): TypedPropertyDescriptor<AnyMethod<This, Args, Return>> | undefined;
 }
 
 const isMethodDecoratorArgs = (args: unknown[]): args is LegacyMethodDecoratorArgs<AnyMethod> =>
@@ -39,7 +45,7 @@ const createWrappedMethod = <T extends AnyMethod>(
 	title?: StepTitle,
 	options?: StepOptions,
 ) =>
-	function (this: unknown, ...methodArgs: Parameters<T>) {
+	function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
 		const rawClassName = (this as { constructor?: { name?: string } }).constructor?.name ?? "";
 		const className = rawClassName && rawClassName !== "Object" ? rawClassName : "Anonymous";
 		const resolvedTitle = title ?? `${className}.${String(methodName)}`;
@@ -81,7 +87,10 @@ export function step(): StepDecoratorFactory;
 export function step(title: StepTitle): StepDecoratorFactory;
 export function step(options: StepOptions): StepDecoratorFactory;
 export function step(title: StepTitle, options: StepOptions): StepDecoratorFactory;
-export function step<T extends AnyMethod>(value: T, context: ClassMethodDecoratorContext): T | undefined;
+export function step<This, Args extends unknown[], Return>(
+	value: AnyMethod<This, Args, Return>,
+	context: ClassMethodDecoratorContext<This, AnyMethod<This, Args, Return>>,
+): AnyMethod<This, Args, Return> | undefined;
 export function step(
 	...args: StepDecoratorArgs | LegacyMethodDecoratorArgs<AnyMethod> | Stage3MethodDecoratorArgs<AnyMethod>
 ): StepDecoratorFactory | AnyMethod | undefined | TypedPropertyDescriptor<AnyMethod> {

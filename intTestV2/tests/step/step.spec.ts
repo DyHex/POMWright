@@ -25,3 +25,25 @@ test("stepWithOptionLocation should return the expected message", async ({ testP
 test("stepWithTitleAndAllOptions should return the expected message", async ({ testPage }) => {
 	await expect(testPage.stepWithTitleAndAllOptions()).resolves.toBe("Hello, World!");
 });
+
+test("stepWithArgs should support required/default parameters", async ({ testPage }) => {
+	await expect(testPage.stepWithArgs("Starter"))
+		.resolves.toBe("Starter:1");
+	await expect(testPage.stepWithArgs("Starter", 3)).resolves.toBe("Starter:3");
+});
+
+test("stepWithArgsAndObjectReturn should preserve typed argument/return flows", async ({ testPage }) => {
+	await expect(testPage.stepWithArgsAndObjectReturn({ id: "abc" })).resolves.toEqual({
+		ok: true,
+		id: "abc",
+		mode: "basic",
+		retry: 0,
+	});
+
+	await expect(testPage.stepWithArgsAndObjectReturn({ id: "xyz", mode: "advanced" }, 2)).resolves.toEqual({
+		ok: true,
+		id: "xyz",
+		mode: "advanced",
+		retry: 2,
+	});
+});

@@ -98,4 +98,22 @@ export default class TestPageV2 extends TestApp<Paths> {
 			startedAt: new Date(0),
 		};
 	}
+
+	@step
+	async stepWithArgs(subscriptionTitle: string, clickCount = 1): Promise<string> {
+		return `${subscriptionTitle}:${clickCount}`;
+	}
+
+	@step("Step with args and object return")
+	async stepWithArgsAndObjectReturn(
+		input: { id: string; mode?: "basic" | "advanced" },
+		retry = 0,
+	): Promise<{ ok: true; id: string; mode: "basic" | "advanced"; retry: number }> {
+		return {
+			ok: true,
+			id: input.id,
+			mode: input.mode ?? "basic",
+			retry,
+		};
+	}
 }
