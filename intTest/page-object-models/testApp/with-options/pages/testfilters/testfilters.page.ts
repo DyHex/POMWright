@@ -1,8 +1,8 @@
 import { test } from "@fixtures/withOptions";
 import BaseWithOptions from "@page-object-models/testApp/with-options/base/baseWithOptions.page";
-import { type Page, type TestInfo, expect } from "@playwright/test";
+import { expect, type Page, type TestInfo } from "@playwright/test";
 import type { PlaywrightReportLogger } from "pomwright";
-import { type LocatorSchemaPath, initLocatorSchemas } from "./testfilters.locatorSchema";
+import { defineLocators, initLocatorSchemas, type LocatorSchemaPath } from "./testfilters.locatorSchema";
 
 // Note, if BasePageOptions aren't specified, default options are used
 export default class TestFilters extends BaseWithOptions<LocatorSchemaPath> {
@@ -12,6 +12,10 @@ export default class TestFilters extends BaseWithOptions<LocatorSchemaPath> {
 
 	protected initLocatorSchemas() {
 		initLocatorSchemas(this.locators);
+	}
+
+	protected defineLocators() {
+		defineLocators(this.locatorRegistry);
 	}
 
 	async expectThisPage() {

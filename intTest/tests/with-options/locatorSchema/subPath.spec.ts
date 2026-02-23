@@ -5,6 +5,8 @@ test.describe("getNestedLocator", () => {
 	const nth = ".nth(2)";
 	const nestedLocator =
 		"getByRole('button', { name: 'roleOptions' }).filter({ hasNotText: 'hasNotText' }).nth(2).locator(getByRole('button', { name: 'roleOptions' })).filter({ hasText: 'hasText' }).locator(getByRole('button', { name: 'roleOptions' })).filter({ hasNotText: 'hasNotText' }).locator(getByRole('button', { name: 'roleOptions' })).filter({ hasText: 'hasText' })";
+	const nestedLocatorV2 =
+		"getByRole('button', { name: 'roleOptions' }).filter({ hasNotText: 'hasNotText' }).nth(2).getByRole('button', { name: 'roleOptions' }).filter({ hasText: 'hasText' }).getByRole('button', { name: 'roleOptions' }).filter({ hasNotText: 'hasNotText' }).getByRole('button', { name: 'roleOptions' }).filter({ hasText: 'hasText' })";
 
 	test("await poc.getNestedLocator(LocatorSchemaPath, {subPath: nth})", async ({ testFilters }) => {
 		const t = await testFilters.getNestedLocator(

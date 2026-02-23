@@ -1,0 +1,22 @@
+{
+	"name": "test-v2",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"start": "node ./server.js",
+		"postinstall": "npx -y only-allow pnpm && npx playwright install-deps"
+	},
+	"keywords": [],
+	"devDependencies": {
+		"@playwright/test": "1.58.0",
+		"@types/express": "^5.0.3",
+		"@types/node": "^24.5.2",
+		"express": "^5.1.0",
+		"pomwright": "file:../pomwright-1.4.0.tgz"
+	},
+	"dependencies": {
+		"dotenv": "^17.2.2"
+	},
+	"packageManager": "pnpm@9.12.0"
+}

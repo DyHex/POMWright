@@ -1,0 +1,15 @@
+export type { LocatorQueryBuilderPublic } from "./locatorQueryBuilder";
+export { LocatorQueryBuilder } from "./locatorQueryBuilder";
+export { LocatorRegistrationBuilder } from "./locatorRegistrationBuilder";
+export type {
+	AddAccessor,
+	GetLocatorAccessor,
+	GetLocatorSchemaAccessor,
+	GetNestedLocatorAccessor,
+	LocatorRegistry,
+} from "./locatorRegistry";
+export { createRegistryWithAccessors, LocatorRegistryInternal } from "./locatorRegistry";
+export { LocatorUpdateBuilder } from "./locatorUpdateBuilder";
+export { ReusableLocatorBuilder, ReusableLocatorFactory } from "./reusableLocatorBuilder";
+export * from "./types";
+export * from "./utils";

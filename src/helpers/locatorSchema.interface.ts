@@ -1,7 +1,15 @@
 import type { Locator, Page } from "@playwright/test";
+
+/**
+ * @deprecated AriaRoleType will be removed in v2, see docs/v1-to-v2-migration
+ *
+ * Type representing the ARIA role of an element, used in the "role" property of the "LocatorSchema" interface. This type is derived from the parameters of Playwright's "page.getByRole" method, ensuring compatibility with Playwright's locator strategies.
+ */
 export type AriaRoleType = Parameters<Page["getByRole"]>[0];
 
 /**
+ * @deprecated GetByMethod will be removed in v2, see docs/v1-to-v2-migration
+ *
  * ENUM representing methods from the "GetBy" helper class, used by the "GetLocatorBase" class when building nested locators
  */
 export enum GetByMethod {
@@ -19,6 +27,8 @@ export enum GetByMethod {
 }
 
 /**
+ * @deprecated LocatorSchema will be removed in v2, see docs/v1-to-v2-migration
+ *
  * An interface representing a locator object, which can be used with Playwright or other automation tools to create a reusable and maintainable "library" of Locator objects.
  *
  * To make tests resilient, prioritize user-facing attributes and explicit contracts such as role locators (ARIA).

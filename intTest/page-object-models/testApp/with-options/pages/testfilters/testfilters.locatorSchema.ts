@@ -1,5 +1,5 @@
 import type { Locator } from "@playwright/test";
-import { GetByMethod, type GetLocatorBase, type LocatorSchemaWithoutPath } from "pomwright";
+import { GetByMethod, type GetLocatorBase, type LocatorRegistry, type LocatorSchemaWithoutPath } from "pomwright";
 
 export type LocatorSchemaPath =
 	| "body"
@@ -207,4 +207,88 @@ export function initLocatorSchemas(locators: GetLocatorBase<LocatorSchemaPath>) 
 			hasText: "hasText",
 		},
 	});
+}
+
+export function defineLocators(registry: LocatorRegistry<LocatorSchemaPath>) {
+	registry.add("body").locator("body");
+
+	registry.add("body.section").locator("section");
+
+	registry.add("body.section.heading").getByRole("heading", { level: 2 });
+
+	registry.add("body.section.button").getByRole("button");
+
+	registry.add("body.section@playground").locator("section").filter({ hasText: /Playground/i });
+
+	registry
+		.add("body.section@playground.heading")
+		.getByRole("heading", { name: "Primary Colors Playground", level: 2, exact: true });
+
+	registry.add("body.section@playground.button").getByRole("button");
+
+	registry.add("body.section@playground.button@red").getByRole("button", { name: "Red" });
+
+	registry.add("body.section@playground.button@reset").getByRole("button", { name: "Reset Color" });
+
+	registry.add("fictional.filter@undefined").getByRole("button");
+
+	registry
+		.add("fictional.filter@optionsUndefined")
+		.getByRole("button")
+		.filter({ has: undefined, hasNot: undefined, hasText: undefined, hasNotText: undefined });
+
+	registry
+		.add("fictional.locatorWithfilter@allOptions")
+		.getByRole("button")
+		.filter({
+			has: "has" as unknown as Locator,
+			hasNot: "hasNot" as unknown as Locator,
+			hasText: "hasText",
+			hasNotText: "hasNotText",
+		});
+
+	registry
+		.add("fictional.locatorAndOptionsWithfilter@allOptions")
+		.getByRole("button", { name: "roleOptions" })
+		.filter({
+			has: "has" as unknown as Locator,
+			hasNot: "hasNot" as unknown as Locator,
+			hasText: "hasText",
+			hasNotText: "hasNotText",
+		});
+
+	registry
+		.add("fictional.filter@has")
+		.getByRole("button")
+		.filter({ has: "has" as unknown as Locator });
+
+	registry
+		.add("fictional.filter@hasNot")
+		.getByRole("button")
+		.filter({ hasNot: "hasNot" as unknown as Locator });
+
+	registry
+		.add("fictional.filter@hasText")
+		.getByRole("button")
+		.filter({ hasText: "hasText" });
+
+	registry
+		.add("fictional.filter@hasNotText")
+		.getByRole("button", { name: "roleOptions" })
+		.filter({ hasNotText: "hasNotText" });
+
+	registry
+		.add("fictional.filter@hasNotText.filter@hasText")
+		.getByRole("button", { name: "roleOptions" })
+		.filter({ hasText: "hasText" });
+
+	registry
+		.add("fictional.filter@hasNotText.filter@hasText.filter@hasNotText")
+		.getByRole("button", { name: "roleOptions" })
+		.filter({ hasNotText: "hasNotText" });
+
+	registry
+		.add("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText")
+		.getByRole("button", { name: "roleOptions" })
+		.filter({ hasText: "hasText" });
 }

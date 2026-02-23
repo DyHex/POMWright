@@ -1,4 +1,6 @@
 import { type Locator, test } from "@playwright/test";
+import type { LocatorRegistry } from "../../srcV2/locators";
+import { addV1SchemaToV2Registry } from "../../srcV2/locators/v1SchemaTranslator";
 import type { BasePage, BasePageOptions } from "../basePage";
 import { GetBy } from "./getBy.locator";
 import { GetByMethod, getLocatorSchemaDummy, type LocatorSchema } from "./locatorSchema.interface";
@@ -42,6 +44,8 @@ export type SubPaths<
 	: never;
 
 /**
+ * @deprecated LocatorSchemaWithMethods will be replaced by LocatorRegistry.createReusable in v2, see docs/v1-to-v2-migration
+ *
  * UpdatableLocatorSchemaProperties represent the properties of LocatorSchema that can be changed by update,
  * excluding the locatorSchemaPath itself, which remains immutable.
  */
@@ -264,6 +268,8 @@ export type LocatorSchemaWithMethods<
 };
 
 /**
+ * @deprecated GetLocatorBase will be replaced by LocatorRegistry in v2, see docs/v1-to-v2-migration
+ *
  * GetLocatorBase:
  * The foundational class for managing and constructing nested locators based on LocatorSchemas.
  *
@@ -439,6 +445,12 @@ export class GetLocatorBase<
 		}
 
 		this.locatorSchemas.set(locatorSchemaPath, () => newLocatorSchema);
+
+		const v2Registry = (this.pageObjectClass as { locatorRegistry?: LocatorRegistry<LocatorSchemaPathType> })
+			.locatorRegistry;
+		if (v2Registry) {
+			addV1SchemaToV2Registry(v2Registry, newLocatorSchema);
+		}
 	}
 
 	/**

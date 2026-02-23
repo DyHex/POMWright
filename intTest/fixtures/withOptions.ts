@@ -1,7 +1,7 @@
+import TestFilters from "@page-object-models/testApp/with-options/pages/testfilters/testfilters.page";
 import TestPage from "@page-object-models/testApp/with-options/pages/testPage.page";
 import Color from "@page-object-models/testApp/with-options/pages/testPath/[color]/color.page";
 import TestPath from "@page-object-models/testApp/with-options/pages/testPath/testPath.page";
-import TestFilters from "@page-object-models/testApp/with-options/pages/testfilters/testfilters.page";
 import { expect } from "@playwright/test";
 import { test as base } from "pomwright";
 

@@ -1,0 +1,36 @@
+#!/bin/bash
+
+TEST_DIR="intTestV2"
+
+cleanup() {
+    if [[ $(basename "$PWD") != "$TEST_DIR" ]]; then
+        echo "Not in ./$TEST_DIR directory. Trying to change to ./$TEST_DIR directory..."
+        if [[ -d "$TEST_DIR" ]]; then
+            cd $TEST_DIR || { echo "Failed to change to ./$TEST_DIR directory"; return 1; }
+        else
+            echo "The ./$TEST_DIR directory does not exist. Exiting cleanup."
+            return 1
+        fi
+    fi
+
+    # echo "Reverting to latest published version of POMWright in the ./$TEST_DIR directory..."
+    # pnpm i -D pomwright@latest || { echo "Failed to revert to latest POMWright version"; exit 1; }
+}
+
+trap cleanup EXIT
+
+set -e
+
+VERSION=$(node -pe "require('./package.json').version")
+
+./pack-build.sh
+
+cd $TEST_DIR || { echo "Changing directory failed"; exit 1; }
+
+pnpm i -D "../pomwright-$VERSION.tgz" || { echo "Local package installation failed"; exit 1; }
+
+pnpm i --frozen-lockfile || { echo "Installation failed"; exit 1; }
+pnpm playwright install --with-deps || { echo "Playwright dependencies installation failed"; exit 1; }
+pnpm playwright test --project=chromium || { echo "Tests failed"; exit 1; }
+
+echo "Testing completed successfully."

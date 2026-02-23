@@ -35,22 +35,23 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	};
 
 	const testCases: testCase[] = [
-		{ getByMethod: GetByMethod.role, expected: "getByRole('button')" },
-		{ getByMethod: GetByMethod.text, expected: "getByText('text')" },
-		{ getByMethod: GetByMethod.label, expected: "getByLabel('label')" },
-		{ getByMethod: GetByMethod.placeholder, expected: "getByPlaceholder('placeholder')" },
-		{ getByMethod: GetByMethod.altText, expected: "getByAltText('altText')" },
-		{ getByMethod: GetByMethod.title, expected: "getByTitle('title')" },
-		{ getByMethod: GetByMethod.locator, expected: "locator('locator')" },
-		{ getByMethod: GetByMethod.dataCy, expected: "locator('data-cy=dataCy')" },
-		{ getByMethod: GetByMethod.testId, expected: "getByTestId('testId')" },
-		{ getByMethod: GetByMethod.id, expected: "locator('#id')" },
+		{ getByMethod: GetByMethod.role, expected: "getByRole('button').filter({ hasText: 'hello' })" },
+		{ getByMethod: GetByMethod.text, expected: "getByText('text').filter({ hasText: 'hello' })" },
+		{ getByMethod: GetByMethod.label, expected: "getByLabel('label').filter({ hasText: 'hello' })" },
+		{ getByMethod: GetByMethod.placeholder, expected: "getByPlaceholder('placeholder').filter({ hasText: 'hello' })" },
+		{ getByMethod: GetByMethod.altText, expected: "getByAltText('altText').filter({ hasText: 'hello' })" },
+		{ getByMethod: GetByMethod.title, expected: "getByTitle('title').filter({ hasText: 'hello' })" },
+		{ getByMethod: GetByMethod.locator, expected: "locator('locator').filter({ hasText: 'hello' })" },
+		{ getByMethod: GetByMethod.dataCy, expected: "locator('data-cy=dataCy').filter({ hasText: 'hello' })" },
+		{ getByMethod: GetByMethod.testId, expected: "getByTestId('testId').filter({ hasText: 'hello' })" },
+		{ getByMethod: GetByMethod.id, expected: "locator('#id').filter({ hasText: 'hello' })" },
 	];
 
 	for (const { getByMethod, expected } of testCases) {
 		test(`GetByMethod.${getByMethod}: should apply filter `, async ({ testFilters }) => {
 			const undefinedFilter = await testFilters
 				.getLocatorSchema("fictional.filter@undefined")
+				.addFilter("fictional.filter@undefined", { hasText: "hello" })
 				.update("fictional.filter@undefined", { locatorMethod: GetByMethod[getByMethod] })
 				.getNestedLocator();
 
@@ -120,8 +121,8 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			.addFilter("body.section@playground.button@reset", { hasText: /Color/i })
 			.getNestedLocator();
 
-		expect(`${reset1}`).not.toEqual(
-			"locator('body').locator(locator('section')).filter({ hasText: /Playground/i }).filter({ hasText: /Primary Colors/i }).first().locator(getByRole('button', { name: 'Reset Color' })).filter({ hasText: /Reset/i }).filter({ hasText: /Color/i }).first()",
+		expect(`${reset1}`).toEqual(
+			"locator('body').locator(locator('section')).filter({ hasText: /Playground/i }).filter({ hasText: /Primary Colors/i }).locator(getByRole('button', { name: 'Reset Color' })).filter({ hasText: /Reset/i }).filter({ hasText: /Color/i })",
 		);
 
 		const reset2 = await testFilters.getNestedLocator("body.section@playground.button@reset");

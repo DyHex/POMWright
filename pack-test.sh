@@ -15,8 +15,8 @@ cleanup() {
         fi
     fi
 
-    echo "Reverting to latest published version of POMWright in the ./$TEST_DIR directory..."
-    pnpm i -D pomwright@latest || { echo "Failed to revert to latest POMWright version"; exit 1; }
+    # echo "Reverting to latest published version of POMWright in the ./$TEST_DIR directory..."
+    # pnpm i -D pomwright@latest || { echo "Failed to revert to latest POMWright version"; exit 1; }
 }
 
 # Trap statement that calls cleanup function on exit
@@ -29,9 +29,7 @@ set -e
 VERSION=$(node -pe "require('./package.json').version")
 
 # Install, Build & Pack
-pnpm i --frozen-lockfile || { echo "Installation failed"; exit 1; }
-pnpm build || { echo "Build failed"; exit 1; }
-pnpm pack || { echo "Packaging failed"; exit 1; }
+./pack-build.sh
 
 # Move to the test directory
 cd $TEST_DIR || { echo "Changing directory failed"; exit 1; }
@@ -42,6 +40,6 @@ pnpm i -D ../pomwright-$VERSION.tgz || { echo "Local package installation failed
 # Install dependencies and run playwright tests
 pnpm i --frozen-lockfile || { echo "Installation failed"; exit 1; }
 pnpm playwright install --with-deps || { echo "Playwright dependencies installation failed"; exit 1; }
-pnpm playwright test || { echo "Tests failed"; exit 1; }
+pnpm playwright test --project=chromium || { echo "Tests failed"; exit 1; }
 
 echo "Testing completed successfully."

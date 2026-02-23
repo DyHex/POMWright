@@ -1,8 +1,8 @@
 import { test } from "@fixtures/withOptions";
 import BaseWithOptions from "@page-object-models/testApp/with-options/base/baseWithOptions.page";
-import { type Page, type TestInfo, expect } from "@playwright/test";
+import { expect, type Page, type TestInfo } from "@playwright/test";
 import type { PlaywrightReportLogger } from "pomwright";
-import { type LocatorSchemaPath, initLocatorSchemas } from "./color.locatorSchema";
+import { defineLocators, initLocatorSchemas, type LocatorSchemaPath } from "./color.locatorSchema";
 
 // By providing the urlOptions, the urlPath property now has RegExp type instead of string type (default) for this POC
 export default class Color extends BaseWithOptions<LocatorSchemaPath, { urlOptions: { urlPathType: RegExp } }> {
@@ -17,6 +17,10 @@ export default class Color extends BaseWithOptions<LocatorSchemaPath, { urlOptio
 
 	protected initLocatorSchemas() {
 		initLocatorSchemas(this.locators);
+	}
+
+	protected defineLocators() {
+		defineLocators(this.locatorRegistry);
 	}
 
 	async expectThisPage() {
