@@ -20,7 +20,7 @@ as a staged migration step.
 2. **Switch inheritance** from `BasePage` to `BasePageV1toV2`. Constructor signature stays the same (`page, testInfo, baseUrl, urlPath, pocName, pwrl`).
 3. **Add `defineLocators()`** method stub.
 4. **Translate each `addSchema` call** from `initLocatorSchemas` into `this.add(path).method(...)` inside `defineLocators()`. See [references/schema-translation.md](references/schema-translation.md) for the full mapping table and examples.
-5. **Remove translated `addSchema` entries** from `initLocatorSchemas`. Once all are moved, delete the method entirely.
+5. **Remove translated `addSchema` entries** from `initLocatorSchemas`. Once all are moved, keep `initLocatorSchemas()` as an empty method while still extending `BasePageV1toV2`.
 6. **Update call-site syntax** in tests/helpers/fixtures that consume the POC. See [references/call-site-migration.md](references/call-site-migration.md).
 7. **Verify** by running tests.
 

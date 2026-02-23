@@ -134,7 +134,7 @@ this.add("body.section@playground").locator("section").filter({ hasText: /Playgr
 this.add("body.section@playground").locator("section", { hasText: /Playground/i });
 ```
 
-v2 `filter` also accepts `has`/`hasNot` as **registry path strings** (not Locator instances as in v1):
+v2 `filter` accepts `has`/`hasNot` as **registry path strings or Playwright Locator instances**. Path strings are often preferred for registry-native references:
 
 ```ts
 // v2 filter with has/hasNot as path references
@@ -162,14 +162,16 @@ this.locators.addSchema("main.button@cancel", { ...buttonSchema, roleOptions: { 
 
 ```ts
 // Option A: createReusable
-const button = this.createReusable.getByRole("button");
+const button = this.locatorRegistry.createReusable.getByRole("button");
 this.add("main.button@submit", { reuse: button }).getByRole({ name: "Submit" });
 this.add("main.button@cancel", { reuse: button }).getByRole({ name: "Cancel" });
 
-// Option B: reuse by path (exact clone, no override chaining)
+// Option B: reuse by path (exact clone, no override chaining; returns void so no follow-up chain)
 this.add("main.button@submit").getByRole("button", { name: "Submit" });
 this.add("main.button@cancel", { reuse: "main.button@submit" });
 ```
+
+> Bridge note: when `BasePageV1toV2` translates remaining v1 schemas, any path already registered in `defineLocators()` is skipped (not overwritten). Keep `defineLocators()` as the source of truth and remove stale duplicates from `initLocatorSchemas()`.
 
 ## Registration with filter + nth at definition time
 

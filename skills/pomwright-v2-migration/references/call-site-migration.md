@@ -171,13 +171,20 @@ const removed = poc
   .getNestedLocator();
 ```
 
-Without subPath, removes the terminal segment:
+Without subPath, `remove()` targets the terminal segment. Resolving immediately will throw unless the terminal definition is replaced/updated before resolve:
 
 ```ts
-// This effectively makes the chain end at the parent
-const removed = poc
+// Throws: terminal path was removed
+expect(() =>
+  poc.getLocatorSchema("main.form.button@login").remove().getNestedLocator()
+).toThrow(/No locator schema registered/);
+
+// Repair terminal path before resolve
+const repaired = poc
   .getLocatorSchema("main.form.button@login")
   .remove()
+  .replace("main.form.button@login")
+  .getByRole("button", { name: "Sign in" })
   .getNestedLocator();
 ```
 

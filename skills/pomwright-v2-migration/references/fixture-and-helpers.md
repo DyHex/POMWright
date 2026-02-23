@@ -94,7 +94,7 @@ await poc.navigation.gotoThisPage({
 
 ### Post-navigation actions
 
-The `pageActionsToPerformAfterNavigation()` method runs automatically after `navigation.gotoThisPage()` and `navigation.goto()`:
+The `pageActionsToPerformAfterNavigation()` method runs automatically after `navigation.gotoThisPage()` and `navigation.expectThisPage()`:
 
 ```ts
 protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {

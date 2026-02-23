@@ -228,7 +228,7 @@ this.add("body.section@playground").locator("section").filter({ hasText: /Playgr
 this.add("body.section@playground").locator("section", { hasText: /Playground/i });
 ```
 
-v2 `filter` also accepts `has`/`hasNot` as **registry path strings** (not Locator instances as in v1):
+v2 `filter` accepts `has`/`hasNot` as **registry path strings or Playwright Locator instances**. Path strings are often preferred for registry-native references:
 
 ```ts
 // v2 filter with has/hasNot as path references
@@ -282,6 +282,8 @@ this.add("main.button@submit").getByRole("button", { name: "Submit" });
 this.add("main.button@cancel", { reuse: "main.button@submit" });
 ```
 
+`add(path, { reuse: "existing.path" })` clones the existing schema and returns `void`, so it cannot be chained with additional overrides.
+
 ### v2: createReusable with steps
 
 ```ts
@@ -327,9 +329,9 @@ v2 enforces stricter path validation than v1:
 | Whitespace in paths | Allowed | Rejected |
 | Empty path segments (`a..b`) | Allowed | Rejected |
 | Duplicate registration | Overwrites silently | Throws error |
-| Missing parent path | Allowed | Throws error (parent must exist first) |
+| Missing parent path | Allowed | Registration does not require parent-first order; chain semantics depend on registered segments |
 
-Register paths in parent-first order: `"main"` before `"main.form"` before `"main.form.input"`.
+Parent-first registration is recommended for readability and predictable chain behavior: `"main"` before `"main.form"` before `"main.form.input"`.
 
 ## describe() at registration time
 
