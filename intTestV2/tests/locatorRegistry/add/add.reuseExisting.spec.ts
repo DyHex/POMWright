@@ -21,6 +21,18 @@ test("add reuses with existing record by path does not have chainable methods", 
 	});
 });
 
+test("add reuse by path throws when source path matches target path", async ({ page }) => {
+	type LocatorSchemaPaths = "button";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	const addUnsafe = registry.add as unknown as (path: string, options: { reuse: string }) => void;
+
+	expect(() => addUnsafe("button", { reuse: "button" })).toThrowError(
+		'Locator reuse path cannot be the same as registration path: "button".',
+	);
+});
+
 test("add reuse by path clones records so mutations do not leak", async ({ page }) => {
 	type LocatorSchemaPaths = "button" | "button.copy";
 

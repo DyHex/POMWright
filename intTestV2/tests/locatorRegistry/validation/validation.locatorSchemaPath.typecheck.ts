@@ -3,11 +3,25 @@ import { createRegistryWithAccessors } from "pomwright";
 
 declare const page: Page;
 
-type ValidPaths = "valid" | "valid.path";
+type ValidPaths = "valid" | "validReuse";
 
-createRegistryWithAccessors<ValidPaths>(page);
+const validRegistryFactoryResult = createRegistryWithAccessors<ValidPaths>(page);
 
-type InvalidPaths = "valid" | "validReuse" | "" | ".leading" | "trailing." | "double..dot" | "contains whitespace";
+validRegistryFactoryResult.add("valid").locator("body");
+// @ts-expect-error invalid path literal should fail at the accessor argument with path-format details
+validRegistryFactoryResult.add("does.not.exist").locator("body");
+// @ts-expect-error invalid path literal should fail at the accessor argument with path-format details
+validRegistryFactoryResult.add("valid", { reuse: "does.not.exist" });
+// @ts-expect-error reuse path cannot be the same as registration path
+validRegistryFactoryResult.add("validReuse", { reuse: "validReuse" });
+// @ts-expect-error invalid path literal should fail at the accessor argument with path-format details
+validRegistryFactoryResult.getLocator("does.not.exist");
+// @ts-expect-error invalid path literal should fail at the accessor argument with path-format details
+validRegistryFactoryResult.getLocatorSchema("does.not.exist");
+// @ts-expect-error invalid path literal should fail at the accessor argument with path-format details
+validRegistryFactoryResult.getNestedLocator("does.not.exist");
+
+type InvalidPaths = ValidPaths | "" | ".leading" | "trailing." | "double..dot" | "contains whitespace";
 
 const invalidRegistryFactoryResult = createRegistryWithAccessors<InvalidPaths>(page);
 
@@ -24,7 +38,6 @@ invalidRegistryFactoryResult.add("double..dot").locator("body");
 invalidRegistryFactoryResult.add("contains whitespace").locator("body");
 
 invalidRegistryFactoryResult.add("validReuse", { reuse: "valid" });
-invalidRegistryFactoryResult.add("validReuse", { reuse: "validReuse" });
 // @ts-expect-error invalid path literal should fail at the accessor argument with path-format details
 invalidRegistryFactoryResult.add("validReuse", { reuse: "" });
 // @ts-expect-error invalid path literal should fail at the accessor argument with path-format details

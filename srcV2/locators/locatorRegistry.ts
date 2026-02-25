@@ -37,6 +37,13 @@ type PathArgument<Paths extends string, Path extends Paths> = LocatorSchemaPathF
 	? Path
 	: LocatorSchemaPathFormat<Path>;
 
+type ReusePathArgument<Paths extends string, Path extends Paths, ReusePath extends Paths> = Exclude<
+	ReusePath,
+	Path
+> extends never
+	? [`Invalid reuse path, reuse path cannot be the same as registration path: ${ReusePath}`]
+	: PathArgument<Paths, ReusePath>;
+
 export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	private readonly schemas = new Map<
 		RegistryPath<LocatorSchemaPathType>,
@@ -98,55 +105,81 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 *   .nth("last");
 	 * ```
 	 */
-	add<Path extends LocatorSchemaPathType>(
-		path: PathArgument<LocatorSchemaPathType, Path>,
-	): LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>;
-	add<Path extends LocatorSchemaPathType, ReusePath extends LocatorSchemaPathType>(
-		path: PathArgument<LocatorSchemaPathType, Path>,
-		options: { reuse: PathArgument<LocatorSchemaPathType, ReusePath> },
-	): void;
 	add<
 		Path extends LocatorSchemaPathType,
-		Reuse extends ReusableLocator<
-			LocatorSchemaPathType,
-			RegistryPath<LocatorSchemaPathType>,
-			LocatorStrategyDefinition["type"]
-		>,
+		Reuse extends
+			| LocatorSchemaPathType
+			| ReusableLocator<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, LocatorStrategyDefinition["type"]>
+			| undefined = undefined,
 	>(
 		path: PathArgument<LocatorSchemaPathType, Path>,
-		options: { reuse: Reuse },
-	): LocatorRegistrationSeededBuilderForType<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, Reuse["type"]>;
-	add(
-		path: LocatorSchemaPathType,
-		options?: {
-			reuse?:
-				| ReusableLocator<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, LocatorStrategyDefinition["type"]>
-				| LocatorSchemaPathType;
-		},
-	):
-		| LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>
-		| LocatorRegistrationSeededBuilderForType<
-				LocatorSchemaPathType,
-				RegistryPath<LocatorSchemaPathType>,
-				LocatorStrategyDefinition["type"]
-		  >
-		| undefined {
+		...args: Reuse extends undefined
+			? []
+			: [
+					options: {
+						reuse: Reuse extends LocatorSchemaPathType
+							? ReusePathArgument<LocatorSchemaPathType, Path, Reuse>
+							: Extract<
+									Reuse,
+									ReusableLocator<
+										LocatorSchemaPathType,
+										RegistryPath<LocatorSchemaPathType>,
+										LocatorStrategyDefinition["type"]
+									>
+								>;
+					},
+				]
+	): Reuse extends undefined
+		? LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>
+		: Reuse extends LocatorSchemaPathType
+			? void
+			: LocatorRegistrationSeededBuilderForType<
+					LocatorSchemaPathType,
+					RegistryPath<LocatorSchemaPathType>,
+					Extract<
+						Reuse,
+						ReusableLocator<
+							LocatorSchemaPathType,
+							RegistryPath<LocatorSchemaPathType>,
+							LocatorStrategyDefinition["type"]
+						>
+					>["type"]
+				> {
+		const options = args[0] as
+			| {
+					reuse?:
+						| ReusableLocator<
+								LocatorSchemaPathType,
+								RegistryPath<LocatorSchemaPathType>,
+								LocatorStrategyDefinition["type"]
+						  >
+						| LocatorSchemaPathType
+						| [`Invalid reuse path, reuse path cannot be the same as registration path: ${LocatorSchemaPathType}`];
+			  }
+			| undefined;
 		const reuse = options?.reuse;
 
 		if (!reuse) {
 			return new LocatorRegistrationBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>(
 				this,
 				path as RegistryPath<LocatorSchemaPathType>,
-			);
+			) as never;
 		}
 
 		if (typeof reuse === "string") {
 			const targetPath = path as RegistryPath<LocatorSchemaPathType>;
+			if (reuse === targetPath) {
+				throw new Error(`Locator reuse path cannot be the same as registration path: "${targetPath}".`);
+			}
 			const sourceRecord = this.get(reuse as RegistryPath<LocatorSchemaPathType>);
 			const cloned = this.cloneRecordForReuse(sourceRecord, targetPath);
 
 			this.register(targetPath, cloned);
-			return undefined;
+			return undefined as never;
+		}
+
+		if (Array.isArray(reuse)) {
+			throw new Error(`Invalid reuse path configuration for "${path}".`);
 		}
 
 		const reusedRecord: LocatorSchemaRecord<
@@ -171,7 +204,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				reuseType: reusedRecord.definition.type,
 				initialDescription: reusedRecord.description,
 			},
-		).persistSeededDefinition();
+		).persistSeededDefinition() as never;
 	}
 
 	register(
@@ -228,7 +261,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	): LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>> | undefined {
 		const record = this.schemas.get(path);
 		if (!record) {
-			return undefined;
+			return undefined as never;
 		}
 
 		return {
