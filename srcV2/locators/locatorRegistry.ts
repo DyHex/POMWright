@@ -12,7 +12,7 @@ import type {
 	IndexSelector,
 	LocatorBuilderTarget,
 	LocatorDescription,
-	LocatorSchemaPathErrors,
+	LocatorSchemaPathFormat,
 	LocatorSchemaRecord,
 	LocatorStep,
 	LocatorStrategyDefinition,
@@ -32,6 +32,10 @@ import {
 	stringifyForLog,
 	validateLocatorSchemaPath,
 } from "./utils";
+
+type PathArgument<Paths extends string, Path extends Paths> = LocatorSchemaPathFormat<Path> extends Path
+	? Path
+	: LocatorSchemaPathFormat<Path>;
 
 export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	private readonly schemas = new Map<
@@ -94,26 +98,30 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 *   .nth("last");
 	 * ```
 	 */
-	add(
-		path: RegistryPath<LocatorSchemaPathType>,
+	add<Path extends LocatorSchemaPathType>(
+		path: PathArgument<LocatorSchemaPathType, Path>,
 	): LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>;
-	add(path: RegistryPath<LocatorSchemaPathType>, options: { reuse: RegistryPath<LocatorSchemaPathType> }): void;
+	add<Path extends LocatorSchemaPathType, ReusePath extends LocatorSchemaPathType>(
+		path: PathArgument<LocatorSchemaPathType, Path>,
+		options: { reuse: PathArgument<LocatorSchemaPathType, ReusePath> },
+	): void;
 	add<
+		Path extends LocatorSchemaPathType,
 		Reuse extends ReusableLocator<
 			LocatorSchemaPathType,
 			RegistryPath<LocatorSchemaPathType>,
 			LocatorStrategyDefinition["type"]
 		>,
 	>(
-		path: RegistryPath<LocatorSchemaPathType>,
+		path: PathArgument<LocatorSchemaPathType, Path>,
 		options: { reuse: Reuse },
 	): LocatorRegistrationSeededBuilderForType<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, Reuse["type"]>;
 	add(
-		path: RegistryPath<LocatorSchemaPathType>,
+		path: LocatorSchemaPathType,
 		options?: {
 			reuse?:
 				| ReusableLocator<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, LocatorStrategyDefinition["type"]>
-				| RegistryPath<LocatorSchemaPathType>;
+				| LocatorSchemaPathType;
 		},
 	):
 		| LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>
@@ -128,15 +136,16 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		if (!reuse) {
 			return new LocatorRegistrationBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>(
 				this,
-				path,
+				path as RegistryPath<LocatorSchemaPathType>,
 			);
 		}
 
 		if (typeof reuse === "string") {
+			const targetPath = path as RegistryPath<LocatorSchemaPathType>;
 			const sourceRecord = this.get(reuse as RegistryPath<LocatorSchemaPathType>);
-			const cloned = this.cloneRecordForReuse(sourceRecord, path);
+			const cloned = this.cloneRecordForReuse(sourceRecord, targetPath);
 
-			this.register(path, cloned);
+			this.register(targetPath, cloned);
 			return undefined;
 		}
 
@@ -145,17 +154,17 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			RegistryPath<LocatorSchemaPathType>
 		> = this.cloneRecordForReuse(
 			{
-				locatorSchemaPath: path,
+				locatorSchemaPath: path as RegistryPath<LocatorSchemaPathType>,
 				definition: reuse.definition,
 				steps: reuse.steps,
 				description: reuse.description,
 			},
-			path,
+			path as RegistryPath<LocatorSchemaPathType>,
 		);
 
 		return new LocatorRegistrationBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, true>(
 			this,
-			path,
+			path as RegistryPath<LocatorSchemaPathType>,
 			{
 				initialDefinition: reusedRecord.definition,
 				initialSteps: reusedRecord.steps,
@@ -204,7 +213,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		}
 		return {
 			locatorSchemaPath: record.locatorSchemaPath,
-			definition: record.definition,
+			definition: cloneLocatorStrategyDefinition(record.definition),
 			steps: normalizeSteps(record.steps),
 			...(record.description !== undefined ? { description: record.description } : {}),
 		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
@@ -224,7 +233,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 
 		return {
 			locatorSchemaPath: record.locatorSchemaPath,
-			definition: record.definition,
+			definition: cloneLocatorStrategyDefinition(record.definition),
 			steps: normalizeSteps(record.steps),
 			...(record.description !== undefined ? { description: record.description } : {}),
 		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
@@ -345,10 +354,13 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * const locator = builder.getNestedLocator();
 	 * ```
 	 */
-	getLocatorSchema<Path extends RegistryPath<LocatorSchemaPathType>>(
-		path: Path,
-	): LocatorQueryBuilderPublic<LocatorSchemaPathType, Path> {
-		return new LocatorQueryBuilder<LocatorSchemaPathType, Path>(this, path);
+	getLocatorSchema<Path extends LocatorSchemaPathType>(
+		path: PathArgument<LocatorSchemaPathType, Path>,
+	): LocatorQueryBuilderPublic<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>> {
+		return new LocatorQueryBuilder<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>>(
+			this,
+			path as Extract<Path, RegistryPath<LocatorSchemaPathType>>,
+		);
 	}
 
 	/**
@@ -361,7 +373,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * await button.click();
 	 * ```
 	 */
-	getLocator<Path extends RegistryPath<LocatorSchemaPathType>>(path: Path): Locator {
+	getLocator<Path extends LocatorSchemaPathType>(path: PathArgument<LocatorSchemaPathType, Path>): Locator {
 		return this.getLocatorSchema(path).getLocator();
 	}
 
@@ -375,7 +387,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * await expect(nested).toBeVisible();
 	 * ```
 	 */
-	getNestedLocator<Path extends RegistryPath<LocatorSchemaPathType>>(path: Path): Locator {
+	getNestedLocator<Path extends LocatorSchemaPathType>(path: PathArgument<LocatorSchemaPathType, Path>): Locator {
 		return this.getLocatorSchema(path).getNestedLocator();
 	}
 
@@ -485,24 +497,18 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	}
 }
 
-export type GetLocatorAccessor<LocatorSchemaPathType extends string> = <
-	Path extends RegistryPath<LocatorSchemaPathType>,
->(
-	path: Path,
+export type GetLocatorAccessor<LocatorSchemaPathType extends string> = <Path extends LocatorSchemaPathType>(
+	path: LocatorSchemaPathFormat<Path> extends Path ? Path : LocatorSchemaPathFormat<Path>,
 ) => Locator;
 
 export type AddAccessor<LocatorSchemaPathType extends string> = LocatorRegistryInternal<LocatorSchemaPathType>["add"];
 
-export type GetLocatorSchemaAccessor<LocatorSchemaPathType extends string> = <
-	Path extends RegistryPath<LocatorSchemaPathType>,
->(
-	path: Path,
-) => LocatorQueryBuilderPublic<LocatorSchemaPathType, Path>;
+export type GetLocatorSchemaAccessor<LocatorSchemaPathType extends string> = <Path extends LocatorSchemaPathType>(
+	path: LocatorSchemaPathFormat<Path> extends Path ? Path : LocatorSchemaPathFormat<Path>,
+) => LocatorQueryBuilderPublic<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>>;
 
-export type GetNestedLocatorAccessor<LocatorSchemaPathType extends string> = <
-	Path extends RegistryPath<LocatorSchemaPathType>,
->(
-	path: Path,
+export type GetNestedLocatorAccessor<LocatorSchemaPathType extends string> = <Path extends LocatorSchemaPathType>(
+	path: LocatorSchemaPathFormat<Path> extends Path ? Path : LocatorSchemaPathFormat<Path>,
 ) => Locator;
 
 export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
@@ -529,8 +535,6 @@ export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
  * ```
  */
 export const createRegistryWithAccessors = <Paths extends string>(page: Page) => {
-	type PathErrors = LocatorSchemaPathErrors<Paths>;
-	const _assertValidPaths: PathErrors extends never ? true : never = true as PathErrors extends never ? true : never;
 	const registryInstance = new LocatorRegistryInternal<Paths>(page);
 	const add: LocatorRegistryInternal<Paths>["add"] = registryInstance.add.bind(registryInstance);
 	const getLocator: GetLocatorAccessor<Paths> = registryInstance.getLocator.bind(registryInstance);
