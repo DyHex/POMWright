@@ -21,6 +21,47 @@ test("add reuses with existing record by path does not have chainable methods", 
 	});
 });
 
+test("add reuse by path with empty string does not silently skip reuse", async ({ page }) => {
+	type LocatorSchemaPaths = "button";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	// @ts-expect-error - testing runtime error when reuse is an empty string
+	expect(() => registry.add("button", { reuse: "" })).toThrowError('No locator schema registered for path "".');
+});
+
+test("add reuse by path throws when source path matches target path", async ({ page }) => {
+	type LocatorSchemaPaths = "button";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	// @ts-expect-error - testing runtime error when reuse path is the same as registration path
+	expect(() => registry.add("button", { reuse: "button" })).toThrowError(
+		'Locator reuse path cannot be the same as registration path: "button".',
+	);
+});
+
+test("add reuse by path reports compile-time fallback reason when forced at runtime", async ({ page }) => {
+	type LocatorSchemaPaths = "button" | "button.copy";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+
+	const addUnsafe = registry.add as unknown as (
+		path: string,
+		options: {
+			reuse: [string];
+		},
+	) => void;
+
+	expect(() =>
+		addUnsafe("button.copy", {
+			reuse: ["Invalid reuse path, reuse path cannot be the same as registration path: button.copy"],
+		}),
+	).toThrowError(
+		'Invalid reuse path configuration for "button.copy": Invalid reuse path, reuse path cannot be the same as registration path: button.copy',
+	);
+});
+
 test("add reuse by path clones records so mutations do not leak", async ({ page }) => {
 	type LocatorSchemaPaths = "button" | "button.copy";
 

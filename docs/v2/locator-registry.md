@@ -119,7 +119,9 @@ type Paths =
     | "main.button@login";
 ```
 
-If invalid literals are included in the union, type errors are surfaced where the registry factory is instantiated.
+If invalid literals are included in the union, TypeScript blocks those values at locator accessor argument usage
+(`add`, `getLocator`, `getNestedLocator`, `getLocatorSchema`) with path-format diagnostics while preserving
+valid path autocomplete suggestions. Runtime validation still applies for non-literal strings.
 
 ### Runtime validation rules
 
