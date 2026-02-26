@@ -1,5 +1,19 @@
 # pomwright
 
+## 1.5.1
+
+### Patch Changes
+
+- [#40](https://github.com/DyHex/POMWright/pull/40) [`c8232d2`](https://github.com/DyHex/POMWright/commit/c8232d21e2d7f0149042f4844037c67289d26068) Thanks [@DyHex](https://github.com/DyHex)! - # Summary
+
+  This PR focuses on preventative quality improvements to v2 locator-registry typing and internal safety.
+
+  ## What changed
+
+  - Refined compile-time diagnostics for invalid locator schema paths so errors are clearer and more actionable at the literal argument level.
+  - Hardened internal registry retrieval behavior (`get` / `getIfExists`) for safer, more predictable handling of missing paths and record cloning semantics.
+  - Added both compile-time and runtime guards to reject path-based reuse when the source path equals the target registration path `registry.add(path, { reuse: path })`.
+
 ## 1.5.0
 
 ### Minor Changes
