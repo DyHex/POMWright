@@ -41,7 +41,7 @@ type ReusePathArgument<Paths extends string, Path extends Paths, ReusePath exten
 	ReusePath,
 	Path
 > extends never
-	? [`Invalid reuse path, reuse path cannot be the same as registration path: ${ReusePath}`]
+	? [`Invalid reuse path, reuse path cannot be the same as registration path: ${Path}`]
 	: PathArgument<Paths, ReusePath>;
 
 export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
