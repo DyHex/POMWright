@@ -17,20 +17,19 @@
 	"main": "dist/index.js",
 	"module": "dist/index.mjs",
 	"types": "dist/index.d.ts",
+	"files": [
+		"dist/**",
+		"README.md",
+		"LICENSE",
+		"CHANGELOG.md"
+	],
 	"scripts": {
 		"build": "tsup index.ts --format cjs,esm --dts",
 		"release": "pnpm run build && changeset publish",
-		"lint": "pnpm lint:v2",
-		"lint:v2": "biome check ./srcV2",
-		"lint:all": "pnpm lint:v2",
-		"format": "pnpm format:v2",
-		"format:v2": "biome format ./srcV2 --write",
-		"format:all": "pnpm format:v2",
-		"pack-test": "pnpm pack-test:v2",
-		"pack-test:v2": "bash pack-test-v2.sh",
-		"test": "pnpm test:v2",
-		"test:v2": "bash pack-test-v2.sh",
-		"test:all": "pnpm test:v2"
+		"lint": "biome check ./src",
+		"format": "biome format ./src --write",
+		"pack-test": "bash pack-test.sh",
+		"test": "pnpm pack-test"
 	},
 	"keywords": [
 		"Playwright",

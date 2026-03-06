@@ -40,26 +40,26 @@ jobs:
           timestamp=$(date +"%d_%m_%Y_%H%M")
           echo "PLAYWRIGHT_REPORT_NAME=playwright-report-$normalizedBranchName-$timestamp" >> $GITHUB_ENV
 
-      - name: Run v2 test script
-        id: test_v2
+      - name: Run test script
+        id: test
         continue-on-error: true
-        run: pnpm pack-test:v2
+        run: pnpm pack-test
         env:
           CI: true
 
-      - name: Upload Playwright V2 Test Report Artifact on failure
-        if: steps.test_v2.outcome == 'failure'
+      - name: Upload Playwright Test Report Artifact on failure
+        if: steps.test.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
-          name: V2_${{ env.PLAYWRIGHT_REPORT_NAME }}
-          path: intTestV2/playwright-report
+          name: ${{ env.PLAYWRIGHT_REPORT_NAME }}
+          path: test/playwright-report
           retention-days: 30
 
       - name: Fail job if suite failed
         if: always()
         shell: bash
         run: |
-          echo "V2 outcome: ${{ steps.test_v2.outcome }}"
-          if [ "${{ steps.test_v2.outcome }}" = "failure" ]; then
+          echo "Test outcome: ${{ steps.test.outcome }}"
+          if [ "${{ steps.test.outcome }}" = "failure" ]; then
             exit 1
           fi

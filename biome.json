@@ -38,12 +38,9 @@
 			"**",
 			"!**/dist",
 			"!**/node_modules",
-			"!**/intTest/node_modules",
-			"!**/intTest/playwright-report",
-			"!**/intTest/test-results",
-			"!**/intTestV2/node_modules",
-			"!**/intTestV2/playwright-report",
-			"!**/intTestV2/test-results"
+			"!**/test/node_modules",
+			"!**/test/playwright-report",
+			"!**/test/test-results"
 		]
 	}
 }
