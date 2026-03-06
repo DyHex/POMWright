@@ -17,20 +17,19 @@
 	"main": "dist/index.js",
 	"module": "dist/index.mjs",
 	"types": "dist/index.d.ts",
+	"files": [
+		"dist/**",
+		"README.md",
+		"LICENSE",
+		"CHANGELOG.md"
+	],
 	"scripts": {
 		"build": "tsup index.ts --format cjs,esm --dts",
 		"release": "pnpm run build && changeset publish",
 		"lint": "biome check ./src",
-		"lint:v2": "biome check ./srcV2",
-		"lint:all": "pnpm lint && pnpm lint:v2",
 		"format": "biome format ./src --write",
-		"format:v2": "biome format ./srcV2 --write",
-		"format:all": "pnpm format && pnpm format:v2",
 		"pack-test": "bash pack-test.sh",
-		"pack-test:v2": "bash pack-test-v2.sh",
-		"test": "vitest run && bash pack-test.sh",
-		"test:v2": "bash pack-test-v2.sh",
-		"test:all": "pnpm test && pnpm test:v2"
+		"test": "pnpm pack-test"
 	},
 	"keywords": [
 		"Playwright",
@@ -58,8 +57,7 @@
 		"@changesets/cli": "^2.29.7",
 		"@types/node": "^24.5.2",
 		"tsup": "^8.5.0",
-		"typescript": "^5.9.2",
-		"vitest": "^3.2.4"
+		"typescript": "^5.9.2"
 	},
 	"peerDependencies": {
 		"@playwright/test": ">=1.57.0 <2.0.0"

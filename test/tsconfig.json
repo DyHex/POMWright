@@ -1,0 +1,11 @@
+{
+	"extends": "../tsconfig.json",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"@page-object-models/*": ["page-object-models/*"],
+			"@fixtures/*": ["fixtures/*"],
+			"@test-data/*": ["test-data/*"]
+		}
+	}
+}

@@ -647,7 +647,7 @@ Troubleshooting checklist:
 
 ## Tested behavioral guarantees
 
-The v2 integration suite (`intTestV2`) verifies Locator Registry behavior in depth, including:
+The integration suite (`test`) verifies Locator Registry behavior in depth, including:
 
 - path validation (compile-time + runtime)
 - sub-path validation
@@ -660,7 +660,7 @@ The v2 integration suite (`intTestV2`) verifies Locator Registry behavior in dep
 - reusable locators and reuse constraints
 - frame locator behavior
 
-For implementation-level examples, see the Locator Registry tests under `intTestV2/tests/locatorRegistry`.
+For implementation-level examples, see the Locator Registry tests under `test/tests/locatorRegistry`.
 
 ---
 

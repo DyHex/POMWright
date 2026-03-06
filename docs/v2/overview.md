@@ -486,11 +486,6 @@ This is not intended for direct usage but explains the building blocks used by t
 - **Purpose**: Create and attach log entries to Playwright HTML reports.
 - **Used by**: Public `test` export and optional injection into custom POMs.
 
-#### `addV1SchemaToV2Registry`
-
-- **Purpose**: Migration helper translating v1 `LocatorSchema` objects into v2 registry definitions.
-- **Used by**: v1-to-v2 bridge workflows and migration paths.
-
 ---
 
 ## 4) Glossary (quick reference)

@@ -40,7 +40,15 @@ build/Release
 
 # Dependency directories
 node_modules/
+.pnpm-store/
 jspm_packages/
+test/node_modules/
+
+# Playwright integration test outputs
+test/playwright-report/
+test/test-results/
+test/blob-report/
+test/playwright/.cache/
 
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
@@ -68,6 +76,7 @@ web_modules/
 
 # Output of 'npm pack'
 *.tgz
+pomwright-test-build.tgz
 
 # Yarn Integrity file
 .yarn-integrity

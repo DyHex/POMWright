@@ -13,14 +13,14 @@ It provides automatic locator chaining via a LocatorRegistry, a Session Storage 
 
 ---
 
-## Version status: v1.5 is a migration bridge
+## Version status: v2 runtime only
 
-POMWright v1.5 currently ships both:
+POMWright now ships a **v2-only runtime API** centered on `PageObject`, `LocatorRegistry`, and standalone helpers.
 
-- **v1 API** (legacy/deprecated)
-- **v2 API** (current direction)
+Legacy v1 and migration documentation is retained under:
 
-**v1.5 is the bridge release** for migrating from v1 patterns to v2 patterns. If you are starting fresh, use **v2 (`PageObject` + `LocatorRegistry`)**. If you are on v1, use the migration docs to move incrementally.
+- `docs/v1`
+- `docs/v1-to-v2-migration`
 
 ---
 
