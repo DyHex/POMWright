@@ -2,15 +2,10 @@
 .github
 .vscode
 example
-src
-test
-intTest
 .editorconfig
 .gitignore
 pnpm-lock.yaml
 tsconfig.json
 *.test.ts
-vitest.config.ts
-pack-test.sh
 biome.json
 pomwright-*.tgz

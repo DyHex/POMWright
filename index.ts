@@ -1,32 +1,3 @@
-/*
- * V1 Exports
- */
-
-import { type AriaRoleType, GetByMethod, type LocatorSchema } from "./src/helpers/locatorSchema.interface";
-export { GetByMethod, type LocatorSchema, type AriaRoleType };
-
-import { BaseApi } from "./src/api/baseApi";
-export { BaseApi };
-
-import {
-	BasePage,
-	type BasePageOptions,
-	type ExtractBaseUrlType,
-	type ExtractFullUrlType,
-	type ExtractUrlPathType,
-} from "./src/basePage";
-export { BasePage, type BasePageOptions, type ExtractBaseUrlType, type ExtractFullUrlType, type ExtractUrlPathType };
-
-import { GetLocatorBase, type LocatorSchemaWithoutPath } from "./src/helpers/getLocatorBase";
-export { GetLocatorBase, type LocatorSchemaWithoutPath };
-
-import { BasePageV1toV2 } from "./src/basePageV1toV2";
-export { BasePageV1toV2 };
-
-/*
- * V2 Exports
- */
-
 import {
 	type AddAccessor,
 	createRegistryWithAccessors,

@@ -2,7 +2,7 @@
 
 A `LocatorSchema` describes how to find an element in the DOM. Instead of storing Playwright `Locator` objects directly, POMWright keeps these schema definitions and resolves them only when a test requests the locator. The same schema can be reused across multiple page objects and test files without risking stale references.
 
-Every schema must set `locatorMethod` to one of the [`GetByMethod`](../src/helpers/locatorSchema.interface.ts) enum values. The matching selector fields listed below determine which Playwright API call is executed under the hood. You can provide more than one selector field, but the method chosen by `locatorMethod` is the one that will be used when the locator is created.
+Every schema must set `locatorMethod` to one of the `GetByMethod` enum values. The matching selector fields listed below determine which Playwright API call is executed under the hood. You can provide more than one selector field, but the method chosen by `locatorMethod` is the one that will be used when the locator is created.
 
 When you register a schema with `GetLocatorBase.addSchema(path, schemaDetails)` the `locatorSchemaPath` is stored automatically and becomes part of the structured logs produced by POMWright.
 

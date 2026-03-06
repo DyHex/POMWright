@@ -6,11 +6,11 @@ on:
       - "main"
   pull_request:
     types:
-      - opened # Triggers for new PRs and draft PRs
-      - reopened # Triggers for reopened PRs and draft PRs
-      - synchronize # Triggers on new commits to PRs and draft PRs
+      - opened
+      - reopened
+      - synchronize
     branches:
-      - "**" # Triggers for PRs and draft PRs targeting any branch
+      - "**"
 
 jobs:
   test:
@@ -35,27 +35,10 @@ jobs:
         if: always()
         shell: bash
         run: |
-          # Determine branch name: use github.head_ref for PRs, fallback to github.ref_name for pushes
           branchName="${{ github.head_ref || github.ref_name }}"
-          # Replace any character that isn't a letter, number, or hyphen with '-'
           normalizedBranchName="${branchName//[^a-zA-Z0-9æÆøØåÅ\-]/-}"
           timestamp=$(date +"%d_%m_%Y_%H%M")
           echo "PLAYWRIGHT_REPORT_NAME=playwright-report-$normalizedBranchName-$timestamp" >> $GITHUB_ENV
-
-      - name: Run v1 test script
-        id: test_v1
-        continue-on-error: true
-        run: pnpm pack-test
-        env:
-          CI: true
-
-      - name: Upload Playwright V1 Test Report Artifact on failure
-        if: steps.test_v1.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: V1_${{ env.PLAYWRIGHT_REPORT_NAME }}
-          path: intTest/playwright-report
-          retention-days: 30
 
       - name: Run v2 test script
         id: test_v2
@@ -72,12 +55,11 @@ jobs:
           path: intTestV2/playwright-report
           retention-days: 30
 
-      - name: Fail job if any suite failed
+      - name: Fail job if suite failed
         if: always()
         shell: bash
         run: |
-          echo "V1 outcome: ${{ steps.test_v1.outcome }}"
           echo "V2 outcome: ${{ steps.test_v2.outcome }}"
-          if [ "${{ steps.test_v1.outcome }}" = "failure" ] || [ "${{ steps.test_v2.outcome }}" = "failure" ]; then
+          if [ "${{ steps.test_v2.outcome }}" = "failure" ]; then
             exit 1
           fi

@@ -4,6 +4,8 @@ POMWright is a small TypeScript-based framework implementing the Page Object Mod
 
 POMWright has Playwright/test as a peer dependency and will use whichever supported installed version of Playwright.
 
+> Note: v1 runtime source files were removed from the repository. This document is retained as legacy reference material.
+
 ## Requirements
 
 ![NPM dev or peer Dependency Version](https://img.shields.io/npm/dependency-version/pomwright/peer/%40playwright%2Ftest)
@@ -45,9 +47,9 @@ From playwright we import:
 
 From POMWright we import:
 
-- [BasePage](../src/basePage.ts) - An abstract class which is the foundation of all POC's in POMWright.
-- [PlaywrightReportLogger](../src/helpers/playwrightReportLogger.ts) - A custom logger which records log messages and attaches them to the Playwright HTML report in chronological order (timestamp) per test.
-- [GetByMethod](../src/helpers/locatorSchema.interface.ts#L7) - Dictates which Playwright Locator method POMWright uses for a given LocatorSchema when creating single or nested Locators.
+- [BasePage](./BasePage-explanation.md) - An abstract class which is the foundation of all POC's in v1 POMWright.
+- [PlaywrightReportLogger](./PlaywrightReportLogger-explanation.md) - A custom logger which records log messages and attaches them to the Playwright HTML report in chronological order (timestamp) per test.
+- [GetByMethod](../v1-to-v2-migration/v1-to-v2-comparison.md) - Dictates which Playwright Locator method POMWright uses for a given LocatorSchema when creating single or nested Locators.
 
 #### We can now create a minimal implementation of our POC
 
@@ -76,9 +78,9 @@ The constructor has to invoke super with the following parameters:
 - baseUrl - a string, similar to [BaseURL](https://playwright.dev/docs/api/class-testoptions#test-options-base-url) in playwright.config
 - urlPath - a string, the resource path of the POCs page URL
 - pocName - a string, the POCs human-readable name, used for logging and enriching the playwright HTML report
-- pwrl - see [PlaywrightReportLogger](../src/helpers/playwrightReportLogger.ts)
+- pwrl - see [PlaywrightReportLogger](./PlaywrightReportLogger-explanation.md)
 
-Since each POC we create will be initialized as a custom Playwright fixture, we'll need to provide atleast three of these parameters to the constructor, namely [Page](https://playwright.dev/docs/api/class-page), [TestInfo](https://playwright.dev/docs/api/class-testinfo) and [PlaywrightReportLogger](../src/fixture/base.fixtures.ts), as they will be provided by their respective fixtures. The rest can be defined in the POC as above or in the custom fixture initializing the POC.
+Since each POC we create will be initialized as a custom Playwright fixture, we'll need to provide atleast three of these parameters to the constructor, namely [Page](https://playwright.dev/docs/api/class-page), [TestInfo](https://playwright.dev/docs/api/class-testinfo) and `PlaywrightReportLogger`, as they will be provided by their respective fixtures. The rest can be defined in the POC as above or in the custom fixture initializing the POC.
 
 For an indepth explanation of BasePage see [BasePage-explanation.md](BasePage-explanation.md)
 
