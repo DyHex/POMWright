@@ -186,7 +186,7 @@ export function defineLocators<ExternalPaths extends string = never>(
 For example, if `common.locators.ts` has:
 
 ```ts
-export type Paths = Header | Footer | "main" | SlotPaths;
+export type Paths = Header | Footer | "main";
 ```
 
 and it calls:
@@ -195,17 +195,17 @@ and it calls:
 addHeader(registry);
 ```
 
-then, from `header.locators.ts`, `ExternalPaths` conceptually accounts for the paths that are not part of the header module, such as `Footer | "main" | SlotPaths`.
+then, from `header.locators.ts`, `ExternalPaths` conceptually accounts for the paths that are not part of the header module, such as `Footer | "main"`.
 
 Those paths are external only relative to the current module. They may be local to the caller.
 
 ## Shared Slot Paths
 
-Sometimes a path name should be shared across every PageObject in a domain, while its concrete locator definition varies by page. Treat these as shared slot paths.
+Sometimes a path name should be shared across multiple or every PageObject in a domain, while its concrete locator definition varies by page. Treat these as shared slot paths.
 
 The most common pattern is to declare the slot in the common parent module without registering a locator for it there. The top-level PageObject locator module then fills the slot with its page-specific definition.
 
-In the earlier `common.locators.ts` example we can declare `"main.heading"` as a slot path:
+In the earlier `common.locators.ts` example we can declare the path `"main.heading"` without registering a locator for it, i.e. a slot path:
 
 ```ts
 // common.locators.ts
@@ -267,7 +267,7 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 }
 ```
 
-> If you forget to register a slot path in a top-level module, pomwright will throw a descriptive error during runtime.
+> If you forget to register a slot path in a top-level module, pomwright will throw a descriptive error at runtime.
 
 Because these files are at the top of their respective locator hierarchies, they do not need an overload signature. Each PageObject creates a separate registry, so each top-level module can register its own definition for the same shared slot path.
 
@@ -283,7 +283,7 @@ registry.add("main.heading").getByRole("heading", { name: "Login" });
 
 then `"main.heading"` must be included in that module's implementation `Paths`, either directly or through a composed path union such as `Common`.
 
-Each concrete registry should register a given path once. If multiple modules register the same path on the same registry instance, the duplicate registration will make POMWright throw an error at runtime.
+Each concrete registry should register a given path once. If multiple modules register the same path on the same registry instance, POMWright will throw a duplicate registration error at runtime.
 
 ## Recommended Checklist
 
@@ -293,7 +293,7 @@ For each locator module:
 - Use the overload signature with `ExternalPaths` for modules/components/children.
 - Keep the implementation signature as `LocatorRegistry<Paths>` for local autocomplete.
 - Declare domain-wide shared slots in the nearest common parent module.
-- Register each shared slot in exactly one top-level or composed module per concrete registry.
+- Register each shared slot in exactly one top-level.
 - Let parent modules compose child `Paths` unions and call child `defineLocators` functions.
 
 ## Summary
@@ -313,3 +313,5 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 This gives parent modules the flexibility to pass larger registries while preserving precise `registry.add(...)` autocomplete inside each locator module.
 
 The overload pattern can be dropped for the locator files at the top of the hierarchy (usually PageObject locator files).
+
+> The approach described in this document is recommended based on experience from playwright-projects across multiple repositories/applications in production. That said, there are multiple ways to go about this, feel free to diviate based on your needs.
