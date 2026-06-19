@@ -15,6 +15,6 @@ export default abstract class TestApp<
 		urlPath: UrlPathTypeFromOptions<BaseOptions<Options>>,
 		options?: { label?: string; navOptions?: NavigationOptions },
 	) {
-		super(page, "http://localhost:8080", urlPath, options);
+		super(page, "http://localhost:9000", urlPath, options);
 	}
 }

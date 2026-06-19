@@ -94,7 +94,7 @@ import { BasePage, type PlaywrightReportLogger } from "pomwright";
 
 export default abstract class AppBase<Paths extends string> extends BasePage<Paths> {
   constructor(page: Page, testInfo: TestInfo, urlPath: string, pocName: string, pwrl: PlaywrightReportLogger) {
-    super(page, testInfo, "http://localhost:8080", urlPath, pocName, pwrl);
+    super(page, testInfo, "http://localhost:9000", urlPath, pocName, pwrl);
   }
 }
 
@@ -116,7 +116,7 @@ export default abstract class AppBase<
     urlPath: UrlPathTypeFromOptions<BaseOptions<Options>>,
     options?: { label?: string; navOptions?: NavigationOptions },
   ) {
-    super(page, "http://localhost:8080", urlPath, options);
+    super(page, "http://localhost:9000", urlPath, options);
   }
 }
 ```

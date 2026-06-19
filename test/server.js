@@ -2,7 +2,7 @@ const express = require("express");
 const path = require("node:path");
 
 const app = express();
-const port = 8080;
+const port = 9000;
 
 // Serve static files from the "test-data/staticPage" directory
 app.use(express.static(path.join(__dirname, "test-data/staticPage")));

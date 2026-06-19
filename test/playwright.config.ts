@@ -12,7 +12,7 @@ export default defineConfig({
 		? [
 				{
 					command: "pnpm start",
-					url: "http://localhost:8080/",
+					url: "http://localhost:9000/",
 					timeout: 5 * 60_000,
 					reuseExistingServer: false,
 					ignoreHTTPSErrors: false,
@@ -21,7 +21,7 @@ export default defineConfig({
 		: [
 				{
 					command: "pnpm start",
-					url: "http://localhost:8080/",
+					url: "http://localhost:9000/",
 					timeout: 5 * 60_000,
 					reuseExistingServer: true,
 					ignoreHTTPSErrors: false,
