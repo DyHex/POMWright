@@ -25,8 +25,8 @@ test("getLocator resolves the terminal locator when ancestor paths are registere
 		.locator(".w3-dropdown-content")
 		.locator(".w3-bar-item");
 
-	expect(`${locator}`).toEqual("locator('.w3-bar-item')");
-	expect(`${locator}`).not.toEqual(`${chained}`);
+	expect(`${locator.describe("")}`).toEqual("locator('.w3-bar-item')");
+	expect(`${locator.describe("")}`).not.toEqual(`${chained}`);
 });
 
 test("getLocator uses terminal steps while ignoring ancestor filters", async ({ page }) => {
@@ -40,7 +40,7 @@ test("getLocator uses terminal steps while ignoring ancestor filters", async ({ 
 
 	const locator = registry.getLocator("panel.row.button");
 
-	expect(`${locator}`).toEqual("getByRole('button', { name: 'Save' }).filter({ hasText: 'terminal' })");
+	expect(`${locator.describe("")}`).toEqual("getByRole('button', { name: 'Save' }).filter({ hasText: 'terminal' })");
 });
 
 test("getLocator returns a fresh locator each time", async ({ page }) => {
@@ -54,7 +54,7 @@ test("getLocator returns a fresh locator each time", async ({ page }) => {
 	const second = registry.getLocator("button");
 
 	expect(first).not.toBe(second);
-	expect(`${first}`).toEqual(`${second}`);
+	expect(`${first.describe("")}`).toEqual(`${second.describe("")}`);
 });
 
 test.describe("getLocator applies terminal filters for registered definitions", () => {
@@ -122,7 +122,7 @@ test.describe("getLocator applies terminal filters for registered definitions", 
 			build(registry);
 
 			const locator = registry.getLocator("terminal");
-			expect(`${locator}`).toEqual(expected);
+			expect(`${locator.describe("")}`).toEqual(expected);
 		});
 	}
 });
@@ -137,7 +137,7 @@ test("getLocator returns frame locators without chaining ancestor filters", asyn
 	const locator = registry.getLocator("frame");
 	const manual = page.frameLocator('iframe[title="name"]').owner();
 
-	expect(`${locator}`).toEqual(`${manual}`);
+	expect(`${locator.describe("")}`).toEqual(`${manual.describe("")}`);
 });
 
 test("getLocator ignores filter options when all values are undefined", async ({ page }) => {
@@ -152,7 +152,7 @@ test("getLocator ignores filter options when all values are undefined", async ({
 
 	const locator = registry.getLocator("fictional.filter@optionsUndefined");
 
-	expect(`${locator}`).toEqual("getByRole('button')");
+	expect(`${locator.describe("")}`).toEqual("getByRole('button')");
 });
 
 test("getLocator applies terminal indices", async ({ page }) => {
@@ -178,7 +178,7 @@ test("getLocator applies terminal indices", async ({ page }) => {
 
 	const locator = registry.getLocator("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText");
 
-	expect(`${locator}`).toEqual("getByRole('button').filter({ hasText: 'hasText' }).nth(2)");
+	expect(`${locator.describe("")}`).toEqual("getByRole('button').filter({ hasText: 'hasText' }).nth(2)");
 });
 
 test("getLocator honors terminal filter and index ordering", async ({ page }) => {
@@ -196,7 +196,7 @@ test("getLocator honors terminal filter and index ordering", async ({ page }) =>
 
 	const locator = registry.getLocator("fictional.filter@hasText");
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"getByRole('button').filter({ hasText: 'hasText' }).filter({ hasText: 'extra' }).nth(1).filter({ hasNotText: 'tail' })",
 	);
 });
@@ -210,7 +210,7 @@ test("getLocator supports explicit last() selection for the terminal path", asyn
 
 	const locator = registry.getLocator("fictional.filter@hasText");
 
-	expect(`${locator}`).toEqual("getByRole('button').filter({ hasText: 'hasText' }).last()");
+	expect(`${locator.describe("")}`).toEqual("getByRole('button').filter({ hasText: 'hasText' }).last()");
 });
 
 test('getLocator accepts "first" and "last" selections for terminal indices', async ({ page }) => {
@@ -220,13 +220,13 @@ test('getLocator accepts "first" and "last" selections for terminal indices', as
 	registry.add("fictional.filter@hasText").getByRole("button").filter({ hasText: "hasText" }).nth("first");
 
 	const first = registry.getLocator("fictional.filter@hasText");
-	expect(`${first}`).toContain("first()");
+	expect(`${first.describe("")}`).toContain("first()");
 
 	const secondRegistry = createTestRegistry<LocatorSchemaPaths>(page);
 	secondRegistry.add("fictional.filter@hasText").getByRole("button").filter({ hasText: "hasText" }).nth("last");
 
 	const last = secondRegistry.getLocator("fictional.filter@hasText");
-	expect(`${last}`).toContain("last()");
+	expect(`${last.describe("")}`).toContain("last()");
 });
 
 test("getLocator rejects missing terminal paths", async ({ page }) => {

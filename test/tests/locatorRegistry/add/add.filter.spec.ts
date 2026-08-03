@@ -19,7 +19,7 @@ test("add records chained filters and indices in order for nested paths", async 
 
 	const nested = registry.getNestedLocator("list.item");
 
-	expect(`${nested}`).toEqual(
+	expect(`${nested.describe("")}`).toEqual(
 		"locator('ul.list').filter({ hasText: 'List' }).nth(1).filter({ hasText: 'Hello' }).getByRole('listitem', { name: /Row/ }).filter({ hasText: 'Row' }).last().filter({ hasText: 'Goodbye' })",
 	);
 });
@@ -37,7 +37,7 @@ test("add.filter supports Playwright Locator instances for has/hasNot", async ({
 
 	const locator = registry.getLocator("item");
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"getByRole('button').filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('heading', { level: 3 }) })",
 	);
 });
@@ -53,7 +53,7 @@ test("add.filter supports registry path strings for has/hasNot", async ({ page }
 
 	const locator = registry.getLocator("item");
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"getByRole('button').filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('heading', { level: 3 }) })",
 	);
 });
@@ -139,5 +139,5 @@ test("add.filter supports visible true/false", async ({ page }) => {
 
 	const locator = registry.getLocator("item");
 
-	expect(`${locator}`).toEqual("getByRole('button').filter({ visible: true }).filter({ visible: false })");
+	expect(`${locator.describe("")}`).toEqual("getByRole('button').filter({ visible: true }).filter({ visible: false })");
 });

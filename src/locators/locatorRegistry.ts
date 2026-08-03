@@ -33,20 +33,15 @@ import {
 	validateLocatorSchemaPath,
 } from "./utils";
 
-type PathArgument<Paths extends string, Path extends Paths> = LocatorSchemaPathFormat<Path> extends Path
-	? Path
-	: LocatorSchemaPathFormat<Path>;
+type PathArgument<Paths extends string, Path extends Paths> =
+	LocatorSchemaPathFormat<Path> extends Path ? Path : LocatorSchemaPathFormat<Path>;
 
 type InvalidReusePath<Path extends string> = [
 	`Invalid reuse path, reuse path cannot be the same as registration path: ${Path}`,
 ];
 
-type ReusePathArgument<Paths extends string, Path extends Paths, ReusePath extends Paths> = Exclude<
-	ReusePath,
-	Path
-> extends never
-	? InvalidReusePath<Path>
-	: PathArgument<Paths, ReusePath>;
+type ReusePathArgument<Paths extends string, Path extends Paths, ReusePath extends Paths> =
+	Exclude<ReusePath, Path> extends never ? InvalidReusePath<Path> : PathArgument<Paths, ReusePath>;
 
 export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	private readonly schemas = new Map<
@@ -487,11 +482,6 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 					lastLocator = frameLocator as unknown as Locator;
 				}
 
-				if (isTerminalStep && terminalDescription && isLocatorInstance(lastLocator)) {
-					lastLocator = lastLocator.describe(terminalDescription);
-					currentTarget = lastLocator;
-				}
-
 				debugSteps.push({ path: part, definition, appliedFilters: [], recordedSteps: [] });
 				continue;
 			}
@@ -516,10 +506,6 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				}
 			}
 
-			if (isTerminalStep && terminalDescription) {
-				resolvedLocator = resolvedLocator.describe(terminalDescription);
-			}
-
 			currentTarget = resolvedLocator;
 			lastLocator = resolvedLocator;
 			debugSteps.push({
@@ -529,6 +515,10 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				index: appliedIndex,
 				recordedSteps,
 			});
+		}
+
+		if (lastLocator) {
+			lastLocator = lastLocator.describe(terminalDescription ?? path);
 		}
 
 		return { locator: lastLocator, steps: debugSteps };

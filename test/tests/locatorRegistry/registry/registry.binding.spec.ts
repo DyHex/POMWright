@@ -16,8 +16,8 @@ test("createRegistryWithAccessors creates isolated bound wrappers per registry",
 	const locatorA = registryA.getNestedLocator("main");
 	const locatorB = registryB.getNestedLocator("main");
 
-	expect(`${locatorA}`).toEqual("locator('div.a')");
-	expect(`${locatorB}`).toEqual("locator('div.b')");
+	expect(`${locatorA.describe("")}`).toEqual("locator('div.a')");
+	expect(`${locatorB.describe("")}`).toEqual("locator('div.b')");
 });
 
 test("factory-based wrappers preserve fluent helpers without BasePage", async ({ page }) => {
@@ -29,7 +29,7 @@ test("factory-based wrappers preserve fluent helpers without BasePage", async ({
 
 	const locator = getNestedLocator("chain.child");
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"locator('div.root').locator('div.child').filter({ hasText: 'x' }).nth(1).filter({ hasText: 'y' })",
 	);
 });
@@ -46,5 +46,7 @@ test("createRegistryWithAccessors exposes getLocatorSchema builder", async ({ pa
 
 	const locator = schemaBuilder.getNestedLocator();
 
-	expect(`${locator}`).toEqual("locator('div.tree').nth(1).locator('div.leaf').filter({ hasText: 'leaf' })");
+	expect(`${locator.describe("")}`).toEqual(
+		"locator('div.tree').nth(1).locator('div.leaf').filter({ hasText: 'leaf' })",
+	);
 });

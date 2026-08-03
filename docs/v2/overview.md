@@ -188,6 +188,7 @@ add("main.banner@error").getById("error-banner");
 
 - `getLocator(path)` resolves only the terminal locator (ignores ancestor steps).
 - `getNestedLocator(path)` chains each segment along the dot-delimited path.
+- Both use the terminal path as the locator description by default; a `.describe(...)` value overrides it.
 
 ```ts
 import { test } from "./fixtures";
@@ -195,9 +196,11 @@ import { test } from "./fixtures";
 test("locator helpers", async ({ loginPage }) => {
   const terminal = loginPage.getLocator("main.form@login.input@username");
   // terminal => getByLabel('Username')
+  // terminal.description() => "main.form@login.input@username"
 
   const chained = loginPage.getNestedLocator("main.form@login.input@username");
   // chained => locator('main').getByRole('form', { name: 'Login' }).getByLabel('Username')
+  // chained.description() => "main.form@login.input@username"
 });
 ```
 

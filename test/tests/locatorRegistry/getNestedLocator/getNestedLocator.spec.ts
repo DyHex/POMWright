@@ -26,11 +26,11 @@ test("getNestedLocator should resolve chained locators automatically", async ({ 
 
 	const automaticallyChained = registry.getNestedLocator("topMenu.notifications.dropdown.item");
 
-	expect(`${automaticallyChained}`).toEqual(
+	expect(`${automaticallyChained.describe("")}`).toEqual(
 		"locator('.w3-top').locator('.w3-dropdown-hover').locator('.w3-dropdown-content').locator('.w3-bar-item')",
 	);
 
-	expect(`${automaticallyChained}`).toEqual(`${manuallyChained}`);
+	expect(`${automaticallyChained.describe("")}`).toEqual(`${manuallyChained.describe("")}`);
 });
 
 test("getLocator returns the terminal locator while getNestedLocator builds the chain", async ({ page }) => {
@@ -50,8 +50,8 @@ test("getLocator returns the terminal locator while getNestedLocator builds the 
 	const direct = registry.getLocator("topMenu.notifications.dropdown.item");
 	const nested = registry.getNestedLocator("topMenu.notifications.dropdown.item");
 
-	expect(`${direct}`).toEqual("locator('.w3-bar-item')");
-	expect(`${nested}`).toEqual(
+	expect(`${direct.describe("")}`).toEqual("locator('.w3-bar-item')");
+	expect(`${nested.describe("")}`).toEqual(
 		"locator('.w3-top').locator('.w3-dropdown-hover').locator('.w3-dropdown-content').locator('.w3-bar-item')",
 	);
 });
@@ -73,7 +73,7 @@ test("getNestedLocator returns a fresh locator each time", async ({ page }) => {
 	const first = registry.getNestedLocator("topMenu.notifications.dropdown.item");
 	const second = registry.getNestedLocator("topMenu.notifications.dropdown.item");
 	expect(first).not.toBe(second);
-	expect(`${first}`).toEqual(`${second}`);
+	expect(`${first.describe("")}`).toEqual(`${second.describe("")}`);
 });
 
 test.describe("getNestedLocator for locatorSchema with filter property", () => {
@@ -140,7 +140,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			register(registry);
 
 			const nested = registry.getNestedLocator("fictional.filter@undefined");
-			expect(`${nested}`).toEqual(expected);
+			expect(`${nested.describe("")}`).toEqual(expected);
 		});
 	}
 
@@ -167,7 +167,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			.getByRole("button", { name: "inside frame" })
 			.filter({ hasNotText: "hasNotText" });
 
-		expect(`${nested}`).toEqual(`${manualNested}`);
+		expect(`${nested.describe("")}`).toEqual(`${manualNested.describe("")}`);
 	});
 
 	test("multiple nesting/chaining retains filters across the chain", async ({ page }) => {
@@ -203,7 +203,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			"fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText",
 		);
 
-		expect(`${multiChain}`).toEqual(
+		expect(`${multiChain.describe("")}`).toEqual(
 			"getByRole('button', { name: 'roleOptions' }).filter({ hasNotText: 'hasNotText' }).locator('locator').filter({ hasText: 'locatorOptionsHasText' }).filter({ hasNotText: 'locatorOptionshasNotText' }).filter({ hasText: 'hasText' }).getByTestId('testId').filter({ hasNotText: 'hasNotText' }).getByLabel('label', { exact: true }).filter({ hasText: 'hasText' })",
 		);
 	});
@@ -219,7 +219,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			.filter({ has: undefined, hasNot: undefined, hasText: undefined, hasNotText: undefined });
 
 		const nested = registry.getNestedLocator("fictional.filter@optionsUndefined");
-		expect(`${nested}`).toEqual("getByRole('button')");
+		expect(`${nested.describe("")}`).toEqual("getByRole('button')");
 	});
 
 	test("schema filters resolve path string references", async ({ page }) => {
@@ -251,8 +251,8 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			hasNotText: "hasNotText",
 		});
 
-		expect(`${nested}`).toEqual(`${manual}`);
-		expect(`${nested}`).toEqual(
+		expect(`${nested.describe("")}`).toEqual(`${manual.describe("")}`);
+		expect(`${nested.describe("")}`).toEqual(
 			"getByRole('button', { name: 'roleOptions' }).filter({ hasText: 'hasText' }).filter({ hasNotText: 'hasNotText' }).filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('button') })",
 		);
 	});
@@ -276,11 +276,10 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 
 		const nested = registry.getNestedLocator("fictional.filter@hasNotText");
 
-		expect(`${nested}`).toEqual(
+		expect(`${nested.describe("")}`).toEqual(
 			"getByRole('button').filter({ hasNotText: 'hasNotText' }).filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('button', { name: 'Red' }) })",
 		);
 	});
-
 });
 
 const fullPath = "fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText" as const;
@@ -309,8 +308,8 @@ test("getNestedLocator applies chained indices", async ({ page }) => {
 
 	const locator = registry.getNestedLocator(fullPath);
 
-	expect(`${locator}`).toContain(".nth(2)");
-	expect(`${locator}`).toEqual(expectedChain);
+	expect(`${locator.describe("")}`).toContain(".nth(2)");
+	expect(`${locator.describe("")}`).toEqual(expectedChain);
 });
 
 test("getNestedLocator honors chained filters and indices", async ({ page }) => {
@@ -328,7 +327,7 @@ test("getNestedLocator honors chained filters and indices", async ({ page }) => 
 
 	const locator = registry.getNestedLocator("fictional.filter@hasText");
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"getByRole('button').filter({ hasText: 'hasText' }).filter({ hasText: 'extra' }).nth(1).filter({ hasNotText: 'tail' })",
 	);
 });
@@ -355,7 +354,7 @@ test("getNestedLocator supports explicit last() selection", async ({ page }) => 
 
 	const locator = registry.getNestedLocator(fullPath);
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"getByRole('button').filter({ hasNotText: 'hasNotText' }).last().getByRole('button').filter({ hasText: 'hasText' }).getByRole('button').filter({ hasNotText: 'hasNotText' }).getByRole('button').filter({ hasText: 'hasText' })",
 	);
 });
@@ -383,8 +382,8 @@ test('getNestedLocator accepts "first" and "last" selections', async ({ page }) 
 
 	const locator = registry.getNestedLocator(fullPath);
 
-	expect(`${locator}`).toContain("first()");
-	expect(`${locator}`).toContain("last()");
+	expect(`${locator.describe("")}`).toContain("first()");
+	expect(`${locator.describe("")}`).toContain("last()");
 });
 
 test("getNestedLocator rejects unknown paths", async ({ page }) => {

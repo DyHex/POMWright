@@ -7,20 +7,20 @@ test("getLocator fluent wrapper supports update and clearSteps", async ({ testFi
 		.getByRole("heading", { level: 3 })
 		.getLocator();
 
-	expect(`${updated}`).toEqual("getByRole('heading', { level: 3 })");
+	expect(`${updated.describe("")}`).toEqual("getByRole('heading', { level: 3 })");
 
 	const cleared = testFilters
 		.getLocatorSchema("fictional.filter@hasText")
 		.clearSteps("fictional.filter@hasText")
 		.getLocator();
 
-	expect(`${cleared}`).toEqual("getByRole('button')");
+	expect(`${cleared.describe("")}`).toEqual("getByRole('button')");
 });
 
 test("getLocator update accepts partial patch arguments", async ({ testFilters }) => {
 	const baseline = testFilters.getLocator("body.section.heading");
 
-	expect(`${baseline}`).toEqual("getByRole('heading', { level: 2 })");
+	expect(`${baseline.describe("")}`).toEqual("getByRole('heading', { level: 2 })");
 
 	const noArgs = testFilters
 		.getLocatorSchema("body.section.heading")
@@ -28,7 +28,7 @@ test("getLocator update accepts partial patch arguments", async ({ testFilters }
 		.getByRole()
 		.getLocator();
 
-	expect(`${noArgs}`).toEqual("getByRole('heading', { level: 2 })");
+	expect(`${noArgs.describe("")}`).toEqual("getByRole('heading', { level: 2 })");
 
 	const optionsOnly = testFilters
 		.getLocatorSchema("body.section.heading")
@@ -36,7 +36,7 @@ test("getLocator update accepts partial patch arguments", async ({ testFilters }
 		.getByRole({ level: 4 })
 		.getLocator();
 
-	expect(`${optionsOnly}`).toEqual("getByRole('heading', { level: 4 })");
+	expect(`${optionsOnly.describe("")}`).toEqual("getByRole('heading', { level: 4 })");
 
 	const roleOnly = testFilters
 		.getLocatorSchema("body.section.heading")
@@ -44,7 +44,7 @@ test("getLocator update accepts partial patch arguments", async ({ testFilters }
 		.getByRole("heading")
 		.getLocator();
 
-	expect(`${roleOnly}`).toEqual("getByRole('heading', { level: 2 })");
+	expect(`${roleOnly.describe("")}`).toEqual("getByRole('heading', { level: 2 })");
 
 	const roleAndOptions = testFilters
 		.getLocatorSchema("body.section.heading")
@@ -52,5 +52,5 @@ test("getLocator update accepts partial patch arguments", async ({ testFilters }
 		.getByRole("heading", { level: 5 })
 		.getLocator();
 
-	expect(`${roleAndOptions}`).toEqual("getByRole('heading', { level: 5 })");
+	expect(`${roleAndOptions.describe("")}`).toEqual("getByRole('heading', { level: 5 })");
 });

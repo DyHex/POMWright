@@ -20,5 +20,7 @@ test("getLocatorSchema propagates registered filters and indices to getLocator",
 		.nth("body.section@playground.button@reset", "first")
 		.getLocator();
 
-	expect(`${locator}`).toEqual("getByRole('button', { name: 'Reset Color' }).filter({ hasText: /Reset/i }).first()");
+	expect(`${locator.describe("")}`).toEqual(
+		"getByRole('button', { name: 'Reset Color' }).filter({ hasText: /Reset/i }).first()",
+	);
 });

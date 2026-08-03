@@ -50,8 +50,9 @@
     4. [Reuse patch rules and limitations](#reuse-patch-rules-and-limitations)
     5. [Seed immutability](#seed-immutability)
 13. [`describe` semantics](#describe-semantics)
-    1. [Registry-level descriptions](#registry-level-descriptions)
-    2. [Query-level overrides](#query-level-overrides)
+    1. [Default descriptions](#default-descriptions)
+    2. [Registry-level descriptions](#registry-level-descriptions)
+    3. [Query-level overrides](#query-level-overrides)
 14. [Error reference and troubleshooting](#error-reference-and-troubleshooting)
 15. [Tested behavioral guarantees](#tested-behavioral-guarantees)
 16. [Migration notes from v1](#migration-notes-from-v1)
@@ -82,12 +83,13 @@ Think of the registry as:
 
 1. A map of **path -> locator definition** (`getByRole`, `locator`, `frameLocator`, etc.).
 2. A map of **path -> ordered steps** (`filter` / `nth`).
-3. An optional **path description** (`describe`).
+3. An optional explicit **path description** (`describe`).
 
 When resolving:
 
 - `getLocator(path)` applies only the terminal definition + terminal steps.
 - `getNestedLocator(path)` traverses the chain (`a`, `a.b`, `a.b.c`) and applies each registered segment in order.
+- The resolved terminal locator uses its path as its description unless an explicit description overrides it.
 
 When querying with `getLocatorSchema(path)`:
 
@@ -356,6 +358,7 @@ Resolves terminal-only:
 registry.add("main.form.username").getByLabel("Username");
 const terminal = registry.getLocator("main.form.username");
 // Equivalent to direct getByLabel("Username") from page context.
+// terminal.description() === "main.form.username"
 ```
 
 ### `getNestedLocator(path)`
@@ -369,6 +372,7 @@ registry.add("main.form.username").getByLabel("Username");
 
 const nested = registry.getNestedLocator("main.form.username");
 // locator("main").getByRole("form", { name: "Login" }).getByLabel("Username")
+// nested.description() === "main.form.username"
 ```
 
 ### Frame behavior: terminal vs non-terminal
@@ -553,12 +557,15 @@ registry.add("card.title@first", { reuse: h2 }).nth(0);
 
 ### Reuse by existing path string
 
-Pass a previously registered path to clone that path definition/steps/description as-is.
+Pass a previously registered path to clone that path definition, steps, and explicit description.
 
 ```ts
 registry.add("errors.invalidPassword").getByText("Invalid password");
 registry.add("main.form.error@invalidPassword", { reuse: "errors.invalidPassword" });
 ```
+
+If the source has no explicit description, the reused locator defaults to its new target path
+(`"main.form.error@invalidPassword"` in this example). An explicit source description is preserved.
 
 Note: path-based reuse registers immediately and does not return a chainable builder.
 
@@ -589,20 +596,47 @@ Using a seed in multiple `add(..., { reuse: seed })` chains does not mutate the 
 
 ## `describe` semantics
 
+### Default descriptions
+
+Every locator resolved through `getLocator`, `getNestedLocator`, or `getLocatorSchema` receives the terminal locator
+path as its default Playwright description:
+
+```ts
+registry.add("main").locator("main");
+registry.add("main.button@login").getByRole("button", { name: "Login" });
+
+const direct = registry.getLocator("main.button@login");
+const nested = registry.getNestedLocator("main.button@login");
+
+direct.description();
+// "main.button@login"
+
+nested.description();
+// "main.button@login"
+```
+
+For nested chains, descriptions on ancestor paths are ignored; only the terminal locator's explicit description or
+path default is applied. Terminal `frameLocator` definitions follow the same rule on their owner locator.
+
 ### Registry-level descriptions
 
-Calling `.describe(...)` on `add` stores description with the path definition and applies it to resolved terminal locator.
+Calling `.describe(...)` on `add` stores the supplied description with the path definition and overrides the path
+default on the resolved terminal locator.
 
 ```ts
 registry
     .add("main.submit")
     .getByRole("button", { name: "Submit" })
     .describe("Primary submit button");
+
+registry.getLocator("main.submit").description();
+// "Primary submit button"
 ```
 
 ### Query-level overrides
 
-Calling `.describe(...)` on query builder overrides description only for that builder resolution and does not mutate the stored registry description.
+Calling `.describe(...)` on a query builder takes precedence over the registered description or path default for that
+builder resolution only. It does not mutate the stored registry description.
 
 ```ts
 const override = registry
@@ -654,7 +688,7 @@ The integration suite (`test`) verifies Locator Registry behavior in depth, incl
 - all registration strategies
 - `filter` behavior, including `has`/`hasNot` variants
 - `nth` chaining and ordering
-- `describe` behavior
+- default, registered, reused, and query-level `describe` behavior
 - `update` / `replace` / `remove`
 - `clearSteps`
 - reusable locators and reuse constraints
