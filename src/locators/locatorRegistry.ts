@@ -33,20 +33,15 @@ import {
 	validateLocatorSchemaPath,
 } from "./utils";
 
-type PathArgument<Paths extends string, Path extends Paths> = LocatorSchemaPathFormat<Path> extends Path
-	? Path
-	: LocatorSchemaPathFormat<Path>;
+type PathArgument<Paths extends string, Path extends Paths> =
+	LocatorSchemaPathFormat<Path> extends Path ? Path : LocatorSchemaPathFormat<Path>;
 
 type InvalidReusePath<Path extends string> = [
 	`Invalid reuse path, reuse path cannot be the same as registration path: ${Path}`,
 ];
 
-type ReusePathArgument<Paths extends string, Path extends Paths, ReusePath extends Paths> = Exclude<
-	ReusePath,
-	Path
-> extends never
-	? InvalidReusePath<Path>
-	: PathArgument<Paths, ReusePath>;
+type ReusePathArgument<Paths extends string, Path extends Paths, ReusePath extends Paths> =
+	Exclude<ReusePath, Path> extends never ? InvalidReusePath<Path> : PathArgument<Paths, ReusePath>;
 
 export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	private readonly schemas = new Map<
