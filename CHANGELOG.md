@@ -1,5 +1,14 @@
 # pomwright
 
+## 2.1.0
+
+### Minor Changes
+
+- [#44](https://github.com/DyHex/POMWright/pull/44) [`9345734`](https://github.com/DyHex/POMWright/commit/9345734feaa5069cc5befeae3195f694649ba5df) Thanks [@DyHex](https://github.com/DyHex)! - Default Playwright descriptions for locators resolved through `getLocator` and `getNestedLocator` to their terminal
+  registry paths. Explicit descriptions from registrations, reused schemas, and query-level overrides continue to take
+  precedence, while terminal frame definitions apply the description to the `Locator` returned by `FrameLocator.owner()`.
+  This provides meaningful labels in Playwright traces and reports without changing the resolved locator chain.
+
 ## 2.0.0
 
 ### Major Changes
