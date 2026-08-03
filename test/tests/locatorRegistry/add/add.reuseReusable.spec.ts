@@ -43,7 +43,7 @@ test("reusable builder yields the same locator chain as a direct definition", as
 	const direct = registry.getLocator("heading");
 	const reused = registry.getLocator("heading.reused");
 
-	expect(`${reused}`).toEqual(`${direct}`);
+	expect(`${reused.describe("")}`).toEqual(`${direct.describe("")}`);
 });
 
 test("add reuse by reusable locator patches options while preserving selector", async ({ page }) => {
@@ -206,7 +206,7 @@ test("createReusable.filter supports Playwright Locator instances for has/hasNot
 
 	const locator = registry.getLocator("item");
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"getByRole('button').filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('heading', { level: 3 }) })",
 	);
 });
@@ -228,7 +228,7 @@ test("createReusable.filter supports registry path strings for has/hasNot", asyn
 
 	const locator = registry.getLocator("item");
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"getByRole('button').filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('heading', { level: 3 }) })",
 	);
 });
@@ -307,5 +307,5 @@ test("createReusable.filter supports visible true/false", async ({ page }) => {
 
 	const locator = registry.getLocator("item");
 
-	expect(`${locator}`).toEqual("getByRole('button').filter({ visible: true }).filter({ visible: false })");
+	expect(`${locator.describe("")}`).toEqual("getByRole('button').filter({ visible: true }).filter({ visible: false })");
 });

@@ -33,7 +33,7 @@ test("add getById to registry", async ({ page }) => {
 	expect(registry.get("stringId.#stringId")).toEqual(expectedHashIdDefinition);
 
 	const locator = registry.getLocator("stringId.#stringId");
-	expect(`${locator}`).toEqual("locator('#unique-element')");
+	expect(`${locator.describe("")}`).toEqual("locator('#unique-element')");
 
 	registry.add("regExpId").getById(/unique-\w+/);
 	const regExpDefinition = {

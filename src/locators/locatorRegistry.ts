@@ -487,11 +487,6 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 					lastLocator = frameLocator as unknown as Locator;
 				}
 
-				if (isTerminalStep && terminalDescription && isLocatorInstance(lastLocator)) {
-					lastLocator = lastLocator.describe(terminalDescription);
-					currentTarget = lastLocator;
-				}
-
 				debugSteps.push({ path: part, definition, appliedFilters: [], recordedSteps: [] });
 				continue;
 			}
@@ -516,10 +511,6 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				}
 			}
 
-			if (isTerminalStep && terminalDescription) {
-				resolvedLocator = resolvedLocator.describe(terminalDescription);
-			}
-
 			currentTarget = resolvedLocator;
 			lastLocator = resolvedLocator;
 			debugSteps.push({
@@ -529,6 +520,10 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				index: appliedIndex,
 				recordedSteps,
 			});
+		}
+
+		if (lastLocator) {
+			lastLocator = lastLocator.describe(terminalDescription ?? path);
 		}
 
 		return { locator: lastLocator, steps: debugSteps };

@@ -39,7 +39,7 @@ test.describe("getLocator helpers on web app", () => {
 		const locator = testPage.getLocator("topMenu.notifications.dropdown.item");
 		expect(locator).not.toBeNull();
 		expect(locator).not.toBeUndefined();
-		expect(`${locator}`).toEqual("locator('.w3-bar-item')");
+		expect(`${locator.describe("")}`).toEqual("locator('.w3-bar-item')");
 	});
 
 	test("should be able to manually chain locators returned by getLocator", async ({ testPage }) => {
@@ -57,7 +57,7 @@ test.describe("getLocator helpers on web app", () => {
 
 		expect(topMenuNotificationsDropdownItem).not.toBeNull();
 		expect(topMenuNotificationsDropdownItem).not.toBeUndefined();
-		expect(`${topMenuNotificationsDropdownItem}`).toEqual(
+		expect(`${topMenuNotificationsDropdownItem.describe("")}`).toEqual(
 			"locator('.w3-top').locator(locator('.w3-dropdown-hover')).locator(locator('.w3-dropdown-content')).locator(locator('.w3-bar-item'))",
 		);
 	});

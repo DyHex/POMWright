@@ -3,7 +3,7 @@ import { expect, test } from "@fixtures/testApp.fixtures";
 test("nth applies numeric index to targeted sub-path", async ({ testFilters }) => {
 	const locator = testFilters.getLocatorSchema("body.section.button").nth("body.section.button", 1).getNestedLocator();
 
-	expect(`${locator}`).toEqual("locator('body').locator('section').getByRole('button').nth(1)");
+	expect(`${locator.describe("")}`).toEqual("locator('body').locator('section').getByRole('button').nth(1)");
 });
 
 test('nth supports "first" and "last" selectors', async ({ testFilters }) => {
@@ -12,14 +12,14 @@ test('nth supports "first" and "last" selectors', async ({ testFilters }) => {
 		.nth("body.section.button", "first")
 		.getNestedLocator();
 
-	expect(`${first}`).toEqual("locator('body').locator('section').getByRole('button').first()");
+	expect(`${first.describe("")}`).toEqual("locator('body').locator('section').getByRole('button').first()");
 
 	const last = testFilters
 		.getLocatorSchema("body.section.button")
 		.nth("body.section.button", "last")
 		.getNestedLocator();
 
-	expect(`${last}`).toEqual("locator('body').locator('section').getByRole('button').last()");
+	expect(`${last.describe("")}`).toEqual("locator('body').locator('section').getByRole('button').last()");
 });
 
 test("nth can target intermediate sub-paths", async ({ testFilters }) => {
@@ -30,7 +30,7 @@ test("nth can target intermediate sub-paths", async ({ testFilters }) => {
 		.nth("body.section.heading", -1)
 		.getNestedLocator();
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"locator('body').first().locator('section').nth(1).getByRole('heading', { level: 2 }).last()",
 	);
 });
@@ -40,8 +40,8 @@ test("nth overrides are scoped to each builder instance", async ({ testFilters }
 	const first = builder.nth("body.section.button", "first").getNestedLocator();
 	const second = testFilters.getLocatorSchema("body.section.button").getNestedLocator();
 
-	expect(`${first}`).toEqual("locator('body').locator('section').getByRole('button').first()");
-	expect(`${second}`).toEqual("locator('body').locator('section').getByRole('button')");
+	expect(`${first.describe("")}`).toEqual("locator('body').locator('section').getByRole('button').first()");
+	expect(`${second.describe("")}`).toEqual("locator('body').locator('section').getByRole('button')");
 });
 
 test("filter and nth ordering apply per sub-path when chained on getLocatorSchema", async ({ testFilters }) => {
@@ -54,7 +54,7 @@ test("filter and nth ordering apply per sub-path when chained on getLocatorSchem
 		.nth("one.two", "last")
 		.getNestedLocator();
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"locator('div.one').filter({ hasText: 'outer' }).first().locator('div.two').filter({ hasText: 'inner' }).last()",
 	);
 });

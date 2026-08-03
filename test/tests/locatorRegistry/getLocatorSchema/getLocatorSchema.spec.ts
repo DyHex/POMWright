@@ -6,7 +6,7 @@ test("shorthand getLocator returns the same none-nested locator as getLocatorSch
 	const builderLocator = testPage.getLocatorSchema("topMenu.notifications.dropdown.item").getLocator();
 	const shorthand = testPage.getLocator("topMenu.notifications.dropdown.item");
 
-	expect(`${shorthand}`).toEqual(`${builderLocator}`);
+	expect(`${shorthand.describe("")}`).toEqual(`${builderLocator.describe("")}`);
 });
 
 test("shorthand getNestedLocator returns the same nested locator as getLocatorSchema.getNestedLocator", async ({
@@ -15,7 +15,7 @@ test("shorthand getNestedLocator returns the same nested locator as getLocatorSc
 	const builderLocator = testPage.getLocatorSchema("topMenu.notifications.dropdown.item").getNestedLocator();
 	const shorthand = testPage.getNestedLocator("topMenu.notifications.dropdown.item");
 
-	expect(`${shorthand}`).toEqual(`${builderLocator}`);
+	expect(`${shorthand.describe("")}`).toEqual(`${builderLocator.describe("")}`);
 });
 
 test("independent builders do not share state", async ({ testFilters }) => {
@@ -27,17 +27,19 @@ test("independent builders do not share state", async ({ testFilters }) => {
 
 	const untouched = testFilters.getLocatorSchema("body.section.heading").getNestedLocator();
 
-	expect(`${modified}`).toEqual(
+	expect(`${modified.describe("")}`).toEqual(
 		"locator('body').locator('section').getByRole('heading', { name: 'hello', exact: true, level: 3 })",
 	);
-	expect(`${untouched}`).toEqual("locator('body').locator('section').getByRole('heading', { level: 2 })");
+	expect(`${untouched.describe("")}`).toEqual("locator('body').locator('section').getByRole('heading', { level: 2 })");
 });
 
 test("demonstrate filter and index implementation in v2", async ({ page, testFilters }) => {
 	const schemaTwo = testFilters.getLocatorSchema("one.two");
 
 	const initialLocator = schemaTwo.getNestedLocator();
-	expect(`${initialLocator}`).toEqual("locator('div.one').locator('div.two').filter({ hasText: 'two' }).first()");
+	expect(`${initialLocator.describe("")}`).toEqual(
+		"locator('div.one').locator('div.two').filter({ hasText: 'two' }).first()",
+	);
 
 	schemaTwo
 		.update("one.two")
@@ -47,7 +49,7 @@ test("demonstrate filter and index implementation in v2", async ({ page, testFil
 		.filter("one.two", { hasText: "AdditionalText" })
 		.nth("one.two", "last");
 	const newLocator = schemaTwo.getNestedLocator();
-	expect(`${newLocator}`).toEqual(
+	expect(`${newLocator.describe("")}`).toEqual(
 		"locator('div.one').locator('div.two').filter({ hasText: 'NewText' }).filter({ hasText: 'AdditionalText' }).last()",
 	);
 
@@ -60,7 +62,7 @@ test("demonstrate filter and index implementation in v2", async ({ page, testFil
 		.nth("one", 0)
 		.nth("one.two", 1);
 	const updatedLocator = schemaTwo.getNestedLocator();
-	expect(`${updatedLocator}`).toEqual(
+	expect(`${updatedLocator.describe("")}`).toEqual(
 		"locator('div.one').first().locator('div.two').filter({ hasText: 'NewText' }).filter({ hasText: 'AdditionalText' }).filter({ hasText: 'AddedText' }).filter({ hasText: 'LastText' }).nth(1)",
 	);
 
@@ -76,7 +78,7 @@ test("demonstrate filter and index implementation in v2", async ({ page, testFil
 		.filter({ hasText: "AddedText" })
 		.filter({ hasText: "LastText" })
 		.nth(1);
-	expect(`${manualLocator}`).toEqual(
+	expect(`${manualLocator.describe("")}`).toEqual(
 		"locator('div.one').locator('div.two').first().filter({ hasText: 'NewText' }).last().filter({ hasText: 'AdditionalText' }).filter({ hasText: 'AddedText' }).filter({ hasText: 'LastText' }).nth(1)",
 	);
 
@@ -92,7 +94,7 @@ test("demonstrate filter and index implementation in v2", async ({ page, testFil
 		.nth("one.two", 1)
 		.getNestedLocator();
 
-	expect(`${autoChainedLocator}`).toEqual(`${manualLocator}`);
+	expect(`${autoChainedLocator.describe("")}`).toEqual(`${manualLocator.describe("")}`);
 
 	const autoChainedLocatorWrapper = testFilters
 		.getLocatorSchema("one.two")
@@ -106,5 +108,5 @@ test("demonstrate filter and index implementation in v2", async ({ page, testFil
 		.nth("one.two", 1)
 		.getNestedLocator();
 
-	expect(`${autoChainedLocatorWrapper}`).toEqual(`${manualLocator}`);
+	expect(`${autoChainedLocatorWrapper.describe("")}`).toEqual(`${manualLocator.describe("")}`);
 });

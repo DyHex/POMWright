@@ -6,15 +6,15 @@ test("clearSteps clears existing filters for a sub-path", async ({ testFilters }
 	const schema = testFilters.getLocatorSchema("fictional.filter@hasText");
 
 	const original = schema.getNestedLocator();
-	expect(`${original}`).toEqual("getByRole('button').filter({ hasText: 'hasText' })");
+	expect(`${original.describe("")}`).toEqual("getByRole('button').filter({ hasText: 'hasText' })");
 
 	const noFilters = schema.clearSteps("fictional.filter@hasText").getNestedLocator();
-	expect(`${noFilters}`).toEqual("getByRole('button')");
+	expect(`${noFilters.describe("")}`).toEqual("getByRole('button')");
 });
 
 test("clearSteps allows re-adding filters after clearing filters added through filter", async ({ testFilters }) => {
 	const original = testFilters.getNestedLocator("fictional.filter@hasText");
-	expect(`${original}`).toEqual("getByRole('button').filter({ hasText: 'hasText' })");
+	expect(`${original.describe("")}`).toEqual("getByRole('button').filter({ hasText: 'hasText' })");
 
 	const locator = testFilters
 		.getLocatorSchema("fictional.filter@hasText")
@@ -23,7 +23,7 @@ test("clearSteps allows re-adding filters after clearing filters added through f
 		.filter("fictional.filter@hasText", { hasText: /Re-added/i })
 		.getNestedLocator();
 
-	expect(`${locator}`).toEqual("getByRole('button').filter({ hasText: /Re-added/i })");
+	expect(`${locator.describe("")}`).toEqual("getByRole('button').filter({ hasText: /Re-added/i })");
 });
 
 test("clearSteps does not remove filters defined via locator options", async ({ testFilters }) => {
@@ -32,7 +32,7 @@ test("clearSteps does not remove filters defined via locator options", async ({ 
 		.clearSteps("body.section@playground")
 		.getNestedLocator();
 
-	expect(`${locator}`).toEqual("locator('body').locator('section').filter({ hasText: /Playground/i })");
+	expect(`${locator.describe("")}`).toEqual("locator('body').locator('section').filter({ hasText: /Playground/i })");
 });
 
 test("filter resolves path string and locator references after clearing steps", async ({ testFilters }) => {
@@ -43,7 +43,7 @@ test("filter resolves path string and locator references after clearing steps", 
 		.filter("fictional.filter@hasNotText", { hasNot: testFilters.page.locator(".missing") })
 		.getNestedLocator();
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"getByRole('button').filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: locator('.missing') })",
 	);
 });
@@ -52,8 +52,8 @@ test("nth defaults to the terminal path when subPath is omitted", async ({ testF
 	const explicit = testFilters.getLocatorSchema(terminalPath).nth(terminalPath, 0).getNestedLocator();
 	const implicit = testFilters.getLocatorSchema(terminalPath).nth(0).getNestedLocator();
 
-	expect(`${explicit}`).toEqual("locator('body').locator('section').getByRole('button').first()");
-	expect(`${implicit}`).toEqual(`${explicit}`);
+	expect(`${explicit.describe("")}`).toEqual("locator('body').locator('section').getByRole('button').first()");
+	expect(`${implicit.describe("")}`).toEqual(`${explicit.describe("")}`);
 });
 
 test("filter defaults to the terminal path when subPath is omitted", async ({ testFilters }) => {
@@ -63,8 +63,10 @@ test("filter defaults to the terminal path when subPath is omitted", async ({ te
 		.getNestedLocator();
 	const implicit = testFilters.getLocatorSchema(terminalPath).filter({ hasText: /click/i }).getNestedLocator();
 
-	expect(`${explicit}`).toEqual("locator('body').locator('section').getByRole('button').filter({ hasText: /click/i })");
-	expect(`${implicit}`).toEqual(`${explicit}`);
+	expect(`${explicit.describe("")}`).toEqual(
+		"locator('body').locator('section').getByRole('button').filter({ hasText: /click/i })",
+	);
+	expect(`${implicit.describe("")}`).toEqual(`${explicit.describe("")}`);
 });
 
 test("clearSteps defaults to the terminal path when subPath is omitted", async ({ testFilters }) => {
@@ -75,13 +77,13 @@ test("clearSteps defaults to the terminal path when subPath is omitted", async (
 		.clearSteps()
 		.getNestedLocator();
 
-	expect(`${locator}`).toEqual("locator('body').locator('section').getByRole('button')");
+	expect(`${locator.describe("")}`).toEqual("locator('body').locator('section').getByRole('button')");
 });
 
 test("update defaults to the terminal path when subPath is omitted", async ({ testFilters }) => {
 	const updated = testFilters.getLocatorSchema(terminalPath).update().getByRole({ name: "Reset Color" }).getLocator();
 
-	expect(`${updated}`).toEqual("getByRole('button', { name: 'Reset Color' })");
+	expect(`${updated.describe("")}`).toEqual("getByRole('button', { name: 'Reset Color' })");
 });
 
 test("replace defaults to the terminal path when subPath is omitted", async ({ testFilters }) => {
@@ -91,7 +93,7 @@ test("replace defaults to the terminal path when subPath is omitted", async ({ t
 		.locator("button.replace", { hasText: /Replace/ })
 		.getNestedLocator();
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"locator('body').locator('section').locator('button.replace').filter({ hasText: /Replace/ })",
 	);
 });

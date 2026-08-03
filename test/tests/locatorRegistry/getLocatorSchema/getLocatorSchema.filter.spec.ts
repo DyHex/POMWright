@@ -13,7 +13,7 @@ test("filter adds an additional filter per sub-path", async ({ testFilters }) =>
 		.filter("body.section", { hasText: "Primary Colors Playground" })
 		.getNestedLocator();
 
-	expect(`${filtered}`).toEqual(
+	expect(`${filtered.describe("")}`).toEqual(
 		"locator('body').filter({ hasText: 'Playground' }).locator('section').filter({ hasText: 'Primary Colors Playground' })",
 	);
 });
@@ -26,7 +26,7 @@ test("filter with has locator", async ({ testFilters }) => {
 		.filter("fictional.filter@hasNotText", { has: heading })
 		.getNestedLocator();
 
-	expect(`${filtered}`).toEqual(
+	expect(`${filtered.describe("")}`).toEqual(
 		"getByRole('button').filter({ hasNotText: 'hasNotText' }).filter({ has: getByRole('heading', { level: 2 }) })",
 	);
 });
@@ -39,10 +39,10 @@ test("filter chaining is non-destructive", async ({ testFilters }) => {
 		.filter("body.section", { hasText: /Playground/i })
 		.getNestedLocator();
 
-	expect(`${filtered}`).toEqual("locator('body').locator('section').filter({ hasText: /Playground/i })");
+	expect(`${filtered.describe("")}`).toEqual("locator('body').locator('section').filter({ hasText: /Playground/i })");
 
 	const unchanged = testFilters.getNestedLocator("body.section");
-	expect(`${unchanged}`).toEqual(`${base}`);
+	expect(`${unchanged.describe("")}`).toEqual(`${base.describe("")}`);
 });
 
 test("filter preserves call order when multiple filters target the same sub-path", async ({ testFilters }) => {
@@ -52,7 +52,7 @@ test("filter preserves call order when multiple filters target the same sub-path
 		.filter("body.section@playground.button@reset", { hasText: /Color/i })
 		.getNestedLocator();
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"locator('body').locator('section').filter({ hasText: /Playground/i }).getByRole('button', { name: 'Reset Color' }).filter({ hasText: /Reset/i }).filter({ hasText: /Color/i })",
 	);
 });
@@ -65,7 +65,7 @@ test("filter can layer ancestor and descendant filters simultaneously", async ({
 		.filter("body.section@playground", { hasText: /Primary Colors/i })
 		.getNestedLocator();
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"locator('body').filter({ hasText: /Playground/i }).locator('section').filter({ hasText: /Playground/i }).filter({ hasText: /Primary Colors/i }).getByRole('button', { name: 'Red' }).filter({ hasText: /Red/i })",
 	);
 });
@@ -79,7 +79,7 @@ test("filter accepts registry path strings for has/hasNot", async ({ testFilters
 		})
 		.getNestedLocator();
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"locator('body').locator('section').filter({ hasText: /Playground/i }).getByRole('button', { name: 'Reset Color' }).filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('button', { name: 'Red' }) })",
 	);
 });
@@ -94,7 +94,7 @@ test("filter accepts Playwright locators for has/hasNot", async ({ testFilters }
 		.filter("body.section@playground", { hasNot: hasNotLocator })
 		.getNestedLocator();
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"locator('body').locator('section').filter({ hasText: /Playground/i }).filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('button', { name: 'Red' }) })",
 	);
 });
@@ -112,7 +112,7 @@ test("filters accept frame owner locators for has/hasNot", async ({ testFilters 
 		has: testFilters.page.frameLocator("iframe").owner(),
 	});
 
-	expect(`${locator}`).toEqual(`${manual}`);
+	expect(`${locator.describe("")}`).toEqual(`${manual.describe("")}`);
 });
 
 test("multiple nesting/chaining retains filters across the chain", async ({ testFilters }) => {
@@ -131,14 +131,14 @@ test("multiple nesting/chaining retains filters across the chain", async ({ test
 		.getByLabel("label", { exact: true })
 		.getNestedLocator();
 
-	expect(`${multiChain}`).toEqual(
+	expect(`${multiChain.describe("")}`).toEqual(
 		"getByRole('button', { name: 'roleOptions' }).filter({ hasNotText: 'hasNotText' }).locator('locator').filter({ hasText: 'locatorOptionsHasText' }).filter({ hasNotText: 'locatorOptionshasNotText' }).filter({ hasText: 'hasText' }).getByTestId('testId').filter({ hasNotText: 'hasNotText' }).getByLabel('label', { exact: true }).filter({ hasText: 'hasText' })",
 	);
 });
 
 test("filter definitions that omit options stay stable", async ({ testFilters }) => {
 	const nested = testFilters.getNestedLocator("fictional.filter@optionsUndefined");
-	expect(`${nested}`).toEqual("getByRole('button')");
+	expect(`${nested.describe("")}`).toEqual("getByRole('button')");
 });
 
 test("schema filters resolve path string references", async ({ testFilters, page }) => {
@@ -151,7 +151,7 @@ test("schema filters resolve path string references", async ({ testFilters, page
 		hasNotText: "hasNotText",
 	});
 
-	expect(`${nested}`).toEqual(`${manual}`);
+	expect(`${nested.describe("")}`).toEqual(`${manual.describe("")}`);
 
 	const has = page.getByRole("heading", { level: 2 });
 	const hasNot = page.getByRole("button");
@@ -163,9 +163,9 @@ test("schema filters resolve path string references", async ({ testFilters, page
 		hasNotText: "hasNotText",
 	});
 
-	expect(`${nested}`).toEqual(`${manual2}`);
+	expect(`${nested.describe("")}`).toEqual(`${manual2.describe("")}`);
 
-	expect(`${nested}`).toEqual(
+	expect(`${nested.describe("")}`).toEqual(
 		"getByRole('button', { name: 'roleOptions' }).filter({ hasText: 'hasText' }).filter({ hasNotText: 'hasNotText' }).filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('button') })",
 	);
 });
@@ -179,7 +179,7 @@ test("frameLocator keeps the chain inside the frame and skips frame-level filter
 	const directFrameLocator = frameTerminalBuilder.getLocator();
 	const manualFrame = page.frameLocator('iframe[title="name"]').owner();
 
-	expect(`${directFrameLocator}`).toEqual(`${manualFrame}`);
+	expect(`${directFrameLocator.describe("")}`).toEqual(`${manualFrame.describe("")}`);
 
 	const nestedBuilder = testFilters
 		.getLocatorSchema("fictional.filter@hasNotText.filter@hasText.filter@hasNotText")
@@ -196,7 +196,7 @@ test("frameLocator keeps the chain inside the frame and skips frame-level filter
 		.getByRole("button", { name: "inside frame" })
 		.filter({ hasNotText: "hasNotText" });
 
-	expect(`${nested}`).toEqual(`${manualNested}`);
+	expect(`${nested.describe("")}`).toEqual(`${manualNested.describe("")}`);
 });
 
 test.describe("getNestedLocator for locatorSchema with filter property", () => {
@@ -255,7 +255,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 
 			const nested = query.getNestedLocator();
 
-			expect(`${nested}`).toEqual(expected);
+			expect(`${nested.describe("")}`).toEqual(expected);
 		});
 	}
 });
@@ -275,7 +275,7 @@ test("getLocatorSchema.filter supports Playwright Locator instances for has/hasN
 		.filter({ hasNot: page.getByRole("heading", { level: 3 }) })
 		.getLocator();
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"getByRole('button').filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('heading', { level: 3 }) })",
 	);
 });
@@ -295,7 +295,7 @@ test("getLocatorSchema.filter supports registry path strings for has/hasNot", as
 		.filter({ hasNot: "heading.secondary" })
 		.getLocator();
 
-	expect(`${locator}`).toEqual(
+	expect(`${locator.describe("")}`).toEqual(
 		"getByRole('button').filter({ has: getByRole('heading', { level: 2 }) }).filter({ hasNot: getByRole('heading', { level: 3 }) })",
 	);
 });
@@ -364,5 +364,5 @@ test("getLocatorSchema.filter supports visible true/false", async ({ page }) => 
 
 	const locator = registry.getLocatorSchema("item").filter({ visible: true }).filter({ visible: false }).getLocator();
 
-	expect(`${locator}`).toEqual("getByRole('button').filter({ visible: true }).filter({ visible: false })");
+	expect(`${locator.describe("")}`).toEqual("getByRole('button').filter({ visible: true }).filter({ visible: false })");
 });
