@@ -1,8 +1,9 @@
 # POMWright 3.0.0 decisions log
 
-Every decision made while building 3.0.0, across all plans, big and small. One row each: date, decision, reason.
-Grouped by origin, newest plan at the bottom. A reversed decision is not deleted: add a new row that supersedes it
-and say which one it replaces. Open questions live in the last section and move up when answered.
+Current decisions for 3.0.0, across all plans, big and small. One row each: date, decision, reason. Grouped by
+origin, newest plan at the bottom. When a decision is reversed, its row is replaced by the new one; this file holds
+only what is in force, and git history keeps the rest. Open questions live in the last section and move up when
+answered.
 
 ## Process and release shape
 
@@ -12,7 +13,7 @@ and say which one it replaces. Open questions live in the last section and move 
 | 2026-10-05 | Work proceeds in the order suggested by analysis section 6 unless redirected. | The order front-loads verified bugs with small blast radius. |
 | 2026-10-05 | Every claim in a plan is verified against the source and, for runtime behaviour, against Chromium through the Playwright install in `test/`. | The earlier bundle-based analysis contained errors that only probes caught. |
 | 2026-10-06 | The next release is **3.0.0**, a major. It collects all work derived from the analysis: bug fixes, maintenance, dead and redundant code removal, structural improvements, packaging, tooling, CI, quality, reliability, performance, test coverage, and documentation. No intermediate 2.x release from this work. | Consumers absorb one bump, and breaking items need not be split from the fixes they belong with. |
-| 2026-10-06 | The getById fix ships in 3.0.0 as a `major` changeset with a *Breaking changes* heading. Supersedes the plan's original recommendation of a minor. | Removing documented prefix stripping is breaking by the book; a major keeps `^2.1.0` consumers safe from a silent behaviour change. |
+| 2026-10-06 | The getById fix ships in 3.0.0 as a `major` changeset with a *Breaking changes* heading. | Removing documented prefix stripping is breaking by the book; a major keeps `^2.1.0` consumers safe from a silent behaviour change. |
 | 2026-10-06 | `docs/v2` is frozen as the 2.x reference. `docs/v3` is created as a verbatim copy and receives every doc edit from every 3.0.0 plan. README and CHANGELOG keep linking to v2 until release. | 2.x docs stay an accurate snapshot while 3.0.0 changes accumulate in one place. |
 | 2026-10-06 | 3.0.0 ships a redesigned documentation site built with Starlight on GitHub Pages, using `docs/v3` as source notes. This is release work, not part of any feature plan. | Starlight builds static output and deploys to Pages with the official Astro action; the v3 notes feed it. |
 | 2026-10-06 | All release working documents live in `release-3.0.0/`: the analysis file, plans named `PLAN-<analysis items>-<slug>.md`, `RELEASE-NOTES-3.0.0.md`, and this file. Links inside are relative to the folder. The folder is temporary and is removed or archived when 3.0.0 ships. | Everything for the release is in one place and numbered against the analysis. |
@@ -24,30 +25,27 @@ and say which one it replaces. Open questions live in the last section and move 
 
 | Date | Decision | Why |
 | --- | --- | --- |
-| 2026-10-05 | String ids resolve as `[id="…"]` with a one-line CSS string escape (quote, backslash, newline). Replaces `#<id>` through the no-op `cssEscape`. | Attribute selectors accept any string value; `#` needs identifier escaping, which was broken. |
 | 2026-10-05 | `#` and `id=` prefix stripping is removed, `normalizeIdValue` is deleted, and the string is matched verbatim and case-sensitively. | Makes ids starting with `#` or `id=` reachable, matches the `getByTestId` convention, and removes the triple normalisation from analysis 1.10. |
 | 2026-10-05 | No registration-time guard against a leading `#` or `id=`. | A guard would reintroduce the blind spot being removed. A stale call site fails visibly, with the rendered selector and the registry path in the message. |
 | 2026-10-05 | An empty id throws at registration via `assertIdValue`. The message names the registry path, or `createReusable.getById` for reusable seeds. | Fail fast at the boundary instead of a `TypeError` at resolution. |
 | 2026-10-05 | Whitespace inside ids is escaped, not rejected. | HTML ids may contain spaces, and the attribute selector handles them. |
-| 2026-10-05 | A RegExp with the sticky `y` flag throws at registration. Every other flag passes through unchanged. | Playwright evaluates one regex object across all candidates; `lastIndex` would make results order-dependent. |
 | 2026-10-05 | `cssEscape` is deleted together with `normalizeIdValue`. | Not exported from the package root; replaced by the new `escapeCssString` and `buildIdSelector` helpers. |
 | 2026-10-05 | The registration builder distinguishes `undefined` (inherit, seeded only) from a value with an explicit `=== undefined` check. A non-seeded `getById(undefined)` throws. `applyDefinitionPatch` keeps the id case as `patch.id !== undefined ? patch.id : base.id`. | Truthiness checks conflated an empty string with "not provided". |
 | 2026-10-05 | `createLocator` throws a descriptive error when an id definition lacks an id, instead of `?? ""`. | Surfaces a corrupted definition instead of producing an empty selector. |
 | 2026-10-05 | No change to `IdDefinition` or any exported type. No signature change. | The contract change is behavioural; stable types keep the migration to call-site values. |
 | 2026-10-05 | New integration coverage asserts against real DOM elements, not only against `toString()`. | The 2.x suite passed while the selector was broken because it only compared rendered strings. |
 | 2026-10-06 | Ships in 3.0.0 as `major`; doc edits land under `docs/v3`. | See the process table. |
-| 2026-10-06 | The CSS string escape covers `"`, `\`, LF, CR and FF (`\a `, `\d `, `\c `). Supersedes the 2026-10-05 row above, which listed only quote, backslash and newline. NUL is left as is, since no CSS selector can express it. | Chromium probe: a raw CR or FF inside a CSS string is a `BADSTRING` parse error. The second-pass review flagged the gap. |
+| 2026-10-06 | String ids resolve as `[id="…"]` with a CSS string escape covering `"`, `\`, LF, CR and FF (`\a `, `\d `, `\c `). NUL is left as is, since no CSS selector can express it. | Attribute selectors accept any string value, and `#` needs identifier escaping, which was broken. A raw CR or FF inside a CSS string is a `BADSTRING` parse error (Chromium probe). |
 | 2026-10-06 | `getById(RegExp)` resolves through Playwright's `internal:attr=[id=/source/flags]` engine. Rejected: a `match` option over CSS attribute operators plus throwing on regex metacharacters, which would give up the pattern use case. | It is the engine `getByTestId(RegExp)` compiles to, so it cannot disappear quietly; the selector string is built in one helper; integration tests resolve real elements through it, so a Playwright change fails CI loudly. |
 | 2026-10-06 | The tricky-id fixture is a new `/testids` express route with its own page object, fixture and spec. The static W3 index page stays untouched. | Keeps the fixture readable and isolated; follows the existing `/testfilters` and `/iframe` layout. |
 | 2026-10-06 | Unit tests run on vitest, colocated as `src/**/*.test.ts`, with `vitest.config.ts` limiting discovery to that glob. Rejected: `node:test` with `tsx`, and a separate `unit/` folder. | Pure helpers need no browser and the inner loop should be milliseconds. Verified that test files cannot ship: tsup bundles from `index.ts` only, and `pnpm pack` publishes only the `files` allowlist (`dist/**`, README, LICENSE, CHANGELOG). |
-| 2026-10-06 | All RegExp flags pass through to Playwright unchanged, including sticky `y`. Supersedes the 2026-10-05 row that rejected `y` at registration. The docs recommend `^`. | Playwright fixed the `lastIndex` carry-over in [microsoft/playwright#42818](https://github.com/microsoft/playwright/pull/42818) (merged 2026-09-22; verified absent from 1.63.0 and present in the 1.64.0 alphas, so first release 1.64.0). With the reset, `y` is a deterministic start anchor. Passing it through keeps `getById` identical to `getByTestId` on every Playwright version; rejecting it would have been POMWright-specific semantics. |
+| 2026-10-06 | All RegExp flags pass through to Playwright unchanged, including sticky `y`. The docs recommend `^`. | Playwright fixed the `lastIndex` carry-over in [microsoft/playwright#42818](https://github.com/microsoft/playwright/pull/42818) (merged 2026-09-22; verified absent from 1.63.0 and present in the 1.64.0 alphas, so first release 1.64.0). With the reset, `y` is a deterministic start anchor. Passing it through keeps `getById` identical to `getByTestId` on every Playwright version; rejecting it would have been POMWright-specific semantics. |
 
 ### Execution-time decisions (2026-10-06)
 
 | Date | Decision | Why |
 | --- | --- | --- |
 | 2026-10-06 | `assertIdValue` is an assertion function (`asserts id is string \| RegExp`) that also rejects `undefined`, so a non-seeded `getById(undefined)` fails at registration with the same message as `getById("")`. | One check, one message, and TypeScript narrows after it. Seeded builders short-circuit before the check to keep inheritance. |
-| 2026-10-06 | `normalizeIdValue` was kept alive for one commit (step 2) and deleted together with its last callers (step 3). | Every commit builds and keeps the unit tests green. |
 | 2026-10-06 | The `/testids` page carries a `button.submit.zz99` decoy outside the `generated` container and sets LF/CR/FF ids through HTML character references. | Makes the difference between `getLocator` (page-wide) and `getNestedLocator` (scoped) observable, and proves the CR/FF escape against markup rather than only against DOM-set ids. |
 | 2026-10-06 | No DOM assertion on the sticky `y` flag; specs assert only that it is accepted and preserved. | Its matching result differs between the 1.62.1 harness pin and Playwright 1.64. |
 | 2026-10-06 | For non-interactive runs the suite is executed as `./pack-build.sh`, then `pnpm add -D pomwright@file:../pomwright-test-build.tgz --ignore-scripts` and `pnpm exec playwright test --project=chromium` in `test/`. `pack-test.sh` itself is left for the packaging plan. | `pack-test.sh` needs sudo for OS dependencies, and a plain `pnpm install` does not refresh an unchanged `file:` tarball specifier (see analysis section 4). |
