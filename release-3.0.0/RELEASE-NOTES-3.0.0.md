@@ -2,12 +2,13 @@
 
 > Working draft, maintained in `release-3.0.0/` while the release is built. It lists only changes that are done or
 > committed to by a plan in this folder. It is not a summary of the analysis. Status markers:
-> **[planned]** covered by a plan, not yet implemented. **[done]** implemented on the working branch.
+> **[done]** covered by a plan, not yet implemented. **[done]** implemented on the working branch.
 > **[roadmap]** decided for 3.0.0 but not yet planned. Where a planned item depends on an open decision, the
 > decision number from the plan is given. When 3.0.0 ships, drop the markers and this note; what remains is the basis
 > for the changelog entry and the announcement.
 >
-> Last updated 2026-10-06. Plans covered: 1.1-1.2 (getById). Nothing executed yet.
+> Last updated 2026-10-06. Plans covered: 1.1-1.2 (getById), executed and committed on
+> `chore/bugfixes-quality-improvements-and-docs` (commits e709d0c to 735066b).
 
 ## Overview
 
@@ -19,7 +20,7 @@ Requirements: unchanged so far. Peer dependency `@playwright/test >=1.57.0 <2.0.
 
 ## Breaking changes
 
-### `getById(string)` matches ids verbatim **[planned, plan 1.1-1.2]**
+### `getById(string)` matches ids verbatim **[done, plan 1.1-1.2]**
 
 In 2.x, `getById("#login")` and `getById("id=login")` were normalised to `login`, and the resolved selector was
 `#<id>` passed through a CSS escape that did not work for most real-world ids. In 3.0.0:
@@ -40,7 +41,7 @@ grep -rnE 'getById\(\s*["'"'"'`](#|id=)' --include=*.ts .
 
 and drop the prefix. Tests that compare rendered locator strings need `#x` changed to `[id="x"]`.
 
-### `getById(RegExp)` is a real pattern match **[planned, plan 1.1-1.2]**
+### `getById(RegExp)` is a real pattern match **[done, plan 1.1-1.2]**
 
 In 2.x a RegExp id was flattened to `[id*="<source>"]`: the regex source text was used as a literal substring match
 on the id. Plain patterns such as `/btn-submit/` worked by coincidence, `/a.b/` matched only the literal text `a.b`,
@@ -56,35 +57,35 @@ anchored patterns matched nothing, and flags were ignored. In 3.0.0 the regex is
 ## Bug fixes
 
 - `getById(string)` no longer breaks on ids with punctuation, whitespace, quotes, or a leading digit (analysis 1.1).
-  **[planned]**
-- `getById(RegExp)` no longer silently matches nothing for patterns with metacharacters (analysis 1.2). **[planned]**
+  **[done]**
+- `getById(RegExp)` no longer silently matches nothing for patterns with metacharacters (analysis 1.2). **[done]**
 - Resolving an id definition that lacks an id now throws a descriptive error instead of falling back to an empty
-  id. **[planned]**
+  id. **[done]**
 
 ## Removed and internal cleanup
 
 - The internal helpers `cssEscape` and `normalizeIdValue` are removed from `src/locators/utils.ts`. Neither was
-  exported from the package entry point. **[planned]**
+  exported from the package entry point. **[done]**
 - The id-specific normalisation repeated across `add`, `update`, `replace`, and resolution is gone with them
-  (analysis 1.10, third bullet). **[planned]**
+  (analysis 1.10, third bullet). **[done]**
 
 ## Tooling, CI, and tests
 
 - A unit-test layer for the pure helpers, with `pnpm test:unit` and `pnpm test` running unit tests before the
   packed integration suite. CI runs the unit tests after lint. The runner is vitest, with tests colocated as
-  `src/**/*.test.ts`; they never enter the bundle or the published tarball. **[planned]**
+  `src/**/*.test.ts`; they never enter the bundle or the published tarball. **[done]**
 - A new `/testids` fixture route in the test server, a `testIds` page object and fixture, and a spec that covers
   tricky ids, verbatim matching, case sensitivity, shadow DOM, frames, and RegExp matching against real DOM.
-  **[planned]**
+  **[done]**
 - Existing `getById` specs extended for registration-time validation, flag preservation, seeded inheritance, and
-  the new rendered selectors. **[planned]**
+  the new rendered selectors. **[done]**
 
 ## Documentation
 
 - `docs/v3` created as the working documentation set for 3.0.0. `docs/v2` is frozen as the 2.x reference.
-  **[planned]**
+  **[done]**
 - The `getById` section of `docs/v3/locator-registry.md` rewritten: string and RegExp semantics, validation,
-  multiple matches, what the resolved selector looks like, and a 2.x to 3.0 migration subsection. **[planned]**
+  multiple matches, what the resolved selector looks like, and a 2.x to 3.0 migration subsection. **[done]**
 - `AGENTS.md` rewritten as the persistent contributor guide, including the 3.0.0 workflow. Removes the incorrect
   "thenable query builders" wording (analysis section 5, AGENTS.md). **[done]**
 - A new documentation site built with Starlight and hosted on GitHub Pages, using `docs/v3` as its source.

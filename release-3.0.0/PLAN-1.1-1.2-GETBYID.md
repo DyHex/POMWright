@@ -14,8 +14,13 @@ ids is escaped, not rejected. **Amended 2026-10-06:** all RegExp flags, includin
 Playwright unchanged (see 1.2 and the *Flags* paragraph in 3.2).
 
 **Decided (2026-10-06):** RegExp ids resolve through Playwright's `internal:attr` engine (3.2); the tricky-id fixture
-is a new `/testids` route (5.1); unit tests run on vitest, colocated as `src/**/*.test.ts` (5.2). All decisions in
-section 7 are now ticked; the plan is ready to execute.
+is a new `/testids` route (5.1); unit tests run on vitest, colocated as `src/**/*.test.ts` (5.2).
+
+**Executed 2026-10-06** on `chore/bugfixes-quality-improvements-and-docs`, one commit per execution step:
+e709d0c (1, vitest), 2dca747 (2, utils + unit tests), 7d4ce93 (3, builders), 53ce672 (4, `/testids` and specs),
+7da3289 and 735066b (5, `docs/v3` copy, then docs and changeset). Step 6 found nothing to fix: `pnpm lint` clean,
+19 unit tests, 241 Playwright tests on chromium against the packed tarball. Two harness findings are recorded under
+analysis section 4 (stale `file:` tarball installs; `pack-test.sh` needs sudo).
 
 **Decided (2026-10-06):** this ships as **POMWright 3.0.0**. The changeset is `major`, the `#` / `id=` prefix removal
 is documented as a breaking change, and the docs carry a 2.x to 3.0 migration note. See sections 4.3 and 6.

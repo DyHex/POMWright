@@ -72,9 +72,11 @@ decision to ship everything as 3.0.0. Test expectations it asked for, carried ov
 
 ### 1.1 `cssEscape` is a no-op, so `getById(string)` breaks on real-world ids
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Fixed 2026-10-06 by plan 1.1-1.2 (commits 2dca747, 7d4ce93, 53ce672). String ids resolve as `[id="…"]` with
+> a CSS string escape for `"`, `\`, LF, CR, FF; `#`/`id=` prefix stripping removed; `cssEscape` and `normalizeIdValue`
+> deleted; empty ids throw at registration. Covered by unit tests and the `/testids` integration page.
 
 **Context.** `getById` is the one non-Playwright strategy. A string id is normalised (`#x` → `x`, `id=x` → `x`) and
 turned into `locator('#' + cssEscape(id))`. Real ids routinely contain `.`, `:`, `/`, `[`, `]`, spaces, or start with
@@ -123,9 +125,11 @@ Add unit tests for `.`, `:`, `[`, space, leading digit, `"`, `\`, LF, CR, FF.
 
 ### 1.2 `getById(RegExp)` ignores regex semantics
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Fixed 2026-10-06 by plan 1.1-1.2 (same commits). RegExp ids resolve through Playwright's
+> `internal:attr=[id=/source/flags]` engine; all flags pass through unchanged (sticky `y` documented as
+> version-dependent, see the plan). Ships as a breaking change in 3.0.0.
 
 **Context.** The signature `getById(id: string | RegExp)` mirrors `getByTestId(string | RegExp)`, where Playwright
 really does regex-match the attribute.
@@ -350,7 +354,8 @@ loginPage.getLocatorSchema("main.button@login").update().getByRole("button", opt
 ```
 
 **Fix.** `commit()` requires the primary field unless seeded; treat an explicit `undefined` second argument as
-"not provided", or document that `undefined` clears.
+"not provided", or document that `undefined` clears. The `getById` row is resolved by plan 1.1-1.2 (2026-10-06):
+an empty or missing id throws at registration in all three builders. The other strategies remain open.
 
 ### 1.9 Type-level gaps (each proven with `tsc` against `dist/index.d.ts`)
 
@@ -395,7 +400,8 @@ loginPage.getLocatorSchema("main.button@login").update().getByRole("button", opt
   ([locatorRegistry.ts:220-224](../src/locators/locatorRegistry.ts#L220-L224),
   [utils.ts:92-110](../src/locators/utils.ts#L92-L110)). A tiny fake produced 5.7k characters. Fix: render locators as
   `String(locator)` in the replacer.
-- [ ] `normalizeIdValue` is applied one to three times depending on path
+- [x] Resolved 2026-10-06 by removal: plan 1.1-1.2 deleted `normalizeIdValue` (commit 7d4ce93), so ids are stored
+  and matched verbatim and the line references below are historical. `normalizeIdValue` was applied one to three times depending on path
   ([locatorRegistrationBuilder.ts:394](../src/locators/locatorRegistrationBuilder.ts#L394),
   [utils.ts:294](../src/locators/utils.ts#L294), [locatorUpdateBuilder.ts:585](../src/locators/locatorUpdateBuilder.ts#L585),
   [L187](../src/locators/locatorUpdateBuilder.ts#L187), [L285](../src/locators/locatorUpdateBuilder.ts#L285),
@@ -596,6 +602,15 @@ property (that `add` clones the seed). Either return a new builder per call or d
   `pomwright` by tarball integrity hash and still records 2.0.0, and every fresh pack changes the hash, so a frozen
   install can never pass with a `file:` tarball. The fix is a harness design choice, for example a frozen install of
   the fixture followed by adding the tarball in a separate step, or a temporary consumer project.
+  **Two more findings from executing plan 1.1-1.2 (2026-10-06):** (a) `pnpm install --no-frozen-lockfile` does *not*
+  refresh a `file:` tarball whose specifier is unchanged. The local harness was still running a 2.0.0 install while
+  the package was at 2.1.0, and it kept running pre-fix code after a fresh pack; only
+  `pnpm add -D pomwright@file:../pomwright-test-build.tgz` re-resolved it. Locally, pack-test can silently test a
+  stale build. (b) `pack-test.sh` cannot run non-interactively: `playwright install --with-deps` and the harness
+  postinstall `playwright install-deps` both shell out to `sudo`, which needs a TTY or passwordless sudo. The
+  equivalent that works anywhere browsers are already installed is `./pack-build.sh`, then in `test/`
+  `pnpm add -D pomwright@file:../pomwright-test-build.tgz --ignore-scripts` and
+  `pnpm exec playwright test --project=chromium`.
   [L20](../pack-test.sh#L20) runs chromium only. Firefox/WebKit never run (relevant for `SessionStorage` on `about:blank`).
 - [ ] **NEW: publishing is not gated on tests.** [publish.yaml:4](../.github/workflows/publish.yaml#L4) triggers on the
   `CI` workflow (lint plus build). The test workflow is separate, so a release can publish with a red suite on `main`.

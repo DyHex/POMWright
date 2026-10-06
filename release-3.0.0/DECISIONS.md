@@ -42,6 +42,16 @@ and say which one it replaces. Open questions live in the last section and move 
 | 2026-10-06 | Unit tests run on vitest, colocated as `src/**/*.test.ts`, with `vitest.config.ts` limiting discovery to that glob. Rejected: `node:test` with `tsx`, and a separate `unit/` folder. | Pure helpers need no browser and the inner loop should be milliseconds. Verified that test files cannot ship: tsup bundles from `index.ts` only, and `pnpm pack` publishes only the `files` allowlist (`dist/**`, README, LICENSE, CHANGELOG). |
 | 2026-10-06 | All RegExp flags pass through to Playwright unchanged, including sticky `y`. Supersedes the 2026-10-05 row that rejected `y` at registration. The docs recommend `^`. | Playwright fixed the `lastIndex` carry-over in [microsoft/playwright#42818](https://github.com/microsoft/playwright/pull/42818) (merged 2026-09-22; verified absent from 1.63.0 and present in the 1.64.0 alphas, so first release 1.64.0). With the reset, `y` is a deterministic start anchor. Passing it through keeps `getById` identical to `getByTestId` on every Playwright version; rejecting it would have been POMWright-specific semantics. |
 
+### Execution-time decisions (2026-10-06)
+
+| Date | Decision | Why |
+| --- | --- | --- |
+| 2026-10-06 | `assertIdValue` is an assertion function (`asserts id is string \| RegExp`) that also rejects `undefined`, so a non-seeded `getById(undefined)` fails at registration with the same message as `getById("")`. | One check, one message, and TypeScript narrows after it. Seeded builders short-circuit before the check to keep inheritance. |
+| 2026-10-06 | `normalizeIdValue` was kept alive for one commit (step 2) and deleted together with its last callers (step 3). | Every commit builds and keeps the unit tests green. |
+| 2026-10-06 | The `/testids` page carries a `button.submit.zz99` decoy outside the `generated` container and sets LF/CR/FF ids through HTML character references. | Makes the difference between `getLocator` (page-wide) and `getNestedLocator` (scoped) observable, and proves the CR/FF escape against markup rather than only against DOM-set ids. |
+| 2026-10-06 | No DOM assertion on the sticky `y` flag; specs assert only that it is accepted and preserved. | Its matching result differs between the 1.62.1 harness pin and Playwright 1.64. |
+| 2026-10-06 | For non-interactive runs the suite is executed as `./pack-build.sh`, then `pnpm add -D pomwright@file:../pomwright-test-build.tgz --ignore-scripts` and `pnpm exec playwright test --project=chromium` in `test/`. `pack-test.sh` itself is left for the packaging plan. | `pack-test.sh` needs sudo for OS dependencies, and a plain `pnpm install` does not refresh an unchanged `file:` tarball specifier (see analysis section 4). |
+
 ## Open questions
 
 None as of 2026-10-06. The three questions raised on 2026-10-05 for plan 1.1-1.2 (RegExp engine, fixture location,
