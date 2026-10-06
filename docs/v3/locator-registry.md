@@ -18,9 +18,14 @@
     3. [One-strategy-per-registration rule](#one-strategy-per-registration-rule)
     4. [Duplicate path behavior](#duplicate-path-behavior)
 6. [`getById` deep dive](#getbyid-deep-dive)
-    1. [String normalization](#string-normalization)
-    2. [RegExp behavior and escaping](#regexp-behavior-and-escaping)
-    3. [Examples](#examples)
+    1. [String ids (verbatim, exact match)](#string-ids-verbatim-exact-match)
+    2. [RegExp ids (pattern match)](#regexp-ids-pattern-match)
+    3. [Flags](#flags)
+    4. [Validation](#validation)
+    5. [Multiple matches](#multiple-matches)
+    6. [What the resolved selector looks like](#what-the-resolved-selector-looks-like)
+    7. [Why not `locator("#settings.panel")`](#why-not-locatorsettingspanel)
+    8. [Migrating from 2.x to 3.0: no more `#` / `id=` prefixes](#migrating-from-2x-to-30-no-more---id-prefixes)
 7. [`filter` deep dive](#filter-deep-dive)
     1. [Accepted `has`/`hasNot` reference forms](#accepted-hashasnot-reference-forms)
 2. [Path examples](#path-examples)
@@ -237,7 +242,7 @@ Each registration can choose exactly one strategy method:
 - `locator(selector, options?)`
 - `frameLocator(selector)`
 - `getByTestId(testId)`
-- `getById(id)`
+- `getById(id: string | RegExp)`
 
 ### Post-definition chain methods
 
@@ -273,30 +278,107 @@ A path can only be registered once. Attempting to register the same path again t
 
 ## `getById` deep dive
 
-### String normalization
+`getById(id: string | RegExp)` targets elements by their `id` attribute. A string is matched verbatim; a RegExp is
+evaluated as a pattern. POMWright adds no semantics of its own on top of Playwright.
 
-For string IDs, v2 normalizes:
+### String ids (verbatim, exact match)
 
-- `"#login"` -> `"login"`
-- `"id=login"` -> `"login"`
-
-Then resolves as `locator('#login')` with CSS escaping.
-
-### RegExp behavior and escaping
-
-For RegExp IDs, v2 uses the regex source and resolves as a substring selector:
-
-- `getById(/panel-/)` -> `locator('[id*="panel-"]')` (escaped)
-
-This is **substring** matching of the regex source string in the `id` attribute, not runtime regex evaluation in the browser selector engine.
-
-### Examples
+The string is compared verbatim and case-sensitively to the element's `id` attribute. There are no prefixes and no
+normalization: write the id exactly as it appears in the DOM.
 
 ```ts
-registry.add("modal.close").getById("close-modal");
-registry.add("modal.close2").getById("#close-modal");
-registry.add("modal.dynamic").getById(/modal-/);
+registry.add("settings.panel").getById("settings.panel"); // <section id="settings.panel">
+registry.add("form.user").getById("form:user"); // <input id="form:user">
+registry.add("items.first").getById("items[0]"); // <li id="items[0]">
+registry.add("banner").getById("#literal-hash"); // <p id="#literal-hash">, the "#" is part of the id
 ```
+
+Ids containing `.`, `:`, `[`, `]`, spaces, quotes, backslashes, `>>`, non-ASCII characters, or a leading digit all
+work as written. An empty string throws at registration (see [Validation](#validation)).
+
+### RegExp ids (pattern match)
+
+The regex is evaluated against each element's `id` attribute value, in the browser, with its flags. An unanchored
+pattern is a substring match; anchor with `^` and `$` to match a whole id.
+
+```ts
+registry.add("button.submit").getById(/^button\.submit\.[a-z0-9]{4}$/); // whole ids of that shape
+registry.add("buttons.any").getById(/btn-submit/); // any id containing "btn-submit"
+registry.add("settings.any").getById(/settings/i); // case-insensitive
+```
+
+This is intended for auto-generated ids with a stable shape, and for "every element whose id contains X" iteration
+together with `nth`, `filter`, `count()` or `all()`.
+
+### Flags
+
+Every flag is passed through to Playwright unchanged, so `getById(/x/i)` behaves exactly like `getByTestId(/x/i)`.
+Two notes:
+
+- `g` has no effect on matching.
+- `y` (sticky) depends on the Playwright version. On Playwright 1.64 and later it is deterministic and acts as a
+  start anchor, so `/foo/y` behaves as `/^foo/`. On earlier versions Playwright reuses one regex object across
+  elements, so a sticky regex skips every other match
+  ([microsoft/playwright#42818](https://github.com/microsoft/playwright/pull/42818)). Prefer `^`.
+
+### Validation
+
+- `getById("")` throws at registration with the registry path in the message:
+  `getById requires a non-empty id for "main.form@user".` The same check runs in `update()` and `replace()`, where
+  the message names the sub-path, and in `createReusable.getById("")`, where it reads
+  `createReusable.getById requires a non-empty id.`
+- A seeded registration (`add(path, { reuse: seed })`) may call `getById(undefined)` to inherit the seeded id, or
+  pass a value to override it.
+- RegExp values are never rejected or rewritten.
+
+### Multiple matches
+
+`getById` may match zero, one, or many elements. Playwright strictness applies at action time as usual, and `nth`,
+`filter`, `count()` and `all()` work as for any other locator.
+
+```ts
+registry.add("buttons").getById(/^button\.submit\./);
+registry.add("buttons.second").getById(/^button\.submit\./).nth(1);
+```
+
+### What the resolved selector looks like
+
+- A string id resolves to an attribute selector: `getById("settings.panel")` becomes
+  `locator('[id="settings.panel"]')`. The characters that are special inside a CSS string (`"`, `\`, and line
+  breaks) are escaped for you.
+- A RegExp id resolves through Playwright's attribute engine, the same engine `getByTestId(RegExp)` compiles to:
+  `getById(/^a\.b$/i)` becomes the selector `internal:attr=[id=/^a\.b$/i]`.
+
+Both forms pierce open shadow roots, like every Playwright locator. Neither reaches closed shadow roots, which no
+Playwright locator can.
+
+### Why not `locator("#settings.panel")`
+
+`#settings.panel` is the CSS compound selector "id `settings` and class `panel`", `#form:user` is a pseudo-class
+parse error, and `#1st` is invalid because a CSS identifier cannot start with a digit. Matching such ids with a hash
+selector requires identifier escaping (`#settings\.panel`), which is easy to get wrong and hard to read in reports.
+The attribute form `[id="…"]` accepts any string and needs only string escaping. One deliberate difference: in a
+quirks-mode page (no doctype) `#SETTINGS` matches `id="settings"`, while `[id="SETTINGS"]` does not. POMWright is
+case-sensitive in every document mode.
+
+### Migrating from 2.x to 3.0: no more `#` / `id=` prefixes
+
+In 2.x, `getById("#login")` and `getById("id=login")` were normalized to `login`, and a RegExp was reduced to a
+literal substring match on its source text. In 3.0:
+
+- `getById("#login")` looks for `id="#login"`. Find stale call sites with
+
+  ```sh
+  grep -rnE 'getById\(\s*["'"'"'`](#|id=)' --include=*.ts .
+  ```
+
+  and drop the prefix.
+- Rendered locator strings change from `locator('#x')` to `locator('[id="x"]')`. Update assertions that compare
+  them.
+- Plain unanchored patterns such as `/btn-submit/` behave the same. Patterns containing regex metacharacters
+  (`.`, `[`, `]`, `(`, `)`, `+`, `*`, `?`, `^`, `$`, `|`) or flags were matched as literal text in 2.x and are
+  interpreted in 3.0: escape characters meant literally (`/a\.b/`), and expect flags such as `i` to take effect.
+- `getById("")` now throws at registration instead of failing at resolution.
 
 ---
 
