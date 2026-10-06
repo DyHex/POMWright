@@ -130,7 +130,19 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 			label: "id",
 			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getById("id"),
-			expected: "locator('#id')",
+			expected: `locator('[id="id"]')`,
+		},
+		{
+			label: "id with CSS-significant characters",
+			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+				registry.add("fictional.filter@undefined").getById("a.b"),
+			expected: `locator('[id="a.b"]')`,
+		},
+		{
+			label: "id as RegExp",
+			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+				registry.add("fictional.filter@undefined").getById(/^a\.b$/),
+			expected: `locator('internal:attr=[id=/^a\\\\.b$/]')`,
 		},
 	];
 

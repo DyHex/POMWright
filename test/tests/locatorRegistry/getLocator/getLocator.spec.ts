@@ -111,7 +111,22 @@ test.describe("getLocator applies terminal filters for registered definitions", 
 			label: "id",
 			build: (registry: LocatorRegistryInternal<"terminal">) =>
 				registry.add("terminal").getById("unique-id").filter({ hasText: "filtered" }),
-			expected: "locator('#unique-id').filter({ hasText: 'filtered' })",
+			expected: `locator('[id="unique-id"]').filter({ hasText: 'filtered' })`,
+		},
+		{
+			label: "id with CSS-significant characters",
+			build: (registry: LocatorRegistryInternal<"terminal">) =>
+				registry.add("terminal").getById("settings.panel").filter({ hasText: "filtered" }),
+			expected: `locator('[id="settings.panel"]').filter({ hasText: 'filtered' })`,
+		},
+		{
+			label: "id as RegExp",
+			build: (registry: LocatorRegistryInternal<"terminal">) =>
+				registry
+					.add("terminal")
+					.getById(/^settings\.panel$/i)
+					.filter({ hasText: "filtered" }),
+			expected: `locator('internal:attr=[id=/^settings\\\\.panel$/i]').filter({ hasText: 'filtered' })`,
 		},
 	];
 

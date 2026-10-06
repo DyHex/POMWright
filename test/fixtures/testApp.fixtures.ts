@@ -1,5 +1,6 @@
 import IframePage from "@page-object-models/testApp/pages/iframe/iframe.page";
 import TestFilters from "@page-object-models/testApp/pages/testfilters/testfilters.page";
+import TestIds from "@page-object-models/testApp/pages/testids/testids.page";
 import TestPage from "@page-object-models/testApp/pages/testPage.page";
 import Color from "@page-object-models/testApp/pages/testPath/[color]/color.page";
 import TestPath from "@page-object-models/testApp/pages/testPath/testPath.page";
@@ -12,6 +13,7 @@ type Fixtures = {
 	testPath: TestPath;
 	color: Color;
 	testFilters: TestFilters;
+	testIds: TestIds;
 };
 
 const test = base.extend<Fixtures>({
@@ -37,6 +39,11 @@ const test = base.extend<Fixtures>({
 	testFilters: async ({ page }, use) => {
 		const testFilters = new TestFilters(page);
 		await use(testFilters);
+	},
+
+	testIds: async ({ page }, use) => {
+		const testIds = new TestIds(page);
+		await use(testIds);
 	},
 });
 

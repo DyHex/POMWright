@@ -210,6 +210,48 @@ app.get("/iframe/c", (_req, res) => {
   `);
 });
 
+// Route to handle "/testids": ids that are valid HTML but awkward as CSS selectors
+app.get("/testids", (_req, res) => {
+	res.send(`<!DOCTYPE html>
+    <html>
+      <head><meta charset="utf-8"><title>Test ids</title></head>
+      <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">
+        <h1>Test ids</h1>
+        <section id="settings.panel">settings panel</section>
+        <div id="settings" class="panel">decoy</div>
+        <div id="Settings.Panel">case decoy</div>
+        <input id="form:user" value="colon">
+        <ul><li id="items[0]">first</li><li id="items[1]">second</li></ul>
+        <p id="1st">digit</p>
+        <p id="has space">space</p>
+        <p id="line&#10;feed">lf</p>
+        <p id="carriage&#13;return">cr</p>
+        <p id="form&#12;feed">ff</p>
+        <p id="literal-hash">no hash</p>
+        <p id="#literal-hash">hash</p>
+        <p id="id=weird">id-eq prefix</p>
+        <p id="say&quot;hi">quote</p>
+        <p id="back\\slash">backslash</p>
+        <p id="a>>b">chain chars</p>
+        <p id="résumé">unicode</p>
+        <div id="generated">
+          <button id="button.submit.af3b">one</button>
+          <button id="button.submit.bd2a">two</button>
+          <button id="button.submit.toolong">three</button>
+          <span id="a4f38e-btn-submit-form-34ab">four</span>
+        </div>
+        <button id="button.submit.zz99">outside</button>
+        <div id="shadow-host"></div>
+        <iframe id="frame.ids" title="frame.ids" srcdoc="<button id='inner.button'>inner</button>"></iframe>
+        <script>
+          document.getElementById("shadow-host").attachShadow({ mode: "open" }).innerHTML =
+            '<p id="in.open">shadow</p>';
+        </script>
+      </body>
+    </html>
+  `);
+});
+
 // Start the server
 app.listen(port, () => {
 	console.log(`Server running at http://localhost:${port}/`);
