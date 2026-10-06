@@ -61,9 +61,53 @@ export const expandSchemaPath = (path: string): string[] => {
 	return parts.map((_part, index) => parts.slice(0, index + 1).join("."));
 };
 
-export const cssEscape = (value: string) => {
-	// Simple CSS escape implementation covering common cases.
-	return value.replace(/([\\"'#.:;,?*+<>{}[\\]()])/g, "\\$1");
+/**
+ * Escapes a value for use inside a double-quoted CSS string, e.g. `[id="…"]`.
+ * Only `"`, `\` and the three CSS newline characters (LF, CR, FF) are special there; everything
+ * else, including `.`, `:`, `[`, spaces and non-ASCII, is passed through verbatim. NUL is left as
+ * is: no CSS selector can express it, so such an id is unmatchable either way.
+ */
+export const escapeCssString = (value: string): string =>
+	value
+		.replace(/\\/g, "\\\\")
+		.replace(/"/g, '\\"')
+		.replace(/\n/g, "\\a ")
+		.replace(/\r/g, "\\d ")
+		.replace(/\f/g, "\\c ");
+
+/**
+ * Serialises a RegExp for Playwright's selector syntax (`internal:attr=[id=/source/flags]`).
+ * Port of Playwright's `escapeRegexForSelector` (playwright-core, Apache-2.0): unescaped quotes
+ * and backticks are backslash-escaped, `>>` is escaped so the selector parser does not split the
+ * chain, and unicode-mode regexes (`u`, `v`) are passed through as-is because unicode mode rejects
+ * identity escapes. All flags are kept; POMWright adds no regex semantics of its own.
+ */
+export const escapeRegExpForSelector = (re: RegExp): string => {
+	if (re.flags.includes("u") || re.flags.includes("v")) {
+		return String(re);
+	}
+	return String(re)
+		.replace(/(^|[^\\])(\\\\)*(["'`])/g, "$1$2\\$3")
+		.replace(/>>/g, "\\>\\>");
+};
+
+/**
+ * Builds the selector string for an `id` definition: an exact, case-sensitive attribute match for
+ * strings, and Playwright's attribute engine with a real RegExp for patterns (the same engine
+ * `getByTestId(RegExp)` compiles to).
+ */
+export const buildIdSelector = (id: string | RegExp): string =>
+	typeof id === "string" ? `[id="${escapeCssString(id)}"]` : `internal:attr=[id=${escapeRegExpForSelector(id)}]`;
+
+/**
+ * Validates an id value at the DSL boundary. Throws for an empty string, naming the calling
+ * method and, when known, the registry path. RegExp values are accepted as they are.
+ */
+export const assertIdValue = (id: string | RegExp, source: { method: string; path?: string }): void => {
+	const where = source.path === undefined ? "" : ` for "${source.path}"`;
+	if (typeof id === "string" && id.length === 0) {
+		throw new Error(`${source.method} requires a non-empty id${where}.`);
+	}
 };
 
 export const normalizeSteps = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
@@ -146,13 +190,11 @@ export const createLocator = (
 		case "testId":
 			return target.getByTestId(definition.testId);
 		case "id": {
-			if (typeof definition.id === "string") {
-				const normalized = normalizeIdValue(definition.id);
-				return target.locator(`#${cssEscape(normalized ?? "")}`);
+			const { id } = definition as { id?: IdDefinition["id"] };
+			if (id === undefined) {
+				throw new Error('Locator definition of type "id" has no id value.');
 			}
-			const pattern = definition.id.source;
-			const safePattern = cssEscape(pattern);
-			return target.locator(`[id*="${safePattern}"]`);
+			return target.locator(buildIdSelector(id));
 		}
 		default: {
 			const exhaustive: never = definition;
@@ -290,8 +332,7 @@ export const applyDefinitionPatch = (
 			return { type: "testId", testId } satisfies TestIdDefinition;
 		}
 		case "id": {
-			const id =
-				patch.id !== undefined ? (normalizeIdValue(patch.id) ?? (base as IdDefinition).id) : (base as IdDefinition).id;
+			const id = patch.id !== undefined ? patch.id : (base as IdDefinition).id;
 			return { type: "id", id } satisfies IdDefinition;
 		}
 		default: {
