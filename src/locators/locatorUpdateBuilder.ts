@@ -7,7 +7,7 @@ import type {
 	RegistryPath,
 	RoleDefinition,
 } from "./types";
-import { normalizeIdValue } from "./utils";
+import { assertIdValue } from "./utils";
 
 const parseUpdateArguments = <Primary, OptionsType>(
 	primaryOrOptions?: Primary | OptionsType,
@@ -183,8 +183,7 @@ const mergeLocatorDefinition = (
 		}
 		case "id": {
 			const idSource = source("id");
-			const rawId = updates.id ?? idSource?.id;
-			const id = normalizeIdValue(rawId);
+			const id = updates.id ?? idSource?.id;
 			if (id === undefined) {
 				throw new Error(`Locator update for "${path}" of type "id" requires an "id" value.`);
 			}
@@ -281,8 +280,7 @@ const buildReplacementDefinition = (updates: LocatorUpdate, path: string): Locat
 			return { type: "testId", testId } as LocatorStrategyDefinition;
 		}
 		case "id": {
-			const rawId = updates.id;
-			const id = normalizeIdValue(rawId);
+			const { id } = updates;
 			if (id === undefined) {
 				throw new Error(`Locator replace for "${path}" of type "id" requires an "id" value.`);
 			}
@@ -572,8 +570,9 @@ export class LocatorUpdateBuilder<
 	}
 
 	/**
-	 * Defines or patches an `id` locator strategy for the target subpath. In `update` mode the id is
-	 * optional and will be normalized if provided; in `replace` mode the id is required.
+	 * Defines or patches an `id` locator strategy for the target subpath. The value is stored verbatim:
+	 * strings match the `id` attribute exactly, RegExps are evaluated as patterns with their flags. An
+	 * empty string throws. In `update` mode the id is optional; in `replace` mode it is required.
 	 *
 	 * @example
 	 * ```ts
@@ -581,8 +580,10 @@ export class LocatorUpdateBuilder<
 	 * ```
 	 */
 	getById(...args: UpdateArgsWithoutOptions<string | RegExp>) {
-		const [idValue] = args;
-		const id = idValue !== undefined ? normalizeIdValue(idValue) : undefined;
+		const [id] = args;
+		if (id !== undefined) {
+			assertIdValue(id, { method: "getById", path: this.subPath });
+		}
 
 		const definition: LocatorUpdate = {
 			type: "id",

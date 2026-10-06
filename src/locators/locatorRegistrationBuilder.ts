@@ -3,7 +3,6 @@ import type { LocatorRegistryInternal } from "./locatorRegistry";
 import type {
 	AltTextDefinition,
 	FilterDefinition,
-	IdDefinition,
 	IndexSelector,
 	LabelDefinition,
 	LocatorDefinition,
@@ -18,7 +17,7 @@ import type {
 	TextDefinition,
 	TitleDefinition,
 } from "./types";
-import { applyDefinitionPatch, normalizeIdValue, normalizeSteps } from "./utils";
+import { applyDefinitionPatch, assertIdValue, normalizeSteps } from "./utils";
 
 export type LocatorRegistrationPostDefinitionBuilder<
 	LocatorSchemaPathType extends string,
@@ -379,21 +378,28 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Targets elements by `id`, normalizing string or RegExp input. When seeded, the argument can be
-	 * omitted to inherit the seeded id.
+	 * Targets elements by `id`. A string is matched verbatim and case-sensitively against the `id`
+	 * attribute; there is no `#` or `id=` prefix handling, and the resolved selector is `[id="…"]`,
+	 * so ids containing `.`, `:`, `[`, spaces or quotes work as written. A RegExp is evaluated as a
+	 * pattern against each element's `id` with its flags passed through unchanged; an unanchored
+	 * pattern is a substring match, so anchor with `^` and `$` for a whole-id match. An empty string
+	 * throws at registration. When seeded, the argument can be omitted to inherit the seeded id.
 	 *
 	 * @example
 	 * ```ts
 	 * registry.add("modal.close").getById("close-modal");
+	 * registry.add("settings.panel").getById("settings.panel");
+	 * registry.add("button.submit").getById(/^button\.submit\.[a-z0-9]{4}$/);
 	 * ```
 	 */
 	getById(
 		id: Seeded extends true ? string | RegExp | undefined : string | RegExp,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
-		const definition: LocatorStrategyDefinitionPatch = id
-			? { type: "id", id: normalizeIdValue(id) as IdDefinition["id"] }
-			: { type: "id" };
-		return this.commit(definition);
+		if (id === undefined && this.seededDefinition) {
+			return this.commit({ type: "id" });
+		}
+		assertIdValue(id, { method: "getById", path: this.path });
+		return this.commit({ type: "id", id });
 	}
 
 	private commit(

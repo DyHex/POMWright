@@ -96,6 +96,12 @@ describe("assertIdValue", () => {
 		);
 	});
 
+	it("rejects a missing value with the same message", () => {
+		expect(() => assertIdValue(undefined, { method: "getById", path: "main.form@user" })).toThrowError(
+			'getById requires a non-empty id for "main.form@user".',
+		);
+	});
+
 	it("uses the method label alone when there is no path", () => {
 		expect(() => assertIdValue("", { method: "createReusable.getById" })).toThrowError(
 			"createReusable.getById requires a non-empty id.",

@@ -100,38 +100,22 @@ export const buildIdSelector = (id: string | RegExp): string =>
 	typeof id === "string" ? `[id="${escapeCssString(id)}"]` : `internal:attr=[id=${escapeRegExpForSelector(id)}]`;
 
 /**
- * Validates an id value at the DSL boundary. Throws for an empty string, naming the calling
- * method and, when known, the registry path. RegExp values are accepted as they are.
+ * Validates an id value at the DSL boundary. Throws for an empty string or a missing value, naming
+ * the calling method and, when known, the registry path. RegExp values are accepted as they are.
  */
-export const assertIdValue = (id: string | RegExp, source: { method: string; path?: string }): void => {
+export function assertIdValue(
+	id: string | RegExp | undefined,
+	source: { method: string; path?: string },
+): asserts id is string | RegExp {
 	const where = source.path === undefined ? "" : ` for "${source.path}"`;
-	if (typeof id === "string" && id.length === 0) {
+	if (id === undefined || (typeof id === "string" && id.length === 0)) {
 		throw new Error(`${source.method} requires a non-empty id${where}.`);
 	}
-};
+}
 
 export const normalizeSteps = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
 	steps?: LocatorStep<LocatorSchemaPathType, AllowedPaths>[],
 ) => (steps ? steps.map((step) => ({ ...step })) : []);
-
-export function normalizeIdValue(id: string): string;
-export function normalizeIdValue(id: RegExp): RegExp;
-export function normalizeIdValue(id: string | RegExp | undefined): string | RegExp | undefined;
-export function normalizeIdValue(id: string | RegExp | undefined) {
-	if (typeof id !== "string") {
-		return id;
-	}
-
-	if (id.startsWith("#")) {
-		return id.slice(1);
-	}
-
-	if (id.startsWith("id=")) {
-		return id.slice("id=".length);
-	}
-
-	return id;
-}
 
 export const stringifyForLog = (value: unknown) => {
 	const seen = new WeakSet();
