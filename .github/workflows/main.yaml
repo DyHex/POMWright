@@ -19,4 +19,5 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint
+      - run: pnpm run test:unit
       - run: pnpm run build
