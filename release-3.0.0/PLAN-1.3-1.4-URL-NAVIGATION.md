@@ -399,7 +399,12 @@ assertions use the expect timeout unless `NavigationOptions.timeout` is set. Doc
   `composeFullUrl`. `navigation` is typed `NavigationFor<BaseUrlTypeFromOptions<Options>, FullUrlTypeFromOptions<Options>>`.
 - [index.ts](../index.ts) additionally exports the types `BaseUrl`, `UrlPath`, `UrlMatcher`, `ThisPageOptions` and
   the guards `assertBaseUrl`, `assertUrlPath`. `ExtractNavigationType`, `NavigationString`, and `NavigationRegExp`
-  are internal today and are replaced by `NavigationFor`.
+  are internal today and are replaced by `NavigationFor`; export `NavigationFor` too if the generated `.d.ts` would
+  otherwise inline it in `PageObject.navigation`.
+- Inside the generic constructor the argument types are `BaseUrl | RegExp` and `UrlPath | RegExp`, so the call to
+  `composeFullUrl` resolves to the `UrlMatcher` overload and the result is cast to `FullUrlTypeFromOptions<Options>`,
+  as the four branches are today ([pageObject.ts:92-101](../src/pageObject.ts#L92-L101)). The overloads give exact
+  types to direct callers and to the unit tests.
 
 Impact of `fullUrl` no longer being a `RegExp` on RegExp pages. Inside the repository: every runtime reference is in
 lines this plan rewrites; the harness needs no change beyond the two `gotoThisPage()` call sites, because its
@@ -420,7 +425,11 @@ predicate (`waitForURL`, `toHaveURL`, `page.route`) keeps working.
 2. [pageObject.ts:19-30](../src/pageObject.ts#L19-L30): the three aliases per 3.4; [L49-80](../src/pageObject.ts#L49-L80):
    label first, guards, `composeFullUrl` from the helper; [L85-104](../src/pageObject.ts#L85-L104): delete.
 3. [navigation.ts:9-26](../src/helpers/navigation.ts#L9-L26): `timeout`, `ThisPageOptions`, `NavigationFor`;
-   `fullUrl` typed `string | UrlMatcher`.
+   `fullUrl` typed `string | UrlMatcher`; a `resolveTimeout` next to `resolveWaitUntil`
+   ([L45-51](../src/helpers/navigation.ts#L45-L51)) returning `options?.timeout ?? defaultOptions?.timeout`, with no
+   POMWright default of its own. When neither is set, `undefined` is passed on, and each Playwright call keeps its
+   configured timeout: `page.goto` and `waitForLoadState` use `use.navigationTimeout`, `toHaveURL` uses
+   `expect.timeout`. This concerns timeouts only; the base URL is always the page object's, never the config's.
 4. [navigation.ts:63-90](../src/helpers/navigation.ts#L63-L90): one `goto` per 3.2; delete `gotoThisPage`.
 5. [navigation.ts:96-136](../src/helpers/navigation.ts#L96-L136): the two assertions per 3.3.
 6. [navigation.ts:142-153](../src/helpers/navigation.ts#L142-L153): `createNavigation` typed on both parts.
@@ -445,6 +454,11 @@ predicate (`waitForURL`, `toHaveURL`, `page.route`) keeps working.
   relative inputs now resolve against the page object).
 - [docs/v3/overview.md:284-308](../docs/v3/overview.md#L284-L308) (2.8): bullets updated; `goto()` replaces
   `gotoThisPage()` in the usage comment; [L431](../docs/v3/overview.md#L431): the export list.
+- Every remaining `gotoThisPage` mention in `docs/v3`: [PageObject.md:74](../docs/v3/PageObject.md#L74),
+  [overview.md:91](../docs/v3/overview.md#L91), [L162](../docs/v3/overview.md#L162), [L320](../docs/v3/overview.md#L320),
+  [L424](../docs/v3/overview.md#L424), [session-storage.md:112](../docs/v3/session-storage.md#L112). Verify with
+  `grep -rn gotoThisPage docs/v3` before closing step 4.
+- [README.md:255](../README.md#L255) keeps the 2.x example until release (AGENTS.md section 6, rule 4).
 
 ### 4.3 Changeset
 
@@ -473,6 +487,13 @@ slashes; failures show a diff; the inverse false pass in `expectAnotherPage`.
 Tick *Fix* on 1.3 and 1.4 with notes; tick the `goto` bullet in 1.10 and the `"" | string` bullet in section 2.
 [DECISIONS.md](DECISIONS.md) and [RELEASE-NOTES-3.0.0.md](RELEASE-NOTES-3.0.0.md) carry the decisions and the
 *planned* items from 2026-10-07; flip to *done* after execution.
+
+[AGENTS.md](../AGENTS.md) after execution: the revision line ([L4](../AGENTS.md#L4)); the repo map rows for `src/`
+and `src/helpers/` ([L25-27](../AGENTS.md#L25-L27): `url.ts`, the second unit-test file) and `vitest.config.ts`
+([L38](../AGENTS.md#L38): typecheck mode); section 3 ([L49](../AGENTS.md#L49): `test:unit` also type-checks);
+section 4 ([L78](../AGENTS.md#L78): `/testnav`; [L82](../AGENTS.md#L82): `tests/pageObject/`); section 5: a
+convention line for URLs next to the `getById` one (origin-only base, single-slash path, `UrlMatcher`, `goto()`);
+section 7 ([L158](../AGENTS.md#L158): the second pending changeset).
 
 ### 4.5 Tooling: vitest typecheck mode (decision 7.12)
 
