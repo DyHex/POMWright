@@ -131,7 +131,9 @@ become the basis for the changelog entry and announcement, and `docs/v3` becomes
 | --- | --- |
 | `POMWRIGHT-2.1.0-ANALYSIS.md` | Source-verified findings numbered 1.1 to 1.10, 2, 3.1 to 3.8, 4, 5. Each has `Fix / Skip / Discuss` boxes and a `Notes:` block. Section 6 is the working order. |
 | `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` (executed 2026-10-06) and `PLAN-1.3-1.4-URL-NAVIGATION.md` (executed 2026-10-08) are
-  done, one commit per execution step each. Next in the analysis order: 1.7 (lazy `defineLocators`). |
+  done, one commit per execution step each. The remaining plans, their scope, and their order are in `PLANS.md`;
+  the current one is `PLAN-1.5-SESSION-STORAGE.md`. |
+| `PLANS.md` | The ordered list of remaining plans with the analysis items each covers and its status. Updated when a plan is written, split, or executed. |
 | `RELEASE-NOTES-3.0.0.md` | Consumer-facing notes. Only what is done or committed to by a plan in this folder, each item with a status marker. Never a copy of the analysis. |
 | `DECISIONS.md` | Current decisions across all plans, big and small, with date and reason. A reversed decision is replaced, not kept; git history has the rest. Open questions at the bottom. |
 
