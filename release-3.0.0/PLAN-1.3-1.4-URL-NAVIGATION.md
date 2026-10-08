@@ -38,6 +38,10 @@ and a method option overrides it per call or per page object.
 
 ### 1.2 String `baseUrl`: a non-empty origin
 
+`baseUrl` may instead be a `RegExp`, declared with `Options` as `{ baseUrlType: RegExp }`, in which case the
+parameter is typed `RegExp`, the value is used exactly as written, and 1.5 applies. The rules below are for string
+values.
+
 - Shape: `scheme://host[:port]`, optional trailing slash. `http://localhost:9000`, `https://localhost:9000/`, and
   `https://app.example` are valid. Ports are ordinary (verified).
 - The browser always reports an origin-only page as `https://app.example/`, pathname `/`. You may write the base
@@ -68,6 +72,9 @@ and a method option overrides it per call or per page object.
   navigation), and they force every environment-driven value through a narrowing call.
 
 ### 1.3 String `urlPath`: empty or a single-slash path
+
+`urlPath` may instead be a `RegExp`, declared with `Options` as `{ urlPathType: RegExp }`, as the harness's `color`
+page does today; the value is used exactly as written, and 1.5 applies. The rules below are for string values.
 
 - `""` is the homepage page object. Otherwise the value starts with exactly one `/`. `"/"`, `"/login"`,
   `"/app/login"` are valid; `"login"`, `"?tab=1"`, `"#section"`, absolute URLs, and `"//other.example/x"` are not.
