@@ -1,10 +1,10 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import { SessionStorage } from "pomwright";
 
-test("navigation.gotoThisPage runs post-navigation actions", async ({ testPage }) => {
+test("navigation.goto() runs post-navigation actions", async ({ testPage }) => {
 	expect(testPage.navigationActionCount.value).toBe(0);
 
-	await testPage.navigation.gotoThisPage();
+	await testPage.navigation.goto();
 
 	expect(testPage.navigationActionCount.value).toBe(1);
 });

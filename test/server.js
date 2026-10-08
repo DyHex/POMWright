@@ -252,6 +252,64 @@ app.get("/testids", (_req, res) => {
   `);
 });
 
+// Navigation fixture for the PageObject navigation helper (plan 1.3-1.4). Links and buttons
+// navigate to the same path with a query, a hash, or a trailing slash, to an item page whose
+// path has a dynamic segment, to another page, and (after a delay) to a page that bounces back.
+app.get("/testnav", (_req, res) => {
+	res.send(`
+    <html>
+      <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">
+        <h1>Navigation playground</h1>
+        <nav style="display: flex; flex-direction: column; gap: 8px;">
+          <a id="self-query" href="/testnav?tab=1">Same page with a query</a>
+          <a id="self-hash" href="/testnav#section">Same page with a hash</a>
+          <a id="trailing" href="/testnav/">Same page with a trailing slash</a>
+          <a id="item" href="/testnav/item/42">Item 42</a>
+          <a id="other" href="/testids">Another page</a>
+          <button id="delayed-item">Item 7 after 1.5 s</button>
+          <button id="delayed-other">Another page after 1.5 s</button>
+          <button id="bounce">Bounce after 1.5 s</button>
+        </nav>
+        <section id="section" style="margin-top: 600px;">Section</section>
+        <script>
+          const delayed = (id, href) =>
+            document.getElementById(id).addEventListener('click', () => setTimeout(() => { location.href = href; }, 1500));
+          delayed('delayed-item', '/testnav/item/7');
+          delayed('delayed-other', '/testids');
+          delayed('bounce', '/testnav/bounce');
+        </script>
+      </body>
+    </html>
+  `);
+});
+
+app.get("/testnav/item/:id", (req, res) => {
+	if (!/^\d+$/.test(req.params.id)) {
+		res.status(404).send("Not found");
+		return;
+	}
+	res.send(`
+    <html>
+      <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">
+        <h1 id="item-heading">Item ${req.params.id}</h1>
+        <a id="back" href="/testnav">Back</a>
+      </body>
+    </html>
+  `);
+});
+
+// Commits, then navigates straight back to /testnav before its own load event: a redirect that bounces.
+app.get("/testnav/bounce", (_req, res) => {
+	res.send(`
+    <html>
+      <body>
+        <script>location.replace("/testnav");</script>
+        <h1>Bouncing back</h1>
+      </body>
+    </html>
+  `);
+});
+
 // Start the server
 app.listen(port, () => {
 	console.log(`Server running at http://localhost:${port}/`);
