@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
-import { createNavigation, type ExtractNavigationType, type NavigationOptions } from "./helpers/navigation";
+import { createNavigation, type NavigationFor, type NavigationOptions } from "./helpers/navigation";
 import { SessionStorage } from "./helpers/sessionStorage";
+import { assertBaseUrl, assertUrlPath, composeFullUrl, type UrlMatcher } from "./helpers/url";
 import {
 	type AddAccessor,
 	createRegistryWithAccessors,
@@ -11,10 +12,11 @@ import {
 } from "./locators";
 
 /**
- * UrlTypeOptions define types for baseUrl and urlPath.
- * string is the default type; The types can be overridden to RegExp, using the Extract...Type utility types. If either
- * baseUrlType or urlPathType is set to RegExp, then fullUrlType will also be RegExp and can't be used for navigation,
- * only validation through URL matching.
+ * UrlTypeOptions declare which of baseUrl and urlPath are RegExps; both default to string.
+ * With two strings, fullUrl is the resolved URL string and every navigation method is available.
+ * When either is a RegExp, fullUrl is a UrlMatcher (the base is matched against the URL's origin,
+ * the path against the rest), `goto()` without a target is unavailable, and on a RegExp baseUrl
+ * `goto(target)` accepts only absolute URLs.
  */
 export type UrlTypeOptions = {
 	baseUrlType?: string | RegExp;
@@ -22,11 +24,11 @@ export type UrlTypeOptions = {
 };
 
 export type BaseUrlTypeFromOptions<T extends UrlTypeOptions> = T extends { baseUrlType: RegExp } ? RegExp : string;
-export type UrlPathTypeFromOptions<T extends UrlTypeOptions> = T extends { urlPathType: RegExp } ? RegExp : "" | string;
+export type UrlPathTypeFromOptions<T extends UrlTypeOptions> = T extends { urlPathType: RegExp } ? RegExp : string;
 export type FullUrlTypeFromOptions<T extends UrlTypeOptions> = T extends
 	| { baseUrlType: RegExp }
 	| { urlPathType: RegExp }
-	? RegExp
+	? UrlMatcher
 	: string;
 
 export abstract class PageObject<
@@ -39,7 +41,7 @@ export abstract class PageObject<
 	readonly fullUrl: FullUrlTypeFromOptions<Options>;
 	readonly label: string;
 	readonly sessionStorage: SessionStorage;
-	public readonly navigation: ExtractNavigationType<FullUrlTypeFromOptions<Options>>;
+	public readonly navigation: NavigationFor<BaseUrlTypeFromOptions<Options>, FullUrlTypeFromOptions<Options>>;
 	protected readonly locatorRegistry: LocatorRegistry<LocatorSchemaPathType>;
 	public readonly add: AddAccessor<LocatorSchemaPathType>;
 	public readonly getLocator: GetLocatorAccessor<LocatorSchemaPathType>;
@@ -53,11 +55,17 @@ export abstract class PageObject<
 		options?: { label?: string; navOptions?: NavigationOptions },
 	) {
 		this.page = page;
-		this.baseUrl = baseUrl;
-		this.urlPath = urlPath;
-		this.fullUrl = this.composeFullUrl(baseUrl, urlPath);
 		const label = options?.label ?? this.constructor.name;
 		this.label = label;
+		if (typeof baseUrl === "string") {
+			assertBaseUrl(baseUrl, label);
+		}
+		if (typeof urlPath === "string") {
+			assertUrlPath(urlPath, label);
+		}
+		this.baseUrl = baseUrl;
+		this.urlPath = urlPath;
+		this.fullUrl = composeFullUrl(baseUrl, urlPath) as FullUrlTypeFromOptions<Options>;
 		const { registry, add, getLocator, getNestedLocator, getLocatorSchema } =
 			createRegistryWithAccessors<LocatorSchemaPathType>(page);
 		this.locatorRegistry = registry;
@@ -81,25 +89,4 @@ export abstract class PageObject<
 
 	protected abstract defineLocators(): void;
 	protected abstract pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null;
-
-	private composeFullUrl(
-		baseUrl: BaseUrlTypeFromOptions<Options>,
-		urlPath: UrlPathTypeFromOptions<Options>,
-	): FullUrlTypeFromOptions<Options> {
-		const escapeRegex = (value: string) => value.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
-
-		if (typeof baseUrl === "string" && typeof urlPath === "string") {
-			return `${baseUrl}${urlPath}` as FullUrlTypeFromOptions<Options>;
-		}
-		if (typeof baseUrl === "string" && urlPath instanceof RegExp) {
-			return new RegExp(`^${escapeRegex(baseUrl)}${urlPath.source}`) as FullUrlTypeFromOptions<Options>;
-		}
-		if (baseUrl instanceof RegExp && typeof urlPath === "string") {
-			return new RegExp(`${baseUrl.source}${escapeRegex(urlPath)}$`) as FullUrlTypeFromOptions<Options>;
-		}
-		if (baseUrl instanceof RegExp && urlPath instanceof RegExp) {
-			return new RegExp(`${baseUrl.source}${urlPath.source}`) as FullUrlTypeFromOptions<Options>;
-		}
-		throw new Error("Invalid baseUrl or urlPath types. Expected string or RegExp.");
-	}
 }
