@@ -66,15 +66,13 @@ compile time and at runtime. A new `runPostNavigationActions` option (default `t
 
 **Migration.** `grep -rn 'gotoThisPage(' --include=*.ts .` and drop `ThisPage`.
 
-### String `baseUrl` and `urlPath` are typed and validated **[planned, plan 1.3-1.4]**
+### String `baseUrl` and `urlPath` are validated at construction **[planned, plan 1.3-1.4]**
 
 A string `baseUrl` must be a non-empty origin: `scheme://host[:port]`, optional trailing slash, no path, query, or
-hash, and not scheme-less (`localhost:9000` is rejected, `http://localhost:9000` is fine). A string `urlPath` must be `""` or
-start with exactly one `/`. Both are enforced by the exported types `BaseUrl` and `UrlPath` for literals and by the
-constructor at runtime for every value. Plain `string` values, for example from environment variables, narrow
-through the exported `assertBaseUrl` and `assertUrlPath` guards. `fullUrl` for two strings is
-`new URL(urlPath, baseUrl).href`, so a homepage page object now has `https://x.com/` with the trailing slash, the
-form the browser reports.
+hash, and not scheme-less (`localhost:9000` is rejected, `http://localhost:9000` is fine). A string `urlPath` must be
+`""` or start with exactly one `/`. The constructor checks every value, literal or variable, and throws with the
+class name and the reason. `fullUrl` for two strings is `new URL(urlPath, baseUrl).href`, so a homepage page object
+now has `https://app.example/` with the trailing slash, the form the browser reports.
 
 ### RegExp URLs match structurally; `fullUrl` becomes a `UrlMatcher` **[planned, plan 1.3-1.4]**
 
@@ -91,12 +89,15 @@ the origin; on the path, to the whole rest. The matcher is a predicate accepted 
 A base regex that contains a path prefix never matches, because the base sees only the origin; move the prefix into
 `urlPath`. `$` on a base regex includes the port.
 
-### `expectThisPage` and `expectAnotherPage` use `toHaveURL` **[planned, plan 1.3-1.4]**
+### `expectThisPage` and `expectAnotherPage` are one `waitForURL` each; `waitForLoadState` option removed **[planned, plan 1.3-1.4]**
 
-Both assertions are now Playwright's `expect(page).toHaveURL` and its negation, bounded by the expect timeout
-(5 s by default, overridable with `NavigationOptions.timeout`) instead of the navigation timeout followed by an
-unbounded retry. Failures print Playwright's `Expected … / Received …` diff. `expectAnotherPage` waits for the URL
-to change, then for the requested load state, then checks once more that the URL has not bounced back.
+Each method is now a single `page.waitForURL` call under the project's `use.navigationTimeout`, overridable with
+`NavigationOptions.timeout`, instead of a navigation wait followed by an unbounded exact-string retry. A failure
+names the page object, the expected URL or matcher, and the URL found at failure time. `expectAnotherPage` waits
+for the URL to change and then fails at once if it bounced back. POMWright no longer defaults `waitUntil` to
+`"load"` itself; an unset value means Playwright's own default. `NavigationOptions.waitForLoadState` is removed,
+since `waitUntil` now covers every method. Migration: rename `waitForLoadState` to `waitUntil` in `navOptions` and
+in per-call options.
 
 ## Bug fixes
 
@@ -172,9 +173,10 @@ Grows as plans land.
    (`/a\.b/`) and expect flags such as `i` to take effect.
 4. Replace `gotoThisPage()` with `goto()`.
 5. Make every string `baseUrl` an origin with a scheme and no path, and every string `urlPath` empty or
-   `/`-rooted; wrap environment-derived values in `assertBaseUrl` / `assertUrlPath`.
+   `/`-rooted. Environment-derived values are passed as they are; the constructor validates them.
 6. On pages with a RegExp `baseUrl` or `urlPath`, `fullUrl` is a `UrlMatcher`: keep passing it to Playwright APIs,
    replace `toMatch(fullUrl)` with `toHaveURL(fullUrl)` or `fullUrl.test(url)`, and move any path prefix out of a
    base regex into `urlPath`. Flags on RegExp parts now apply.
-7. If navigations take longer than the expect timeout, set `navOptions: { timeout }` on the page object or
-   `expect.timeout` in the config.
+7. Navigation waits follow `use.navigationTimeout`; override it with `navOptions: { timeout }` on the page object
+   or a per-call `timeout`.
+8. Rename `waitForLoadState` to `waitUntil` in `navOptions` and per-call navigation options.
