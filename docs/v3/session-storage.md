@@ -109,7 +109,7 @@ await storage.clear(["token"], { waitForContext: true });
 import { test, expect } from "./fixtures";
 
 test("session storage via PageObject", async ({ loginPage }) => {
-  await loginPage.navigation.gotoThisPage();
+  await loginPage.navigation.goto();
   await loginPage.sessionStorage.set({ token: "abc" }, { reload: true });
   await loginPage.sessionStorage.setOnNextNavigation({ theme: "dark" });
 

@@ -88,7 +88,7 @@ Test example using the fixture:
 import { test } from "./fixtures";
 
 test("login flow", async ({ loginPage, testData }) => {
-  await loginPage.navigation.gotoThisPage();
+  await loginPage.navigation.goto();
   await loginPage.loginAsUser(testData.user.alice);
   await loginPage.navigation.expectAnotherPage();
 });
@@ -159,7 +159,7 @@ export class LoginPage<Paths> {
   }
 
   @step()
-  async gotoThisPage() {
+  async goto() {
     await this.page.goto(this.urlPath);
     await expect(this.getLocator("common.spinner")).toHaveCount(0);
     await this.getNestedLocator("main.form@login").waitFor({ state: "visible" });
@@ -283,7 +283,11 @@ Thus use createReusable if you need a reusable definition as base for creating m
 
 ### 2.8 Navigation helper: `navigation` (on `PageObject`)
 
-The navigation helper is **only available through `PageObject`**. Its methods depend on the type of `fullUrl` (string vs RegExp). You can return `[]` or `null` from `pageActionsToPerformAfterNavigation()` to skip actions, or provide any number of actions (including Playwright calls or `this.getNestedLocator(...).waitFor(...)` calls).
+The navigation helper is **only available through `PageObject`**. Which `goto` forms exist depends on the URL types:
+`goto()` without a target needs a string `fullUrl`, `goto(target)` always exists and takes only absolute URLs on a
+RegExp `baseUrl`, and `expectThisPage` / `expectAnotherPage` always exist. You can return `[]` or `null` from
+`pageActionsToPerformAfterNavigation()` to skip actions, or provide any number of actions (including Playwright calls or
+`this.getNestedLocator(...).waitFor(...)` calls).
 
 Below is the same `LoginPage` example from 2.1:
 
@@ -298,14 +302,15 @@ protected pageActionsToPerformAfterNavigation() {
 }
 
 // Usage:
-// await loginPage.navigation.gotoThisPage();
-// await loginPage.navigation.goto("/profil"); prefixes with this.baseUrl
-// await loginPage.navigation.goto("https://anotherDomain.com/");
-// await loginPage.navigation.expectThisPage();
-// await loginPage.navigation.expectAnotherPage();
+// await loginPage.navigation.goto();                          // this page, runs the actions
+// await loginPage.navigation.goto("/profile");                // resolved against this.baseUrl, no actions
+// await loginPage.navigation.goto("https://another.example/"); // absolute, no actions
+// await loginPage.navigation.expectThisPage();                // waits for the URL and load state, runs the actions
+// await loginPage.navigation.expectAnotherPage();             // waits until the URL has left this page
 ```
 
-Only `.gotoThisPage()` and `.expectThisPage()` calls `pageActionsToPerformAfterNavigation`.
+Only `goto()` without a target and `expectThisPage()` call `pageActionsToPerformAfterNavigation`; both accept
+`{ runPostNavigationActions: false }`. See `PageObject.md` for the options, timeouts, and failure messages.
 
 ### 2.9 `SessionStorage` helper
 
@@ -317,7 +322,7 @@ Only `.gotoThisPage()` and `.expectThisPage()` calls `pageActionsToPerformAfterN
 import { test, expect } from "./fixtures";
 
 test("session storage via PageObject", async ({ loginPage }) => {
-  await loginPage.navigation.gotoThisPage();
+  await loginPage.navigation.goto();
   await loginPage.sessionStorage.set({ token: "abc" }, { reload: true });
   await loginPage.sessionStorage.setOnNextNavigation({ theme: "dark" });
 
@@ -421,7 +426,7 @@ This section separates public API from internal implementation details and expla
 
 #### Helpers
 
-- **Navigation**: `navigation.goto`, `gotoThisPage`, `expectThisPage`, `expectAnotherPage` (availability depends on string vs RegExp URL typing).
+- **Navigation**: `navigation.goto()` (this page, string `fullUrl` only), `goto(target)`, `expectThisPage`, `expectAnotherPage`; the `goto` forms depend on the string vs RegExp URL typing.
 - **SessionStorage**: `set`, `setOnNextNavigation`, `get`, `clear`.
 - **Step decorator**: `step`.
 - **Logging**: `PlaywrightReportLogger` and `test` fixture.
@@ -429,7 +434,7 @@ This section separates public API from internal implementation details and expla
 #### Type exports
 
 - `UrlTypeOptions`, `BaseUrlTypeFromOptions`, `UrlPathTypeFromOptions`, `FullUrlTypeFromOptions`.
-- `NavigationOptions`.
+- `NavigationOptions`, `ThisPageOptions`, `NavigationFor`, `UrlMatcher`.
 - `LocatorRegistry` type.
 
 ### 3.2 Internal API (implementation details and dependencies)
@@ -476,8 +481,9 @@ This is not intended for direct usage but explains the building blocks used by t
 
 #### `createNavigation` + `Navigation` class
 
-- **Purpose**: Provide navigation API and correct type narrowing based on URL type.
+- **Purpose**: Provide the navigation API (one `page.waitForURL` per wait) and the type narrowing based on URL type.
 - **Used by**: `PageObject` constructor to build `navigation`.
+- **Dependencies**: `src/helpers/url.ts` for validation, `new URL` resolution, and the `UrlMatcher`.
 
 #### `SessionStorage`
 
