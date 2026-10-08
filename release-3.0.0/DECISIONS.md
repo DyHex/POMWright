@@ -69,6 +69,17 @@ answered.
 | 2026-10-07 | New `src/helpers/url.ts` with colocated unit tests; new `/testnav` fixture route, `testnav` and `testnav-item` page objects, and a construction-time validation spec. | Same structure as plan 1.1-1.2. |
 | 2026-10-07 | The unit tests' type-level assertions (`expectTypeOf`, `@ts-expect-error`) are enforced by vitest typecheck mode, enabled in `vitest.config.ts` for `src/**/*.test.ts`; `vitest` is pinned exactly to `5.0.3`. The repo-wide `tsc --noEmit` step remains an analysis section 4 item. | Nothing in the repo runs `tsc`, so without this a loosened type passes CI silently. Verified 2026-10-07 that the mode reports an unused `@ts-expect-error` as a failing test against the current source. Vitest labels the mode experimental and asks for an exact pin. |
 
+### Execution-time decisions (2026-10-08)
+
+| Date | Decision | Why |
+| --- | --- | --- |
+| 2026-10-08 | Vitest typecheck mode uses a dedicated `tsconfig.vitest.json` (extends the root, `include: src/**/*.ts`, `exclude: src/dist`, `target: es2024`) rather than the root tsconfig. | The root tsconfig has no `include`, so tsc swept `dist/` and `test/` (724 errors); `test/` has its own tsconfig and path aliases. The existing `utils.test.ts` uses `v`-flag regex literals, which tsc accepts only from `es2024`; the published build still targets `es2022` through tsup. |
+| 2026-10-08 | The `NavigationFor` type contract and the two runtime guards are tested in `src/helpers/navigation.test.ts`, next to the type, not in `url.test.ts`. | Keeps execution step 1 self-contained; `url.test.ts` covers only `url.ts`. The type contract is a never-called function with `@ts-expect-error` lines, checked by the typecheck mode. |
+| 2026-10-08 | `/testnav/bounce` navigates back synchronously (`location.replace` during parsing) instead of 300 ms after load. | The re-check in `expectAnotherPage` is immediate, so only a bounce that happens before the load state settles is detectable; the synchronous form makes the spec deterministic. A bounce after the page has settled is undetectable by design and documented as such. |
+| 2026-10-08 | `Navigation` builds a `UrlMatcher` internally for string pages too, so every page kind is matched by the same code; the public `fullUrl` of a string page stays the resolved string. | One matching path, exact origin and rest semantics, no glob interpretation of string URLs. |
+| 2026-10-08 | `NavigationFor` is exported from the package root; `AbsoluteUrl` stays internal and is inlined in the `.d.ts` as `` `${string}:${string}` ``. | Consumers can name the navigation type; the absolute-URL alias is an implementation detail. |
+| 2026-10-08 | Execution step 6 found nothing to fix: `pnpm lint` clean, 76 unit tests, 260 Playwright tests on chromium against the packed tarball. | Recorded so the ledger shows the step ran. |
+
 ## Open questions
 
 None as of 2026-10-07. The one question raised for plan 1.3-1.4 (enforcement of type-level tests) was decided the

@@ -7,9 +7,9 @@
 > decision number from the plan is given. When 3.0.0 ships, drop the markers and this note; what remains is the basis
 > for the changelog entry and the announcement.
 >
-> Last updated 2026-10-07. Plans covered: 1.1-1.2 (getById), executed and committed on
+> Last updated 2026-10-08. Plans covered: 1.1-1.2 (getById), executed and committed on
 > `chore/bugfixes-quality-improvements-and-docs` (commits e709d0c to 735066b); 1.3-1.4 (URL composition and
-> navigation), planned 2026-10-07, not yet executed.
+> navigation), executed and committed on the same branch on 2026-10-08 (commits bc8d980 to 4682146).
 
 ## Overview
 
@@ -55,7 +55,7 @@ anchored patterns matched nothing, and flags were ignored. In 3.0.0 the regex is
 - The rendered selector changes from `[id*="…"]` to `internal:attr=[id=/…/flags]`, the same engine Playwright's own
   `getByTestId(RegExp)` compiles to.
 
-### `goto()` replaces `gotoThisPage()` **[planned, plan 1.3-1.4]**
+### `goto()` replaces `gotoThisPage()` **[done, plan 1.3-1.4]**
 
 `navigation.goto()` without an argument navigates to the page object's `fullUrl` and runs the post-navigation
 actions, as `gotoThisPage()` did; it is available only when `fullUrl` is a string. `goto(target)` navigates
@@ -66,7 +66,7 @@ compile time and at runtime. A new `runPostNavigationActions` option (default `t
 
 **Migration.** `grep -rn 'gotoThisPage(' --include=*.ts .` and drop `ThisPage`.
 
-### String `baseUrl` and `urlPath` are validated at construction **[planned, plan 1.3-1.4]**
+### String `baseUrl` and `urlPath` are validated at construction **[done, plan 1.3-1.4]**
 
 A string `baseUrl` must be a non-empty origin: `scheme://host[:port]`, optional trailing slash, no path, query, or
 hash, and not scheme-less (`localhost:9000` is rejected, `http://localhost:9000` is fine). A string `urlPath` must be
@@ -74,7 +74,7 @@ hash, and not scheme-less (`localhost:9000` is rejected, `http://localhost:9000`
 class name and the reason. `fullUrl` for two strings is `new URL(urlPath, baseUrl).href`, so a homepage page object
 now has `https://app.example/` with the trailing slash, the form the browser reports.
 
-### RegExp URLs match structurally; `fullUrl` becomes a `UrlMatcher` **[planned, plan 1.3-1.4]**
+### RegExp URLs match structurally; `fullUrl` becomes a `UrlMatcher` **[done, plan 1.3-1.4]**
 
 In 2.x the two regexes were concatenated into one, which silently required the base regex to match the URL up to the
 exact character where the path begins, dropped all flags, and broke `^`-anchored paths. In 3.0.0 a page object with a
@@ -89,7 +89,7 @@ the origin; on the path, to the whole rest. The matcher is a predicate accepted 
 A base regex that contains a path prefix never matches, because the base sees only the origin; move the prefix into
 `urlPath`. `$` on a base regex includes the port.
 
-### `expectThisPage` and `expectAnotherPage` are one `waitForURL` each; `waitForLoadState` option removed **[planned, plan 1.3-1.4]**
+### `expectThisPage` and `expectAnotherPage` are one `waitForURL` each; `waitForLoadState` option removed **[done, plan 1.3-1.4]**
 
 Each method is now a single `page.waitForURL` call under the project's `use.navigationTimeout`, overridable with
 `NavigationOptions.timeout`, instead of a navigation wait followed by an unbounded exact-string retry. A failure
@@ -107,15 +107,15 @@ in per-call options.
 - Resolving an id definition that lacks an id now throws a descriptive error instead of falling back to an empty
   id. **[done]**
 - A fully anchored RegExp `urlPath` such as `/^\/account\/\d+$/` no longer produces a `fullUrl` that can never match
-  (analysis 1.3). **[planned]**
-- RegExp flags on `baseUrl` or `urlPath` are no longer dropped (analysis 1.3). **[planned]**
+  (analysis 1.3). **[done]**
+- RegExp flags on `baseUrl` or `urlPath` are no longer dropped (analysis 1.3). **[done]**
 - `fullUrl` and `goto` no longer produce a double slash for a `baseUrl` with a trailing slash (analysis 1.3).
-  **[planned]**
+  **[done]**
 - `expectThisPage` no longer retries forever when `fullUrl` lacks the trailing slash the browser reports (analysis
-  1.4). **[planned]**
-- A substring RegExp `baseUrl` no longer needs to match up to the start of the path (analysis 1.3). **[planned]**
-- `expectAnotherPage` no longer passes while still on the page (analysis 1.4). **[planned]**
-- `goto` is no longer unavailable on a page object whose `urlPath` is a RegExp (analysis 1.10). **[planned]**
+  1.4). **[done]**
+- A substring RegExp `baseUrl` no longer needs to match up to the start of the path (analysis 1.3). **[done]**
+- `expectAnotherPage` no longer passes while still on the page (analysis 1.4). **[done]**
+- `goto` is no longer unavailable on a page object whose `urlPath` is a RegExp (analysis 1.10). **[done]**
 
 ## Removed and internal cleanup
 
@@ -125,7 +125,7 @@ in per-call options.
   (analysis 1.10, third bullet). **[done]**
 - `PageObject.composeFullUrl` and the internal `NavigationString` / `NavigationRegExp` / `ExtractNavigationType`
   types are replaced by `src/helpers/url.ts` and a single `NavigationFor` type. `UrlPathTypeFromOptions` no longer
-  spells `"" | string` (analysis section 2). **[planned]**
+  spells `"" | string` (analysis section 2). **[done]**
 
 ## Tooling, CI, and tests
 
@@ -138,14 +138,14 @@ in per-call options.
 - Existing `getById` specs extended for registration-time validation, flag preservation, seeded inheritance, and
   the new rendered selectors. **[done]**
 - Unit tests for URL validation, resolution, and composition in `src/helpers/url.test.ts`, including the Playwright
-  parity table for relative inputs. **[planned]**
+  parity table for relative inputs. **[done]**
 - Vitest typecheck mode enabled for the unit tests, so the compile-time rules (the `BaseUrl` and `UrlPath` shapes,
   the `goto` overloads) are enforced by `pnpm test:unit` and CI through `@ts-expect-error` and `expectTypeOf`
-  assertions. `vitest` is pinned exactly because the mode is experimental. **[planned]**
+  assertions. `vitest` is pinned exactly because the mode is experimental. **[done]**
 - A new `/testnav` fixture route with delayed, query, hash, trailing-slash, and bounce-back navigations; `testNav`
   and `testNavItem` page objects and fixtures; a navigation spec covering `goto()`, `goto(target)`, the actions
   option, timeouts, RegExp bases, flags, and the empty-base case; and a construction-time validation spec.
-  **[planned]**
+  **[done]**
 
 ## Documentation
 
@@ -157,7 +157,7 @@ in per-call options.
   "thenable query builders" wording (analysis section 5, AGENTS.md). **[done]**
 - The `PageObject` and navigation sections of `docs/v3/PageObject.md` and `docs/v3/overview.md` rewritten: URL
   rules and guards, how `fullUrl` is composed, the four navigation methods and their options, a real failure
-  message, and a 2.x to 3.0 migration note. **[planned]**
+  message, and a 2.x to 3.0 migration note. **[done]**
 - A new documentation site built with Starlight and hosted on GitHub Pages, using `docs/v3` as its source.
   **[roadmap]**
 

@@ -150,9 +150,13 @@ invites regex use.
 
 ### 1.3 `composeFullUrl` has three independent problems
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Fixed 2026-10-08 by plan 1.3-1.4 (commits bc8d980, 4bdc347, 6c225b9). String parts are validated at
+> construction (non-empty origin, "" or single-slash path) and resolved with `new URL`, like Playwright's `baseURL`;
+> RegExp parts produce a structured `UrlMatcher` (base against the origin, path against the rest, each regex as
+> written), so anchors, flags, substring bases, and the seam all behave. Covered by `src/helpers/url.test.ts` and the
+> `/testnav` integration page.
 
 **Context.** `PageObject` accepts `baseUrl` and `urlPath` as `string | RegExp` and composes `fullUrl`, which
 `expectThisPage`/`expectAnotherPage` match against.
@@ -190,9 +194,12 @@ await accountPage.navigation.expectThisPage(); // waitForURL never matches → n
 
 ### 1.4 `expectThisPage` exact-compares and retries forever; **NEW** `expectAnotherPage` has the inverse false-pass *(Playwright semantics)*
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Fixed 2026-10-08 by plan 1.3-1.4 (commits 4bdc347, 6c225b9). `expectThisPage` and `expectAnotherPage` are each
+> one `page.waitForURL` call under `use.navigationTimeout`, with Playwright's timeout error rethrown naming the
+> expected URL and the URL found; `expectAnotherPage` re-checks at once for a bounce. `gotoThisPage` is replaced by
+> `goto()`; the `waitForLoadState` option is removed. Covered by `tests/testApp/testNav.spec.ts`.
 
 **Intent.** Wait until the browser is on this page, then give a readable `expected 'X', found 'Y'` failure.
 
@@ -419,9 +426,10 @@ an empty or missing id throws at registration in all three builders. The other s
 - [ ] `ensureSubPath` conflates "not a sub-path" with "sub-path not registered"
   ([L401](../src/locators/locatorQueryBuilder.ts#L401)); `getLocator()` after `remove()` says "No locator schema
   registered" ([L351](../src/locators/locatorQueryBuilder.ts#L351)).
-- [ ] `goto` is disabled by the `urlPath` type ([navigation.ts:65](../src/helpers/navigation.ts#L65),
+- [x] `goto` is disabled by the `urlPath` type ([navigation.ts:65](../src/helpers/navigation.ts#L65),
   [L26](../src/helpers/navigation.ts#L26)) although it only needs a string `baseUrl`. A string-base plus RegExp-path page
-  cannot call `goto("/settings")`; probe confirmed the type error.
+  cannot call `goto("/settings")`; probe confirmed the type error. Fixed 2026-10-08 by plan 1.3-1.4: `goto(target)` is
+  always available, typed by the `baseUrl` type.
 - [ ] `@step`: sync methods become async while the type says `Return`
   ([stepDecorator.ts:52](../src/helpers/stepDecorator.ts#L52)); no `context.kind === "method"` check
   ([L62-65](../src/helpers/stepDecorator.ts#L62-L65)); legacy static methods fall through to the factory branch because
@@ -465,9 +473,9 @@ an empty or missing id throws at registration in all three builders. The other s
   [L76](../src/locators/types.ts#L76), [L211-224](../src/locators/types.ts#L211-L224), [L256](../src/locators/types.ts#L256))
   are referenced nowhere. None of the four appears in the published `dist/index.d.ts` (checked 2026-10-06 on a
   fresh build), so removing them is not a consumer-facing change.
-- [ ] [pageObject.ts:25](../src/pageObject.ts#L25) `"" | string`; [L83](../src/pageObject.ts#L83) plus
-  [navigation.ts:41](../src/helpers/navigation.ts#L41) make `null` and `[]` identical, and the abstract method forces
-  `return [];` boilerplate in every page object.
+- [x] [pageObject.ts:25](../src/pageObject.ts#L25) `"" | string`: written as `string` by plan 1.3-1.4 (2026-10-08).
+- [ ] [pageObject.ts:83](../src/pageObject.ts#L83) plus [navigation.ts:41](../src/helpers/navigation.ts#L41) make
+  `null` and `[]` identical, and the abstract method forces `return [];` boilerplate in every page object.
 - [x] Withdrawn 2026-10-06. [locatorRegistrationBuilder.ts:479-484](../src/locators/locatorRegistrationBuilder.ts#L479-L484)
   was listed here as dead because the `PageObject` path discards the registry when the constructor throws. But
   `createRegistryWithAccessors` is public, so a standalone registry survives a builder error and the rollback is

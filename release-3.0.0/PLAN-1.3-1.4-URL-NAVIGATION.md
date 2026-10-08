@@ -3,7 +3,7 @@
 Working document, kept in `release-3.0.0/` beside the analysis it answers (items 1.3 and 1.4, plus the `goto`
 bullet of 1.10 and the `"" | string` bullet of section 2, which touch the same types). File links are relative to
 this folder. Decisions are ticked in section 7 and mirrored in [DECISIONS.md](DECISIONS.md); consumer-facing
-outcomes are tracked in [RELEASE-NOTES-3.0.0.md](RELEASE-NOTES-3.0.0.md). Not yet executed.
+outcomes are tracked in [RELEASE-NOTES-3.0.0.md](RELEASE-NOTES-3.0.0.md). Executed 2026-10-08, see below.
 
 Every runtime claim below was verified between 2026-10-07 and 2026-10-08 against Chromium (and, where stated,
 Firefox and WebKit) through the Playwright 1.62.1 install in `test/`, against the Playwright source in that
@@ -20,6 +20,12 @@ origin and the path against the rest, each regex used exactly as written; `goto(
 `gotoThisPage()`; `expectThisPage` and `expectAnotherPage` are each one `page.waitForURL` call; every Playwright call
 keeps the timeout its config option gives it; the unit tests' type-level assertions run through vitest typecheck
 mode. All decisions are in section 7.
+
+**Executed 2026-10-08** on `chore/bugfixes-quality-improvements-and-docs`, one commit per execution step: bc8d980
+(1, `url.ts`, its tests, vitest typecheck mode), 4bdc347 (2, `PageObject` and `navigation.ts`), 6c225b9 (3, the
+`/testnav` fixture and specs), 7779078 (4, `docs/v3`), 4682146 (5, changeset), and the ledger commit for step 7 that
+carries this note. Step 6 found nothing to fix: `pnpm lint` clean, 76 unit tests, 260 Playwright tests on chromium
+against the packed tarball. Execution-time decisions are recorded in [DECISIONS.md](DECISIONS.md).
 
 ---
 

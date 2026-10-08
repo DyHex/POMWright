@@ -1,8 +1,8 @@
 # AGENTS.md
 
 Persistent context and working rules for AI agents and humans contributing to POMWright. Read it fully before
-changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-06, after the
-getById plan (analysis items 1.1 and 1.2) was executed.
+changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-08, after the
+URL and navigation plan (analysis items 1.3 and 1.4) was executed.
 
 ## 1. What POMWright is
 
@@ -22,9 +22,9 @@ getById plan (analysis items 1.1 and 1.2) was executed.
 | Path | What it is | Edit? |
 | --- | --- | --- |
 | `index.ts` | Package entry. tsup bundles from here. | yes |
-| `src/` | Runtime: 14 files, about 2,850 lines of code, plus colocated vitest unit tests (`**/*.test.ts`, currently `locators/utils.test.ts`). | yes |
+| `src/` | Runtime: 15 files, about 2,900 lines of code, plus colocated vitest unit tests (`**/*.test.ts`: `locators/utils.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`). | yes |
 | `src/locators/` | `locatorRegistry.ts` (registry, resolution, cycle detection), `locatorRegistrationBuilder.ts` (`add(path).getByRole(...)` DSL, seeded registrations), `locatorUpdateBuilder.ts` (`update` and `replace`), `locatorQueryBuilder.ts` (`getLocatorSchema(path)` chain: `filter`, `nth`, `remove`, `describe`, `getLocator`, `getNestedLocator`), `reusableLocatorBuilder.ts` (`createReusable`), `types.ts` (definitions and compile-time path validation), `utils.ts` (path validation, the id selector helpers `escapeCssString`, `escapeRegExpForSelector`, `buildIdSelector`, `assertIdValue`, `createLocator`, cloning, patching). | yes |
-| `src/helpers/` | `sessionStorage.ts`, `navigation.ts`, `playwrightReportLogger.ts`, `stepDecorator.ts`. | yes |
+| `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts`, `playwrightReportLogger.ts`, `stepDecorator.ts`. | yes |
 | `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject`; the `test` fixture that provides `log`. | yes |
 | `src/dist/` | Stray local build output, gitignored. Never read it as source. | no |
 | `test/` | Standalone pnpm project that installs the packed tarball and runs Playwright against it. Section 4. | yes |
@@ -35,7 +35,8 @@ getById plan (analysis items 1.1 and 1.2) was executed.
 | `.changeset/` | Changesets config. `CHANGELOG.md` is generated from changesets at release time. | config only |
 | `.github/workflows/` | `main.yaml` runs lint, unit tests and build on every push. `test.yaml` runs `pack-test` (chromium) on PRs and on `main`. `publish.yaml` runs the changesets action after `CI` succeeds on `main`. | yes |
 | `pack-build.sh`, `pack-test.sh`, `playwright.base.ts` | Build and pack the tarball; run the harness; shared Playwright config. | yes |
-| `vitest.config.ts` | Unit-test discovery limited to `src/**/*.test.ts`, node environment, so Playwright specs are never picked up. | yes |
+| `vitest.config.ts` | Unit-test discovery limited to `src/**/*.test.ts`, node environment, so Playwright specs are never picked up; typecheck mode on, so `expectTypeOf` and `// @ts-expect-error` assertions are enforced. | yes |
+| `tsconfig.vitest.json` | The tsconfig vitest's typecheck uses: extends the root, scoped to `src/`, target `es2024` (the root has no `include` and would sweep `dist/` and `test/`). | yes |
 | `biome.json`, `tsconfig.json`, `.editorconfig` | Lint and format, strict TypeScript, tabs. | yes |
 | `dist/`, `*.tgz`, `node_modules/`, `.pnpm-store/` | Build and install artefacts, gitignored. | no |
 
@@ -46,8 +47,9 @@ getById plan (analysis items 1.1 and 1.2) was executed.
 - `pnpm lint` runs `biome check ./src` (lint plus format check). `pnpm format` rewrites. Root `index.ts`,
   `playwright.base.ts` and `test/` are not covered by the script even though `biome.json` includes them.
 - `pnpm build` runs `tsup index.ts --format cjs,esm --dts` into `dist/`.
-- `pnpm test:unit` runs the vitest unit tests for the pure helpers in seconds. `pnpm test` runs them and then
-  `pack-test`.
+- `pnpm test:unit` runs the vitest unit tests for the pure helpers in seconds and type-checks the test files and
+  what they import (vitest typecheck mode; `vitest` is pinned exactly because the mode is experimental). `pnpm test`
+  runs them and then `pack-test`.
 - `pnpm pack-test` is the authoritative integration run. It installs, builds, packs `pomwright-test-build.tgz`,
   installs that into `test/`, installs browsers and OS dependencies, and runs the Playwright `chromium` project.
   It takes minutes, and it needs sudo: `playwright install --with-deps` and the harness postinstall both call it,
@@ -75,12 +77,14 @@ getById plan (analysis items 1.1 and 1.2) was executed.
 - Own `package.json`, lockfile and `tsconfig.json` (path aliases `@page-object-models/*`, `@fixtures/*`,
   `@test-data/*`). Depends on `pomwright` as `file:../pomwright-test-build.tgz`. Playwright is pinned to 1.62.1.
 - `server.js` is an express app on port 9000. It serves `test-data/staticPage` (a W3 template page) and the routes
-  `/testpath`, `/testpath/:color`, `/testfilters`, `/iframe` (with `/iframe/a`, `/b`, `/c`), and `/testids` (ids
-  that are valid HTML but awkward as CSS selectors). New fixture pages go in as new routes, not into the static page.
+  `/testpath`, `/testpath/:color`, `/testfilters`, `/iframe` (with `/iframe/a`, `/b`, `/c`), `/testids` (ids
+  that are valid HTML but awkward as CSS selectors), and `/testnav` (with `/testnav/item/:id` and `/testnav/bounce`,
+  the navigation fixture: query, hash, trailing slash, delayed and bouncing navigations). New fixture pages go in as new routes, not into the static page.
 - Page objects live under `page-object-models/testApp/pages/<name>/` as `<name>.locatorSchema.ts` plus
   `<name>.page.ts`, all extending `testApp.base.ts`. `fixtures/testApp.fixtures.ts` exposes them to specs.
 - Specs live under `tests/`: `locatorRegistry/` (`add`, `getLocator`, `getLocatorSchema`, `getNestedLocator`,
-  `registry`, `validation`), `step/`, `testApp/`. 39 spec files, about 4,100 lines. One spec file per DSL method,
+  `registry`, `validation`), `pageObject/` (construction-time URL validation), `step/`, `testApp/`. 41 spec files,
+  about 4,300 lines. One spec file per DSL method,
   for example `add.getById.spec.ts` or `getLocatorSchema.update.spec.ts`; one DOM-level spec per fixture page under
   `testApp/`, for example `testIds.spec.ts`.
 - Know what each spec exercises. Most `locatorRegistry/` specs import `LocatorRegistryInternal` from
@@ -107,6 +111,11 @@ getById plan (analysis items 1.1 and 1.2) was executed.
 - `getById` stores values verbatim: strings resolve as `[id="…"]` (exact, case-sensitive, no prefix handling),
   RegExps as `internal:attr=[id=/source/flags]` with every flag passed through. POMWright adds no regex semantics of
   its own.
+- URLs mirror Playwright's `baseURL` handling with one base per page object: a string `baseUrl` is a non-empty
+  origin and a string `urlPath` is `""` or a single-slash path, both validated at construction; two strings resolve
+  with `new URL`; a RegExp in either part makes `fullUrl` a `UrlMatcher` (base against the origin, path against the
+  rest, each regex as written). `goto()` without a target is the this-page navigation; `expectThisPage` and
+  `expectAnotherPage` are one `page.waitForURL` each. POMWright sets no timeout or `waitUntil` default of its own.
 - Descriptive path names in docs and tests. No anonymous segments.
 - `// biome-ignore` only with a one-line justification. No `try/catch` around imports.
 - Prefer behaviour-preserving refactors. A contract change (anything a documented 2.x behaviour relies on) goes
@@ -121,7 +130,8 @@ become the basis for the changelog entry and announcement, and `docs/v3` becomes
 | File | Role |
 | --- | --- |
 | `POMWRIGHT-2.1.0-ANALYSIS.md` | Source-verified findings numbered 1.1 to 1.10, 2, 3.1 to 3.8, 4, 5. Each has `Fix / Skip / Discuss` boxes and a `Notes:` block. Section 6 is the working order. |
-| `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` is done (executed 2026-10-06, one commit per execution step). Next in the analysis order: `PLAN-1.3-COMPOSEFULLURL.md`. |
+| `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` (executed 2026-10-06) and `PLAN-1.3-1.4-URL-NAVIGATION.md` (executed 2026-10-08) are
+  done, one commit per execution step each. Next in the analysis order: 1.7 (lazy `defineLocators`). |
 | `RELEASE-NOTES-3.0.0.md` | Consumer-facing notes. Only what is done or committed to by a plan in this folder, each item with a status marker. Never a copy of the analysis. |
 | `DECISIONS.md` | Current decisions across all plans, big and small, with date and reason. A reversed decision is replaced, not kept; git history has the rest. Open questions at the bottom. |
 
@@ -155,7 +165,8 @@ Rules:
   a 2.x user wrote stops working.
 - `publish.yaml` is gated on the `CI` workflow (lint, unit tests, build) only, not on `test.yaml`. Analysis
   section 4 covers fixing that.
-- Pending 3.0.0 changesets so far: `.changeset/getbyid-verbatim-ids-and-regex.md` (`major`).
+- Pending 3.0.0 changesets so far: `.changeset/getbyid-verbatim-ids-and-regex.md` and
+  `.changeset/url-composition-and-navigation.md` (both `major`).
 
 ## 8. Do not
 
