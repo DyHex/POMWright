@@ -124,14 +124,15 @@ export const escapeForScript = (value: unknown): string =>
 		.replace(/\u2028/g, "\\u2028")
 		.replace(/\u2029/g, "\\u2029");
 
-const NO_REFERRER = '<meta name="referrer" content="no-referrer">';
+/** UTF-8 so a re-submitted form encodes its fields as the original page did; no referrer, as `page.goto` sends none. */
+const HEAD = '<meta charset="utf-8"><meta name="referrer" content="no-referrer">';
 
 const continueScript = (url: string, method: string, postData: string | null): string => {
 	if (method === "GET") {
 		return `location.replace(${escapeForScript(url)});`;
 	}
 	return (
-		`var form = document.createElement("form"); form.method = "post"; form.action = ${escapeForScript(url)}; ` +
+		`var form = document.createElement("form"); form.method = "post"; form.acceptCharset = "utf-8"; form.action = ${escapeForScript(url)}; ` +
 		`new URLSearchParams(${escapeForScript(postData ?? "")}).forEach(function (value, name) { ` +
 		'var input = document.createElement("input"); input.type = "hidden"; input.name = name; input.value = value; ' +
 		"form.appendChild(input); }); document.body.appendChild(form); form.submit();"
@@ -149,7 +150,7 @@ export const buildSeedDocument = (
 	method: string,
 	postData: string | null,
 ): string =>
-	`<!doctype html>${NO_REFERRER}<title>POMWright session storage seed</title><body><script>(function () { ` +
+	`<!doctype html>${HEAD}<title>POMWright session storage seed</title><body><script>(function () { ` +
 	`var entries = ${escapeForScript(entries)}; ` +
 	"try { Object.keys(entries).forEach(function (key) { sessionStorage.setItem(key, entries[key]); }); } " +
 	'catch (error) { document.title = "POMWright seed failed"; document.body.textContent = ' +
@@ -158,7 +159,7 @@ export const buildSeedDocument = (
 
 /** The document that replaces a server redirect seen by the proxy: performs the same navigation itself. */
 export const buildRedirectDocument = (url: string, method: string, postData: string | null): string =>
-	`<!doctype html>${NO_REFERRER}<title>POMWright redirect</title><body><script>(function () { ${continueScript(
+	`<!doctype html>${HEAD}<title>POMWright redirect</title><body><script>(function () { ${continueScript(
 		url,
 		method,
 		postData,

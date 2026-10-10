@@ -4,6 +4,8 @@ import TestIds from "@page-object-models/testApp/pages/testids/testids.page";
 import TestNav from "@page-object-models/testApp/pages/testnav/testnav.page";
 import TestNavItem from "@page-object-models/testApp/pages/testnav/testnav-item.page";
 import TestPage from "@page-object-models/testApp/pages/testPage.page";
+import TestStorage from "@page-object-models/testApp/pages/teststorage/teststorage.page";
+import TestStorageSecond from "@page-object-models/testApp/pages/teststorage/teststorage-second.page";
 import Color from "@page-object-models/testApp/pages/testPath/[color]/color.page";
 import TestPath from "@page-object-models/testApp/pages/testPath/testPath.page";
 import { expect } from "@playwright/test";
@@ -18,6 +20,9 @@ type Fixtures = {
 	testIds: TestIds;
 	testNav: TestNav;
 	testNavItem: TestNavItem;
+	testStorage: TestStorage;
+	testStorageTwin: TestStorage;
+	testStorageSecond: TestStorageSecond;
 };
 
 const test = base.extend<Fixtures>({
@@ -56,6 +61,18 @@ const test = base.extend<Fixtures>({
 
 	testNavItem: async ({ page }, use) => {
 		await use(new TestNavItem(page));
+	},
+
+	testStorage: async ({ page }, use) => {
+		await use(new TestStorage(page));
+	},
+
+	testStorageTwin: async ({ page }, use) => {
+		await use(new TestStorage(page, { label: "TestStorageTwin" }));
+	},
+
+	testStorageSecond: async ({ page }, use) => {
+		await use(new TestStorageSecond(page));
 	},
 });
 

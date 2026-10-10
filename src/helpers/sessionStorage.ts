@@ -147,9 +147,12 @@ const readTestOutcome: ReadTestOutcome = () => {
 	}
 };
 
-/** Playwright's error for a storage operation on a document without an origin, such as `about:blank`. */
+/**
+ * The browser's refusal to touch storage on a document without an origin, such as `about:blank`: Chromium and
+ * WebKit raise a `SecurityError`, Firefox says "The operation is insecure".
+ */
 const isNoOriginError = (error: unknown): error is Error =>
-	error instanceof Error && /SecurityError|Access is denied/.test(error.message);
+	error instanceof Error && /SecurityError|Access is denied|The operation is insecure/.test(error.message);
 
 export class SessionStorage<S extends SessionStorageSchema = Record<never, never>> {
 	private readonly label: string | undefined;
@@ -169,22 +172,27 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		return `${this.label === undefined ? "" : `${this.label}.`}SessionStorage.${method}`;
 	}
 
-	/** Runs `body` as a step; a recorded seed failure is thrown first, and a no-origin error is explained. */
+	/** Runs `body` as a step; a recorded seed failure is thrown first. */
 	private async step<T>(method: string, body: () => Promise<T>): Promise<T> {
 		return test.step(`${this.title(method)}:`, async () => {
 			existingRegistryFor(this.page)?.throwIfFailed();
-			try {
-				return await body();
-			} catch (error) {
-				if (isNoOriginError(error)) {
-					throw new Error(
-						`${this.title(method)}: the page has no origin yet (${this.page.url()}); navigate to the origin first or use seed()`,
-						{ cause: error },
-					);
-				}
-				throw error;
-			}
+			return body();
 		});
+	}
+
+	/** One call into `page.sessionStorage`; the browser's refusal on a document without an origin is explained. */
+	private async access<T>(method: string, call: () => Promise<T>): Promise<T> {
+		try {
+			return await call();
+		} catch (error) {
+			if (isNoOriginError(error) || (error instanceof Error && originOf(this.page.url()) === undefined)) {
+				throw new Error(
+					`${this.title(method)}: the page has no origin yet (${this.page.url()}); navigate to the origin first or use seed()`,
+					{ cause: error },
+				);
+			}
+			throw error;
+		}
 	}
 
 	/** A helper with an origin touches only that origin's storage. */
@@ -202,9 +210,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		}
 	}
 
-	private async write(encoded: Record<string, string>): Promise<void> {
+	private async write(method: string, encoded: Record<string, string>): Promise<void> {
 		for (const [key, value] of Object.entries(encoded)) {
-			await this.page.sessionStorage.setItem(key, value);
+			await this.access(method, () => this.page.sessionStorage.setItem(key, value));
 		}
 	}
 
@@ -215,7 +223,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		const entries = typeof keyOrEntries === "string" ? { [keyOrEntries]: value } : keyOrEntries;
 		await this.step("set", async () => {
 			this.assertOnOrigin("set");
-			await this.write(encodeEntries(this.schema, entries, this.title("set")));
+			await this.write("set", encodeEntries(this.schema, entries, this.title("set")));
 		});
 	}
 
@@ -228,18 +236,31 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 			this.assertOnOrigin("get");
 			const title = this.title("get");
 			if (typeof keyOrKeys === "string") {
-				return decodeValue(this.schema, keyOrKeys, await this.page.sessionStorage.getItem(keyOrKeys), title);
+				return decodeValue(
+					this.schema,
+					keyOrKeys,
+					await this.access("get", () => this.page.sessionStorage.getItem(keyOrKeys)),
+					title,
+				);
 			}
 			if (keyOrKeys !== undefined) {
 				const pairs = await Promise.all(
 					keyOrKeys.map(
 						async (key) =>
-							[key, decodeValue(this.schema, key, await this.page.sessionStorage.getItem(key), title)] as const,
+							[
+								key,
+								decodeValue(
+									this.schema,
+									key,
+									await this.access("get", () => this.page.sessionStorage.getItem(key)),
+									title,
+								),
+							] as const,
 					),
 				);
 				return Object.fromEntries(pairs);
 			}
-			const items = await this.page.sessionStorage.items();
+			const items = await this.access("get", () => this.page.sessionStorage.items());
 			return Object.fromEntries(
 				items.map((item) => [item.name, decodeValue(this.schema, item.name, item.value, title)]),
 			);
@@ -254,11 +275,11 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		await this.step("clear", async () => {
 			this.assertOnOrigin("clear");
 			if (keyOrKeys === undefined) {
-				await this.page.sessionStorage.clear();
+				await this.access("clear", () => this.page.sessionStorage.clear());
 				return;
 			}
 			for (const key of typeof keyOrKeys === "string" ? [keyOrKeys] : keyOrKeys) {
-				await this.page.sessionStorage.removeItem(key);
+				await this.access("clear", () => this.page.sessionStorage.removeItem(key));
 			}
 		});
 	}
@@ -289,7 +310,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 			}
 			const encoded = encodeEntries(this.schema, entries, title);
 			if (originOf(this.page.url()) === origin) {
-				await this.write(encoded);
+				await this.write("seed", encoded);
 				return;
 			}
 			await registryFor(this.page, readTestOutcome).add(origin, encoded, title, site);

@@ -101,7 +101,7 @@ describe("buildSeedDocument", () => {
 		const html = buildSeedDocument(entries, `${B}/app?x=1`, "GET", null);
 		expect(
 			html.startsWith(
-				'<!doctype html><meta name="referrer" content="no-referrer"><title>POMWright session storage seed</title>',
+				'<!doctype html><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>POMWright session storage seed</title>',
 			),
 		).toBe(true);
 		expect(html).toContain(`var entries = ${escapeForScript(entries)};`);
@@ -124,6 +124,7 @@ describe("buildSeedDocument", () => {
 			"SAMLResponse=xyz&RelayState=r+s%26t&empty=&dup=1&dup=2",
 		);
 		expect(html).toContain('form.method = "post"');
+		expect(html).toContain('form.acceptCharset = "utf-8"');
 		expect(html).toContain(`form.action = ${JSON.stringify(`${B}/app`)}`);
 		expect(html).toContain('new URLSearchParams("SAMLResponse=xyz&RelayState=r+s%26t&empty=&dup=1&dup=2").forEach');
 		expect(html).toContain('input.type = "hidden"');
@@ -135,7 +136,7 @@ describe("buildSeedDocument", () => {
 describe("buildRedirectDocument", () => {
 	it("performs the navigation without storing anything", () => {
 		const get = buildRedirectDocument(`${B}/app`, "GET", null);
-		expect(get).toContain('<meta name="referrer" content="no-referrer">');
+		expect(get).toContain('<meta charset="utf-8"><meta name="referrer" content="no-referrer">');
 		expect(get).toContain("<title>POMWright redirect</title>");
 		expect(get).toContain(`location.replace(${JSON.stringify(`${B}/app`)});`);
 		expect(get).not.toContain("sessionStorage");
