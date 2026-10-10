@@ -2,14 +2,15 @@
 
 > Working draft, maintained in `release-3.0.0/` while the release is built. It lists only changes that are done or
 > committed to by a plan in this folder. It is not a summary of the analysis. Status markers:
-> **[done]** covered by a plan, not yet implemented. **[done]** implemented on the working branch.
+> **[planned]** covered by a plan, not yet implemented. **[done]** implemented on the working branch.
 > **[roadmap]** decided for 3.0.0 but not yet planned. Where a planned item depends on an open decision, the
 > decision number from the plan is given. When 3.0.0 ships, drop the markers and this note; what remains is the basis
 > for the changelog entry and the announcement.
 >
-> Last updated 2026-10-08. Plans covered: 1.1-1.2 (getById), executed and committed on
+> Last updated 2026-10-10. Plans covered: 1.1-1.2 (getById), executed and committed on
 > `chore/bugfixes-quality-improvements-and-docs` (commits e709d0c to 735066b); 1.3-1.4 (URL composition and
-> navigation), executed and committed on the same branch on 2026-10-08 (commits bc8d980 to 4682146).
+> navigation), executed and committed on the same branch on 2026-10-08 (commits bc8d980 to 4682146); 1.5 (session
+> storage), decided 2026-10-09 and 2026-10-10, awaiting execution.
 
 ## Overview
 
@@ -17,7 +18,8 @@ POMWright 3.0.0 is a major release focused on fixing bugs, maintenance, removing
 code, structural improvements, and improving packaging, tooling, CI, quality, reliability, performance, test coverage,
 and documentation.
 
-Requirements: unchanged so far. Peer dependency `@playwright/test >=1.57.0 <2.0.0`.
+Requirements: peer dependency `@playwright/test >=1.61.0 <2.0.0`, raised from `>=1.57.0` because `SessionStorage`
+uses `page.sessionStorage` (added in Playwright 1.61) **[planned, plan 1.5]**.
 
 ## Breaking changes
 
@@ -99,6 +101,43 @@ for the URL to change and then fails at once if it bounced back. POMWright no lo
 since `waitUntil` now covers every method. Migration: rename `waitForLoadState` to `waitUntil` in `navOptions` and
 in per-call options.
 
+### `SessionStorage` rebuilt on Playwright's WebStorage API **[planned, plan 1.5]**
+
+The helper now reads and writes through `page.sessionStorage` and adds only what Playwright lacks: batches, step
+titles, origin checks, typed values, and seeding before the app loads.
+
+- Values are strings, stored and read exactly as given. 2.x JSON-encoded every value, so `set({ token: "abc" })`
+  reached the app as `"abc"` with quotes. Structured values are declared once per key with a codec:
+  `new SessionStorage(page, { schema: { user: json<User>() } })`, or the `sessionStorage: { schema }` option of a
+  page object, with the schema type named through the `storage` member of the page object's options type. `json<T>()` ships; `Codec<T>` is exported for custom
+  codecs. An undeclared key must be a string, at compile time and at runtime.
+- `set`, `get`, `clear` and `seed` each take a single key or a record: `set("token", "abc")`, `get("token")`,
+  `clear(["a", "b"])`, `seed({ token })`.
+- `get(keys)` returns every requested key with `null` when absent; `get()` returns the present entries. A literal
+  `get([])` or `clear([])` no longer compiles; a computed empty list reads nothing or removes nothing (2.x read or
+  cleared everything).
+- `setOnNextNavigation` is replaced by `seed(entries, { origin? })`. It intercepts the next navigation to the origin,
+  whether by `goto`, a link, a script redirect, a form POST or a server redirect, and stores the entries in the
+  browser before the app's document exists, so the app's first script sees them. It never leaves the page the test
+  is on, so an origin can be seeded with data learned on the previous one. Already on the origin, it writes at once.
+  While a seed is pending, and only then, navigations to other origins pass through Playwright so that server
+  redirects can be seen; nothing is registered on a page that never seeds. A seed that is still pending when the
+  page closes fails the test; two page objects seeding the same origin merge. Whole-page navigation mocks must be
+  registered after `seed`; API mocks are unaffected.
+- `waitForContext` is removed: an operation on a page without an origin fails at once with a message naming the
+  fix. `reload` is removed: call `page.reload()`.
+- A page object's helper operates on that page object's origin and throws, naming both origins, when the page is on
+  another one. A standalone helper without an origin operates on the current origin; its `seed` needs `{ origin }`.
+- Service workers: a worker registered by the app that answers navigations also answers a pending seed, and
+  Playwright's routes cannot see it. The test then fails at once with a message naming the fixes: `serviceWorkers:
+  "block"`, seeding before the app's first load in the context, or unregistering the worker in the test.
+
+**Migration.** `grep -rn 'setOnNextNavigation\|waitForContext' --include=*.ts .`; replace `setOnNextNavigation(x)`
+with `seed(x)`, drop `waitForContext`, replace `set(x, { reload: true })` with `set(x)` plus `page.reload()`. Where
+2.x stored objects, declare a codec for the key and drop the `set<T>` / `get<T>` generics; where it stored strings
+that the app parsed as JSON (an `ngx-webstorage` style layer), declare `json<string>()` for those keys to keep the
+quotes. Replace `get(keys)` checks for `undefined` with `null`.
+
 ## Bug fixes
 
 - `getById(string)` no longer breaks on ids with punctuation, whitespace, quotes, or a leading digit (analysis 1.1).
@@ -116,6 +155,13 @@ in per-call options.
 - A substring RegExp `baseUrl` no longer needs to match up to the start of the path (analysis 1.3). **[done]**
 - `expectAnotherPage` no longer passes while still on the page (analysis 1.4). **[done]**
 - `goto` is no longer unavailable on a page object whose `urlPath` is a RegExp (analysis 1.10). **[done]**
+- `SessionStorage.set` no longer stores strings with JSON quotes (analysis 1.5a). **[planned, plan 1.5]**
+- Seeding before the app's first load no longer loses the race against the app's first script (analysis 1.5b), no
+  longer merges and wipes concurrent calls (1.5c), and no longer leaks a listener after a failure (1.5d).
+  **[planned, plan 1.5]**
+- `get([])` and `clear([])` no longer mean "everything" (analysis 1.5e). **[planned, plan 1.5]**
+- An empty string in session storage no longer reads back as `null` (analysis 1.5f). **[planned, plan 1.5]**
+- No session storage operation waits without a timeout any more (analysis 1.5g). **[planned, plan 1.5]**
 
 ## Removed and internal cleanup
 
@@ -126,6 +172,9 @@ in per-call options.
 - `PageObject.composeFullUrl` and the internal `NavigationString` / `NavigationRegExp` / `ExtractNavigationType`
   types are replaced by `src/helpers/url.ts` and a single `NavigationFor` type. `UrlPathTypeFromOptions` no longer
   spells `"" | string` (analysis section 2). **[done]**
+- `SessionStorage.setOnNextNavigation`, the `waitForContext` and `reload` options, the `set<T>` / `get<T>` generics,
+  and the internal `SessionStorageState` type are removed; `json`, `Codec` and `SessionStorageSchema` are exported
+  instead. **[planned, plan 1.5]**
 
 ## Tooling, CI, and tests
 
@@ -146,6 +195,11 @@ in per-call options.
   and `testNavItem` page objects and fixtures; a navigation spec covering `goto()`, `goto(target)`, the actions
   option, timeouts, RegExp bases, flags, and the empty-base case; and a construction-time validation spec.
   **[done]**
+- A new `/teststorage` fixture route (GET and POST) with a startup snapshot, a link and a form POST hop to a second
+  origin, a COOP variant and a service worker; `testStorage` and `testStorageSecond` page objects; a
+  `sessionStorage.spec.ts` covering codecs, every method form, the no-origin and wrong-origin errors, seeding by
+  `goto`, link and form POST, multi-origin chains, COOP, and the service-worker cases; unit tests for the pure
+  parts and the type contract. **[planned, plan 1.5]**
 
 ## Documentation
 
@@ -158,6 +212,9 @@ in per-call options.
 - The `PageObject` and navigation sections of `docs/v3/PageObject.md` and `docs/v3/overview.md` rewritten: URL
   rules and guards, how `fullUrl` is composed, the four navigation methods and their options, a real failure
   message, and a 2.x to 3.0 migration note. **[done]**
+- `docs/v3/session-storage.md` rewritten: codecs with worked examples, every method form, `seed` and what it
+  supports and costs, multi-origin flows, the service-worker limitation with every fix, and a 2.x to 3.0 migration
+  with usage cases side by side. `overview.md` and `PageObject.md` follow. **[planned, plan 1.5]**
 - A new documentation site built with Starlight and hosted on GitHub Pages, using `docs/v3` as its source.
   **[roadmap]**
 
@@ -180,3 +237,13 @@ Grows as plans land.
 7. Navigation waits follow `use.navigationTimeout`; override it with `navOptions: { timeout }` on the page object
    or a per-call `timeout`.
 8. Rename `waitForLoadState` to `waitUntil` in `navOptions` and per-call navigation options.
+9. Upgrade `@playwright/test` to 1.61 or later.
+10. Replace `setOnNextNavigation` with `seed`, drop `waitForContext`, and replace `reload: true` with a
+    `page.reload()` call.
+11. Declare a codec for every session storage key that holds a structured value, and `json<string>()` for string
+    keys the app parses as JSON; drop the `set<T>` / `get<T>` generics.
+12. A check for `undefined` from `get(keys)` becomes a check for `null`; a literal `get([])` or `clear([])` must go.
+13. If the app registers a service worker and a test seeds after the app has loaded, add `serviceWorkers: "block"`
+    to the Playwright config or seed before the first load.
+14. Remove `seed` calls that are not followed by a navigation to that origin, including defensive seeding in
+    fixtures; seed in the test, right before the hop. Register whole-page navigation mocks after `seed`.
