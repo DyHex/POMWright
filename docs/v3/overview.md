@@ -314,40 +314,51 @@ Only `goto()` without a target and `expectThisPage()` call `pageActionsToPerform
 
 ### 2.9 `SessionStorage` helper
 
-`SessionStorage` is available via `PageObject.sessionStorage` or direct instantiation.
+`SessionStorage` is Playwright's `page.sessionStorage` with batches, step titles, origin checks, per-key codecs,
+and `seed`, which stores entries for an origin before the app's next load there, whatever navigation takes the page
+there. It is available as `PageObject.sessionStorage` or by direct construction. Values are strings unless a codec
+is declared for the key. See `session-storage.md` for the full contract.
 
-**Example A — using `LoginPage.sessionStorage` in a test:**
+**Example A — a page object with a declared key, seeding before the first load:**
 
 ```ts
-import { test, expect } from "./fixtures";
+import type { Page } from "@playwright/test";
+import { json, PageObject } from "pomwright";
+
+type User = { name: string; age: number };
+const loginStorage = { user: json<User>() };
+
+class LoginPage extends PageObject<Paths, { storage: typeof loginStorage }> {
+  constructor(page: Page) {
+    super(page, "https://app.example", "/login", { sessionStorage: { schema: loginStorage } });
+  }
+  // defineLocators, pageActionsToPerformAfterNavigation …
+}
 
 test("session storage via PageObject", async ({ loginPage }) => {
-  await loginPage.navigation.goto();
-  await loginPage.sessionStorage.set({ token: "abc" }, { reload: true });
-  await loginPage.sessionStorage.setOnNextNavigation({ theme: "dark" });
+  await loginPage.sessionStorage.seed({ token: "abc", user: { name: "Ada", age: 36 } }); // pending for the origin
+  await loginPage.navigation.goto(); // the app's first script already sees both
 
-  const data = await loginPage.sessionStorage.get(["token", "theme"], { waitForContext: true });
-  await loginPage.sessionStorage.clear(["token"], { waitForContext: true });
-
-  expect(data.token).toBe("abc");
-  expect(data.theme).not.toBe("dark")
-  await loginPage.page.reload();
-  expect(data.theme).toBe("dark")
+  const user = await loginPage.sessionStorage.get("user"); // User | null
+  const { token } = await loginPage.sessionStorage.get(["token"]); // { token: string | null }
+  await loginPage.sessionStorage.clear("token");
+  expect(user?.name).toBe("Ada");
+  expect(token).toBe("abc");
 });
 ```
 
-**Example B — custom SessionStorage fixture:**
+**Example B — a standalone helper as a fixture:**
 
 ```ts
-import { test as base } from "pomwright";
-import type { SessionStorage } from "pomwright";
-import { SessionStorage as SessionStorageHelper } from "pomwright";
+import { type Codec, json, SessionStorage, test as base } from "pomwright";
 
-type Fixtures = { sessionStorage: SessionStorage };
+type Fixtures = { storage: SessionStorage<{ user: Codec<User> }> };
 
 export const test = base.extend<Fixtures>({
-  sessionStorage: async ({ page }, use) => {
-    await use(new SessionStorageHelper(page, { label: "SessionStorage" }));
+  storage: async ({ page }, use) => {
+    await use(
+      new SessionStorage(page, { label: "Storage", origin: "https://app.example", schema: { user: json<User>() } }),
+    );
   },
 });
 ```
@@ -356,12 +367,10 @@ export const test = base.extend<Fixtures>({
 import { test } from "./fixtures";
 import { expect } from "@playwright/test";
 
-test("session storage via custom fixture", async ({ page, sessionStorage }) => {
-  await page.goto("https://example.com/login");
-  await sessionStorage.set({ token: "abc" });
-
-  const data = await sessionStorage.get(["token"]);
-  expect(data.token).toBe("abc");
+test("session storage via custom fixture", async ({ page, storage }) => {
+  await page.goto("https://app.example/login");
+  await storage.set({ token: "abc" });
+  expect(await storage.get("token")).toBe("abc");
 });
 ```
 
@@ -427,13 +436,16 @@ This section separates public API from internal implementation details and expla
 #### Helpers
 
 - **Navigation**: `navigation.goto()` (this page, string `fullUrl` only), `goto(target)`, `expectThisPage`, `expectAnotherPage`; the `goto` forms depend on the string vs RegExp URL typing.
-- **SessionStorage**: `set`, `setOnNextNavigation`, `get`, `clear`.
+- **SessionStorage**: `set`, `get`, `clear`, `seed`, each taking a key or a record; values typed by the codecs declared
+  in the schema (`json<T>()`, `Codec<T>`).
 - **Step decorator**: `step`.
 - **Logging**: `PlaywrightReportLogger` and `test` fixture.
 
 #### Type exports
 
-- `UrlTypeOptions`, `BaseUrlTypeFromOptions`, `UrlPathTypeFromOptions`, `FullUrlTypeFromOptions`.
+- `UrlTypeOptions`, `BaseUrlTypeFromOptions`, `UrlPathTypeFromOptions`, `FullUrlTypeFromOptions`,
+  `StorageTypeFromOptions`.
+- `Codec`, `SessionStorageSchema`, and the `json` codec.
 - `NavigationOptions`, `ThisPageOptions`, `NavigationFor`, `UrlMatcher`.
 - `LocatorRegistry` type.
 
@@ -487,7 +499,9 @@ This is not intended for direct usage but explains the building blocks used by t
 
 #### `SessionStorage`
 
-- **Purpose**: Manage session storage with robust context handling and Playwright `test.step` reporting.
+- **Purpose**: Playwright's `page.sessionStorage` with batches, step titles, origin checks, per-key codecs, and the
+  deferred `seed`. The seed registry in `src/helpers/sessionStorageSeed.ts`, one per page, registers a route and two
+  listeners only while a seed is pending and removes them once it is applied.
 - **Used by**: `PageObject` (as `sessionStorage`) and can be used directly.
 
 #### `PlaywrightReportLogger` and `test` fixture

@@ -23,7 +23,11 @@ export abstract class PageObject<
     page: Page,
     baseUrl: BaseUrlTypeFromOptions<Options>,
     urlPath: UrlPathTypeFromOptions<Options>,
-    options?: { label?: string; navOptions?: NavigationOptions },
+    options?: {
+      label?: string;
+      navOptions?: NavigationOptions;
+      sessionStorage?: { schema?: StorageTypeFromOptions<Options> };
+    },
   )
 }
 ```
@@ -44,18 +48,37 @@ type Paths =
 
 ### `Options` (`UrlTypeOptions`)
 
-`UrlTypeOptions` declares which of `baseUrl` and `urlPath` are RegExps. Both default to `string`:
+`UrlTypeOptions` declares which of `baseUrl` and `urlPath` are RegExps, both defaulting to `string`, and names
+the session storage schema the page object's helper is typed with:
 
 ```ts
 type UrlTypeOptions = {
   baseUrlType?: string | RegExp;
   urlPathType?: string | RegExp;
+  storage?: SessionStorageSchema; // codecs by key; see session-storage.md
 };
 ```
 
 - With two strings, `fullUrl` is the resolved URL string and every navigation method is available.
 - When either is a `RegExp`, `fullUrl` is a `UrlMatcher` (see *How `fullUrl` is composed*), `goto()` without a target is
   unavailable, and on a RegExp `baseUrl` `goto(target)` accepts only absolute URLs.
+- `storage` types `sessionStorage` (`StorageTypeFromOptions<Options>`), so `set`, `get` and `seed` know each declared
+  key's type; the schema value itself is passed in the constructor options. Without it every key is a string. It lives
+  in this options bag rather than in a generic of its own because generics cannot be skipped: a subclass with a schema
+  would otherwise have to spell out the URL defaults.
+
+```ts
+const loginStorage = { user: json<User>() };
+
+class LoginPage extends PageObject<Paths, { storage: typeof loginStorage }> {
+  constructor(page: Page) {
+    super(page, "https://app.example", "/login", { sessionStorage: { schema: loginStorage } });
+  }
+  // …
+}
+
+class AccountPage extends PageObject<Paths, { urlPathType: RegExp; storage: typeof loginStorage }> { /* … */ }
+```
 
 #### String `baseUrl`: a non-empty origin
 
@@ -114,6 +137,7 @@ the port, so use `(?::\d+)?$` when it varies. A `UrlMatcher` is accepted by `pag
   class name.
 - `navOptions`: Default `NavigationOptions` (`waitUntil`, `timeout`) for the navigation helper; every method can
   override them per call.
+- `sessionStorage.schema`: The codecs by key, whose type is named by the `storage` member of `Options`.
 
 ---
 
@@ -140,7 +164,7 @@ Return a list of async callbacks to run after `goto()` without a target and afte
 | `baseUrl` / `urlPath` | `string` or `RegExp` | The values passed to the constructor, typed by `UrlTypeOptions`. |
 | `fullUrl` | `string` or `UrlMatcher` | The resolved URL for two strings; a structured matcher when either part is a RegExp. |
 | `label` | `string` | Label used for navigation and session storage steps. |
-| `sessionStorage` | `SessionStorage` | Session storage helper, labeled with `label`. |
+| `sessionStorage` | `SessionStorage<StorageTypeFromOptions<Options>>` | Session storage helper, labeled with `label`, bound to the origin of a string `baseUrl`, typed by the `storage` option. |
 | `navigation` | `NavigationFor<BaseUrl, FullUrl>` | Navigation helper; the available `goto` forms depend on the URL types. |
 | `add` | `AddAccessor<Paths>` | Registry `add` method for locator definitions. |
 | `getLocator` | `GetLocatorAccessor<Paths>` | Terminal locator resolver. |
@@ -398,14 +422,20 @@ const filtered = loginPage
 
 ## SessionStorage helper
 
-`PageObject` constructs `SessionStorage` with `label` as a prefix, so step titles are easy to track.
+`PageObject` constructs `SessionStorage` with its `label`, the origin of a string `baseUrl` (so `seed` needs no
+argument and `set`, `get` and `clear` touch only this origin), and the schema given as `sessionStorage.schema`.
 
 ```ts
-await loginPage.sessionStorage.set({ token: "abc" }, { reload: true });
-await loginPage.sessionStorage.setOnNextNavigation({ theme: "dark" });
-const data = await loginPage.sessionStorage.get(["token", "theme"], { waitForContext: true });
-await loginPage.sessionStorage.clear(["token"], { waitForContext: true });
+await loginPage.sessionStorage.seed({ token: "abc", user }); // before the app's next load on this origin
+await loginPage.navigation.goto();
+const user = await loginPage.sessionStorage.get("user"); // typed by the schema
+await loginPage.sessionStorage.set("token", "def");
+await loginPage.sessionStorage.clear(["token"]);
 ```
+
+On a RegExp `baseUrl` there is no origin to take: `seed` then needs `{ origin }`, and the other methods follow the
+page. See `session-storage.md` for codecs, every hop `seed` supports, multi-origin flows, frames, and service
+workers.
 
 ---
 
