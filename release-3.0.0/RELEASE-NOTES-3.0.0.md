@@ -10,7 +10,7 @@
 > Last updated 2026-10-10. Plans covered: 1.1-1.2 (getById), executed and committed on
 > `chore/bugfixes-quality-improvements-and-docs` (commits e709d0c to 735066b); 1.3-1.4 (URL composition and
 > navigation), executed and committed on the same branch on 2026-10-08 (commits bc8d980 to 4682146); 1.5 (session
-> storage), decided 2026-10-09 and 2026-10-10, awaiting execution.
+> storage), executed and committed on the same branch on 2026-10-10 (commits a05e8fd to ab76175).
 
 ## Overview
 
@@ -19,7 +19,7 @@ code, structural improvements, and improving packaging, tooling, CI, quality, re
 and documentation.
 
 Requirements: peer dependency `@playwright/test >=1.61.0 <2.0.0`, raised from `>=1.57.0` because `SessionStorage`
-uses `page.sessionStorage` (added in Playwright 1.61) **[planned, plan 1.5]**.
+uses `page.sessionStorage` (added in Playwright 1.61) **[done, plan 1.5]**.
 
 ## Breaking changes
 
@@ -101,7 +101,7 @@ for the URL to change and then fails at once if it bounced back. POMWright no lo
 since `waitUntil` now covers every method. Migration: rename `waitForLoadState` to `waitUntil` in `navOptions` and
 in per-call options.
 
-### `SessionStorage` rebuilt on Playwright's WebStorage API **[planned, plan 1.5]**
+### `SessionStorage` rebuilt on Playwright's WebStorage API **[done, plan 1.5]**
 
 The helper now reads and writes through `page.sessionStorage` and adds only what Playwright lacks: batches, step
 titles, origin checks, typed values, and seeding before the app loads.
@@ -155,13 +155,13 @@ quotes. Replace `get(keys)` checks for `undefined` with `null`.
 - A substring RegExp `baseUrl` no longer needs to match up to the start of the path (analysis 1.3). **[done]**
 - `expectAnotherPage` no longer passes while still on the page (analysis 1.4). **[done]**
 - `goto` is no longer unavailable on a page object whose `urlPath` is a RegExp (analysis 1.10). **[done]**
-- `SessionStorage.set` no longer stores strings with JSON quotes (analysis 1.5a). **[planned, plan 1.5]**
+- `SessionStorage.set` no longer stores strings with JSON quotes (analysis 1.5a). **[done, plan 1.5]**
 - Seeding before the app's first load no longer loses the race against the app's first script (analysis 1.5b), no
   longer merges and wipes concurrent calls (1.5c), and no longer leaks a listener after a failure (1.5d).
-  **[planned, plan 1.5]**
-- `get([])` and `clear([])` no longer mean "everything" (analysis 1.5e). **[planned, plan 1.5]**
-- An empty string in session storage no longer reads back as `null` (analysis 1.5f). **[planned, plan 1.5]**
-- No session storage operation waits without a timeout any more (analysis 1.5g). **[planned, plan 1.5]**
+  **[done, plan 1.5]**
+- `get([])` and `clear([])` no longer mean "everything" (analysis 1.5e). **[done, plan 1.5]**
+- An empty string in session storage no longer reads back as `null` (analysis 1.5f). **[done, plan 1.5]**
+- No session storage operation waits without a timeout any more (analysis 1.5g). **[done, plan 1.5]**
 
 ## Removed and internal cleanup
 
@@ -174,7 +174,7 @@ quotes. Replace `get(keys)` checks for `undefined` with `null`.
   spells `"" | string` (analysis section 2). **[done]**
 - `SessionStorage.setOnNextNavigation`, the `waitForContext` and `reload` options, the `set<T>` / `get<T>` generics,
   and the internal `SessionStorageState` type are removed; `json`, `Codec` and `SessionStorageSchema` are exported
-  instead. **[planned, plan 1.5]**
+  instead. **[done, plan 1.5]**
 
 ## Tooling, CI, and tests
 
@@ -199,7 +199,7 @@ quotes. Replace `get(keys)` checks for `undefined` with `null`.
   origin, a COOP variant and a service worker; `testStorage` and `testStorageSecond` page objects; a
   `sessionStorage.spec.ts` covering codecs, every method form, the no-origin and wrong-origin errors, seeding by
   `goto`, link and form POST, multi-origin chains, COOP, and the service-worker cases; unit tests for the pure
-  parts and the type contract. **[planned, plan 1.5]**
+  parts and the type contract. The spec passes on Firefox and WebKit as well. **[done, plan 1.5]**
 
 ## Documentation
 
@@ -214,7 +214,7 @@ quotes. Replace `get(keys)` checks for `undefined` with `null`.
   message, and a 2.x to 3.0 migration note. **[done]**
 - `docs/v3/session-storage.md` rewritten: codecs with worked examples, every method form, `seed` and what it
   supports and costs, multi-origin flows, the service-worker limitation with every fix, and a 2.x to 3.0 migration
-  with usage cases side by side. `overview.md` and `PageObject.md` follow. **[planned, plan 1.5]**
+  with usage cases side by side. `overview.md` and `PageObject.md` follow. **[done, plan 1.5]**
 - A new documentation site built with Starlight and hosted on GitHub Pages, using `docs/v3` as its source.
   **[roadmap]**
 

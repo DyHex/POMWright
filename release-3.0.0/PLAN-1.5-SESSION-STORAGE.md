@@ -5,8 +5,14 @@ bullets of section 5). File links are relative to this folder. Written 2026-10-0
 2026-10-09 (deferred `seed`, per-key codecs, single-key forms, origin guard, service-worker handling) and
 2026-10-10 (server redirects through a proxy while a seed is pending, one seed registry per page, a never-firing
 seed fails the test, fidelity mitigations). Every decision in section 7 is taken and mirrored in
-[DECISIONS.md](DECISIONS.md) and [RELEASE-NOTES-3.0.0.md](RELEASE-NOTES-3.0.0.md). The plan awaits execution
-(section 8).
+[DECISIONS.md](DECISIONS.md) and [RELEASE-NOTES-3.0.0.md](RELEASE-NOTES-3.0.0.md). Executed 2026-10-10, see below.
+
+**Executed 2026-10-10** on `chore/bugfixes-quality-improvements-and-docs`, one commit per execution step: a05e8fd (1, the runtime: sessionStorage.ts, sessionStorageSeed.ts, PageObject, exports, peer floor, unit tests), 06c705f (2, the /teststorage fixture, page objects and the spec), 41f7478 (3, docs/v3), ab76175 (4, changeset),
+and the ledger commit for step 6 that carries this note. Step 5 found nothing to fix: `pnpm lint` clean, 154 unit
+tests, 290 Playwright tests on chromium against the packed tarball, and the storage spec green on firefox and webkit
+as well. Execution-time decisions (UTF-8 in the documents, per-call no-origin detection with Firefox's wording, the
+mock-based proxy indicator, WebKit's iframe partitioning, the error page after an aborted proxied navigation, the
+https probe) are recorded in [DECISIONS.md](DECISIONS.md).
 
 Every runtime claim below was verified against Chromium through the Playwright 1.62.1 installs in `test/` and at
 the root, or against the installed Playwright type definitions and the Playwright release notes: the WebStorage,

@@ -229,31 +229,40 @@ timeout and prints a real diff. Use the negated form for `expectAnotherPage`.
 
 ### 1.5 `SessionStorage` contract and ordering problems
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Fixed 2026-10-10 by [PLAN-1.5-SESSION-STORAGE.md](PLAN-1.5-SESSION-STORAGE.md), commits a05e8fd (1, the runtime: sessionStorage.ts, sessionStorageSeed.ts, PageObject, exports, peer floor, unit tests), 06c705f (2, the /teststorage fixture, page objects and the spec), 41f7478 (3, docs/v3), ab76175 (4, changeset).
+> The helper is rebuilt on `page.sessionStorage` (peer floor `>=1.61.0`): (a) values are strings stored verbatim, with
+> per-key codecs declared once for structured values; (b) `setOnNextNavigation` is replaced by `seed`, which answers
+> the next main-frame navigation to the origin with a document that stores the entries before the app's first script,
+> for `goto`, links, script and meta redirects, form POSTs and server redirects (seen through a proxy active only while
+> a seed is pending); `addInitScript` was rejected because it cannot be removed and overwrites what the app wrote;
+> (c) seeds merge per origin in one registry per page; (d) nothing is queued or left registered once a seed is
+> applied, a bypassed or never-applied seed fails the test; (e) a literal `[]` is a compile-time error and a computed
+> empty list means no keys; (f) `""` reads back as `""`; (g) `waitForContext` is gone, a page without an origin
+> fails at once. 38 integration tests against real DOM on chromium, firefox and webkit; 78 unit tests.
 
 All in [sessionStorage.ts](../src/helpers/sessionStorage.ts).
 
-- [ ] **a) Values are JSON-encoded, undocumented.** Write at [L96](../src/helpers/sessionStorage.ts#L96), decode at
+- [x] **a) Values are JSON-encoded, undocumented.** Write at [L96](../src/helpers/sessionStorage.ts#L96), decode at
   [L110](../src/helpers/sessionStorage.ts#L110). `set({ token: "abc" })` stores `"abc"` *with quotes*; the app reads a
   corrupted bearer token. Tests only round-trip through the helper
   ([testPage.spec.ts:138-141](../test/tests/testApp/testPage.spec.ts#L138-L141)), so this is invisible. Docs at
   [session-storage.md:37-51](../docs/v2/session-storage.md#L37-L51) never mention it.
-- [ ] **b) `setOnNextNavigation` writes after commit** *(Playwright semantics)*. The `framenavigated` listener at
+- [x] **b) `setOnNextNavigation` writes after commit** *(Playwright semantics)*. The `framenavigated` listener at
   [L164-172](../src/helpers/sessionStorage.ts#L164-L172) fires once the new document exists, so a SPA that reads storage
   in its first script wins the race. The idiomatic pre-seed is `page.addInitScript`.
-- [ ] **c) Queue race.** `populateStorage` awaits the write at [L157](../src/helpers/sessionStorage.ts#L157) and clears
+- [x] **c) Queue race.** `populateStorage` awaits the write at [L157](../src/helpers/sessionStorage.ts#L157) and clears
   `queuedStates` at [L159](../src/helpers/sessionStorage.ts#L159). A call landing in between is merged and then wiped.
-- [ ] **d) Handler leak.** No `try/finally` around `populateStorage()` at
+- [x] **d) Handler leak.** No `try/finally` around `populateStorage()` at
   [L164-171](../src/helpers/sessionStorage.ts#L164-L171). One throw leaves `isInitiated = true` forever; later queues
   never flush, and the rejection is unhandled inside an event listener.
-- [ ] **e) `clear([])` clears everything** at [L240](../src/helpers/sessionStorage.ts#L240). Reclassified 2026-10-06:
+- [x] **e) `clear([])` clears everything** at [L240](../src/helpers/sessionStorage.ts#L240). Reclassified 2026-10-06:
   `get([])` returns everything too ([L197](../src/helpers/sessionStorage.ts#L197)), so this is a consistent but
   undocumented empty-array contract rather than a bug. Decide the semantics for both methods together and document
   them.
-- [ ] **f) Empty string reads as `null`** at [L110](../src/helpers/sessionStorage.ts#L110).
-- [ ] **g) `waitForContextAvailability` never times out** at [L45-73](../src/helpers/sessionStorage.ts#L45-L73).
+- [x] **f) Empty string reads as `null`** at [L110](../src/helpers/sessionStorage.ts#L110).
+- [x] **g) `waitForContextAvailability` never times out** at [L45-73](../src/helpers/sessionStorage.ts#L45-L73).
 
 **Example (a).**
 
@@ -391,6 +400,8 @@ an empty or missing id throws at registration in all three builders. The other s
   `LocatorQueryBuilderPublic`, `FilterDefinition`, `IndexSelector`, `LocatorDescription`, `LocatorSchemaPathFormat`,
   `SessionStorageState`. The `export *` at [locators/index.ts:14-15](../src/locators/index.ts#L14-L15) is not re-exported
   by root. A user cannot name the type of `registry.createReusable.getByRole(...)` in a shared locators file.
+  `SessionStorageState` resolved 2026-10-10 by plan 1.5: the type is gone, and `Codec`, `SessionStorageSchema`, `json`
+  and `StorageTypeFromOptions` are exported instead; the locator types remain for plan 7.
 - [ ] **e) NEW: the pre-definition builder allows `filter`/`nth`/`describe` before a strategy.**
   [locatorRegistrationBuilder.ts:512-529](../src/locators/locatorRegistrationBuilder.ts#L512-L529) intersects the
   post-definition type. `add("a").filter({...})` and `add("a.b").describe("d")` compile and throw at
@@ -603,7 +614,7 @@ property (that `add` clones the seed). Either return a new builder per call or d
   scanners warn otherwise.
 - [ ] No `exports` map, `engines`, or `sideEffects`. `index.d.mts` is emitted but never selected by TypeScript.
 - [ ] `@playwright/test` is undeclared at root and pinned only by the lockfile
-  ([pnpm-lock.yaml:356](../pnpm-lock.yaml#L356)). The floor `>=1.57.0` is never exercised.
+  ([pnpm-lock.yaml:356](../pnpm-lock.yaml#L356)). The floor `>=1.57.0` is never exercised. Raised to `>=1.61.0` by plan 1.5 on 2026-10-10 (`page.sessionStorage`); the floor matrix remains for plan 6.
   [test/package.json:12](../test/package.json#L12) hard-pins 1.62.1. Declare it, and consider a CI matrix on the floor.
 - [ ] [pack-test.sh:18](../pack-test.sh#L18) `--no-frozen-lockfile` leaves `test/pnpm-lock.yaml` decorative for the
   harness's own dependencies. The flag itself is required, not a defect (corrected 2026-10-06): the lockfile pins
@@ -683,9 +694,11 @@ property (that `add` clones the seed). Either return a new builder per call or d
 
 ### docs/v2/session-storage.md
 
-- [ ] [L37-51](../docs/v2/session-storage.md#L37-L51) no JSON contract (1.5a).
-- [ ] [L66](../docs/v2/session-storage.md#L66) accurate but contradicts the method's implied use; add the
-  `addInitScript` alternative.
+- [x] [L37-51](../docs/v2/session-storage.md#L37-L51) no JSON contract (1.5a). Closed 2026-10-10: `docs/v3/session-storage.md` is
+  rewritten around strings-by-default and per-key codecs.
+- [x] [L66](../docs/v2/session-storage.md#L66) accurate but contradicts the method's implied use; add the
+  `addInitScript` alternative. Closed 2026-10-10: `setOnNextNavigation` is replaced by `seed`, and `addInitScript` is
+  documented as rejected (it cannot be removed and overwrites what the app wrote).
 
 ### docs/v2/logging.md
 
