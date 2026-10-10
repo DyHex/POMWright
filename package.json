@@ -62,7 +62,7 @@
 		"vitest": "5.0.3"
 	},
 	"peerDependencies": {
-		"@playwright/test": ">=1.57.0 <2.0.0"
+		"@playwright/test": ">=1.61.0 <2.0.0"
 	},
 	"packageManager": "pnpm@9.12.0"
 }
