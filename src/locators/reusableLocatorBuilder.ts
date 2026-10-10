@@ -2,7 +2,6 @@ import type { Page } from "@playwright/test";
 import type {
 	AltTextDefinition,
 	FilterDefinition,
-	IdDefinition,
 	IndexSelector,
 	LabelDefinition,
 	LocatorDefinition,
@@ -16,7 +15,7 @@ import type {
 	TextDefinition,
 	TitleDefinition,
 } from "./types";
-import { normalizeIdValue, normalizeSteps } from "./utils";
+import { assertIdValue, normalizeSteps } from "./utils";
 
 export class ReusableLocatorBuilder<
 	LocatorSchemaPathType extends string,
@@ -188,8 +187,13 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 		return this.create({ type: "testId", testId });
 	}
 
+	/**
+	 * Seeds an `id` locator. The value is stored verbatim: strings match the `id` attribute exactly,
+	 * RegExps are evaluated as patterns with their flags. An empty string throws.
+	 */
 	getById(id: string | RegExp) {
-		return this.create({ type: "id", id: normalizeIdValue(id) as IdDefinition["id"] });
+		assertIdValue(id, { method: "createReusable.getById" });
+		return this.create({ type: "id", id });
 	}
 
 	private create<Type extends LocatorStrategyDefinition["type"]>(

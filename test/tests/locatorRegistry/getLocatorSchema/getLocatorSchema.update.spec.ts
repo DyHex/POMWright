@@ -199,7 +199,7 @@ test("update can switch locator strategies, caching all latest locator definitio
 	const testId = schema.update(path).getByTestId("new-test-id").getNestedLocator();
 	expect(`${testId.describe("")}`).toEqual(`${manualTestId.describe("")}`);
 
-	const manualId = page.locator("body").locator("#new-id").filter({ hasText: "Text" }).first();
+	const manualId = page.locator("body").locator('[id="new-id"]').filter({ hasText: "Text" }).first();
 	const id = schema.update(path).getById("new-id").getNestedLocator();
 	expect(`${id.describe("")}`).toEqual(`${manualId.describe("")}`);
 
@@ -323,4 +323,23 @@ test("update overloads cover multiple strategies and retain filter/index steps",
 		.getNestedLocator();
 
 	expect(`${framePatched.describe("")}`).toEqual("locator('iframe[name=seed]')");
+});
+
+test("update accepts ids verbatim and RegExp ids as patterns", async ({ page, testFilters }) => {
+	const path = "body.section" as const;
+	const schema = testFilters.getLocatorSchema(path);
+
+	const manualTrickyId = page.locator("body").locator('[id="settings.panel"]');
+	const trickyId = schema.update(path).getById("settings.panel").getNestedLocator();
+	expect(`${trickyId.describe("")}`).toEqual(`${manualTrickyId.describe("")}`);
+
+	const manualRegExpId = page.locator("body").locator("internal:attr=[id=/^settings\\.panel$/i]");
+	const regExpId = schema
+		.update(path)
+		.getById(/^settings\.panel$/i)
+		.getNestedLocator();
+	expect(`${regExpId.describe("")}`).toEqual(`${manualRegExpId.describe("")}`);
+
+	expect(() => schema.update(path).getById("")).toThrowError(`getById requires a non-empty id for "${path}".`);
+	expect(() => schema.update(path).getById(/sticky/y)).not.toThrow();
 });

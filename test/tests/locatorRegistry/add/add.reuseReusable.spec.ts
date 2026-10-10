@@ -309,3 +309,20 @@ test("createReusable.filter supports visible true/false", async ({ page }) => {
 
 	expect(`${locator.describe("")}`).toEqual("getByRole('button').filter({ visible: true }).filter({ visible: false })");
 });
+
+test("reusable getById seeds store the id verbatim, inherit on omission, and reject an empty id", async ({ page }) => {
+	type LocatorSchemaPaths = "panel" | "panel.inherit" | "panel.override";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	const seed = registry.createReusable.getById("settings.panel");
+
+	registry.add("panel", { reuse: seed });
+	registry.add("panel.inherit", { reuse: seed }).getById(undefined);
+	registry.add("panel.override", { reuse: seed }).getById("#literal-hash");
+
+	expect(registry.get("panel").definition).toEqual({ id: "settings.panel", type: "id" });
+	expect(registry.get("panel.inherit").definition).toEqual({ id: "settings.panel", type: "id" });
+	expect(registry.get("panel.override").definition).toEqual({ id: "#literal-hash", type: "id" });
+
+	expect(() => registry.createReusable.getById("")).toThrowError("createReusable.getById requires a non-empty id.");
+});

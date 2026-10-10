@@ -219,7 +219,13 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 		{ label: "title", definition: { type: "title", text: "title" }, expected: "getByTitle('title')" },
 		{ label: "locator", definition: { type: "locator", selector: "locator" }, expected: "locator('locator')" },
 		{ label: "testId", definition: { type: "testId", testId: "testId" }, expected: "getByTestId('testId')" },
-		{ label: "id", definition: { type: "id", id: "id" }, expected: "locator('#id')" },
+		{ label: "id", definition: { type: "id", id: "id" }, expected: `locator('[id="id"]')` },
+		{ label: "id with dot", definition: { type: "id", id: "a.b" }, expected: `locator('[id="a.b"]')` },
+		{
+			label: "id as RegExp",
+			definition: { type: "id", id: /^a\.b$/ },
+			expected: `locator('internal:attr=[id=/^a\\\\.b$/]')`,
+		},
 	];
 
 	for (const { definition, expected, label } of testCases) {

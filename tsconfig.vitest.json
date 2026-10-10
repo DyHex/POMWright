@@ -1,0 +1,12 @@
+{
+	// Used only by vitest's typecheck mode (vitest.config.ts). The root tsconfig has no
+	// `include`, so tsc would otherwise sweep dist/ and test/, which has its own tsconfig and
+	// path aliases. Target es2024 so regex literals with the `v` flag, which the unit tests use
+	// and Node 24 supports, type-check; the published build still targets es2022 via tsup.
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"target": "es2024"
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": ["src/dist"]
+}
