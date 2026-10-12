@@ -7,10 +7,12 @@
 > decision number from the plan is given. When 3.0.0 ships, drop the markers and this note; what remains is the basis
 > for the changelog entry and the announcement.
 >
-> Last updated 2026-10-10. Plans covered: 1.1-1.2 (getById), executed and committed on
+> Last updated 2026-10-12. Plans covered: 1.1-1.2 (getById), executed and committed on
 > `chore/bugfixes-quality-improvements-and-docs` (commits e709d0c to 735066b); 1.3-1.4 (URL composition and
 > navigation), executed and committed on the same branch on 2026-10-08 (commits bc8d980 to 4682146); 1.5 (session
-> storage), executed and committed on the same branch on 2026-10-10 (commits a05e8fd to ab76175).
+> storage), executed and committed on the same branch on 2026-10-10 (commits a05e8fd to ab76175); 1.6-1.8
+> (registration guards, frames, `update` semantics, the Playwright 1.64 floor), decided 2026-10-12, items marked
+> *planned*.
 
 ## Overview
 
@@ -18,8 +20,10 @@ POMWright 3.0.0 is a major release focused on fixing bugs, maintenance, removing
 code, structural improvements, and improving packaging, tooling, CI, quality, reliability, performance, test coverage,
 and documentation.
 
-Requirements: peer dependency `@playwright/test >=1.61.0 <2.0.0`, raised from `>=1.57.0` because `SessionStorage`
-uses `page.sessionStorage` (added in Playwright 1.61) **[done, plan 1.5]**.
+Requirements: peer dependency `@playwright/test >=1.64.0 <2.0.0`, raised from `>=1.57.0`. `SessionStorage` uses
+`page.sessionStorage` (Playwright 1.61) **[done, plan 1.5]**; the any-frame `frameLocator()` needs 1.63 and the regex
+fix that makes every RegExp flag deterministic is in 1.64.0, so the floor is 1.64.0 and the harness runs it
+**[planned, plan 1.6-1.8]**.
 
 ## Breaking changes
 
@@ -51,9 +55,9 @@ on the id. Plain patterns such as `/btn-submit/` worked by coincidence, `/a.b/` 
 anchored patterns matched nothing, and flags were ignored. In 3.0.0 the regex is evaluated against each element's
 `id` with its flags. An unanchored pattern is still a substring match; anchor with `^` and `$` to match a whole id.
 
-- All flags pass through to Playwright unchanged, as with Playwright's own locators. The sticky `y` flag acts as a
-  start anchor on Playwright 1.64 and later, and is unreliable on earlier versions because of a Playwright bug fixed
-  in 1.64.0 (microsoft/playwright#42818). Prefer `^`.
+- All flags pass through to Playwright unchanged, as with Playwright's own locators. The sticky `y` flag is a start
+  anchor (Playwright 1.64.0 resets the regex state per element, microsoft/playwright#42818, and 1.64 is the floor)
+  **[done, plan 1.1-1.2; the version caveat goes with the floor, planned, plan 1.6-1.8]**.
 - The rendered selector changes from `[id*="…"]` to `internal:attr=[id=/…/flags]`, the same engine Playwright's own
   `getByTestId(RegExp)` compiles to.
 
@@ -138,6 +142,66 @@ with `seed(x)`, drop `waitForContext`, replace `set(x, { reload: true })` with `
 that the app parsed as JSON (an `ngx-webstorage` style layer), declare `json<string>()` for those keys to keep the
 quotes. Replace `get(keys)` checks for `undefined` with `null`.
 
+### Steps on frame segments apply, and `frameLocator()` is Playwright's any-frame locator **[planned, plan 1.6-1.8]**
+
+In 2.x a `filter`, `nth`, `first` or `last` chained on a `frameLocator(selector)` registration was recorded and
+dropped at resolution; when it mattered the action failed with a strict mode violation naming the frame selector.
+In 3.0.0 a frame segment resolves as Playwright recommends since 1.43: `locator(selector)`, then its steps, then
+`contentFrame()` for the descendants, and the `<iframe>` element itself when the frame is the last segment or a
+`has`/`hasNot` reference. Steps work at registration, on seeds and on the query builder (`nth("shell.frame", 1)`,
+`filter("shell.frame", { visible: true })`). A step-less frame renders exactly as before; a stepped one renders
+`locator('iframe').nth(1).contentFrame()…`. Disambiguate frames by their ancestor segments first; a step on the
+iframe element is the last resort, as for any locator, and `filter({ hasText })` on an iframe never matches because
+the frame's document is not part of the parent's text.
+
+`add(path).frameLocator()` with no selector registers Playwright's any-frame locator (1.63): the descendants resolve
+in whichever single frame holds them, the main frame included, and Playwright throws when several frames match. It
+must be the first segment of its chain, takes no steps and has no terminal form; `replace().frameLocator()` makes a
+sub-path any-frame. `frameLocator("")` throws on every builder.
+
+**Migration.** `grep -rn 'frameLocator(' --include=*.ts .` and review every chain that follows with `.nth(`,
+`.filter(`, `.first(` or `.last(`: the step now takes effect.
+
+### `update` keeps the strategy and follows JSON Merge Patch; `replace` changes the strategy **[planned, plan 1.6-1.8]**
+
+`getLocatorSchema(path).update(subPath?)` patches the definition registered for the sub-path and keeps its
+strategy: a provided primary replaces the primary, options merge key by key, `null` deletes an option
+(`{ name: null }`) or every option (`getByRole("button", null)`, `getByRole(null)`), and `undefined` or an absent
+value leaves the field alone. Calling another strategy's method on `update()` throws and names `replace()`.
+`replace(subPath?)` installs a new definition of any strategy with the primary argument required. Neither verb
+touches steps or the description. The builder-local cache that let 2.x switch strategies in `update` and switch
+back for free is gone.
+
+**Migration.** Rename cross-strategy `update(...).<method>(...)` calls to `replace` and state the primary argument.
+`update(x, undefined)` no longer wipes options and `{ key: undefined }` no longer removes a key: use `null`.
+`grep -rn 'update(' --include=*.ts . | grep undefined` finds both.
+
+### Every builder requires the strategy's primary argument **[planned, plan 1.6-1.8]**
+
+`add`, seeded `add`, `createReusable`, `update` and `replace` throw at the call, naming the method and the path,
+when the primary argument is missing (`getByRole requires a role for "main.button"`), and when it is an empty string
+for `locator`, `frameLocator` and `getByRole`, which Playwright cannot use (`locator requires a non-empty selector
+for "list"`); `getById("")` already threw. `getByTestId("")`, `getByText("")`, `getByLabel("")`,
+`getByPlaceholder("")`, `getByAltText("")` and `getByTitle("")` are stored verbatim, because Playwright matches
+elements with empty attributes. In 2.x `getByTestId("")` and `frameLocator("")` registered without their value and
+failed at resolution, a seeded `getByTestId("")` silently inherited, and an options-only `getByRole` from JavaScript
+registered without a role.
+
+### Steps before a strategy no longer compile; a failed seeded override keeps the seed **[planned, plan 1.6-1.8]**
+
+`add(path).filter(…)`, `.nth(…)` and `.describe(…)` are compile errors; after a strategy they are available as
+before, and a seeded registration keeps them before its override. At runtime the message names the method and the
+strategies to call first. A seeded registration whose override throws keeps the seeded definition; 2.x unregistered
+it for a wrong-type override and kept it for a second override.
+
+### Page objects verify their registry after `defineLocators()` **[planned, plan 1.6-1.8]**
+
+`PageObject` resolves every registered path once right after `defineLocators()`, so a mistyped `has`/`hasNot` path
+reference, a cycle, or an any-frame segment used as a terminal fails at construction with every failing path listed,
+instead of at the first action that resolves it. Registration itself is unchanged: forward references are still
+allowed. The cost is about a microsecond per path. Standalone registries from `createRegistryWithAccessors` call
+`registry.verify()` themselves.
+
 ## Bug fixes
 
 - `getById(string)` no longer breaks on ids with punctuation, whitespace, quotes, or a leading digit (analysis 1.1).
@@ -162,6 +226,14 @@ quotes. Replace `get(keys)` checks for `undefined` with `null`.
 - `get([])` and `clear([])` no longer mean "everything" (analysis 1.5e). **[done, plan 1.5]**
 - An empty string in session storage no longer reads back as `null` (analysis 1.5f). **[done, plan 1.5]**
 - No session storage operation waits without a timeout any more (analysis 1.5g). **[done, plan 1.5]**
+- `filter` and `nth` on a `frameLocator` segment are no longer dropped at resolution (analysis 1.6, 3.2).
+  **[planned, plan 1.6-1.8]**
+- A registration, seed, update or replacement without its primary argument no longer registers and fails later
+  (analysis 1.8). **[planned, plan 1.6-1.8]**
+- `update(x, undefined)` no longer wipes the registered options (analysis 1.8). **[planned, plan 1.6-1.8]**
+- `filter`, `nth` and `describe` before a strategy are compile errors and the runtime message says what to call
+  first (analysis 1.9e). **[planned, plan 1.6-1.8]**
+- A seeded registration is no longer unregistered by a wrong-type override (analysis 1.10). **[planned, plan 1.6-1.8]**
 
 ## Removed and internal cleanup
 
@@ -175,6 +247,10 @@ quotes. Replace `get(keys)` checks for `undefined` with `null`.
 - `SessionStorage.setOnNextNavigation`, the `waitForContext` and `reload` options, the `set<T>` / `get<T>` generics,
   and the internal `SessionStorageState` type are removed; `json`, `Codec` and `SessionStorageSchema` are exported
   instead. **[done, plan 1.5]**
+- The frame branch of `buildLocatorChain`, the internal `LocatorRegistryInternal.unregister`, the seeded rollback,
+  the per-path per-type definition cache of the query builder and the three-source merge of the update builder are
+  removed; `createLocator` returns `Locator`; `LocatorRegistry` gains `verify`; `assertIdValue` becomes a call to a
+  generic `assertPrimaryValue`. **[planned, plan 1.6-1.8]**
 
 ## Tooling, CI, and tests
 
@@ -200,6 +276,13 @@ quotes. Replace `get(keys)` checks for `undefined` with `null`.
   `sessionStorage.spec.ts` covering codecs, every method form, the no-origin and wrong-origin errors, seeding by
   `goto`, link and form POST, multi-origin chains, COOP, and the service-worker cases; unit tests for the pure
   parts and the type contract. The spec passes on Firefox and WebKit as well. **[done, plan 1.5]**
+- The harness pins `@playwright/test` 1.64.0; the three `toString` expectations that 1.64 renders as `.visible()`
+  follow, and the sticky `y` flag is asserted against DOM. **[planned, plan 1.6-1.8]**
+- `/iframe` gains a hidden iframe section and the iframe page object gains stepped, hidden and any-frame paths;
+  `/testids` gains a `data-testid=""` element; new specs for frame steps against DOM, registration validation per
+  strategy, the Merge Patch rules and the strategy-switch error, pre-definition calls, seeded recovery, and
+  `verify()` through the registry, the accessors and a page object; unit tests for the builders' guards, the update
+  parsing and merge, and the builder types. **[planned, plan 1.6-1.8]**
 
 ## Documentation
 
@@ -215,6 +298,11 @@ quotes. Replace `get(keys)` checks for `undefined` with `null`.
 - `docs/v3/session-storage.md` rewritten: codecs with worked examples, every method form, `seed` and what it
   supports and costs, multi-origin flows, the service-worker limitation with every fix, and a 2.x to 3.0 migration
   with usage cases side by side. `overview.md` and `PageObject.md` follow. **[done, plan 1.5]**
+- `docs/v3/locator-registry.md`: the frame sections rewritten around `locator` plus `contentFrame()`, steps on
+  frames with the ancestor-context recommendation, the any-frame segment, the strategy-method requirements, the
+  `update`/`replace` split with the Merge Patch rules, a `verify()` section, the error reference, the tested
+  guarantees, and a 2.x to 3.0 migration subsection; the sticky-flag caveat removed; the floor in `overview.md` and
+  `session-storage.md`. **[planned, plan 1.6-1.8]**
 - A new documentation site built with Starlight and hosted on GitHub Pages, using `docs/v3` as its source.
   **[roadmap]**
 
@@ -237,7 +325,7 @@ Grows as plans land.
 7. Navigation waits follow `use.navigationTimeout`; override it with `navOptions: { timeout }` on the page object
    or a per-call `timeout`.
 8. Rename `waitForLoadState` to `waitUntil` in `navOptions` and per-call navigation options.
-9. Upgrade `@playwright/test` to 1.61 or later.
+9. Upgrade `@playwright/test` to 1.64 or later.
 10. Replace `setOnNextNavigation` with `seed`, drop `waitForContext`, and replace `reload: true` with a
     `page.reload()` call.
 11. Declare a codec for every session storage key that holds a structured value, and `json<string>()` for string
@@ -247,3 +335,12 @@ Grows as plans land.
     to the Playwright config or seed before the first load.
 14. Remove `seed` calls that are not followed by a navigation to that origin, including defensive seeding in
     fixtures; seed in the test, right before the hop. Register whole-page navigation mocks after `seed`.
+15. Review every `frameLocator(...)` registration followed by `.nth(`, `.filter(`, `.first(` or `.last(`: the step
+    now applies. Prefer disambiguating frames through their ancestor segments.
+16. Rename `update(...)` calls that change the locator strategy to `replace(...)` and state the primary argument.
+17. Replace `undefined` used to clear options in `update` (`update(x, undefined)`, `{ key: undefined }`) with
+    `null`.
+18. Fix registrations, seeds, updates or replacements that pass an empty string to `locator`, `frameLocator` or
+    `getByRole`, or no primary argument at all; they now throw at the call.
+19. Expect a page object whose registry has a mistyped `has`/`hasNot` path reference or a cycle to fail at
+    construction; fix the reference. Standalone registries can call `registry.verify()` for the same check.
