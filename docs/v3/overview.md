@@ -20,7 +20,7 @@ This section focuses strictly on the public-facing surface of POMWright v2. Each
 
 ### 2.1 `PageObject` (v2 base class)
 
-`PageObject` wires a Playwright `Page` to the v2 locator registry, navigation helper, and session storage helper. You implement `defineLocators()` and `pageActionsToPerformAfterNavigation()`.
+`PageObject` wires a Playwright `Page` to the v2 locator registry, navigation helper, and session storage helper. You implement `defineLocators()`, which runs right after the page object is constructed and so can use constructor arguments and fields, and you may override `pageActionsToPerformAfterNavigation()` (no actions by default). See `PageObject.md` for the lifecycle.
 
 ```ts
 import { expect, type Page } from "@playwright/test";
@@ -70,14 +70,14 @@ export class LoginPage extends PageObject<Paths> {
 Custom Playwright fixture using the `LoginPage` POC:
 
 ```ts
-import  { type Page, test as base } from "@playwright/test";
+import { test as base } from "@playwright/test";
 import { LoginPage } from "./login.page";
 
 type Fixtures = { loginPage: LoginPage };
 
 export const test = base.extend<Fixtures>({
   loginPage: async ({ page }, use) => {
-    await use(new LoginPage(page as Page));
+    await use(new LoginPage(page));
   },
 });
 ```
@@ -285,9 +285,9 @@ Thus use createReusable if you need a reusable definition as base for creating m
 
 The navigation helper is **only available through `PageObject`**. Which `goto` forms exist depends on the URL types:
 `goto()` without a target needs a string `fullUrl`, `goto(target)` always exists and takes only absolute URLs on a
-RegExp `baseUrl`, and `expectThisPage` / `expectAnotherPage` always exist. You can return `[]` or `null` from
-`pageActionsToPerformAfterNavigation()` to skip actions, or provide any number of actions (including Playwright calls or
-`this.getNestedLocator(...).waitFor(...)` calls).
+RegExp `baseUrl`, and `expectThisPage` / `expectAnotherPage` always exist. Override
+`pageActionsToPerformAfterNavigation()` to provide any number of actions (including Playwright calls or
+`this.getNestedLocator(...).waitFor(...)` calls); omit it when there are none (`[]` and `null` also mean none).
 
 Below is the same `LoginPage` example from 2.1:
 
@@ -309,8 +309,8 @@ protected pageActionsToPerformAfterNavigation() {
 // await loginPage.navigation.expectAnotherPage();             // waits until the URL has left this page
 ```
 
-Only `goto()` without a target and `expectThisPage()` call `pageActionsToPerformAfterNavigation`; both accept
-`{ runPostNavigationActions: false }`. See `PageObject.md` for the options, timeouts, and failure messages.
+Only `goto()` without a target and `expectThisPage()` call `pageActionsToPerformAfterNavigation`, each time they run;
+both accept `{ runPostNavigationActions: false }`. See `PageObject.md` for the options, timeouts, and failure messages.
 
 ### 2.9 `SessionStorage` helper
 
@@ -332,7 +332,7 @@ class LoginPage extends PageObject<Paths, { storage: typeof loginStorage }> {
   constructor(page: Page) {
     super(page, "https://app.example", "/login", { sessionStorage: { schema: loginStorage } });
   }
-  // defineLocators, pageActionsToPerformAfterNavigation …
+  // defineLocators …
 }
 
 test("session storage via PageObject", async ({ loginPage }) => {
@@ -418,7 +418,9 @@ This section separates public API from internal implementation details and expla
 
 - **Role**: Base class that binds locators, navigation, and session storage to a Playwright `Page`.
 - **Key members**: `add`, `getLocator`, `getNestedLocator`, `getLocatorSchema`, `navigation`, `sessionStorage`.
-- **Contracts**: `defineLocators()` and `pageActionsToPerformAfterNavigation()` are required abstract hooks.
+- **Contracts**: `defineLocators()` is the one required hook; it runs once, right after construction or at the first
+  locator call, and the registry is verified right after it. `pageActionsToPerformAfterNavigation()` is optional and is
+  called each time the post-navigation actions run.
 
 #### `createRegistryWithAccessors` + `LocatorRegistry`
 

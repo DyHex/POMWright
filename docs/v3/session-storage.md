@@ -232,7 +232,7 @@ class LoginPage extends PageObject<Paths, { storage: typeof loginStorage }> {
   constructor(page: Page) {
     super(page, "https://app.example", "/login", { sessionStorage: { schema: loginStorage } });
   }
-  // defineLocators, pageActionsToPerformAfterNavigation …
+  // defineLocators …
 }
 
 class AccountPage extends PageObject<Paths, { urlPathType: RegExp; storage: typeof loginStorage }> { /* … */ }

@@ -141,23 +141,119 @@ the port, so use `(?::\d+)?$` when it varies. A `UrlMatcher` is accepted by `pag
 
 ---
 
-## Required abstract methods
+## Hooks and lifecycle
 
-### `defineLocators()`
+A page object implements one hook and may override a second:
 
-Define every locator path for the page using the v2 registry DSL (`add(...).getByRole(...)`, etc.). This is called in the constructor before navigation is created.
+- `defineLocators()` (required) registers the page object's locators with the registry DSL
+  (`add(...).getByRole(...)`, etc.).
+- `pageActionsToPerformAfterNavigation()` (optional) returns the actions to run after navigating to this page.
 
-Right after it returns, the registry is verified (`verify()` in `locator-registry.md`): every path is resolved once,
-without touching the DOM, so a mistyped `has`/`hasNot` path reference or a cycle fails the constructor with the path
-named, in the fixture, before any test action. A registration error (a duplicate path, a missing first argument, a
-step before a strategy) throws inside `defineLocators()` itself.
+### When `defineLocators()` runs, and what it can read
+
+`PageObject` does not call `defineLocators()` from its own constructor. It runs once per page object, right after the
+code that called `new` has finished, or at the first locator call (`getNestedLocator`, `getLocator`,
+`getLocatorSchema`, `add`, or a `this.locatorRegistry` method) if that comes earlier. In a fixture that is right after
+`new LoginPage(page)`, before the test body starts. Nothing needs to be called for this.
+
+So the definition can use everything the page object's own constructor sets: constructor arguments, including
+parameter properties, field initialisers, and assignments in the constructor body.
+
+```ts
+const loginLabel = { en: "Log in", nb: "Logg inn" } as const;
+
+export class LocalizedLoginPage extends PageObject<Paths> {
+  constructor(page: Page, private readonly locale: "en" | "nb") {
+    super(page, "https://app.example", "/login", { label: "LoginPage" });
+  }
+
+  protected defineLocators(): void {
+    this.add("main").locator("main");
+    this.add("main.button@login").getByRole("button", { name: loginLabel[this.locale] }); // "Logg inn" for "nb"
+  }
+}
+```
+
+A locator module can take the same state as an extra argument, `defineLocators(this.locatorRegistry, this.locale)`; see
+[Passing page-object state to a module](./composing-locator-modules.md#passing-page-object-state-to-a-module).
+
+In 2.x `defineLocators()` ran inside `super(...)`, before the page object had stored anything, so `this.locale` was
+`undefined` there and the locator above silently lost its name.
+
+### Verification, and how a registry mistake is reported
+
+Right after `defineLocators()` the registry is verified (`verify()` in `locator-registry.md`): every path is resolved
+once, without touching the DOM. Most mistakes are compile errors already (a path outside the union, a misspelt `has`
+path, a step before a strategy). The rest (a duplicate path, an empty selector, a `has` reference to a path that is
+never registered, a cycle) fail right after construction, in the fixture, before the test body, with the page
+object's label in the message, the line that constructed the page object in the stack, and the original error as
+`cause`:
+
+```
+LoginPage: Locator registry verification failed for 1 of 14 paths:
+  "list.item": No locator schema registered for path "list.titel".
+
+LoginPage: defineLocators() failed: A locator schema with the path "main" already exists. …
+```
+
+`new LoginPage(page)` itself does not throw for such a mistake. A test that asserts one does it through a first use,
+constructed and used with no `await` in between, so that the use comes first:
+
+```ts
+expect(() => new LoginPage(page).getNestedLocator("main")).toThrow("LoginPage: Locator registry verification failed");
+```
+
+The error is kept: every later locator call on that page object throws it again, and `defineLocators()` does not run a
+second time.
+
+Where the page object is built decides what a test run shows:
+
+| built in | result |
+| --- | --- |
+| a test-scoped or worker-scoped fixture | the test fails before its body |
+| `beforeEach` | each test fails; each body runs until its first use of the page object |
+| `beforeAll` | every test of the group fails, each body running until its first use; in a `serial` group the first test fails and the others do not run |
+
+### What the definition cannot see
+
+- **A value assigned after an `await` that follows `new`.** The definition has already run by then. Pass such values
+  to the constructor.
+- **Fields declared below a field initialiser that resolves a locator.** `readonly submit =
+  this.getNestedLocator("…")` runs the definition while the class is still being built: fields declared above it are
+  set, fields below it are not, and whether parameter properties are set depends on the compiler (they are under
+  Playwright's test runner, they are not under `tsc` with its default for `es2022` and later). A getter resolves when
+  it is read and is always safe:
+
+  ```ts
+  get submit() {
+    return this.getNestedLocator("main.button@login");
+  }
+  ```
+
+- **State a constructor never set because it threw after `super(...)`.** The definition still runs on the discarded
+  page object and reports its own error if it reads that state. Validate arguments before calling `super(...)` (code
+  that does not use `this` may run there), or keep the definition independent of them.
 
 ### `pageActionsToPerformAfterNavigation()`
 
-Return a list of async callbacks to run after `goto()` without a target and after `expectThisPage()`.
+Optional. Return the async callbacks to run after `goto()` without a target and after `expectThisPage()`; omit the
+method when there are none. It is called each time the actions run, not when the page object is constructed, so it
+may read the page object's current state, constructor arguments included. `[]` and `null` both mean no actions.
 
-- Return `[]` to run no actions.
-- Return `null` to skip the actions list entirely.
+```ts
+protected pageActionsToPerformAfterNavigation() {
+  return this.waitForSpinner
+    ? [async () => { await expect(this.getLocator("common.spinner")).toHaveCount(0); }]
+    : [];
+}
+```
+
+With the `noImplicitOverride` compiler option, an implementation needs the `override` keyword.
+
+### One registry per page object
+
+Each page object has its own registry, defined once. Definitions may depend on the page object's own state (the locale
+above), so they are not shared or cached between instances. Defining and verifying costs about a microsecond per path.
 
 ---
 
@@ -234,9 +330,9 @@ decided by the URL types declared through `Options`; the two `expect` methods al
 
 | method | available | does |
 | --- | --- | --- |
-| `goto(options?)` | `fullUrl` is a string | `page.goto(fullUrl)`, then `pageActionsToPerformAfterNavigation()` unless `runPostNavigationActions: false` |
+| `goto(options?)` | `fullUrl` is a string | `page.goto(fullUrl)`, then calls `pageActionsToPerformAfterNavigation()` and runs its actions unless `runPostNavigationActions: false` |
 | `goto(target, options?)` | always; `target` is any string on a string `baseUrl`, an absolute URL on a RegExp `baseUrl` | `page.goto` to the target; a relative target is resolved against the page object's `baseUrl` exactly as Playwright resolves against `use.baseURL` (`goto("login")`, `goto("/login")`, `goto("?tab=1")`). Never runs the actions |
-| `expectThisPage(options?)` | always | one `page.waitForURL` for this page's URL and the requested load state, then the actions unless `runPostNavigationActions: false` |
+| `expectThisPage(options?)` | always | one `page.waitForURL` for this page's URL and the requested load state, then calls `pageActionsToPerformAfterNavigation()` and runs its actions unless `runPostNavigationActions: false` |
 | `expectAnotherPage(options?)` | always | one `page.waitForURL` for any other URL and the load state of the page the browser moved to, then fails at once if the URL is back on this page (a redirect that bounced) |
 
 `page.waitForURL` resolves immediately, after the requested load state, when the URL already matches, so calling
@@ -270,10 +366,6 @@ class OrdersPage extends PageObject<"main"> {
 
   protected defineLocators() {
     this.add("main").locator("main");
-  }
-
-  protected pageActionsToPerformAfterNavigation() {
-    return [];
   }
 }
 
@@ -312,10 +404,6 @@ class ProfilePage extends PageObject<"main"> {
   protected defineLocators() {
     this.add("main").locator("main");
   }
-
-  protected pageActionsToPerformAfterNavigation() {
-    return [];
-  }
 }
 
 await profilePage.navigation.goto(); // https://app.example/profile, then the actions
@@ -335,10 +423,6 @@ class AccountPage extends PageObject<"main", UrlOptions> {
   protected defineLocators() {
     this.add("main").locator("main");
   }
-
-  protected pageActionsToPerformAfterNavigation() {
-    return [];
-  }
 }
 
 await accountPage.navigation.goto("/account/42"); // targets are still available
@@ -356,10 +440,6 @@ class ConsentPage extends PageObject<"main", { baseUrlType: RegExp; urlPathType:
   protected defineLocators() {
     this.add("main").locator("main");
   }
-
-  protected pageActionsToPerformAfterNavigation() {
-    return [];
-  }
 }
 
 await consentPage.navigation.expectThisPage(); // any origin containing identity-provider
@@ -376,10 +456,6 @@ class OrdersTabPage extends PageObject<"main", { urlPathType: RegExp }> {
 
   protected defineLocators() {
     this.add("main").locator("main");
-  }
-
-  protected pageActionsToPerformAfterNavigation() {
-    return [];
   }
 
   async open(tab: number) {
@@ -404,6 +480,13 @@ class OrdersTabPage extends PageObject<"main", { urlPathType: RegExp }> {
   `page.goto` unchanged.
 - `expectThisPage` and `expectAnotherPage` are bounded by `use.navigationTimeout` or the `timeout` option; 2.x retried
   an exact comparison without limit.
+- `defineLocators()` runs right after construction instead of inside the constructor, so it sees constructor
+  arguments and fields. `new` no longer throws for a registry mistake: the fixture still fails before the test body,
+  now with the page object's label in the message. A test that expected `new X(page)` to throw asserts on a first use
+  instead (see *Verification, and how a registry mistake is reported*).
+- `pageActionsToPerformAfterNavigation()` is optional, and it is called each time the actions run instead of once at
+  construction. Delete implementations that return `[]` or `null`; with `noImplicitOverride`, add `override` to the
+  ones that stay.
 
 ---
 
@@ -448,14 +531,13 @@ workers.
 
 ```ts
 import { test as base } from "@playwright/test";
-import type { Page } from "@playwright/test";
 import { LoginPage } from "./login.page";
 
 type Fixtures = { loginPage: LoginPage };
 
 export const test = base.extend<Fixtures>({
   loginPage: async ({ page }, use) => {
-    await use(new LoginPage(page as Page));
+    await use(new LoginPage(page));
   },
 });
 ```

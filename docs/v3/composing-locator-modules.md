@@ -158,10 +158,6 @@ export class LoginPage extends PageObject<Paths> {
  protected defineLocators(): void {
   defineLocators(this.locatorRegistry);
  }
-
- protected pageActionsToPerformAfterNavigation() {
-  return [];
- }
 }
 ```
 
@@ -198,6 +194,56 @@ addHeader(registry);
 then, from `header.locators.ts`, `ExternalPaths` conceptually accounts for the paths that are not part of the header module, such as `Footer | "main"`.
 
 Those paths are external only relative to the current module. They may be local to the caller.
+
+## Passing Page-Object State To A Module
+
+A locator module is a plain function, so it can take more than the registry. When a definition depends on the page
+object's state, such as a locale passed to its constructor, pass that state on as an extra argument:
+
+```ts
+// login.locators.ts
+import type { LocatorRegistry } from "pomwright";
+
+export type Locale = "en" | "nb";
+
+export type Paths =
+ | "main"
+ | "main.button@login";
+
+const loginLabel = { en: "Log in", nb: "Logg inn" } as const;
+
+export function defineLocators<ExternalPaths extends string = never>(
+ registry: LocatorRegistry<Paths | ExternalPaths>,
+ locale: Locale,
+): void;
+
+export function defineLocators(registry: LocatorRegistry<Paths>, locale: Locale) {
+ registry.add("main").locator("main");
+ registry.add("main.button@login").getByRole("button", { name: loginLabel[locale] });
+}
+```
+
+```ts
+// login.page.ts
+import { type Page } from "@playwright/test";
+import { PageObject } from "pomwright";
+import { defineLocators, type Locale, type Paths } from "./login.locators";
+
+export class LoginPage extends PageObject<Paths> {
+ constructor(page: Page, private readonly locale: Locale) {
+  super(page, "https://example.com", "/login");
+ }
+
+ protected defineLocators(): void {
+  defineLocators(this.locatorRegistry, this.locale);
+ }
+}
+```
+
+A parent module that composes this one passes the argument on, `defineLocators(registry, locale)`, and TypeScript
+requires it at every call. This works because `defineLocators()` runs right after the page object is constructed, when
+`this.locale` is set (see *Hooks and lifecycle* in `PageObject.md`); in 2.x it ran inside the constructor and passed
+`undefined`.
 
 ## Shared Slot Paths
 

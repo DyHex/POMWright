@@ -300,8 +300,9 @@ registry.add("main.button").getByRole("button");
 ```
 
 A call that throws leaves the registry exactly as it was: the path keeps the strategy it had, a seeded path keeps its
-seed, and nothing is unregistered. In practice the throw happens inside `defineLocators()`, so the page object's
-constructor fails and the fixture reports the mistake.
+seed, and nothing is unregistered. In practice the throw happens inside `defineLocators()`, which a page object runs
+right after its construction, so the fixture reports the mistake before the test body, with the page object's label
+in the message.
 
 ### Duplicate path behavior
 
@@ -573,8 +574,10 @@ Locator registry verification failed for 2 of 14 paths:
   "menu.item": Detected cyclic filter reference while resolving "menu.item": "menu.item".
 ```
 
-A `PageObject` calls it right after `defineLocators()`, so a typo fails the page object's construction, in the
-fixture, with the path named; there is no opt-out, because verification fails only where a resolution would fail. A
+A `PageObject` calls it right after `defineLocators()`, which runs right after the page object's construction (or at
+its first locator call, if that comes earlier), so a typo fails in the fixture, before the test body, with the page
+object's label and the path named and the construction site in the stack (see *Hooks and lifecycle* in
+`PageObject.md`); there is no opt-out, because verification fails only where a resolution would fail. A
 standalone registry from `createRegistryWithAccessors` calls `registry.verify()` itself once registration is done.
 Verification is synchronous, never touches the DOM, and costs about a microsecond per path.
 
@@ -950,8 +953,8 @@ For implementation-level examples, see the Locator Registry tests under `test/te
   `getByRole` (as it already did for `getById`). `getByTestId("")` and the text-likes now store the empty string.
 - **Steps before a strategy no longer compile** (`add("x").filter(…)`); at runtime the message names the method.
 - **A failed seeded override keeps the seed** instead of unregistering the path.
-- **Page objects verify after `defineLocators()`:** a mistyped `has`/`hasNot` path reference or a cycle fails at
-  construction. Standalone registries can call `registry.verify()`.
+- **Page objects verify after `defineLocators()`:** a mistyped `has`/`hasNot` path reference or a cycle fails right
+  after construction, in the fixture. Standalone registries can call `registry.verify()`.
 
 ## Migration notes from v1
 
