@@ -6,13 +6,14 @@ primary argument; `update` semantics, which grew in review into a same-strategy 
 semantics), 1.9e (steps and `describe` before a strategy compile), 3.6 (fail fast at registration, `verify()`), the
 "asymmetric seeded recovery" bullet of 1.10, the section 5 bullets for `locator-registry.md` on frames and on the
 "Missing" list, and, decided in review, the Playwright peer floor raised to 1.64.0 with the harness pinned to it. File
-links are relative to this folder. Written 2026-10-12, reviewed and redesigned the same day (frames kept as option A
+links are relative to this folder. Written 2026-10-12, reviewed and redesigned the same day, the `verify()` contract
+tabulated and the role check and the no-rollback rule confirmed on 2026-10-13 (frames kept as option A
 with the any-frame segment added; the empty-string rule narrowed to what Playwright cannot use; `update` restricted to
 the registered strategy with `null` as the delete value; `verify()` made automatic; the floor). Every decision in
 section 7 is taken and mirrored in [DECISIONS.md](DECISIONS.md) and [RELEASE-NOTES-3.0.0.md](RELEASE-NOTES-3.0.0.md)
 as *planned*.
 
-Every runtime claim below was verified on 2026-10-12: Playwright's behaviour against Chromium through the 1.62.1
+Every runtime claim below was verified on 2026-10-12 and 2026-10-13: Playwright's behaviour against Chromium through the 1.62.1
 install in `test/` and through a 1.64.0 install made in the session scratchpad for the comparison (both by
 `createRequire` of the respective `package.json`), on a local http server of the probe's own with pages holding
 visible, hidden and nested iframes and elements with empty attributes; Firefox 153 and WebKit 26.5 from the 1.62.1
@@ -21,7 +22,7 @@ install for the browser-level `[id=""]` question; POMWright's current behaviour 
 of `test/` against the packed HEAD tarball; type claims with the repository's TypeScript 5.9.3 under the root
 `tsconfig.json` flags plus `target: es2024`, every negative case a consumed `@ts-expect-error`; Playwright version
 facts from the installed 1.62.1 and 1.64.0 type definitions, the release notes, and the fix PR; API usage facts from
-the user's `ice-orderform-web` Playwright project (pomwright 2.1.0, 31 locator files, 494 registrations). Every code
+a survey of one 2.1.0 consumer project (31 locator files, 494 registrations). Every code
 reference points at the exact lines in this repository. Example hosts are generic (`*.example`).
 
 Out of scope, left to the plans listed in [PLANS.md](PLANS.md): lazy `defineLocators` (1.7, plan 5), which also
@@ -92,8 +93,7 @@ All three failures are one rendering change: 1.64 adds `locator.visible()` and r
 [add.reuseReusable.spec.ts:310](../test/tests/locatorRegistry/add/add.reuseReusable.spec.ts#L310),
 [getLocatorSchema.filter.spec.ts:372](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.filter.spec.ts#L372));
 the selector is unchanged. The 1.64 note that elements inside hidden iframes count as hidden made no difference for a
-`display: none` iframe (hidden on both versions). Consumers on 1.63, such as the `ice-orderform-web` project, upgrade
-to 1.64 to take 3.0.0.
+`display: none` iframe (hidden on both versions). A consumer on 1.63 upgrades to 1.64 to take 3.0.0.
 
 ### 1.3 Frames with a selector: an element locator whose descendants resolve inside the frame
 
@@ -158,7 +158,7 @@ What Playwright provides, verified in the installed types and in Chromium:
   `filter({ visible: true }).last()` is the second visible frame; the nested chain reads "Toggle C: Off";
   `filter({ has: iframe#iframeB })` on `section` yields `sectionB`; a click inside the hidden frame times out.
 - Locator construction is pure: 10,000 chains with `has`, `nth`, `contentFrame` and `describe` built in 8 ms, and a
-  chain is constructible on `about:blank`. `verify()` (1.8) relies on this.
+  chain is constructible on `about:blank`. `verify()` (1.9) relies on this.
 
 Correction to the analysis for the record (1.6 says the dropped `nth` "targets the first iframe"): with the step
 dropped, the resolved chain is `locator('iframe').contentFrame()...`, and when the selector matches more than one
@@ -187,8 +187,19 @@ POMWright exposes exactly that:
 - At resolution the segment is `page.frameLocator()` and must be the first registered segment of the chain being
   resolved: if the current target is not the page (an ancestor resolved before it, in the registry or after a query
   builder change), resolution throws `frameLocator() without a selector must be the first segment of the chain;
-  "shell.anyFrame" has the ancestor "shell"`, because Playwright would otherwise build `locator('undefined')`.
-  A sparse chain or a removed ancestor whose resolved target is still the page is fine.
+  "shell.anyFrame" has the ancestor "shell"`. The rule is Playwright's, not a limit of how POMWright builds
+  selectors: the any-frame part is only legal at the start of a selector, and both an element part and a frame part
+  before it are rejected by the engine with `"any-frame" is only allowed as the first selector token` (verified on
+  1.64.0 for `locator('#sectionB').locator('internal:control=any-frame')` and for
+  `frameLocator('#iframeB').locator('internal:control=any-frame')`, the two scoped forms a chain could produce),
+  while `locator.frameLocator()` and `frameLocator.frameLocator()` without a selector build `locator('undefined')`.
+  "Any frame" is an operation on the page's frame tree (the main frame and every iframe at any depth), not on a DOM
+  scope; the only scoped variant Playwright offers is `frame.frameLocator()` on a `Frame` object, which searches that
+  frame's subtree and which a locator chain cannot produce. The DOM-scoped question "any iframe under this element"
+  is `frameLocator("iframe")` registered under that element's segment. A sparse chain or a removed ancestor whose
+  resolved target is still the page is fine, and an any-frame segment may be followed by a selector frame:
+  `anyFrame.c` as `frameLocator("#iframeC")` resolves `page.frameLocator().locator('#iframeC').contentFrame()`
+  (verified).
 - It has no terminal form: `getLocator("anyFrame")`, `getNestedLocator("anyFrame")` and a `has`/`hasNot` reference to
   it throw `frameLocator() without a selector does not point to a particular iframe; resolve a path inside it`,
   mirroring Playwright's unsupported `owner()`.
@@ -207,7 +218,7 @@ POMWright exposes exactly that:
 
 | method | primary field | accepted | `add` unseeded | `add` seeded | `createReusable` | `update` | `replace` |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `getByRole` | `role` | non-empty string | required | `undefined` inherits | required | `undefined` inherits | required |
+| `getByRole` | `role` | non-empty string; which strings are roles is Playwright's compile-time union (`RoleDefinition.role`), with autocompletion and a compile error for anything else, as in 2.x; no runtime list | required | `undefined` inherits | required | `undefined` inherits | required |
 | `getByText`, `getByLabel`, `getByPlaceholder`, `getByAltText`, `getByTitle` | `text` | string (empty allowed) or RegExp | required | `undefined` inherits | required | `undefined` inherits | required |
 | `locator` | `selector` | non-empty string | required | `undefined` inherits | required | `undefined` inherits | required |
 | `frameLocator` | `selector` | non-empty string, or absent for any-frame (1.4) | required or any-frame | `undefined` inherits | required | `undefined` inherits | required or any-frame |
@@ -280,18 +291,19 @@ replace().getByRole({ name: "x" })               // throws: replace requires the
   stay on the update builder for autocompletion and the check is at runtime (a strategy-typed registration style is a
   plan 9 question).
 - `replace` takes Playwright's own argument shapes: primary required (`frameLocator()` without a selector means
-  any-frame), options as given, no `null`; a `null` passed anyway equals omission.
+  any-frame), options as given. `null` has no delete meaning in `replace`; the option tuples are shared with
+  `update` until plan 7 makes them mode-aware, so a `null` passed to `replace` compiles and equals omission.
 - The per-path per-type cache that let a builder switch strategies and back without restating the primary is
   removed with the strategy switch.
 - Steps and the description survive both verbs. A step is what Playwright chains after the locator and belongs to
   the path, not to the strategy; `clearSteps(subPath)` is one call when the old steps no longer fit. This is also how
-  the user's project uses the API: 24 query chains do `update(ancestor).locator({ hasText })` and then
+  the surveyed project uses the API: 24 query chains do `update(ancestor).locator({ hasText })` and then
   `.nth(ancestor, index)`.
 
 Why `update` is same-strategy: a PATCH of a role definition yields a role definition; changing the strategy is a PUT,
 which `replace` is, and `replace` keeps steps and the description, so a cross-strategy `update` could do nothing that
 `replace` cannot. The cache existed only to make a switch-and-back free, which is hidden state the caller must know
-about. In the user's project (pomwright 2.1.0) all 75 `update` calls are options-only patches on the registered
+about. In the surveyed 2.1.0 project all 75 `update` calls are options-only patches on the registered
 strategy (66 `locator({ hasText })` on `locator` paths, 9 `getByRole({ name })` on `getByRole` paths), `replace`,
 `remove` and `clearSteps` are unused, and no call passes `undefined` options; nothing there changes.
 
@@ -319,10 +331,12 @@ throws, `p` holds the first. The registry never unregisters a path on its own.
 
 ### 1.9 `verify()`
 
-`registry.verify(): void` resolves every registered path once, the definition and its own steps as `getLocator`
-does, which evaluates every `has`/`hasNot` path reference through the normal resolution: a reference to an
-unregistered path, a cyclic reference, an unsupported reference value, a corrupted definition, an any-frame segment
-used as a terminal or below an ancestor, all throw there. Failures are collected and reported together:
+`registry.verify(): void` checks every registered path once and reports every failure together. For a path with a
+selector-bearing definition it resolves the path's own definition and steps, as `getLocator` does, which evaluates
+every `has`/`hasNot` path reference through the normal resolution with cycle detection; for an any-frame path,
+which has no terminal form, it checks the placement rule of 1.4 instead (no registered ancestor). Each path is
+reported only for its own problem, so a typo in an ancestor's steps appears once, under the ancestor, not under every
+descendant. Resolution never touches the DOM. The message:
 
 ```
 Locator registry verification failed for 2 of 14 paths:
@@ -340,8 +354,38 @@ re-definition of analysis 3.7. There is no opt-out: verification fails only wher
 forward references are allowed, so in a standalone registry that never verifies a typo surfaces at the first action
 that resolves it, exactly as today.
 
-What `verify()` does not do: evaluate selectors against the DOM, or parse them (Playwright parses selectors at
-action time; `locator("div >>")` fails there, as it does in Playwright).
+What `verify()` checks, case by case (every row verified against the resolution code or by probe):
+
+| case | example | `verify()` (passes, or fails with this message) | otherwise surfaces |
+| --- | --- | --- | --- |
+| clean registry, or an empty one | | passes | |
+| `has` reference to an unregistered path | `add("list.item").getByRole("listitem").filter({ has: "list.titel" })` | fails: `"list.item": No locator schema registered for path "list.titel".` | the first action that resolves `list.item` |
+| `hasNot` reference to an unregistered path | `.filter({ hasNot: "list.badge" })` | fails, same shape | same |
+| the typo sits in an ancestor's steps | `add("list").locator("ul").filter({ has: "typo" })`, `add("list.item")…` | fails once, under `"list"` | the first action on `list` or any descendant |
+| forward reference | `add("item").getByRole("listitem").filter({ has: "heading" })` then `add("heading")…` | passes | |
+| reference whose target has its own bad reference | `a` has `b`, `b` has `typo` | fails under `"b"` and under `"a"` (the resolution of `a` enters `b`) | |
+| two paths referencing each other | `a` has `b`, `b` has `a` | fails under both: `Detected cyclic filter reference while resolving "a": "b".` and the mirror | the first action on either |
+| self-reference | `add("a").locator("li").filter({ has: "a" })` | fails: `"a": Detected cyclic filter reference while resolving "a": "a".` | |
+| a reference value that is neither a `Locator` nor a path (smuggled through a cast) | `filter({ has: { selector: "li" } } as never)` | fails: `"x": Unsupported filter reference while resolving "x". Filter has/hasNot supports Playwright Locator instances or registry path strings.` | |
+| reference to a frame path | `filter({ has: "shell.frame" })` | passes; the reference is the `<iframe>` element with its steps | |
+| reference to an any-frame path | `filter({ has: "anyFrame" })` | fails: `"x": frameLocator() without a selector does not point to a particular iframe; resolve a path inside it.` | |
+| any-frame path registered below an ancestor | `add("shell").locator("main")`, `add("shell.anyFrame").frameLocator()` | fails: `"shell.anyFrame": frameLocator() without a selector must be the first segment of the chain; "shell.anyFrame" has the ancestor "shell".` | the first action on a descendant |
+| any-frame path at the root, with or without descendants | `add("anyFrame").frameLocator()`, `add("anyFrame.go")…` | passes | |
+| a corrupted definition reaching the registry through `register()` | `{ type: "id" }` without `id` | fails: `"x": Locator definition of type "id" has no id value.` | |
+| a selector Playwright cannot parse | `add("x").locator("div >>")` | passes; Playwright parses selectors at action time (verified: construction succeeds, `count()` throws) | the first action |
+| an element that is not in the DOM | `add("x").getByTestId("missing")` | passes; the DOM is never consulted | the action or `expect` |
+| a selector that matches several elements | `add("x").locator("li")` | passes | the action, as a strict mode violation |
+| an unknown ARIA role | `getByRole("banana")` | passes; it is a compile error on every builder through Playwright's own role union, which is a type and does not exist at runtime, and at runtime Playwright matches nothing, even for an element with `role="banana"` (verified); no runtime list (7.4) | compile time; for a JavaScript caller or a value cast past the type, a timeout or a false `toHaveCount(0)` |
+| a wrongly cased role | `getByRole("Button")` | passes; a compile error for the same reason, but valid at runtime: Playwright's role engine lowercases, so `"Button"` and `"BUTTON"` match a button (verified on 1.64.0) | compile time only |
+| a frame step that can never match | `frameLocator("iframe").filter({ hasText: "Submit" })` | passes | the action, as a timeout |
+| any-frame descendants matching in several frames | `anyFrame.button` with buttons in two frames | passes | the action: `frameLocator() matched elements in multiple frames` |
+| a `has` `Locator` instance from another page or frame | `filter({ has: otherPage.locator("li") })` | passes | the action (Playwright's check) |
+| a sparse chain | `add("a.b.c")` without `a.b` | passes; sparse chains are allowed | |
+| duplicate path, missing or empty primary, steps before a strategy, wrong-type override, invalid path format | | not reached: these throw inside `defineLocators()`, so the page object's constructor throws before `verify()` runs | registration |
+| query-builder state (`remove`, tombstones, `clearSteps`, `update`, `replace`) | | not in scope: `verify()` reads the registry, not builder clones | the builder's own checks and resolution |
+| descriptions | `describe("Save")` | nothing to check | |
+| called twice | | the same result; no state | |
+| a standalone registry that never calls it | `createRegistryWithAccessors(page)` | nothing happens | the first action that resolves the path |
 
 ### 1.10 Edge cases, with the decided answer
 
@@ -363,7 +407,7 @@ action time; `locator("div >>")` fails there, as it does in Playwright).
 | `getLocator("anyFrame")`, `getNestedLocator("anyFrame")`, `has: "anyFrame"` | n/a | throws: no particular iframe |
 | `add("shell").locator("main")`, `add("shell.anyFrame").frameLocator()`, resolve a descendant | n/a | throws: must be the first segment; `remove("shell")` on the query builder makes it resolvable |
 | `nth("anyFrame", 1)`, `filter("anyFrame", …)` on the query builder | n/a | throw: no element |
-| `createReusable.frameLocator()` | n/a | compile error and `createReusable.frameLocator requires a non-empty selector.` |
+| `createReusable.frameLocator()` | n/a | compile error and `createReusable.frameLocator requires a selector.` |
 | `frameLocator("")` unseeded | registers `{ type: "frameLocator" }`; resolves to `locator('undefined')` | throws `frameLocator requires a non-empty selector for "…"` |
 | `getByTestId("")` unseeded | registers `{ type: "testId" }`; resolution throws Playwright's `Cannot read properties of undefined (reading 'unicode')` | registers `testId: ""`; matches `data-testid=""` |
 | `locator("")` | registers `selector: ""`; renders as an empty selector; action fails with Playwright's css parse error | throws at registration |
@@ -403,21 +447,21 @@ action time; `locator("div >>")` fails there, as it does in Playwright).
 | peer range | `>=1.61.0 <2.0.0` (after plan 1.5) | `>=1.64.0 <2.0.0` (7.1) |
 | harness pin | 1.62.1 | 1.64.0 |
 | frame segment resolution | `target.frameLocator(sel)` ([L472-487](../src/locators/locatorRegistry.ts#L472-L487)); steps never read; terminal `owner()` | `target.locator(sel)`, steps, then `contentFrame()` for descendants; terminal: the element locator (7.2) |
-| `nth`, `first`, `last`, `filter` on a frame segment | recorded, dropped (1.6) | applied |
+| `nth`, `first`, `last`, `filter` on a frame segment | recorded, dropped (analysis 1.6) | applied |
 | rendering of a step-less frame chain | `locator('x').contentFrame()…` | identical |
 | rendering of a stepped frame | the step is absent | `locator('x').nth(1).contentFrame()…` |
 | `frameLocator()` without a selector | registers an undefined selector; `locator('undefined')` | the any-frame segment: `page.frameLocator()`, first segment only, no steps, no terminal form (7.3) |
 | `frameLocator` signature | `(selector)` | `(selector)` or `()` |
-| missing primary on any builder | registered, fails or misbehaves at resolution (1.8) | throws at the call, naming method and path (7.4) |
+| missing primary on any builder | registered, fails or misbehaves at resolution (analysis 1.8) | throws at the call, naming method and path (7.4) |
 | `""` for `locator`, `frameLocator`, `getByRole` | registered | throws (7.4) |
 | `""` for the text-likes and `getByTestId` | registered, except `getByTestId` which lost the field | stored verbatim, Playwright matches it (7.4) |
 | `getById("")` | throws (plan 1) | throws, now with the engine table as the reason (7.4) |
 | `update` across strategies | allowed, per-type cache | throws naming `replace()`; no cache (7.5) |
-| `update(x, undefined)` | registered options wiped (1.8) | kept (7.5) |
+| `update(x, undefined)` | registered options wiped (analysis 1.8) | kept (7.5) |
 | deleting options in `update` | explicit `undefined` (all), `{ key: undefined }` (one) | `null` (all), `{ key: null }` (one); `undefined` is absent (7.5) |
 | `replace` | any strategy, primary required, steps kept | same (7.5) |
-| `filter`, `nth`, `describe` before a strategy | compile; throw with two different messages (1.9e) | compile errors; one runtime message naming the method (7.6) |
-| seeded wrong-type override | rolls back the seed (1.10) | leaves the seed registered (7.7) |
+| `filter`, `nth`, `describe` before a strategy | compile; throw with two different messages (analysis 1.9e) | compile errors; one runtime message naming the method (7.6) |
+| seeded wrong-type override | rolls back the seed (analysis 1.10) | leaves the seed registered (7.7) |
 | typo in a `has`/`hasNot` path | first resolution throws | page objects throw at construction; `registry.verify()` for standalone registries (7.8) |
 | public `LocatorRegistry` members | `add`, `createReusable`, `getLocator`, `getLocatorSchema`, `getNestedLocator` | plus `verify` (7.8) |
 | `createLocator` return type | `Locator \| FrameLocator` | `Locator` (the any-frame case is handled in the chain) |
@@ -538,16 +582,25 @@ registry after `defineLocators()`. The public type is the `Pick` at
 - Strategy switches through `update`, which 3.0.0 moves to `replace`:
   [getLocatorSchema.update.spec.ts:4-20](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L4-L20)
   (`locator` to `getByRole`), [L22-32](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L22-L32)
-  (second call), [L147-255](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L147-L255)
+  (second call), [L64-76](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L64-L76)
+  (second call, `getByRole` to `locator`), [L107-115](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L107-L115)
+  (`getByRole` to `locator`), [L147-255](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L147-L255)
   (every strategy and the cache), [L328-345](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L328-L345)
   (`locator` to `getById`); [getLocatorSchema.filter.spec.ts:261-280](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.filter.spec.ts#L261-L280),
   [L316-343](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.filter.spec.ts#L316-L343) and the
   parametrised block [L345-410](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.filter.spec.ts#L345-L410)
-  (`getByRole` to every other strategy). Same-strategy `update` calls elsewhere are unaffected
+  (`getByRole` to every other strategy); [getLocatorSchema.getNestedLocator.spec.ts:32-40](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.getNestedLocator.spec.ts#L32-L40)
+  (`getByRole` to `getByText`, titled "fluent update can switch strategies"). Eleven literal-path switches and the
+  two variable-path tests, found by matching every `update(...)` call in `test/tests` against the registered
+  strategy of its sub-path. Same-strategy `update` calls elsewhere are unaffected
   ([L34-62](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L34-L62),
-  [L88-145](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L88-L145),
+  [L88-105](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L88-L105),
+  [L117-145](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L117-L145),
   [L257-326](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L257-L326),
-  [getLocatorSchema.clearSteps.spec.ts:128-132](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.clearSteps.spec.ts#L128-L132)).
+  [getLocatorSchema.clearSteps.spec.ts:128-132](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.clearSteps.spec.ts#L128-L132),
+  the `getLocatorSchema.getLocator`, `getLocatorSchema.spec` and `testIds` uses), and
+  [validation.sub-path.spec.ts:36-44](../test/tests/locatorRegistry/validation/validation.sub-path.spec.ts#L36-L44)
+  throws on the invalid sub-path before its strategy method runs.
 - `undefined` as a delete value: [getLocatorSchema.update.spec.ts:134-145](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L134-L145)
   only; nothing covers an `undefined` second argument.
 - Registration: no spec registers an empty or missing primary except the `getById` ones.
@@ -584,7 +637,7 @@ for (const [index, part] of registeredChain.entries()) {
 	const isTerminalStep = index === lastIndex;
 	// tombstone and missing-definition checks unchanged (L461-470)
 	if (isAnyFrameDefinition(definition)) {                       // { type: "frameLocator" } without selector
-		if (currentTarget !== this.page) throw anyFrameNotFirst(part, path, previousPart);
+		if (currentTarget !== this.page) throw anyFrameNotFirst(part, path, registeredChain[index - 1]);
 		if (isTerminalStep) throw anyFrameHasNoElement(part, path);
 		if ((steps.get(part) ?? []).length > 0) throw anyFrameHasNoElement(part, path);   // defensive: the builders reject earlier
 		currentTarget = this.page.frameLocator();
@@ -716,9 +769,14 @@ with it (internal; the docs list it as an internal lifecycle method and are upda
 ```ts
 verify(): void {
 	const failures: string[] = [];
-	for (const path of this.schemas.keys()) {
+	for (const [path, record] of this.schemas) {
 		try {
-			this.getLocator(path);
+			if (isAnyFrameDefinition(record.definition)) {
+				const ancestor = expandSchemaPath(path).slice(0, -1).find((part) => this.schemas.has(part));
+				if (ancestor !== undefined) throw anyFrameNotFirst(path, path, ancestor);
+			} else {
+				this.getLocator(path);
+			}
 		} catch (error) {
 			failures.push(`"${path}": ${error instanceof Error ? error.message : String(error)}`);
 		}
@@ -732,14 +790,16 @@ verify(): void {
 ```
 
 `getLocator(path)` resolves the path's definition and its own steps, so every segment is resolved exactly once over
-the whole pass and every `has`/`hasNot` reference goes through `resolveFilterLocator` with cycle detection; an
-any-frame path is reported through the terminal-form error of 1.4, and an any-frame path that is not a terminal is
-exercised by its descendants. The `LocatorRegistry` `Pick` at [L542-545](../src/locators/locatorRegistry.ts#L542-L545)
+the whole pass, each failure is attributed to the path that owns it, and every `has`/`hasNot` reference goes through
+`resolveFilterLocator` with cycle detection. An any-frame path has no terminal form, so it is checked structurally
+against the rule of 1.4; the same rule also fires at resolution, through `buildLocatorChain`, for a chain that a
+query builder changed. The `LocatorRegistry` `Pick` at [L542-545](../src/locators/locatorRegistry.ts#L542-L545)
 gains `"verify"`. `PageObject` calls `this.locatorRegistry.verify()` right after `this.defineLocators()` at
 [pageObject.ts:97](../src/pageObject.ts#L97). `createRegistryWithAccessors` is unchanged (`registry.verify()` is
-reachable; no accessor). Rejected: walking the steps and checking `schemas.has(reference)` only, which misses cycles
-and unsupported reference values; throwing at the first failure, which hides the rest; an opt-out, which would only
-excuse a broken registry.
+reachable; no accessor). Rejected: resolving every path as a full chain (`getNestedLocator`), which reports an
+ancestor's typo under every descendant; walking the steps and checking `schemas.has(reference)` only, which misses
+cycles and unsupported reference values; throwing at the first failure, which hides the rest; an opt-out, which would
+only excuse a broken registry.
 
 ### 3.7 Public surface
 
@@ -769,7 +829,7 @@ stays internal (exported from `src/locators/utils.ts` for the unit tests only).
   line, with the three reasons); [.changeset/getbyid-verbatim-ids-and-regex.md:23-25](../.changeset/getbyid-verbatim-ids-and-regex.md#L23-L25)
   (drop the version caveat); the release notes and decisions rows (4.6).
 - A DOM assertion for the sticky flag in [testIds.spec.ts](../test/tests/testApp/testIds.spec.ts): `getById(/^gen/y)`
-  and `getById(/en/y)` against the `/testids` page (the second matches nothing).
+  matches the `generated` container on the `/testids` page and `getById(/en/y)` matches nothing.
 - Full run: `pnpm lint`, `pnpm test:unit`, the packed integration suite on chromium; everything else green.
 
 ### 4.2 Runtime (`src/`)
@@ -796,7 +856,8 @@ stays internal (exported from `src/locators/utils.ts` for the unit tests only).
 - [server.js:118-146](../test/server.js#L118-L146): `/iframe` gains `section#sectionC` with
   `<h2>Section C</h2>` and `<iframe id="iframeHidden" title="iframeHidden" src="/iframe/a" style="display: none">`,
   after the existing sections, so `#sectionA`, `#sectionB`, their iframes and `first()` / `nth(1)` over `iframe`
-  are unchanged and `iframe.spec.ts` stays green.
+  are unchanged and `iframe.spec.ts` stays green. [server.js:214-257](../test/server.js#L214-L257): `/testids` gains
+  one element with `data-testid=""` for the empty-string registration tests (5.2).
 - [iframe.locatorSchema.ts](../test/page-object-models/testApp/pages/iframe/iframe.locatorSchema.ts) gains
   `iframes@second` (`frameLocator("iframe").nth(1)`) with `iframes@second.toggle` (`getByRole("button")`),
   `iframes@lastVisible` (`frameLocator("iframe").filter({ visible: true }).nth("last")`) with `.toggle`,
@@ -970,9 +1031,12 @@ to executed, row 6's floor note, row 8's scope minus the `isTerminalStep` bullet
   `(null)` dropping them, `{ key: null }` dropping one, `{ key: undefined }` a no-op, the empty result rendering
   without options; the strategy-switch error for every strategy pair with the suggested `replace` method in the
   message; the tests at [L4-20](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L4-L20),
-  [L22-32](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L22-L32) and
+  [L22-32](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L22-L32),
+  [L64-76](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L64-L76),
+  [L107-115](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L107-L115) and
   [L328-345](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L328-L345) move their
-  switches to `replace`; [L147-255](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L147-L255)
+  switches to `replace`, as does [getLocatorSchema.getNestedLocator.spec.ts:32-40](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.getNestedLocator.spec.ts#L32-L40),
+  retitled "replace can switch strategies without a terminator"; [L147-255](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L147-L255)
   is rewritten as "replace switches strategies and keeps steps" over all ten strategies (the switch-back half goes
   with the cache); [L134-145](../test/tests/locatorRegistry/getLocatorSchema/getLocatorSchema.update.spec.ts#L134-L145)
   uses `{ hasText: null }`; `update().locator("")`, `.frameLocator("")`, `.getByRole("")` and the `replace()` forms
@@ -992,11 +1056,15 @@ to executed, row 6's floor note, row 8's scope minus the `isTerminalStep` bullet
   the wrong-type throw the record equals the seed; the re-add at [L132](../test/tests/locatorRegistry/add/add.reuseReusable.spec.ts#L132)
   becomes an assertion on the record; [L182-193](../test/tests/locatorRegistry/add/add.reuseReusable.spec.ts#L182-L193)
   additionally asserts the record.
-- New `registry.verify.spec.ts` under `locatorRegistry/registry/` (source-level): a clean registry returns; a typo in
-  `has` throws naming the holding path and the missing reference; a `hasNot` typo likewise; two failures listed in
-  one error with the `2 of N` count; a forward reference registered later passes; a cycle is reported; an
-  unsupported reference value is reported; an any-frame terminal is reported; an empty registry returns; `verify()`
-  twice gives the same result; `registry.get(...)` afterwards shows nothing changed.
+- New `registry.verify.spec.ts` under `locatorRegistry/registry/` (source-level), one test per row of the 1.9 table
+  that `verify()` reaches: a clean registry returns; a typo in `has` throws naming the holding path and the missing
+  reference; a `hasNot` typo likewise; a typo in an ancestor's steps is reported once, under the ancestor; two
+  failures listed in one error with the `2 of N` count; a forward reference registered later passes; a mutual cycle
+  is reported under both paths and a self-reference under its path; an unsupported reference value is reported; a
+  reference to a frame path passes; a reference to an any-frame path is reported; an any-frame path below an ancestor
+  is reported and one at the root passes; an unparsable selector, a missing element and a sparse chain pass; an
+  empty registry returns; `verify()` twice gives the same result; `registry.get(...)` afterwards shows nothing
+  changed.
   [registry.binding.spec.ts](../test/tests/locatorRegistry/registry/registry.binding.spec.ts) (tarball-level) adds
   `registry.verify()` through `createRegistryWithAccessors`. A new `pageObject/verify.spec.ts` (tarball-level): a
   small `PageObject` subclass with a correct schema constructs; one with a typo throws at construction with the
@@ -1045,8 +1113,12 @@ Taken with the user on 2026-10-12; the chosen option is stated first in each.
   seeded or update builder; `""` is rejected only for `locator`, `frameLocator`, `getByRole` and `getById` (Playwright
   errors, or engine-dependent matching of invalid HTML), and stored verbatim for the text-likes and `getByTestId`,
   which Playwright matches; the truthiness checks go; two message templates (`requires a <field>`, `requires a
-  non-empty <field>`); `assertIdValue` becomes a call to the generic `assertPrimaryValue`. Rejected: rejecting every
-  empty string (the first draft); passing `""` through for the four.
+  non-empty <field>`); `assertIdValue` becomes a call to the generic `assertPrimaryValue`. Which strings are ARIA
+  roles stays a compile-time check through Playwright's own union, as in 2.x. Rejected: rejecting every empty string
+  (the first draft); passing `""` through for the four; a runtime list of ARIA roles (2026-10-13: types are erased
+  and Playwright exports no list, so POMWright would have to ship one, and a list built into POMWright would reject
+  a role that a newer Playwright within the peer range accepts, while the consumer's own compile-time type accepts
+  it).
 - [x] 7.5 `update` keeps the registered strategy and throws naming `replace()` for another; it follows JSON Merge
   Patch at both levels (`null` deletes, `undefined` and absent leave alone); `replace` is any strategy with the
   primary required and Playwright's option shapes; neither verb touches steps or the description; the per-path
@@ -1057,17 +1129,24 @@ Taken with the user on 2026-10-12; the chosen option is stated first in each.
   the intersection with the post-definition view go; the seeded builder type is unchanged; the runtime check stays
   with one message naming the method and the strategies.
 - [x] 7.7 A DSL call that throws leaves the registry as it was: the wrong-type rollback and `unregister` are
-  deleted. Rejected: rolling back in both seeded cases.
-- [x] 7.8 `verify(): void` on the registry and in the public `LocatorRegistry` type: resolves every path once
-  (terminal-only, as `getLocator`), aggregates every failure into one error with the `n of N` count; `PageObject`
-  calls it right after `defineLocators()`, no opt-out; standalone registries call it themselves; plan 5 moves the
-  call with the lazy definition. Rejected: manual only (the first draft); reference walking only; first failure only;
-  an opt-out.
+  deleted. Rejected: rolling back in both seeded cases. Confirmed 2026-10-13: each of the three errors throws out of
+  the `PageObject` constructor ([pageObject.ts:97](../src/pageObject.ts#L97) has no `try`), whether the page object
+  comes from a fixture or is constructed in the test, so the registry state after the throw is unobservable unless
+  the user catches the error deliberately, which POMWright does not guard against; the value of the decision is one
+  rule for the three cases and the deleted rollback code.
+- [x] 7.8 `verify(): void` on the registry and in the public `LocatorRegistry` type: resolves every
+  selector-bearing path once (terminal-only, as `getLocator`), checks every any-frame path against the first-segment
+  rule, aggregates every failure into one error with the `n of N` count, each attributed to the path that owns it;
+  `PageObject` calls it right after `defineLocators()`, no opt-out; standalone registries call it themselves; plan 5
+  moves the call with the lazy definition. The table in 1.9 is the contract. Rejected: manual only (the first draft);
+  full-chain resolution per path (duplicates an ancestor's failure under every descendant); reference walking only;
+  first failure only; an opt-out. (Amended 2026-10-13: the first draft's terminal-only resolution would have reported
+  every any-frame path as a failure.)
 - [x] 7.9 Fixture: `section#sectionC` with a hidden iframe appended to `/iframe`; the frame and any-frame paths of
   4.3 in `iframe.locatorSchema.ts`; one `data-testid=""` element on `/testids`; no new route.
 - [x] 7.10 Existing expectations that change, each encoding the old contract: the frame test in
-  `getLocatorSchema.filter.spec.ts`; the strategy switches through `update` in the update and filter specs (moved
-  to `replace`, the switch-back half of the cache test dropped); `{ hasText: undefined }` to `null`; the re-add after
+  `getLocatorSchema.filter.spec.ts`; the strategy switches through `update` in the update, filter and query-builder
+  `getNestedLocator` specs, listed in 2.5 (moved to `replace`, the switch-back half of the cache test dropped); `{ hasText: undefined }` to `null`; the re-add after
   the wrong-type throw in `add.reuseReusable.spec.ts`; the three `.visible()` strings (step 0). All other specs
   stay as they are.
 - [x] 7.11 Docs: the `locator-registry.md` sections of 4.4 and the `overview.md` API summary; the floor and sticky
@@ -1082,7 +1161,7 @@ Taken with the user on 2026-10-12; the chosen option is stated first in each.
 > Notes: the frame drop and the explicit-`undefined` delete were 2.1 design, not bugs; both are replaced through
 > these decisions rather than kept, because the first recorded steps it then ignored and the second made
 > `f(a, undefined)` differ from `f(a)` in one place only. The project survey (1.6) showed no use of strategy
-> switching, the cache, `replace`, `remove`, `clearSteps` or `undefined` options, so the user's own suites migrate
+> switching, the cache, `replace`, `remove`, `clearSteps` or `undefined` options, so the surveyed suites migrate
 > without edits beyond the Playwright upgrade.
 
 ---

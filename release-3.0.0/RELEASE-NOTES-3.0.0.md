@@ -183,9 +183,10 @@ when the primary argument is missing (`getByRole requires a role for "main.butto
 for `locator`, `frameLocator` and `getByRole`, which Playwright cannot use (`locator requires a non-empty selector
 for "list"`); `getById("")` already threw. `getByTestId("")`, `getByText("")`, `getByLabel("")`,
 `getByPlaceholder("")`, `getByAltText("")` and `getByTitle("")` are stored verbatim, because Playwright matches
-elements with empty attributes. In 2.x `getByTestId("")` and `frameLocator("")` registered without their value and
-failed at resolution, a seeded `getByTestId("")` silently inherited, and an options-only `getByRole` from JavaScript
-registered without a role.
+elements with empty attributes. Which strings are ARIA roles remains a compile-time check through Playwright's own
+role type, with autocompletion, as in 2.x; there is no runtime list. In 2.x `getByTestId("")` and `frameLocator("")`
+registered without their value and failed at resolution, a seeded `getByTestId("")` silently inherited, and an
+options-only `getByRole` from JavaScript registered without a role.
 
 ### Steps before a strategy no longer compile; a failed seeded override keeps the seed **[planned, plan 1.6-1.8]**
 
