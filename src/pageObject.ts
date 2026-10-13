@@ -42,6 +42,29 @@ export type StorageTypeFromOptions<T extends UrlTypeOptions> = T extends {
 	? S
 	: Record<never, never>;
 
+/** POMWright's own frames, left out of the construction site that the scheduled check reports. */
+const INTERNAL_FRAME = /[\\/]pageObject\.(ts|js|mjs|cjs)|[\\/]pomwright[\\/]dist[\\/]index\.(js|mjs|cjs)/;
+
+/** Points an error raised by the check after construction at the code that called `new`, not at the microtask. */
+const atConstructionSite = (error: Error, site: Error): Error => {
+	const frames = (site.stack ?? "")
+		.split("\n")
+		.slice(1)
+		.filter((line) => !INTERNAL_FRAME.test(line));
+	if (frames.length > 0) {
+		error.stack = `${error.name}: ${error.message}\n${frames.join("\n")}`;
+	}
+	return error;
+};
+
+/**
+ * Base class for page objects. `defineLocators()` does not run inside this constructor, where the
+ * subclass has not stored anything yet: it runs, followed by `verify()`, right after the code that
+ * called `new` has finished (a check scheduled as the constructor's last statement), or at the first
+ * locator call if that comes earlier, once per instance. A registry mistake is reported with the
+ * page object's label and the original error as `cause`; reported by the scheduled check, its stack
+ * points at the construction site.
+ */
 export abstract class PageObject<
 	LocatorSchemaPathType extends string,
 	Options extends UrlTypeOptions = { baseUrlType: string; urlPathType: string },
@@ -58,6 +81,8 @@ export abstract class PageObject<
 	public readonly getLocator: GetLocatorAccessor<LocatorSchemaPathType>;
 	public readonly getLocatorSchema: GetLocatorSchemaAccessor<LocatorSchemaPathType>;
 	public readonly getNestedLocator: GetNestedLocatorAccessor<LocatorSchemaPathType>;
+	// ECMAScript-private, so that no name is reserved in subclasses
+	#locators: "pending" | "defining" | "defined" | { failure: Error } = "pending";
 
 	protected constructor(
 		page: Page,
@@ -83,30 +108,97 @@ export abstract class PageObject<
 		this.fullUrl = composeFullUrl(baseUrl, urlPath) as FullUrlTypeFromOptions<Options>;
 		const { registry, add, getLocator, getNestedLocator, getLocatorSchema } =
 			createRegistryWithAccessors<LocatorSchemaPathType>(page);
-		this.locatorRegistry = registry;
-		this.add = add;
-		this.getLocator = getLocator;
-		this.getLocatorSchema = getLocatorSchema;
-		this.getNestedLocator = getNestedLocator;
+		const define = () => this.#defineLocatorsOnce(registry);
+		const first = <F extends (...args: never[]) => unknown>(fn: F): F =>
+			((...args: Parameters<F>) => {
+				define();
+				return fn(...args);
+			}) as F;
+		// the registry as subclasses see it: every method defines the locators first, so direct use is covered too
+		this.locatorRegistry = {
+			add: first(add),
+			createReusable: registry.createReusable,
+			getLocator: first(getLocator),
+			getLocatorSchema: first(getLocatorSchema),
+			getNestedLocator: first(getNestedLocator),
+			verify: () => {
+				// a first call defines and verifies once, not twice
+				if (!define()) {
+					registry.verify();
+				}
+			},
+		};
+		this.add = this.locatorRegistry.add;
+		this.getLocator = this.locatorRegistry.getLocator;
+		this.getLocatorSchema = this.locatorRegistry.getLocatorSchema;
+		this.getNestedLocator = this.locatorRegistry.getNestedLocator;
 		this.sessionStorage = new SessionStorage<StorageTypeFromOptions<Options>>(page, {
 			label,
 			origin: typeof baseUrl === "string" ? new URL(baseUrl).origin : undefined,
 			schema: options?.sessionStorage?.schema,
 		});
-
-		this.defineLocators();
-		this.locatorRegistry.verify();
 		this.navigation = createNavigation(
 			this.page,
 			this.baseUrl,
 			this.urlPath,
 			this.fullUrl,
 			this.label,
-			this.pageActionsToPerformAfterNavigation(),
+			() => this.pageActionsToPerformAfterNavigation(),
 			options?.navOptions,
 		);
+
+		// last, after everything above that can throw: define and verify once the code that called `new` is done
+		const site = new Error();
+		queueMicrotask(() => {
+			if (this.#locators !== "pending") {
+				return;
+			}
+			try {
+				define();
+			} catch (error) {
+				throw atConstructionSite(error as Error, site);
+			}
+		});
 	}
 
+	/** Runs `defineLocators()` and `verify()` unless they ran or are running; returns whether they ran now. */
+	#defineLocatorsOnce(registry: LocatorRegistry<LocatorSchemaPathType>): boolean {
+		if (this.#locators === "defined" || this.#locators === "defining") {
+			return false;
+		}
+		if (typeof this.#locators === "object") {
+			throw this.#locators.failure;
+		}
+		this.#locators = "defining";
+		let step: "define" | "verify" = "define";
+		try {
+			this.defineLocators();
+			step = "verify";
+			registry.verify();
+			this.#locators = "defined";
+			return true;
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			const failure = new Error(
+				step === "define" ? `${this.label}: defineLocators() failed: ${message}` : `${this.label}: ${message}`,
+				{ cause: error },
+			);
+			this.#locators = { failure };
+			throw failure;
+		}
+	}
+
+	/**
+	 * Registers the page object's locators. Runs once, after the page object is constructed, so it
+	 * may read constructor arguments, fields and constructor-body assignments.
+	 */
 	protected abstract defineLocators(): void;
-	protected abstract pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null;
+
+	/**
+	 * Actions run after `goto()` without a target and after `expectThisPage()`. Called each time they
+	 * run, so it may read the page object's current state; none by default. `null` means none, as `[]`.
+	 */
+	protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {
+		return [];
+	}
 }

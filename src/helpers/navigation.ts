@@ -18,7 +18,7 @@ export type NavigationOptions = {
 
 /** Options for the two this-page forms, `goto()` without a target and `expectThisPage()`. */
 export type ThisPageOptions = NavigationOptions & {
-	/** Run `pageActionsToPerformAfterNavigation()` afterwards. Defaults to `true`. */
+	/** Call `pageActionsToPerformAfterNavigation()` and run its actions afterwards. Defaults to `true`. */
 	runPostNavigationActions?: boolean;
 };
 
@@ -37,9 +37,11 @@ export type NavigationFor<BaseUrl, FullUrl> = {
 
 type GotoArguments = [options?: ThisPageOptions] | [target: string, options?: NavigationOptions];
 
+/** Supplies the post-navigation actions; called each time they run, so it reads the page object's current state. */
+type ActionsProvider = () => (() => Promise<void>)[] | null;
+
 class Navigation {
 	private readonly matcher: UrlMatcher;
-	private readonly actions: (() => Promise<void>)[];
 
 	constructor(
 		private readonly page: Page,
@@ -47,11 +49,10 @@ class Navigation {
 		urlPath: string | RegExp,
 		private readonly fullUrl: string | UrlMatcher,
 		private readonly label: string,
-		actions: (() => Promise<void>)[] | null,
+		private readonly actions: ActionsProvider,
 		private readonly defaultOptions?: NavigationOptions,
 	) {
 		this.matcher = typeof fullUrl === "string" ? createUrlMatcher(baseUrl, urlPath) : fullUrl;
-		this.actions = actions ?? [];
 	}
 
 	private resolveWaitUntil(options?: NavigationOptions) {
@@ -67,7 +68,7 @@ class Navigation {
 	}
 
 	private async executeActions() {
-		for (const action of this.actions) {
+		for (const action of this.actions() ?? []) {
 			await action();
 		}
 	}
@@ -174,7 +175,7 @@ export function createNavigation<BaseUrl extends string | RegExp, FullUrl extend
 	urlPath: string | RegExp,
 	fullUrl: FullUrl,
 	label: string,
-	actions: (() => Promise<void>)[] | null = null,
+	actions: ActionsProvider = () => null,
 	defaultOptions?: NavigationOptions,
 ): NavigationFor<BaseUrl, FullUrl> {
 	const navigation = new Navigation(page, baseUrl, urlPath, fullUrl, label, actions, defaultOptions);

@@ -47,7 +47,7 @@ const typeContract = () => {
 	// the 2.x waitForLoadState option is rejected as a page-object default too
 	// @ts-expect-error the 2.x waitForLoadState option is gone; use waitUntil
 	const staleDefaults: NavigationOptions = { waitForLoadState: "load" };
-	void createNavigation(page, "https://app.example", "/x", "https://app.example/x", "Poc", null, staleDefaults);
+	void createNavigation(page, "https://app.example", "/x", "https://app.example/x", "Poc", () => null, staleDefaults);
 
 	// fullUrl of a RegExp page is a UrlMatcher, not a RegExp
 	const regExpPoc = { fullUrl: undefined as unknown as FullUrlTypeFromOptions<{ urlPathType: RegExp }> };
@@ -83,7 +83,7 @@ describe("createNavigation runtime guards", () => {
 			/^\/account\/\d+$/,
 			matcher,
 			"AccountPage",
-			null,
+			() => null,
 		);
 		const untyped = navigation as unknown as { goto(): Promise<void> };
 		await expect(untyped.goto()).rejects.toThrow(
@@ -93,7 +93,7 @@ describe("createNavigation runtime guards", () => {
 
 	it("rejects a non-absolute target on a RegExp baseUrl", async () => {
 		const matcher = createUrlMatcher(/app\.example/, "/login");
-		const navigation = createNavigation(fakePage, /app\.example/, "/login", matcher, "LoginPage", null);
+		const navigation = createNavigation(fakePage, /app\.example/, "/login", matcher, "LoginPage", () => null);
 		const untyped = navigation as unknown as { goto(target: string): Promise<void> };
 		await expect(untyped.goto("/login")).rejects.toThrow(
 			'LoginPage: goto("/login") needs an absolute URL because baseUrl is a RegExp.',
