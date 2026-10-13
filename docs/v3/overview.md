@@ -423,15 +423,19 @@ This section separates public API from internal implementation details and expla
 #### `createRegistryWithAccessors` + `LocatorRegistry`
 
 - **Role**: Standalone registry factory returning the registry plus bound helpers.
-- **Key outputs**: `registry`, `add`, `getLocator`, `getNestedLocator`, `getLocatorSchema`.
-- **Contract**: Typed path unions are validated both at compile time and runtime.
+- **Key outputs**: `registry` (with `verify()`), `add`, `getLocator`, `getNestedLocator`, `getLocatorSchema`.
+- **Contract**: Typed path unions are validated both at compile time and runtime; every strategy's first argument is
+  required at the call; a standalone registry calls `registry.verify()` once registration is done, where a
+  `PageObject` does so itself after `defineLocators()`.
 
 #### Locator builder methods (public usage)
 
-- **Registration**: `add(path).getByRole(...)`, `getByText`, `locator`, `frameLocator`, `getByTestId`, `getById`, etc.
-- **Steps**: `filter(...)`, `nth(...)`, `describe(...)`.
+- **Registration**: `add(path).getByRole(...)`, `getByText`, `locator`, `frameLocator(selector)` (the `<iframe>`
+  element; descendants resolve inside), `frameLocator()` (Playwright's any-frame locator), `getByTestId`, `getById`, etc.
+- **Steps**: `filter(...)`, `nth(...)`, `describe(...)`, available once a strategy is chosen, on frames too.
 - **Retrieval**: `getLocator(path)`, `getNestedLocator(path)`, `getLocatorSchema(path)`.
-- **Schema builder**: `update`, `replace`, `remove`, `clearSteps`.
+- **Schema builder**: `update` (same strategy, JSON Merge Patch with `null` to delete), `replace` (any strategy),
+  `remove`, `clearSteps`.
 
 #### Helpers
 

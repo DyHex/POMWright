@@ -147,6 +147,11 @@ the port, so use `(?::\d+)?$` when it varies. A `UrlMatcher` is accepted by `pag
 
 Define every locator path for the page using the v2 registry DSL (`add(...).getByRole(...)`, etc.). This is called in the constructor before navigation is created.
 
+Right after it returns, the registry is verified (`verify()` in `locator-registry.md`): every path is resolved once,
+without touching the DOM, so a mistyped `has`/`hasNot` path reference or a cycle fails the constructor with the path
+named, in the fixture, before any test action. A registration error (a duplicate path, a missing first argument, a
+step before a strategy) throws inside `defineLocators()` itself.
+
 ### `pageActionsToPerformAfterNavigation()`
 
 Return a list of async callbacks to run after `goto()` without a target and after `expectThisPage()`.

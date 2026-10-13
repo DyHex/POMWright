@@ -28,40 +28,43 @@
     8. [Migrating from 2.x to 3.0: no more `#` / `id=` prefixes](#migrating-from-2x-to-30-no-more---id-prefixes)
 7. [`filter` deep dive](#filter-deep-dive)
     1. [Accepted `has`/`hasNot` reference forms](#accepted-hashasnot-reference-forms)
-2. [Path examples](#path-examples)
-    3. [Frame-locator restrictions in filters](#frame-locator-restrictions-in-filters)
+    2. [Path examples](#path-examples)
+    3. [Frames in filters](#frames-in-filters)
 8. [Resolution APIs](#resolution-apis)
     1. [`getLocator(path)`](#getlocatorpath)
     2. [`getNestedLocator(path)`](#getnestedlocatorpath)
-    3. [Frame behavior: terminal vs non-terminal](#frame-behavior-terminal-vs-non-terminal)
-    4. [Sparse chain behavior](#sparse-chain-behavior)
-9. [Query builder: `getLocatorSchema(path)`](#query-builder-getlocatorschemapath)
+    3. [Frames: the iframe element, its steps, and entering the frame](#frames-the-iframe-element-its-steps-and-entering-the-frame)
+    4. [Any frame: `frameLocator()` without a selector](#any-frame-framelocator-without-a-selector)
+    5. [Sparse chain behavior](#sparse-chain-behavior)
+9. [Verifying a registry: `verify()`](#verifying-a-registry-verify)
+10. [Query builder: `getLocatorSchema(path)`](#query-builder-getlocatorschemapath)
     1. [Clone semantics (registry is not mutated)](#clone-semantics-registry-is-not-mutated)
     2. [Sub-path scope rules](#sub-path-scope-rules)
     3. [Method-by-method reference](#method-by-method-reference)
     4. [Default sub-path behavior table](#default-sub-path-behavior-table)
-10. [`update` and `replace` semantics](#update-and-replace-semantics)
-    1. [`update`: PATCH-style merge](#update-patch-style-merge)
-    2. [`replace`: POST-style overwrite](#replace-post-style-overwrite)
-    3. [Required fields and type switching](#required-fields-and-type-switching)
-11. [`remove` and tombstones](#remove-and-tombstones)
+11. [`update` and `replace` semantics](#update-and-replace-semantics)
+    1. [`update`: a PATCH of the registered definition](#update-a-patch-of-the-registered-definition)
+    2. [`replace`: a new definition of any strategy](#replace-a-new-definition-of-any-strategy)
+    3. [Steps and descriptions are untouched](#steps-and-descriptions-are-untouched)
+12. [`remove` and tombstones](#remove-and-tombstones)
     1. [Non-terminal removal](#non-terminal-removal)
     2. [Terminal removal behavior](#terminal-removal-behavior)
     3. [Rehydrating removed segments](#rehydrating-removed-segments)
-12. [Reusable locators: `createReusable`](#reusable-locators-createreusable)
+13. [Reusable locators: `createReusable`](#reusable-locators-createreusable)
     1. [Seed creation](#seed-creation)
     2. [Reuse by object seed](#reuse-by-object-seed)
     3. [Reuse by existing path string](#reuse-by-existing-path-string)
     4. [Reuse patch rules and limitations](#reuse-patch-rules-and-limitations)
     5. [Seed immutability](#seed-immutability)
-13. [`describe` semantics](#describe-semantics)
+14. [`describe` semantics](#describe-semantics)
     1. [Default descriptions](#default-descriptions)
     2. [Registry-level descriptions](#registry-level-descriptions)
     3. [Query-level overrides](#query-level-overrides)
-14. [Error reference and troubleshooting](#error-reference-and-troubleshooting)
-15. [Tested behavioral guarantees](#tested-behavioral-guarantees)
-16. [Migration notes from v1](#migration-notes-from-v1)
-17. [Best practices](#best-practices)
+15. [Error reference and troubleshooting](#error-reference-and-troubleshooting)
+16. [Tested behavioral guarantees](#tested-behavioral-guarantees)
+17. [Migrating from 2.x to 3.0: frames, registration, `update`](#migrating-from-2x-to-30-frames-registration-update)
+18. [Migration notes from v1](#migration-notes-from-v1)
+19. [Best practices](#best-practices)
 
 ---
 
@@ -94,6 +97,8 @@ When resolving:
 
 - `getLocator(path)` applies only the terminal definition + terminal steps.
 - `getNestedLocator(path)` traverses the chain (`a`, `a.b`, `a.b.c`) and applies each registered segment in order.
+- A `frameLocator(selector)` segment is the `<iframe>` element, steps included; the segments below it resolve inside
+  the frame.
 - The resolved terminal locator uses its path as its description unless an explicit description overrides it.
 
 When querying with `getLocatorSchema(path)`:
@@ -212,8 +217,10 @@ The **public** `LocatorRegistry` intentionally exposes only:
 - `getLocator`
 - `getNestedLocator`
 - `getLocatorSchema`
+- `verify`
 
-Internal lifecycle methods (`register`, `replace`, `get`, `unregister`) exist on the internal implementation and are intentionally not part of the public API.
+Internal lifecycle methods (`register`, `replace`, `get`) exist on the internal implementation and are intentionally
+not part of the public API.
 
 ---
 
@@ -240,9 +247,25 @@ Each registration can choose exactly one strategy method:
 - `getByAltText(text, options?)`
 - `getByTitle(text, options?)`
 - `locator(selector, options?)`
-- `frameLocator(selector)`
+- `frameLocator(selector)` and `frameLocator()` (see [Resolution APIs](#resolution-apis) for both forms)
 - `getByTestId(testId)`
 - `getById(id: string | RegExp)`
+
+The first argument is required on every builder (`add`, a seeded `add`, `createReusable`, `update`, `replace`), as it
+is on Playwright's own methods; a missing one throws at the call, naming the method and the path:
+
+```
+getByRole requires a role value for "main.button".
+```
+
+An empty string is rejected only where Playwright cannot use it: `locator("")` and `frameLocator("")` are css parse
+errors at action time, `getByRole("")` is an invalid selector, and `getById("")` would match invalid HTML
+inconsistently across engines. These throw `locator requires a non-empty selector for "list".` and so on. The
+text-likes and `getByTestId` store an empty string as given, because Playwright matches elements with empty
+attributes (`getByTestId("")` finds `data-testid=""`). Which strings are ARIA roles is Playwright's own role type,
+checked at compile time with autocompletion; there is no runtime list. The only exceptions to "required" are the
+inheriting forms: on a seeded `add` or an `update`, an omitted argument keeps the seeded or registered value, and
+`frameLocator()` without a selector is Playwright's any-frame locator.
 
 ### Post-definition chain methods
 
@@ -261,6 +284,12 @@ registry
     .describe("Last matching row");
 ```
 
+The builder returned by `add(path)` exposes the ten strategy methods only, so `add("x").filter(…)` is a compile
+error; `filter`, `nth` and `describe` appear once a strategy is chosen. A seeded registration has them from the
+start, because the seed is the definition. The steps apply to every strategy, `frameLocator(selector)` included,
+where they select the `<iframe>` element before the frame is entered. The any-frame `frameLocator()` returns nothing
+to chain, since it has no element to step on.
+
 ### One-strategy-per-registration rule
 
 Without reuse, calling a second strategy in the same registration throws.
@@ -269,6 +298,10 @@ Without reuse, calling a second strategy in the same registration throws.
 registry.add("main.button").getByRole("button");
 // ❌ Later trying to set .locator(...) for same add-chain is invalid.
 ```
+
+A call that throws leaves the registry exactly as it was: the path keeps the strategy it had, a seeded path keeps its
+seed, and nothing is unregistered. In practice the throw happens inside `defineLocators()`, so the page object's
+constructor fails and the fixture reports the mistake.
 
 ### Duplicate path behavior
 
@@ -420,11 +453,14 @@ registry
     .filter({ hasText: /Warning/i });
 ```
 
-### Frame-locator restrictions in filters
+### Frames in filters
 
-Inline frame locator definitions are not supported as filter references. If you need to target a frame, resolve a
-registry path so it yields the frame **owner locator** (the iframe element) or pass a Playwright
-`page.frameLocator(...).owner()` locator to `has`/`hasNot`.
+A path reference to a `frameLocator(selector)` segment resolves, like any reference, terminal-only: it is the
+`<iframe>` element with that segment's own steps, never the frame's content. So `filter({ has: "shell.frame" })` reads
+"has that iframe element". The content of a frame cannot be a `has` target at all: Playwright's `has` is evaluated in
+the parent document and rejects a locator that enters a frame (`Frame locators are not allowed inside composite
+locators`). A reference to an any-frame segment (`frameLocator()` without a selector) throws, because there is no
+element to point at.
 
 ---
 
@@ -455,26 +491,101 @@ const nested = registry.getNestedLocator("main.form.username");
 // nested.description() === "main.form.username"
 ```
 
-### Frame behavior: terminal vs non-terminal
+### Frames: the iframe element, its steps, and entering the frame
 
-If a segment is `frameLocator`:
+A `frameLocator(selector)` segment is resolved the way Playwright recommends for frames since 1.43: the `<iframe>`
+element first, `locator(selector)`, then the segment's own `filter` and `nth` steps, and only then the frame is entered.
 
-- **Non-terminal frame segment**: resolution context enters frame for descendants.
-- **Terminal frame segment**: resolves to the iframe **owner locator**, not the frame target.
+- **Non-terminal frame segment**: after the steps, `contentFrame()` becomes the target for the descendants, which
+  resolve inside the frame.
+- **Terminal frame segment** (`getLocator`, a `getNestedLocator` ending on it, a `has`/`hasNot` reference): the
+  `<iframe>` element itself, steps applied. Call `.contentFrame()` on it yourself to go in.
 
 ```ts
 registry.add("shell.frame@login").frameLocator("iframe#login");
 registry.add("shell.frame@login.username").getByLabel("Username");
 
-const frameOwner = registry.getNestedLocator("shell.frame@login");
-const insideFrame = registry.getNestedLocator("shell.frame@login.username");
+const frameElement = registry.getNestedLocator("shell.frame@login");       // locator('shell').locator('iframe#login')
+const insideFrame = registry.getNestedLocator("shell.frame@login.username"); // …locator('iframe#login').contentFrame().getByLabel('Username')
 ```
+
+A frame segment without steps renders exactly as `page.frameLocator(selector)` does, because Playwright builds the
+same selector for both; a stepped one renders `locator('iframe').nth(1).contentFrame()…`.
+
+**Telling frames apart.** Prefer the ancestor chain: register the frame below the segment that distinguishes it
+(`locator('section', { hasText: 'Payment' })` then `frameLocator('iframe')`). Content *inside* the frame cannot
+disambiguate the iframe: Playwright's strict mode fails on the element before entering it, and a `has` that enters a
+frame is rejected. When the parent context is identical, a step on the iframe element is the last resort, as for any
+locator: `nth`, `first`, `last`, and `filter({ visible: true })` for a hidden duplicate.
+
+```ts
+registry.add("widgets.frame@second").frameLocator("iframe.widget").nth(1);
+registry.add("widgets.frame@visible").frameLocator("iframe.widget").filter({ visible: true }).nth("last");
+registry.add("widgets.frame@visible.go").getByRole("button", { name: "Go" });
+```
+
+What a step means on a frame segment is what it means on any `<iframe>` element in Playwright: `nth`, `first` and
+`last` pick among the matching iframes in the parent document; `filter({ visible })`, `has` and `hasNot` are
+evaluated against the iframe element there. `filter({ hasText })` never matches, because the frame's document is not
+part of the parent document's text. The query builder addresses a frame sub-path like any other
+(`nth("widgets.frame@second", 0)`, `clearSteps("widgets.frame@second")`). `frameLocator(selector)` takes no options,
+like Playwright's; a filter on the iframe element is a `filter` step. Steps that were chained on a frame in 2.x were
+recorded and dropped at resolution; in 3.0.0 they apply.
+
+### Any frame: `frameLocator()` without a selector
+
+`add(path).frameLocator()` with no argument registers Playwright's any-frame locator, `page.frameLocator()`: the
+descendants resolve in whichever single frame holds them, the main frame or any iframe at any depth, so you do not
+have to locate the iframe first. Playwright throws at action time when elements match in several frames.
+
+```ts
+registry.add("anyFrame").frameLocator();
+registry.add("anyFrame.consent").getByRole("button", { name: "Accept" });
+
+await registry.getNestedLocator("anyFrame.consent").click();   // frameLocator().getByRole('button', { name: 'Accept' })
+```
+
+Rules, each of them Playwright's: the any-frame segment must be the first segment of the chain that resolves (the
+engine allows the any-frame part only at the start of a selector, so an any-frame path below a registered ancestor
+throws naming the ancestor); it has no element, so it takes no steps, returns nothing to chain from `add`, cannot be
+resolved on its own (`getLocator("anyFrame")` throws), and cannot be a `has`/`hasNot` reference; a selector frame may
+follow it (`add("anyFrame.inner").frameLocator("#iframeC")`). "Any iframe under this element" is a different
+question, answered by `frameLocator("iframe")` registered under that element's segment. `replace().frameLocator()`
+makes a sub-path any-frame; on `update` and on a seeded `add`, an omitted selector keeps the existing one instead.
 
 ### Sparse chain behavior
 
 During nested resolution, chain parts/sub-paths that are not registered are skipped, except for the terminal chain/path which throws if no locator definition is registered.
 
 This enables partial/sparse registration patterns, but for readability and maintainability you should generally prefer explicit ancestor registration.
+
+---
+
+## Verifying a registry: `verify()`
+
+Forward references are allowed at registration (`filter({ has: "list.heading" })` before `list.heading` exists), so
+a mistyped path reference used to surface only at the first action that resolved it. `registry.verify()` checks every
+registered path once and reports every failure together:
+
+```
+Locator registry verification failed for 2 of 14 paths:
+  "list.item": No locator schema registered for path "list.titel".
+  "menu.item": Detected cyclic filter reference while resolving "menu.item": "menu.item".
+```
+
+A `PageObject` calls it right after `defineLocators()`, so a typo fails the page object's construction, in the
+fixture, with the path named; there is no opt-out, because verification fails only where a resolution would fail. A
+standalone registry from `createRegistryWithAccessors` calls `registry.verify()` itself once registration is done.
+Verification is synchronous, never touches the DOM, and costs about a microsecond per path.
+
+What it checks: each path with a selector is resolved terminal-only, as `getLocator` does, which evaluates its
+`has`/`hasNot` path references through the normal resolution: an unregistered target, a cycle (reported under every
+path in it), a reference value that is neither a `Locator` nor a path, a reference to an any-frame segment, and a
+corrupted definition all fail, attributed to the path that owns them. An any-frame path is checked against its
+first-segment rule instead. What it does not check: whether a selector parses (Playwright parses at action time),
+whether an element exists, whether a locator is unique, or anything about query-builder clones. Registration-time
+errors (a duplicate path, a missing argument, a step before a strategy) throw inside `defineLocators()` before
+`verify()` runs.
 
 ---
 
@@ -548,24 +659,38 @@ If `subPath` is omitted, the terminal path passed to `getLocatorSchema(path)` is
 
 ## `update` and `replace` semantics
 
-### `update`: PATCH-style merge
+### `update`: a PATCH of the registered definition
 
-`update(subPath?)` merges fields into the existing definition for that sub-path.
-
-- Omitted required fields may be inherited from current/baseline definitions.
-- Options are merged where applicable.
+`update(subPath?)` patches the definition registered for the sub-path and keeps its strategy. It follows JSON Merge
+Patch: a provided value replaces, `null` deletes, and an absent or `undefined` value leaves the field alone.
 
 ```ts
-const updated = registry
-    .getLocatorSchema("main.button")
-    .update()
-    .getByRole({ name: "Sign in" })
-    .getNestedLocator();
+const button = () => registry.getLocatorSchema("main.button").update();   // registered: getByRole("button", { name: "Login", exact: true })
+
+button().getByRole("link")                        // getByRole('link', { name: 'Login', exact: true })   primary replaced, options kept
+button().getByRole({ name: "Sign in" })           // getByRole('button', { name: 'Sign in', exact: true })  one option set
+button().getByRole({ name: null })                // getByRole('button', { exact: true })                 one option deleted
+button().getByRole("button", null)                // getByRole('button')                                 every option deleted
+button().getByRole(null)                          // getByRole('button')                                 same, primary kept
+button().getByRole("button", undefined)           // unchanged: undefined is "not provided"
+button().getByRole({ name: undefined })           // unchanged
+button().getByRole()                              // unchanged
 ```
 
-### `replace`: POST-style overwrite
+Calling another strategy's method on `update()` throws and says what to do:
 
-`replace(subPath?)` requires enough data to build a complete definition for the chosen strategy.
+```
+update("main.button") cannot change the strategy from "role" to "locator"; use replace("main.button").locator(…) instead.
+```
+
+All ten methods stay available on `update()` for autocompletion; the registry's path type carries no strategy, so the
+check is at runtime. The first argument, when given, follows the same rules as on `add` (an empty selector or role is
+rejected).
+
+### `replace`: a new definition of any strategy
+
+`replace(subPath?)` installs a complete definition, of any strategy, with the first argument required as on
+Playwright's own methods. The options are taken as given; `null` has no delete meaning here and equals omission.
 
 ```ts
 const replaced = registry
@@ -575,13 +700,26 @@ const replaced = registry
     .getNestedLocator();
 ```
 
-### Required fields and type switching
+`replace().frameLocator()` without a selector installs the any-frame locator.
 
-Important behavior:
+### Steps and descriptions are untouched
 
-- `update` can switch strategy type, but the target strategy must have required fields resolved via provided values or available baselines.
-- `replace` requires the required field for the target strategy in the replacement call chain.
-- `update` / `replace` only change definitions, not steps. Use `filter` / `nth` / `clearSteps` for steps.
+`update` and `replace` change the definition only. The recorded `filter`/`nth` steps and the description survive both,
+because a step is what Playwright chains after the locator and belongs to the path, not to the strategy. Use
+`filter`, `nth` and `clearSteps` for steps, and `describe` for the description:
+
+```ts
+registry.add("list.item").locator("li").filter({ hasText: "Row" }).nth(0);
+
+registry.getLocatorSchema("list.item").replace().getByRole("listitem").getNestedLocator();
+// getByRole('listitem').filter({ hasText: 'Row' }).first()
+
+registry.getLocatorSchema("list.item").replace().getByRole("listitem").clearSteps().getNestedLocator();
+// getByRole('listitem')
+```
+
+In 2.x `update` could switch strategies and remembered each strategy's last definition inside the builder; 3.0.0
+has one meaning per verb and no hidden state.
 
 ---
 
@@ -654,10 +792,14 @@ Note: path-based reuse registers immediately and does not return a chainable bui
 With object-seed reuse:
 
 - Seeded definition is persisted first.
-- You may provide **one matching-strategy override** (same discriminant/type).
-- Mismatched strategy overrides throw.
-- More than one strategy override in that chain throws.
-- `filter` / `nth` / `describe` may still be chained.
+- You may provide **one matching-strategy override** (same discriminant/type). Omitting the first argument
+  (`getByTestId(undefined)`, `frameLocator()`) inherits the seeded value; an empty string is a value, stored or
+  rejected exactly as on `add`.
+- Mismatched strategy overrides throw, and the path keeps the seed; a second override throws, and the path keeps the
+  first. Nothing is unregistered.
+- `filter` / `nth` / `describe` may still be chained, before or after the override.
+- A frame seed needs a selector: `createReusable.frameLocator("iframe")`. The any-frame form has no element and no
+  steps, so there is nothing a seed could carry.
 
 ```ts
 const seed = registry.createReusable.getByRole("heading", { level: 2 });
@@ -696,7 +838,8 @@ nested.description();
 ```
 
 For nested chains, descriptions on ancestor paths are ignored; only the terminal locator's explicit description or
-path default is applied. Terminal `frameLocator` definitions follow the same rule on their owner locator.
+path default is applied. A terminal `frameLocator` definition follows the same rule on the `<iframe>` element it resolves
+to.
 
 ### Registry-level descriptions
 
@@ -737,16 +880,25 @@ Common errors and what they usually mean:
   - Query method targeted a path outside the builder’s chain context.
 - `A locator schema with the path "..." already exists.`
   - Duplicate registration for same path.
-- `A locator definition must be provided before applying filters or indices for "...".`
-  - `filter`/`nth` called before strategy during registration.
+- `<method> requires a <field> value for "...".` and `<method> requires a non-empty <field> for "...".`
+  - A registration, seed, update or replacement without its first argument, or with an empty string where
+    Playwright cannot use one (`locator`, `frameLocator`, `getByRole`, `getById`). Seeds say `createReusable.<method>`.
+- `filter() needs a locator strategy first for "..."; call getByRole, … or getById before it.`
+  - `filter`/`nth`/`describe` called before a strategy during registration (a compile error in TypeScript).
 - `A locator definition for "..." has already been provided; only one locator type can be set for a registration.`
   - Multiple strategy calls on a non-reuse registration.
 - `The locator definition for "..." must use the "..." strategy when reusing a locator.`
   - Mismatched strategy override while using `{ reuse: seed }`.
 - `A locator definition for "..." was already provided from reuse; only one matching override is allowed.`
   - More than one seeded strategy override attempted.
-- `Frame locators cannot be used as filter locators.`
-  - Inline filter `has`/`hasNot` passed a frame locator definition.
+- `update("...") cannot change the strategy from "..." to "..."; use replace("...").<method>(…) instead.`
+  - `update` keeps the registered strategy; `replace` changes it.
+- `frameLocator() without a selector must be the first segment of the chain; "..." has the ancestor "...".`
+  - An any-frame segment registered below a registered ancestor (Playwright's rule).
+- `frameLocator() without a selector does not point to a particular iframe; "..." cannot be resolved on its own, filtered or indexed; resolve a path inside it.`
+  - An any-frame segment used as a terminal, as a `has`/`hasNot` reference, or given a step.
+- `Locator registry verification failed for N of M paths:` followed by one line per path
+  - `verify()` found path references that cannot resolve; fix each listed path.
 - `Detected cyclic filter reference while resolving "...": "...".`
   - A `has`/`hasNot` path reference re-entered an active filter resolution; break/fix the loop or pass a resolved locator.
 
@@ -756,6 +908,8 @@ Troubleshooting checklist:
 2. Confirm query sub-path is in the same chain root.
 3. Confirm reuse override strategy matches seed type.
 4. Confirm terminal path still exists if `remove()` was called.
+5. For a strategy change on a query builder, use `replace`, not `update`.
+6. For an any-frame segment, keep it first in its chain and resolve a path inside it.
 
 ---
 
@@ -769,14 +923,35 @@ The integration suite (`test`) verifies Locator Registry behavior in depth, incl
 - `filter` behavior, including `has`/`hasNot` variants
 - `nth` chaining and ordering
 - default, registered, reused, and query-level `describe` behavior
-- `update` / `replace` / `remove`
-- `clearSteps`
-- reusable locators and reuse constraints
-- frame locator behavior
+- the required first argument per strategy, and which empty strings are rejected
+- `update` as a same-strategy Merge Patch, `replace` as a strategy change, steps kept by both
+- `remove` and `clearSteps`
+- reusable locators and reuse constraints, including that a failed override changes nothing
+- frames: steps on the iframe element against real frames, nested frames, the any-frame segment
+- `verify()` through the registry, the accessors and a page object
 
 For implementation-level examples, see the Locator Registry tests under `test/tests/locatorRegistry`.
 
 ---
+
+## Migrating from 2.x to 3.0: frames, registration, `update`
+
+- **Frame steps now apply.** In 2.x a `filter`, `nth`, `first` or `last` chained on a `frameLocator(selector)`
+  registration was recorded and dropped at resolution. Review every such chain (`grep -rn 'frameLocator(' --include=*.ts .`
+  and look at what follows): the step now selects the `<iframe>` element. A terminal frame path still resolves to the
+  element, as `owner()` gave; a step-less frame renders as before.
+- **`frameLocator()` without a selector is Playwright's any-frame locator** (needs Playwright 1.64, the peer floor),
+  with the first-segment and no-element rules above.
+- **`update` keeps the strategy.** Rename `update(...).<otherStrategy>(...)` calls to `replace(...)` and state the
+  first argument. The builder-local cache that restored an earlier strategy's definition is gone.
+- **`update` deletes with `null`.** `update(x, undefined)` no longer wipes the options and `{ key: undefined }` no
+  longer removes a key; use `null` for both (`grep -rn 'update(' --include=*.ts . | grep undefined`).
+- **The first argument is required on every builder,** and an empty string throws for `locator`, `frameLocator` and
+  `getByRole` (as it already did for `getById`). `getByTestId("")` and the text-likes now store the empty string.
+- **Steps before a strategy no longer compile** (`add("x").filter(…)`); at runtime the message names the method.
+- **A failed seeded override keeps the seed** instead of unregistering the path.
+- **Page objects verify after `defineLocators()`:** a mistyped `has`/`hasNot` path reference or a cycle fails at
+  construction. Standalone registries can call `registry.verify()`.
 
 ## Migration notes from v1
 
@@ -787,7 +962,7 @@ Key v1 -> v2 Locator Registry differences:
 - v1 index maps for nested lookup are replaced by query-builder `.nth(...)`.
 - v1 `addFilter` style maps to v2 `.filter(...)`.
 - v2 query builder adds `replace`, `remove`, `clearSteps`, and `describe`.
-- frame terminal behavior is explicit (terminal frame resolves to owner locator).
+- frame terminal behavior is explicit (a terminal frame resolves to the `<iframe>` element).
 
 See migration docs in `docs/v1-to-v2-migration` for side-by-side mappings and staged migration guidance.
 
@@ -805,5 +980,8 @@ See migration docs in `docs/v1-to-v2-migration` for side-by-side mappings and st
     - Centralize repeated strategy + steps, then reuse with a single matching override.
 5. **Keep filters intentional**
     - Be explicit with `has`/`hasNot` references; prefer path-based references for readability.
-6. **Document intentional strategy switching in query updates**
-    - Type switches are powerful; use them deliberately and clearly in test code.
+6. **Patch with `update`, switch with `replace`**
+    - `update` says "same locator, different details"; a strategy change reads as `replace` at the call site.
+7. **Tell frames apart by their ancestors**
+    - Register a frame below the segment that distinguishes it; use `nth` or `filter({ visible })` on the iframe
+      element only when the parent context is identical.
