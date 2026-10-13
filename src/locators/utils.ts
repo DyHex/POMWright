@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator } from "@playwright/test";
 import type {
 	AltTextDefinition,
 	FrameLocatorDefinition,
@@ -100,6 +100,27 @@ export const buildIdSelector = (id: string | RegExp): string =>
 	typeof id === "string" ? `[id="${escapeCssString(id)}"]` : `internal:attr=[id=${escapeRegExpForSelector(id)}]`;
 
 /**
+ * Validates a strategy's primary argument at the DSL boundary. A missing value always throws; an
+ * empty string throws unless `allowEmpty` is set, which is the case for the strategies Playwright
+ * can match with an empty string (`getByText`, `getByLabel`, `getByPlaceholder`, `getByAltText`,
+ * `getByTitle`, `getByTestId`). RegExp values are accepted as they are. The message names the
+ * calling method and, when known, the registry path.
+ */
+export function assertPrimaryValue(
+	value: string | RegExp | undefined,
+	source: { method: string; field: string; path?: string; allowEmpty: boolean },
+): asserts value is string | RegExp {
+	const where = source.path === undefined ? "" : ` for "${source.path}"`;
+	if (value === undefined) {
+		const article = /^[aeiou]/i.test(source.field) ? "an" : "a";
+		throw new Error(`${source.method} requires ${article} ${source.field} value${where}.`);
+	}
+	if (!source.allowEmpty && typeof value === "string" && value.length === 0) {
+		throw new Error(`${source.method} requires a non-empty ${source.field}${where}.`);
+	}
+}
+
+/**
  * Validates an id value at the DSL boundary. Throws for an empty string or a missing value, naming
  * the calling method and, when known, the registry path. RegExp values are accepted as they are.
  */
@@ -107,10 +128,11 @@ export function assertIdValue(
 	id: string | RegExp | undefined,
 	source: { method: string; path?: string },
 ): asserts id is string | RegExp {
-	const where = source.path === undefined ? "" : ` for "${source.path}"`;
-	if (id === undefined || (typeof id === "string" && id.length === 0)) {
+	if (id === undefined) {
+		const where = source.path === undefined ? "" : ` for "${source.path}"`;
 		throw new Error(`${source.method} requires a non-empty id${where}.`);
 	}
+	assertPrimaryValue(id, { ...source, field: "id", allowEmpty: false });
 }
 
 export const normalizeSteps = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
@@ -150,10 +172,7 @@ export const applyIndexSelector = (locator: Locator, selector: IndexSelector | n
 	return locator.nth(selector);
 };
 
-export const createLocator = (
-	target: LocatorBuilderTarget,
-	definition: LocatorStrategyDefinition,
-): Locator | ReturnType<Page["frameLocator"]> => {
+export const createLocator = (target: LocatorBuilderTarget, definition: LocatorStrategyDefinition): Locator => {
 	switch (definition.type) {
 		case "role":
 			return target.getByRole(definition.role, definition.options);
@@ -169,8 +188,14 @@ export const createLocator = (
 			return target.getByTitle(definition.text, definition.options);
 		case "locator":
 			return target.locator(definition.selector, definition.options);
-		case "frameLocator":
-			return target.frameLocator(definition.selector);
+		case "frameLocator": {
+			if (definition.selector === undefined) {
+				throw new Error(
+					'Locator definition of type "frameLocator" has no selector; the any-frame form is resolved by the chain.',
+				);
+			}
+			return target.locator(definition.selector);
+		}
 		case "testId":
 			return target.getByTestId(definition.testId);
 		case "id": {
@@ -232,7 +257,10 @@ export const cloneLocatorStrategyDefinition = (definition: LocatorStrategyDefini
 				...(definition.options ? { options: { ...definition.options } } : {}),
 			};
 		case "frameLocator":
-			return { type: "frameLocator", selector: definition.selector };
+			return {
+				type: "frameLocator",
+				...(definition.selector !== undefined ? { selector: definition.selector } : {}),
+			};
 		case "testId":
 			return { type: "testId", testId: definition.testId };
 		case "id":
@@ -309,7 +337,10 @@ export const applyDefinitionPatch = (
 		}
 		case "frameLocator": {
 			const selector = patch.selector !== undefined ? patch.selector : (base as FrameLocatorDefinition).selector;
-			return { type: "frameLocator", selector } satisfies FrameLocatorDefinition;
+			return {
+				type: "frameLocator",
+				...(selector !== undefined ? { selector } : {}),
+			} satisfies FrameLocatorDefinition;
 		}
 		case "testId": {
 			const testId = patch.testId !== undefined ? patch.testId : (base as TestIdDefinition).testId;
@@ -328,6 +359,32 @@ export const applyDefinitionPatch = (
 
 export const isFrameLocatorDefinition = (definition: LocatorStrategyDefinition): definition is FrameLocatorDefinition =>
 	definition.type === "frameLocator";
+
+/** Message for an any-frame segment that is not the first resolved segment of its chain (Playwright's rule). */
+export const anyFrameNotFirstMessage = (part: string, ancestor: string) =>
+	`frameLocator() without a selector must be the first segment of the chain; "${part}" has the ancestor "${ancestor}".`;
+
+/** Message for an any-frame segment used where an element is needed: a terminal, a filter reference, a step. */
+export const anyFrameNoElementMessage = (part: string) =>
+	`frameLocator() without a selector does not point to a particular iframe; "${part}" cannot be resolved on its own, filtered or indexed; resolve a path inside it.`;
+
+/** The any-frame form of a frame segment: `frameLocator()` registered without a selector. */
+export const isAnyFrameDefinition = (definition: LocatorStrategyDefinition): definition is FrameLocatorDefinition =>
+	definition.type === "frameLocator" && definition.selector === undefined;
+
+/** The ten DSL method names by strategy type, for error messages. */
+export const methodForStrategy: Record<LocatorStrategyDefinition["type"], string> = {
+	role: "getByRole",
+	text: "getByText",
+	label: "getByLabel",
+	placeholder: "getByPlaceholder",
+	altText: "getByAltText",
+	title: "getByTitle",
+	locator: "locator",
+	frameLocator: "frameLocator",
+	testId: "getByTestId",
+	id: "getById",
+};
 
 export const isLocatorInstance = (value: unknown): value is Locator => {
 	return !!value && typeof value === "object" && typeof (value as Locator).filter === "function";

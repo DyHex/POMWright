@@ -1,23 +1,17 @@
 import type { Page } from "@playwright/test";
 import type { LocatorRegistryInternal } from "./locatorRegistry";
 import type {
-	AltTextDefinition,
 	FilterDefinition,
 	IndexSelector,
-	LabelDefinition,
-	LocatorDefinition,
 	LocatorDescription,
 	LocatorSchemaRecord,
 	LocatorStep,
 	LocatorStrategyDefinition,
 	LocatorStrategyDefinitionPatch,
-	PlaceholderDefinition,
 	RegistryPath,
 	RoleDefinition,
-	TextDefinition,
-	TitleDefinition,
 } from "./types";
-import { applyDefinitionPatch, assertIdValue, normalizeSteps } from "./utils";
+import { applyDefinitionPatch, assertIdValue, assertPrimaryValue, normalizeSteps } from "./utils";
 
 export type LocatorRegistrationPostDefinitionBuilder<
 	LocatorSchemaPathType extends string,
@@ -29,6 +23,12 @@ export type LocatorRegistrationPostDefinitionBuilder<
 	nth: (index: IndexSelector) => LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	describe: (description: LocatorDescription) => LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 };
+
+type TextLikeType = "text" | "label" | "placeholder" | "altText" | "title";
+type TextLikeOptions = Parameters<Page["getByText"]>[1];
+
+const STRATEGY_METHODS =
+	"getByRole, getByText, getByLabel, getByPlaceholder, getByAltText, getByTitle, locator, frameLocator, getByTestId or getById";
 
 export class LocatorRegistrationBuilder<
 	LocatorSchemaPathType extends string,
@@ -79,7 +79,8 @@ export class LocatorRegistrationBuilder<
 	/**
 	 * Records a Playwright-style filter on the locator being registered. Filters are applied in the
 	 * order they are chained and can include `has`/`hasNot` locator references. Requires that a
-	 * locator strategy has already been set for this registration.
+	 * locator strategy has already been set for this registration; the type of `add(path)` exposes
+	 * this method only after one.
 	 *
 	 * @example
 	 * ```ts
@@ -108,6 +109,7 @@ export class LocatorRegistrationBuilder<
 	}
 
 	describe(description: LocatorDescription): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+		this.ensureDefinition("describe");
 		this.description = description;
 		this.persist();
 		return this.getPostDefinitionView();
@@ -116,6 +118,7 @@ export class LocatorRegistrationBuilder<
 	/**
 	 * Uses Playwright `getByRole` semantics to define the locator strategy. Accepts a role and
 	 * optional options; when seeded via `{ reuse }`, an options-only call patches the seeded role.
+	 * The role is required otherwise, and which strings are roles is Playwright's own type.
 	 *
 	 * @example
 	 * ```ts
@@ -131,19 +134,21 @@ export class LocatorRegistrationBuilder<
 		options: Seeded extends true ? RoleDefinition["options"] : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByRole(roleOrOptions: RoleDefinition["role"] | RoleDefinition["options"], options?: RoleDefinition["options"]) {
-		const definition: LocatorStrategyDefinitionPatch =
-			typeof roleOrOptions === "string"
-				? options !== undefined
-					? { type: "role", role: roleOrOptions, options }
-					: { type: "role", role: roleOrOptions }
-				: { type: "role", options: roleOrOptions };
-
-		return this.commit(definition);
+		const role = typeof roleOrOptions === "string" ? roleOrOptions : undefined;
+		const resolvedOptions = typeof roleOrOptions === "string" ? options : roleOrOptions;
+		if (role === undefined && this.seededDefinition) {
+			return this.commit(resolvedOptions !== undefined ? { type: "role", options: resolvedOptions } : { type: "role" });
+		}
+		assertPrimaryValue(role, { method: "getByRole", field: "role", path: this.path, allowEmpty: false });
+		return this.commit(
+			resolvedOptions !== undefined ? { type: "role", role, options: resolvedOptions } : { type: "role", role },
+		);
 	}
 
 	/**
 	 * Uses Playwright `getByText` semantics to define the locator strategy. Accepts string/RegExp
-	 * text and optional options; when seeded, an options-only call patches the seeded text.
+	 * text and optional options; when seeded, an options-only call patches the seeded text. An empty
+	 * string is a value Playwright matches and is stored as given.
 	 *
 	 * @example
 	 * ```ts
@@ -164,14 +169,7 @@ export class LocatorRegistrationBuilder<
 		textOrOptions: Parameters<Page["getByText"]>[0] | Parameters<Page["getByText"]>[1],
 		options?: Parameters<Page["getByText"]>[1],
 	) {
-		const definition: LocatorStrategyDefinitionPatch =
-			typeof textOrOptions === "string" || textOrOptions instanceof RegExp
-				? options !== undefined
-					? ({ type: "text", text: textOrOptions, options } as TextDefinition)
-					: ({ type: "text", text: textOrOptions } as TextDefinition)
-				: { type: "text", options: textOrOptions };
-
-		return this.commit(definition);
+		return this.commitTextLike("text", "getByText", textOrOptions, options);
 	}
 
 	/**
@@ -197,14 +195,7 @@ export class LocatorRegistrationBuilder<
 		textOrOptions: Parameters<Page["getByLabel"]>[0] | Parameters<Page["getByLabel"]>[1],
 		options?: Parameters<Page["getByLabel"]>[1],
 	) {
-		const definition: LocatorStrategyDefinitionPatch =
-			typeof textOrOptions === "string" || textOrOptions instanceof RegExp
-				? options !== undefined
-					? ({ type: "label", text: textOrOptions, options } as LabelDefinition)
-					: ({ type: "label", text: textOrOptions } as LabelDefinition)
-				: { type: "label", options: textOrOptions };
-
-		return this.commit(definition);
+		return this.commitTextLike("label", "getByLabel", textOrOptions, options);
 	}
 
 	/**
@@ -230,14 +221,7 @@ export class LocatorRegistrationBuilder<
 		textOrOptions: Parameters<Page["getByPlaceholder"]>[0] | Parameters<Page["getByPlaceholder"]>[1],
 		options?: Parameters<Page["getByPlaceholder"]>[1],
 	) {
-		const definition: LocatorStrategyDefinitionPatch =
-			typeof textOrOptions === "string" || textOrOptions instanceof RegExp
-				? options !== undefined
-					? ({ type: "placeholder", text: textOrOptions, options } as PlaceholderDefinition)
-					: ({ type: "placeholder", text: textOrOptions } as PlaceholderDefinition)
-				: { type: "placeholder", options: textOrOptions };
-
-		return this.commit(definition);
+		return this.commitTextLike("placeholder", "getByPlaceholder", textOrOptions, options);
 	}
 
 	/**
@@ -263,14 +247,7 @@ export class LocatorRegistrationBuilder<
 		textOrOptions: Parameters<Page["getByAltText"]>[0] | Parameters<Page["getByAltText"]>[1],
 		options?: Parameters<Page["getByAltText"]>[1],
 	) {
-		const definition: LocatorStrategyDefinitionPatch =
-			typeof textOrOptions === "string" || textOrOptions instanceof RegExp
-				? options !== undefined
-					? ({ type: "altText", text: textOrOptions, options } as AltTextDefinition)
-					: ({ type: "altText", text: textOrOptions } as AltTextDefinition)
-				: { type: "altText", options: textOrOptions };
-
-		return this.commit(definition);
+		return this.commitTextLike("altText", "getByAltText", textOrOptions, options);
 	}
 
 	/**
@@ -296,20 +273,13 @@ export class LocatorRegistrationBuilder<
 		textOrOptions: Parameters<Page["getByTitle"]>[0] | Parameters<Page["getByTitle"]>[1],
 		options?: Parameters<Page["getByTitle"]>[1],
 	) {
-		const definition: LocatorStrategyDefinitionPatch =
-			typeof textOrOptions === "string" || textOrOptions instanceof RegExp
-				? options !== undefined
-					? ({ type: "title", text: textOrOptions, options } as TitleDefinition)
-					: ({ type: "title", text: textOrOptions } as TitleDefinition)
-				: { type: "title", options: textOrOptions };
-
-		return this.commit(definition);
+		return this.commitTextLike("title", "getByTitle", textOrOptions, options);
 	}
 
 	/**
 	 * Uses Playwright `locator` semantics to define the locator strategy. Accepts a selector and
 	 * optional options; when seeded, an options-only call patches the seeded selector by merging
-	 * options while inheriting the selector.
+	 * options while inheriting the selector. An empty selector is rejected: Playwright cannot parse it.
 	 *
 	 * @example
 	 * ```ts
@@ -330,38 +300,64 @@ export class LocatorRegistrationBuilder<
 		selectorOrOptions: Parameters<Page["locator"]>[0] | Parameters<Page["locator"]>[1],
 		options?: Parameters<Page["locator"]>[1],
 	) {
-		const definition: LocatorStrategyDefinitionPatch =
-			typeof selectorOrOptions === "string"
-				? options !== undefined
-					? ({ type: "locator", selector: selectorOrOptions, options } as LocatorDefinition)
-					: ({ type: "locator", selector: selectorOrOptions } as LocatorDefinition)
-				: { type: "locator", options: selectorOrOptions };
-
-		return this.commit(definition);
+		const selector = typeof selectorOrOptions === "string" ? selectorOrOptions : undefined;
+		const resolvedOptions = typeof selectorOrOptions === "string" ? options : selectorOrOptions;
+		if (selector === undefined && this.seededDefinition) {
+			return this.commit(
+				resolvedOptions !== undefined ? { type: "locator", options: resolvedOptions } : { type: "locator" },
+			);
+		}
+		assertPrimaryValue(selector, { method: "locator", field: "selector", path: this.path, allowEmpty: false });
+		return this.commit(
+			resolvedOptions !== undefined
+				? { type: "locator", selector, options: resolvedOptions }
+				: { type: "locator", selector },
+		);
 	}
 
 	/**
-	 * Uses Playwright `frameLocator` semantics to define the locator strategy, entering the targeted
-	 * frame for subsequent chained locators. When seeded, `selector` may be omitted to retain the
-	 * existing selector while overriding options elsewhere.
+	 * Registers a frame segment. With a selector the segment is the `<iframe>` element
+	 * (`locator(selector)` plus any chained `filter`/`nth` steps), and the descendants registered
+	 * below it resolve inside the frame through `contentFrame()`; as the last segment of a path it
+	 * resolves to the element itself. Without a selector it is Playwright's any-frame
+	 * `page.frameLocator()`: the descendants resolve in whichever single frame holds them, the main
+	 * frame included. The any-frame form must be the first segment of its chain, has no element to
+	 * step on or to resolve to, and therefore returns nothing to chain. When seeded, omitting the
+	 * selector inherits the seeded one instead.
 	 *
 	 * @example
 	 * ```ts
 	 * registry.add("frame.login").frameLocator("iframe.auth");
+	 * registry.add("frame.login.submit").getByRole("button", { name: "Log in" });
+	 * registry.add("anyFrame").frameLocator();
+	 * registry.add("anyFrame.consent").getByRole("button", { name: "Accept" });
 	 * ```
 	 */
+	frameLocator(): Seeded extends true
+		? LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>
+		: undefined;
 	frameLocator(
 		selector: Seeded extends true ? string | undefined : string,
-	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
-		const definition: LocatorStrategyDefinitionPatch = selector
-			? { type: "frameLocator", selector }
-			: { type: "frameLocator" };
-		return this.commit(definition);
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	frameLocator(selector?: string): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> | undefined {
+		if (selector === undefined) {
+			if (this.seededDefinition) {
+				return this.commit({ type: "frameLocator" });
+			}
+			const definition: LocatorStrategyDefinition = { type: "frameLocator" };
+			this.ensureDefinitionAllowed(definition);
+			this.definition = definition;
+			this.persist();
+			return undefined;
+		}
+		assertPrimaryValue(selector, { method: "frameLocator", field: "selector", path: this.path, allowEmpty: false });
+		return this.commit({ type: "frameLocator", selector });
 	}
 
 	/**
 	 * Uses Playwright `getByTestId` semantics to define the locator strategy. When seeded, omitting
-	 * the argument inherits the seeded `testId` while allowing options from other overrides.
+	 * the argument inherits the seeded `testId`. An empty string is a value Playwright matches
+	 * (`data-testid=""`) and is stored as given.
 	 *
 	 * @example
 	 * ```ts
@@ -371,8 +367,11 @@ export class LocatorRegistrationBuilder<
 	getByTestId(
 		testId: Seeded extends true ? Parameters<Page["getByTestId"]>[0] | undefined : Parameters<Page["getByTestId"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
-		const definition: LocatorStrategyDefinitionPatch = testId ? { type: "testId", testId } : { type: "testId" };
-		return this.commit(definition);
+		if (testId === undefined && this.seededDefinition) {
+			return this.commit({ type: "testId" });
+		}
+		assertPrimaryValue(testId, { method: "getByTestId", field: "testId", path: this.path, allowEmpty: true });
+		return this.commit({ type: "testId", testId });
 	}
 
 	/**
@@ -400,10 +399,33 @@ export class LocatorRegistrationBuilder<
 		return this.commit({ type: "id", id });
 	}
 
+	private commitTextLike(
+		type: TextLikeType,
+		method: string,
+		textOrOptions: string | RegExp | TextLikeOptions,
+		options: TextLikeOptions,
+	) {
+		const text = typeof textOrOptions === "string" || textOrOptions instanceof RegExp ? textOrOptions : undefined;
+		const resolvedOptions = text === undefined ? (textOrOptions as TextLikeOptions) : options;
+		if (text === undefined && this.seededDefinition) {
+			return this.commit(
+				(resolvedOptions !== undefined
+					? { type, options: resolvedOptions }
+					: { type }) as LocatorStrategyDefinitionPatch,
+			);
+		}
+		assertPrimaryValue(text, { method, field: "text", path: this.path, allowEmpty: true });
+		return this.commit(
+			(resolvedOptions !== undefined
+				? { type, text, options: resolvedOptions }
+				: { type, text }) as LocatorStrategyDefinitionPatch,
+		);
+	}
+
 	private commit(
 		definition: LocatorStrategyDefinition | LocatorStrategyDefinitionPatch,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
-		this.ensureDefinitionAllowedWithRollback(definition as LocatorStrategyDefinition);
+		this.ensureDefinitionAllowed(definition as LocatorStrategyDefinition);
 		const mergedDefinition = this.seededDefinition
 			? applyDefinitionPatch(this.definition as LocatorStrategyDefinition, definition)
 			: (definition as LocatorStrategyDefinition);
@@ -418,21 +440,24 @@ export class LocatorRegistrationBuilder<
 	private applyFilter(
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	) {
-		this.ensureDefinition();
+		this.ensureDefinition("filter");
 		this.steps.push({ kind: "filter", filter });
 		this.persist();
 	}
 
 	private applyIndex(index: IndexSelector) {
-		this.ensureDefinition();
+		this.ensureDefinition("nth");
 		this.steps.push({ kind: "index", index });
 		this.persist();
 	}
 
-	private ensureDefinitionAllowedWithRollback(definition: LocatorStrategyDefinition) {
+	/**
+	 * A failed call leaves the registry as it was: a seeded path keeps its seed, a path with a first
+	 * strategy or override keeps it. Nothing is unregistered.
+	 */
+	private ensureDefinitionAllowed(definition: LocatorStrategyDefinition) {
 		if (this.seededDefinition) {
 			if (definition.type !== this.reuseType) {
-				this.rollbackSeededRegistration();
 				throw new Error(
 					`The locator definition for "${this.path}" must use the "${this.reuseType}" strategy when reusing a locator.`,
 				);
@@ -454,9 +479,11 @@ export class LocatorRegistrationBuilder<
 		}
 	}
 
-	private ensureDefinition() {
+	private ensureDefinition(method: "filter" | "nth" | "describe") {
 		if (!this.definition) {
-			throw new Error(`A locator definition must be provided before applying filters or indices for "${this.path}".`);
+			throw new Error(
+				`${method}() needs a locator strategy first for "${this.path}"; call ${STRATEGY_METHODS} before it.`,
+			);
 		}
 	}
 
@@ -477,13 +504,6 @@ export class LocatorRegistrationBuilder<
 		} else {
 			this.registry.register(this.path, record);
 			this.registered = true;
-		}
-	}
-
-	private rollbackSeededRegistration() {
-		if (this.seededDefinition && this.registered) {
-			this.registry.unregister(this.path);
-			this.registered = false;
 		}
 	}
 
@@ -513,24 +533,26 @@ export class LocatorRegistrationBuilder<
 	}
 }
 
+/**
+ * The builder returned by `add(path)`: the ten strategy methods and nothing else. `filter`, `nth`
+ * and `describe` appear once a strategy has been chosen.
+ */
 export type LocatorRegistrationPreDefinitionBuilder<
 	LocatorSchemaPathType extends string,
 	Path extends RegistryPath<LocatorSchemaPathType>,
-	Seeded extends boolean = false,
-> = LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> &
-	Pick<
-		LocatorRegistrationBuilder<LocatorSchemaPathType, Path, Seeded>,
-		| "getByRole"
-		| "getByText"
-		| "getByLabel"
-		| "getByPlaceholder"
-		| "getByAltText"
-		| "getByTitle"
-		| "locator"
-		| "frameLocator"
-		| "getByTestId"
-		| "getById"
-	>;
+> = Pick<
+	LocatorRegistrationBuilder<LocatorSchemaPathType, Path, false>,
+	| "getByRole"
+	| "getByText"
+	| "getByLabel"
+	| "getByPlaceholder"
+	| "getByAltText"
+	| "getByTitle"
+	| "locator"
+	| "frameLocator"
+	| "getByTestId"
+	| "getById"
+>;
 
 type LocatorMethodForType<Type extends LocatorStrategyDefinition["type"]> = Type extends "role"
 	? "getByRole"

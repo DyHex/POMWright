@@ -1,12 +1,17 @@
-import { describe, expect, it } from "vitest";
-import type { IdDefinition, LocatorBuilderTarget } from "./types";
+import type { Locator } from "@playwright/test";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import type { FrameLocatorDefinition, IdDefinition, LocatorBuilderTarget } from "./types";
 import {
 	applyDefinitionPatch,
 	assertIdValue,
+	assertPrimaryValue,
 	buildIdSelector,
+	cloneLocatorStrategyDefinition,
 	createLocator,
 	escapeCssString,
 	escapeRegExpForSelector,
+	isAnyFrameDefinition,
+	methodForStrategy,
 } from "./utils";
 
 describe("escapeCssString", () => {
@@ -164,5 +169,126 @@ describe("applyDefinitionPatch, id case", () => {
 		expect(applyDefinitionPatch({ type: "id", id: "base" }, { type: "id" })).toEqual({ type: "id", id: "base" });
 		const pattern = /x/i;
 		expect(applyDefinitionPatch({ type: "id", id: pattern }, { type: "id" })).toEqual({ type: "id", id: pattern });
+	});
+});
+
+describe("assertPrimaryValue", () => {
+	it("rejects a missing value for every field, naming the method and the path", () => {
+		expect(() =>
+			assertPrimaryValue(undefined, { method: "getByRole", field: "role", path: "main.button", allowEmpty: false }),
+		).toThrowError('getByRole requires a role value for "main.button".');
+		expect(() =>
+			assertPrimaryValue(undefined, { method: "getByText", field: "text", path: "p", allowEmpty: true }),
+		).toThrowError('getByText requires a text value for "p".');
+		expect(() =>
+			assertPrimaryValue(undefined, { method: "getById", field: "id", path: "p", allowEmpty: false }),
+		).toThrowError('getById requires an id value for "p".');
+	});
+
+	it("uses the method label alone when there is no path", () => {
+		expect(() =>
+			assertPrimaryValue(undefined, { method: "createReusable.locator", field: "selector", allowEmpty: false }),
+		).toThrowError("createReusable.locator requires a selector value.");
+	});
+
+	it("rejects an empty string only when allowEmpty is false", () => {
+		expect(() =>
+			assertPrimaryValue("", { method: "locator", field: "selector", path: "list", allowEmpty: false }),
+		).toThrowError('locator requires a non-empty selector for "list".');
+		expect(() => assertPrimaryValue("", { method: "frameLocator", field: "selector", allowEmpty: false })).toThrowError(
+			"frameLocator requires a non-empty selector.",
+		);
+		expect(() =>
+			assertPrimaryValue("", { method: "getByTestId", field: "testId", path: "p", allowEmpty: true }),
+		).not.toThrow();
+		expect(() =>
+			assertPrimaryValue("", { method: "getByText", field: "text", path: "p", allowEmpty: true }),
+		).not.toThrow();
+	});
+
+	it("accepts non-empty strings and RegExps whatever the flags", () => {
+		for (const value of ["x", " ", /x/, /x/gimsuy]) {
+			expect(() => assertPrimaryValue(value, { method: "m", field: "f", allowEmpty: false })).not.toThrow();
+		}
+	});
+});
+
+describe("createLocator, frame case", () => {
+	const stubTarget = () => {
+		const calls: string[] = [];
+		const target = {
+			locator: (selector: string) => {
+				calls.push(`locator:${selector}`);
+				return { selector };
+			},
+			frameLocator: (selector?: string) => {
+				calls.push(`frameLocator:${selector}`);
+				return { selector };
+			},
+		} as unknown as LocatorBuilderTarget;
+		return { target, calls };
+	};
+
+	it("builds the iframe element with target.locator and never calls target.frameLocator", () => {
+		const { target, calls } = stubTarget();
+		createLocator(target, { type: "frameLocator", selector: "iframe#login" });
+		expect(calls).toEqual(["locator:iframe#login"]);
+	});
+
+	it("throws for the any-frame definition, which the chain resolves itself", () => {
+		const { target, calls } = stubTarget();
+		expect(() => createLocator(target, { type: "frameLocator" })).toThrowError(
+			'Locator definition of type "frameLocator" has no selector; the any-frame form is resolved by the chain.',
+		);
+		expect(calls).toEqual([]);
+	});
+
+	it("returns a Locator for every strategy", () => {
+		expectTypeOf(createLocator).returns.toEqualTypeOf<Locator>();
+	});
+});
+
+describe("frame definitions without a selector", () => {
+	it("are recognised by isAnyFrameDefinition", () => {
+		expect(isAnyFrameDefinition({ type: "frameLocator" })).toBe(true);
+		expect(isAnyFrameDefinition({ type: "frameLocator", selector: "iframe" })).toBe(false);
+		expect(isAnyFrameDefinition({ type: "locator", selector: "iframe" })).toBe(false);
+	});
+
+	it("clone and patch keep the selector absent instead of storing undefined", () => {
+		const anyFrame: FrameLocatorDefinition = { type: "frameLocator" };
+		expect(cloneLocatorStrategyDefinition(anyFrame)).toEqual({ type: "frameLocator" });
+		expect(Object.keys(cloneLocatorStrategyDefinition(anyFrame))).toEqual(["type"]);
+		expect(cloneLocatorStrategyDefinition({ type: "frameLocator", selector: "iframe" })).toEqual({
+			type: "frameLocator",
+			selector: "iframe",
+		});
+		expect(applyDefinitionPatch({ type: "frameLocator", selector: "iframe" }, { type: "frameLocator" })).toEqual({
+			type: "frameLocator",
+			selector: "iframe",
+		});
+		expect(
+			applyDefinitionPatch({ type: "frameLocator", selector: "iframe" }, { type: "frameLocator", selector: "x" }),
+		).toEqual({
+			type: "frameLocator",
+			selector: "x",
+		});
+	});
+});
+
+describe("methodForStrategy", () => {
+	it("names the DSL method of every strategy", () => {
+		expect(methodForStrategy).toEqual({
+			role: "getByRole",
+			text: "getByText",
+			label: "getByLabel",
+			placeholder: "getByPlaceholder",
+			altText: "getByAltText",
+			title: "getByTitle",
+			locator: "locator",
+			frameLocator: "frameLocator",
+			testId: "getByTestId",
+			id: "getById",
+		});
 	});
 });

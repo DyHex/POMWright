@@ -95,6 +95,7 @@ export abstract class PageObject<
 		});
 
 		this.defineLocators();
+		this.locatorRegistry.verify();
 		this.navigation = createNavigation(
 			this.page,
 			this.baseUrl,

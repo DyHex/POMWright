@@ -22,10 +22,13 @@ import type {
 	ReusableLocator,
 } from "./types";
 import {
+	anyFrameNoElementMessage,
+	anyFrameNotFirstMessage,
 	applyIndexSelector,
 	cloneLocatorStrategyDefinition,
 	createLocator,
 	expandSchemaPath,
+	isAnyFrameDefinition,
 	isFrameLocatorDefinition,
 	isLocatorInstance,
 	normalizeSteps,
@@ -129,7 +132,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 					},
 				]
 	): Reuse extends undefined
-		? LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>
+		? LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>
 		: Reuse extends LocatorSchemaPathType
 			? void
 			: LocatorRegistrationSeededBuilderForType<
@@ -250,10 +253,6 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			steps: normalizeSteps(record.steps),
 			...(record.description !== undefined ? { description: record.description } : {}),
 		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
-	}
-
-	unregister(path: RegistryPath<LocatorSchemaPathType>) {
-		this.schemas.delete(path);
 	}
 
 	getIfExists(
@@ -397,6 +396,47 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	}
 
 	/**
+	 * Checks every registered path once and reports every failure together. A path with a selector is
+	 * resolved terminal-only, as `getLocator` does, which evaluates its `has`/`hasNot` path references
+	 * through the normal resolution (unregistered targets, cycles, unsupported reference values); an
+	 * any-frame path is checked against its first-segment rule instead, since it has no terminal form.
+	 * Nothing touches the DOM. `PageObject` calls this right after `defineLocators()`; a standalone
+	 * registry calls it after registration.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("list.item").getByRole("listitem").filter({ has: "list.titel" });
+	 * registry.verify();
+	 * // Locator registry verification failed for 1 of 1 paths:
+	 * //   "list.item": No locator schema registered for path "list.titel".
+	 * ```
+	 */
+	verify(): void {
+		const failures: string[] = [];
+		for (const [path, record] of this.schemas) {
+			try {
+				if (isAnyFrameDefinition(record.definition)) {
+					const ancestor = expandSchemaPath(path)
+						.slice(0, -1)
+						.find((part) => this.schemas.has(part as RegistryPath<LocatorSchemaPathType>));
+					if (ancestor !== undefined) {
+						throw new Error(anyFrameNotFirstMessage(path, ancestor));
+					}
+				} else {
+					this.getLocatorWithContext(path, this.createResolutionContext(path));
+				}
+			} catch (error) {
+				failures.push(`"${path}": ${error instanceof Error ? error.message : String(error)}`);
+			}
+		}
+		if (failures.length > 0) {
+			throw new Error(
+				`Locator registry verification failed for ${failures.length} of ${this.schemas.size} paths:\n  ${failures.join("\n  ")}`,
+			);
+		}
+	}
+
+	/**
 	 * Resolves the Playwright {@link Locator} for the provided path, applying only the terminal
 	 * definition and its recorded steps (no ancestor chaining). Throws if the path is not registered.
 	 *
@@ -454,6 +494,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		}[] = [];
 
 		const lastIndex = registeredChain.length - 1;
+		let previousPart: string | undefined;
 
 		for (const [index, part] of registeredChain.entries()) {
 			const isTerminalStep = index === lastIndex;
@@ -469,27 +510,27 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				throw new Error(`Missing locator definition for "${part}" while resolving "${path}".`);
 			}
 
-			if (isFrameLocatorDefinition(definition)) {
-				const frameLocator = createLocator(currentTarget, definition) as ReturnType<Page["frameLocator"]>;
-				const isTerminalStep = index === lastIndex;
-
-				if (isTerminalStep) {
-					const ownerLocator = frameLocator.owner();
-					currentTarget = ownerLocator;
-					lastLocator = ownerLocator;
-				} else {
-					currentTarget = frameLocator as LocatorBuilderTarget;
-					lastLocator = frameLocator as unknown as Locator;
+			// The any-frame segment is Playwright's page.frameLocator(): it exists only at the start of a
+			// selector, has no element to step on or to return, and enters whichever single frame matches.
+			if (isAnyFrameDefinition(definition)) {
+				if (currentTarget !== this.page) {
+					throw new Error(anyFrameNotFirstMessage(part, previousPart ?? path));
 				}
-
+				if (isTerminalStep || (steps.get(part) ?? []).length > 0) {
+					throw new Error(anyFrameNoElementMessage(part));
+				}
+				currentTarget = this.page.frameLocator();
+				lastLocator = null;
+				previousPart = part;
 				debugSteps.push({ path: part, definition, appliedFilters: [], recordedSteps: [] });
 				continue;
 			}
 
-			const locatorResult = createLocator(currentTarget, definition) as Locator;
+			// Every other strategy, frames included, is an element locator followed by its steps in chain
+			// order. A frame segment then enters the frame for its descendants through contentFrame(); as the
+			// terminal segment it is the <iframe> element itself.
 			const recordedSteps = steps.get(part) ?? [];
-
-			let resolvedLocator = locatorResult;
+			let resolvedLocator = createLocator(currentTarget, definition);
 			const appliedFilters: ResolvedFilterDefinition[] = [];
 			let appliedIndex: IndexSelector | null | undefined;
 
@@ -506,8 +547,10 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				}
 			}
 
-			currentTarget = resolvedLocator;
 			lastLocator = resolvedLocator;
+			currentTarget =
+				isFrameLocatorDefinition(definition) && !isTerminalStep ? resolvedLocator.contentFrame() : resolvedLocator;
+			previousPart = part;
 			debugSteps.push({
 				path: part,
 				definition,
@@ -541,7 +584,7 @@ export type GetNestedLocatorAccessor<LocatorSchemaPathType extends string> = <Pa
 
 export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
 	LocatorRegistryInternal<LocatorSchemaPathType>,
-	"add" | "createReusable" | "getLocator" | "getLocatorSchema" | "getNestedLocator"
+	"add" | "createReusable" | "getLocator" | "getLocatorSchema" | "getNestedLocator" | "verify"
 >;
 
 /**

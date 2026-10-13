@@ -132,9 +132,15 @@ export type LocatorDefinition = {
 	options?: Parameters<Page["locator"]>[1];
 };
 
+/**
+ * A frame segment. With a selector it is the `<iframe>` element (`locator(selector)` plus the
+ * segment's steps) whose descendants resolve inside the frame through `contentFrame()`; without a
+ * selector it is Playwright's any-frame `page.frameLocator()`, valid only as the first segment of a
+ * chain, with no steps and no terminal form.
+ */
 export type FrameLocatorDefinition = {
 	type: "frameLocator";
-	selector: string;
+	selector?: string;
 };
 
 export type TestIdDefinition = {
@@ -235,9 +241,18 @@ export type LocatorSchemaRecord<
 	description?: LocatorDescription;
 };
 
+/**
+ * JSON Merge Patch over a Playwright options object: a provided key replaces, `null` deletes the
+ * key, an absent or `undefined` key leaves it alone.
+ */
+export type OptionsPatch<Options> = { [Key in keyof NonNullable<Options>]?: NonNullable<Options>[Key] | null };
+
 type LocatorUpdateFor<Definition extends LocatorStrategyDefinition> = { type: Definition["type"] } & Partial<
-	Omit<Definition, "type">
->;
+	Omit<Definition, "type" | "options">
+> &
+	("options" extends keyof Definition
+		? { options?: OptionsPatch<Definition["options"]> | null }
+		: Record<never, never>);
 
 export type LocatorUpdate =
 	| LocatorUpdateFor<RoleDefinition>

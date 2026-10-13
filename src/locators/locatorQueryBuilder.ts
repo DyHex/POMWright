@@ -11,7 +11,13 @@ import type {
 	LocatorUpdate,
 	RegistryPath,
 } from "./types";
-import { cloneLocatorStrategyDefinition, expandSchemaPath, normalizeSteps } from "./utils";
+import {
+	anyFrameNoElementMessage,
+	cloneLocatorStrategyDefinition,
+	expandSchemaPath,
+	isAnyFrameDefinition,
+	normalizeSteps,
+} from "./utils";
 
 export type LocatorQueryBuilderPublic<
 	LocatorSchemaPathType extends string,
@@ -26,10 +32,6 @@ export class LocatorQueryBuilder<
 	LocatorSubstring extends RegistryPath<LocatorSchemaPathType>,
 > {
 	private readonly definitions = new Map<string, LocatorStrategyDefinition>();
-	private readonly perPathTypeCache = new Map<
-		string,
-		Map<LocatorStrategyDefinition["type"], LocatorStrategyDefinition>
-	>();
 	private readonly steps = new Map<
 		string,
 		LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]
@@ -48,9 +50,7 @@ export class LocatorQueryBuilder<
 			if (!record) {
 				continue;
 			}
-			const clonedDefinition = cloneLocatorStrategyDefinition(record.definition);
-			this.definitions.set(part, clonedDefinition);
-			this.ensureTypeCache(part, clonedDefinition);
+			this.definitions.set(part, cloneLocatorStrategyDefinition(record.definition));
 			const recordSteps = normalizeSteps<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>(
 				record.steps,
 			);
@@ -138,6 +138,7 @@ export class LocatorQueryBuilder<
 		>;
 
 		this.ensureSubPath(resolvedSubPath);
+		this.ensureStepTarget(resolvedSubPath);
 		const existing = this.steps.get(resolvedSubPath) ?? [];
 		existing.push({ kind: "filter", filter });
 		this.steps.set(resolvedSubPath, existing);
@@ -198,6 +199,7 @@ export class LocatorQueryBuilder<
 		const index = (hasExplicitSubPath ? maybeIndex : subPathOrIndex) as IndexSelector;
 
 		this.ensureSubPath(resolvedSubPath);
+		this.ensureStepTarget(resolvedSubPath);
 		const existing = this.steps.get(resolvedSubPath) ?? [];
 		existing.push({ kind: "index", index });
 		this.steps.set(resolvedSubPath, existing);
@@ -229,8 +231,7 @@ export class LocatorQueryBuilder<
 		this.ensureSubPath(subPath);
 		if (!this.definitions.has(subPath) && this.tombstones.has(subPath)) {
 			const baseline = this.registry.get(subPath as RegistryPath<LocatorSchemaPathType>).definition;
-			const baselineClone = cloneLocatorStrategyDefinition(baseline);
-			this.definitions.set(subPath, baselineClone);
+			this.definitions.set(subPath, cloneLocatorStrategyDefinition(baseline));
 			this.steps.set(subPath, []);
 			this.tombstones.delete(subPath);
 		}
@@ -239,13 +240,8 @@ export class LocatorQueryBuilder<
 		if (!current) {
 			throw new Error(`No locator schema registered for sub-path "${subPath}".`);
 		}
-		const baseline = this.registry.get(subPath as RegistryPath<LocatorSchemaPathType>).definition;
-		const cacheForPath = this.ensureTypeCache(subPath, cloneLocatorStrategyDefinition(baseline));
-		const cachedDefinition = cacheForPath.get(updates.type);
-		const merged = mergeLocatorDefinition(current, updates, subPath, cachedDefinition, baseline);
-		const mergedClone = cloneLocatorStrategyDefinition(merged);
-		cacheForPath.set(mergedClone.type, mergedClone);
-		this.definitions.set(subPath, mergedClone);
+		const merged = mergeLocatorDefinition(current, updates, subPath);
+		this.definitions.set(subPath, cloneLocatorStrategyDefinition(merged));
 		return this;
 	}
 
@@ -296,10 +292,7 @@ export class LocatorQueryBuilder<
 			this.tombstones.delete(subPath);
 		}
 		const nextDefinition = buildReplacementDefinition(updates, subPath);
-		const cloned = cloneLocatorStrategyDefinition(nextDefinition);
-		const cacheForPath = this.ensureTypeCache(subPath, cloned);
-		cacheForPath.set(cloned.type, cloneLocatorStrategyDefinition(cloned));
-		this.definitions.set(subPath, cloned);
+		this.definitions.set(subPath, cloneLocatorStrategyDefinition(nextDefinition));
 		return this;
 	}
 
@@ -328,7 +321,6 @@ export class LocatorQueryBuilder<
 		this.ensureSubPath(resolvedSubPath);
 		this.definitions.delete(resolvedSubPath);
 		this.steps.delete(resolvedSubPath);
-		this.perPathTypeCache.delete(resolvedSubPath);
 		this.descriptions.delete(resolvedSubPath);
 		this.tombstones.add(resolvedSubPath);
 		return this;
@@ -402,6 +394,14 @@ export class LocatorQueryBuilder<
 		}
 	}
 
+	/** An any-frame segment has no element, so a filter or index step on it is rejected at the call. */
+	private ensureStepTarget(subPath: string) {
+		const definition = this.definitions.get(subPath);
+		if (definition !== undefined && isAnyFrameDefinition(definition)) {
+			throw new Error(anyFrameNoElementMessage(subPath));
+		}
+	}
+
 	private resolve() {
 		return this.registry.buildLocatorChain(
 			this.path,
@@ -410,18 +410,5 @@ export class LocatorQueryBuilder<
 			this.tombstones,
 			this.descriptions.get(this.path),
 		);
-	}
-
-	private ensureTypeCache(subPath: string, baseline: LocatorStrategyDefinition) {
-		if (!this.perPathTypeCache.has(subPath)) {
-			this.perPathTypeCache.set(
-				subPath,
-				new Map<LocatorStrategyDefinition["type"], LocatorStrategyDefinition>([
-					[baseline.type, cloneLocatorStrategyDefinition(baseline)],
-				]),
-			);
-		}
-
-		return this.perPathTypeCache.get(subPath) as Map<LocatorStrategyDefinition["type"], LocatorStrategyDefinition>;
 	}
 }
