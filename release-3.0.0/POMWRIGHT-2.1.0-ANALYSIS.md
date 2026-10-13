@@ -273,9 +273,13 @@ await loginPage.sessionStorage.set({ token: "eyJhbGci…" }, { reload: true });
 
 ### 1.6 `filter`/`nth` steps on a `frameLocator` segment are silently dropped
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Fixed 2026-10-13 by plan 1.6-1.8 (commits 4f83953, a38a841). A frame segment is now `locator(selector)`, then its
+> steps, then `contentFrame()` for the descendants, and the `<iframe>` element itself as a terminal, so `nth`, `first`,
+> `last` and `filter` apply, verified against real frames. Two corrections for the record: the drop was 2.1's design
+> (the spec title "skips frame-level filters" said so), not an oversight; and the symptom was not a silent wrong frame but
+> a strict mode violation at action time naming the frame selector, whenever the selector matched several iframes.
 
 **Intent.** Steps recorded on a segment are applied to that segment in chain order.
 
@@ -334,9 +338,15 @@ an explicit initialiser is the alternative if that proves awkward.
 
 ### 1.8 Registration accepts incomplete definitions; `update(x, undefined)` clears options
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Fixed 2026-10-13 by plan 1.6-1.8. Registration side: every builder requires the strategy's first argument
+> through `assertPrimaryValue`; an empty string is rejected only for `locator`, `frameLocator`, `getByRole` and `getById`
+> (Playwright errors or engine-dependent matching), and stored verbatim for the text-likes and `getByTestId`, which
+> Playwright matches; the truthiness checks are gone. Update side: the explicit-`undefined` wipe was 2.1's design, replaced
+> by JSON Merge Patch (`null` deletes, `undefined` and absent leave alone) together with a same-strategy `update`;
+> `replace` is the strategy change. The unit tests and `add.validation.spec.ts` / `getLocatorSchema.update.spec.ts` cover
+> every row.
 
 **Intent.** Reject a malformed registration at `add()` time so the stack trace points at the definition.
 
@@ -402,7 +412,9 @@ an empty or missing id throws at registration in all three builders. The other s
   by root. A user cannot name the type of `registry.createReusable.getByRole(...)` in a shared locators file.
   `SessionStorageState` resolved 2026-10-10 by plan 1.5: the type is gone, and `Codec`, `SessionStorageSchema`, `json`
   and `StorageTypeFromOptions` are exported instead; the locator types remain for plan 7.
-- [ ] **e) NEW: the pre-definition builder allows `filter`/`nth`/`describe` before a strategy.**
+- [x] **e) NEW: the pre-definition builder allows `filter`/`nth`/`describe` before a strategy.** Fixed 2026-10-13 by
+  plan 1.6-1.8: the builder returned by `add(path)` exposes the ten strategies only, and the runtime message names the
+  method and the strategies to call first.
   [locatorRegistrationBuilder.ts:512-529](../src/locators/locatorRegistrationBuilder.ts#L512-L529) intersects the
   post-definition type. `add("a").filter({...})` and `add("a.b").describe("d")` compile and throw at
   [L455](../src/locators/locatorRegistrationBuilder.ts#L455) and [L461](../src/locators/locatorRegistrationBuilder.ts#L461).
@@ -425,7 +437,8 @@ an empty or missing id throws at registration in all three builders. The other s
   [L187](../src/locators/locatorUpdateBuilder.ts#L187), [L285](../src/locators/locatorUpdateBuilder.ts#L285),
   [utils.ts:150](../src/locators/utils.ts#L150)). Redundant rather than wrong, but an id literally starting with `#` can
   never be targeted. Normalise once, at registration.
-- [ ] Asymmetric seeded recovery: a wrong-type override rolls back and throws, a second same-type override throws and
+- [x] Resolved 2026-10-13 by plan 1.6-1.8: no rollback anywhere; a throwing DSL call changes nothing, and
+  `LocatorRegistryInternal.unregister` is gone. Asymmetric seeded recovery: a wrong-type override rolls back and throws, a second same-type override throws and
   leaves the first override registered
   ([locatorRegistrationBuilder.ts:428-451](../src/locators/locatorRegistrationBuilder.ts#L428-L451)).
 - [ ] `remove()` then `update()` rehydrates the definition only. Steps become `[]` and the description is dropped
@@ -461,7 +474,7 @@ an empty or missing id throws at registration in all three builders. The other s
   `tombstones` are disjoint by construction (`remove` deletes then tombstones; `applyUpdate`/`applyReplacement`
   un-tombstone then set), and `registeredChain` is already filtered by `definitions.has`. The tombstone half of
   [L442](../src/locators/locatorRegistry.ts#L442) is redundant for the same reason.
-- [ ] [locatorRegistry.ts:474](../src/locators/locatorRegistry.ts#L474) shadows `isTerminalStep` from
+- [x] Closed 2026-10-13 by plan 1.6-1.8 with the frame branch it sat in. [locatorRegistry.ts:474](../src/locators/locatorRegistry.ts#L474) shadows `isTerminalStep` from
   [L459](../src/locators/locatorRegistry.ts#L459).
 - [ ] `debugSteps` is built at [L448-454](../src/locators/locatorRegistry.ts#L448-L454),
   [L485](../src/locators/locatorRegistry.ts#L485), [L511-517](../src/locators/locatorRegistry.ts#L511-L517) and returned at
@@ -521,9 +534,11 @@ clone, patch, merge, replace and create into one generic helper each, and makes 
 
 ### 3.2 Modernise frame handling
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Done 2026-10-13 by plan 1.6-1.8 as suggested: one loop body for the ten strategies, `createLocator` returns
+> `Locator`, and Playwright's any-frame `frameLocator()` (1.63) is exposed as its own segment with its first-segment and
+> no-element rules. The peer floor is 1.64.0.
 
 **Where.** [locatorRegistry.ts:472-487](../src/locators/locatorRegistry.ts#L472-L487).
 
@@ -576,9 +591,11 @@ seeded builder. A registered record is a seed; the two forms differ for no struc
 
 ### 3.6 Fail fast at registration
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Done 2026-10-13 by plan 1.6-1.8: the primary argument is required on every builder (1.8); steps on frames are
+> supported rather than rejected (3.2); `registry.verify()` resolves every path once, reports every failure in one error,
+> is in the public `LocatorRegistry` type, and `PageObject` calls it right after `defineLocators()`.
 
 In `LocatorRegistrationBuilder.commit`: require the primary field when not seeded (1.8), reject steps on frames until
 3.2 lands (1.6), and optionally add `registry.verify()` that resolves every `has:`/`hasNot:` path reference once after
@@ -614,8 +631,8 @@ property (that `add` clones the seed). Either return a new builder per call or d
   scanners warn otherwise.
 - [ ] No `exports` map, `engines`, or `sideEffects`. `index.d.mts` is emitted but never selected by TypeScript.
 - [ ] `@playwright/test` is undeclared at root and pinned only by the lockfile
-  ([pnpm-lock.yaml:356](../pnpm-lock.yaml#L356)). The floor `>=1.57.0` is never exercised. Raised to `>=1.61.0` by plan 1.5 on 2026-10-10 (`page.sessionStorage`); the floor matrix remains for plan 6.
-  [test/package.json:12](../test/package.json#L12) hard-pins 1.62.1. Declare it, and consider a CI matrix on the floor.
+  ([pnpm-lock.yaml:356](../pnpm-lock.yaml#L356)). The floor `>=1.57.0` is never exercised. Raised to `>=1.61.0` by plan 1.5 on 2026-10-10 (`page.sessionStorage`) and to `>=1.64.0` by plan 1.6-1.8 on 2026-10-13 (the regex fix #42818, the any-frame `frameLocator()`), with the harness pinned to 1.64.0 so the floor is what the suite runs; the floor matrix remains for plan 6.
+  [test/package.json:12](../test/package.json#L12) hard-pins 1.64.0. Declare it, and consider a CI matrix on the floor.
 - [ ] [pack-test.sh:18](../pack-test.sh#L18) `--no-frozen-lockfile` leaves `test/pnpm-lock.yaml` decorative for the
   harness's own dependencies. The flag itself is required, not a defect (corrected 2026-10-06): the lockfile pins
   `pomwright` by tarball integrity hash and still records 2.0.0, and every fresh pack changes the hash, so a frozen
@@ -681,10 +698,14 @@ property (that `add` clones the seed). Either return a new builder per call or d
 - [ ] [L320-322](../docs/v2/locator-registry.md#L320-L322) `getNestedLocator(path)...getNestedLocator()` should be
   `getLocatorSchema`. Also, recommending a page-rooted nested chain for `has` is rarely right, because `has` is
   evaluated relative to the outer element *(Playwright semantics)*.
-- [ ] [L345](../docs/v2/locator-registry.md#L345) v1 "inline frame locator" wording.
-- [ ] [L668](../docs/v2/locator-registry.md#L668) lists an error string that does not exist in `src`.
+- [x] [L345](../docs/v2/locator-registry.md#L345) v1 "inline frame locator" wording. Closed 2026-10-13: `docs/v3` has
+  *Frames in filters* instead.
+- [x] [L668](../docs/v2/locator-registry.md#L668) lists an error string that does not exist in `src`. Closed 2026-10-13: the
+  `docs/v3` error reference carries the 3.0.0 messages.
 - [ ] [L727](../docs/v2/locator-registry.md#L727) best practice 5 recommends terminal-only resolution without saying so.
-- [ ] Missing: 1.6 (frame steps ignored), 1.8 (`undefined` clears options), 1.10 (`remove`→`update` drops steps).
+- [x] Missing: 1.6 (frame steps ignored), 1.8 (`undefined` clears options). Closed 2026-10-13: both behaviours are
+  replaced and documented in `docs/v3` (steps on frames apply; `update` is a Merge Patch with `null`).
+- [ ] Missing: 1.10 (`remove`→`update` drops steps); documented when plan 8 decides it.
 
 ### docs/v2/PageObject.md
 

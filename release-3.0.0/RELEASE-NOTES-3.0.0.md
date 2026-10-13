@@ -7,12 +7,12 @@
 > decision number from the plan is given. When 3.0.0 ships, drop the markers and this note; what remains is the basis
 > for the changelog entry and the announcement.
 >
-> Last updated 2026-10-12. Plans covered: 1.1-1.2 (getById), executed and committed on
+> Last updated 2026-10-13. Plans covered: 1.1-1.2 (getById), executed and committed on
 > `chore/bugfixes-quality-improvements-and-docs` (commits e709d0c to 735066b); 1.3-1.4 (URL composition and
 > navigation), executed and committed on the same branch on 2026-10-08 (commits bc8d980 to 4682146); 1.5 (session
 > storage), executed and committed on the same branch on 2026-10-10 (commits a05e8fd to ab76175); 1.6-1.8
-> (registration guards, frames, `update` semantics, the Playwright 1.64 floor), decided 2026-10-12, items marked
-> *planned*.
+> (registration guards, frames, `update` semantics, the Playwright 1.64 floor), executed and committed on the same
+> branch on 2026-10-13 (commits 7105c92 to 803455c).
 
 ## Overview
 
@@ -23,7 +23,7 @@ and documentation.
 Requirements: peer dependency `@playwright/test >=1.64.0 <2.0.0`, raised from `>=1.57.0`. `SessionStorage` uses
 `page.sessionStorage` (Playwright 1.61) **[done, plan 1.5]**; the any-frame `frameLocator()` needs 1.63 and the regex
 fix that makes every RegExp flag deterministic is in 1.64.0, so the floor is 1.64.0 and the harness runs it
-**[planned, plan 1.6-1.8]**.
+**[done, plan 1.6-1.8]**.
 
 ## Breaking changes
 
@@ -57,7 +57,7 @@ anchored patterns matched nothing, and flags were ignored. In 3.0.0 the regex is
 
 - All flags pass through to Playwright unchanged, as with Playwright's own locators. The sticky `y` flag is a start
   anchor (Playwright 1.64.0 resets the regex state per element, microsoft/playwright#42818, and 1.64 is the floor)
-  **[done, plan 1.1-1.2; the version caveat goes with the floor, planned, plan 1.6-1.8]**.
+  **[done, plans 1.1-1.2 and 1.6-1.8]**.
 - The rendered selector changes from `[id*="…"]` to `internal:attr=[id=/…/flags]`, the same engine Playwright's own
   `getByTestId(RegExp)` compiles to.
 
@@ -142,7 +142,7 @@ with `seed(x)`, drop `waitForContext`, replace `set(x, { reload: true })` with `
 that the app parsed as JSON (an `ngx-webstorage` style layer), declare `json<string>()` for those keys to keep the
 quotes. Replace `get(keys)` checks for `undefined` with `null`.
 
-### Steps on frame segments apply, and `frameLocator()` is Playwright's any-frame locator **[planned, plan 1.6-1.8]**
+### Steps on frame segments apply, and `frameLocator()` is Playwright's any-frame locator **[done, plan 1.6-1.8]**
 
 In 2.x a `filter`, `nth`, `first` or `last` chained on a `frameLocator(selector)` registration was recorded and
 dropped at resolution; when it mattered the action failed with a strict mode violation naming the frame selector.
@@ -162,7 +162,7 @@ sub-path any-frame. `frameLocator("")` throws on every builder.
 **Migration.** `grep -rn 'frameLocator(' --include=*.ts .` and review every chain that follows with `.nth(`,
 `.filter(`, `.first(` or `.last(`: the step now takes effect.
 
-### `update` keeps the strategy and follows JSON Merge Patch; `replace` changes the strategy **[planned, plan 1.6-1.8]**
+### `update` keeps the strategy and follows JSON Merge Patch; `replace` changes the strategy **[done, plan 1.6-1.8]**
 
 `getLocatorSchema(path).update(subPath?)` patches the definition registered for the sub-path and keeps its
 strategy: a provided primary replaces the primary, options merge key by key, `null` deletes an option
@@ -176,7 +176,7 @@ back for free is gone.
 `update(x, undefined)` no longer wipes options and `{ key: undefined }` no longer removes a key: use `null`.
 `grep -rn 'update(' --include=*.ts . | grep undefined` finds both.
 
-### Every builder requires the strategy's primary argument **[planned, plan 1.6-1.8]**
+### Every builder requires the strategy's primary argument **[done, plan 1.6-1.8]**
 
 `add`, seeded `add`, `createReusable`, `update` and `replace` throw at the call, naming the method and the path,
 when the primary argument is missing (`getByRole requires a role for "main.button"`), and when it is an empty string
@@ -188,14 +188,14 @@ role type, with autocompletion, as in 2.x; there is no runtime list. In 2.x `get
 registered without their value and failed at resolution, a seeded `getByTestId("")` silently inherited, and an
 options-only `getByRole` from JavaScript registered without a role.
 
-### Steps before a strategy no longer compile; a failed seeded override keeps the seed **[planned, plan 1.6-1.8]**
+### Steps before a strategy no longer compile; a failed seeded override keeps the seed **[done, plan 1.6-1.8]**
 
 `add(path).filter(…)`, `.nth(…)` and `.describe(…)` are compile errors; after a strategy they are available as
 before, and a seeded registration keeps them before its override. At runtime the message names the method and the
 strategies to call first. A seeded registration whose override throws keeps the seeded definition; 2.x unregistered
 it for a wrong-type override and kept it for a second override.
 
-### Page objects verify their registry after `defineLocators()` **[planned, plan 1.6-1.8]**
+### Page objects verify their registry after `defineLocators()` **[done, plan 1.6-1.8]**
 
 `PageObject` resolves every registered path once right after `defineLocators()`, so a mistyped `has`/`hasNot` path
 reference, a cycle, or an any-frame segment used as a terminal fails at construction with every failing path listed,
@@ -228,13 +228,13 @@ allowed. The cost is about a microsecond per path. Standalone registries from `c
 - An empty string in session storage no longer reads back as `null` (analysis 1.5f). **[done, plan 1.5]**
 - No session storage operation waits without a timeout any more (analysis 1.5g). **[done, plan 1.5]**
 - `filter` and `nth` on a `frameLocator` segment are no longer dropped at resolution (analysis 1.6, 3.2).
-  **[planned, plan 1.6-1.8]**
+  **[done, plan 1.6-1.8]**
 - A registration, seed, update or replacement without its primary argument no longer registers and fails later
-  (analysis 1.8). **[planned, plan 1.6-1.8]**
-- `update(x, undefined)` no longer wipes the registered options (analysis 1.8). **[planned, plan 1.6-1.8]**
+  (analysis 1.8). **[done, plan 1.6-1.8]**
+- `update(x, undefined)` no longer wipes the registered options (analysis 1.8). **[done, plan 1.6-1.8]**
 - `filter`, `nth` and `describe` before a strategy are compile errors and the runtime message says what to call
-  first (analysis 1.9e). **[planned, plan 1.6-1.8]**
-- A seeded registration is no longer unregistered by a wrong-type override (analysis 1.10). **[planned, plan 1.6-1.8]**
+  first (analysis 1.9e). **[done, plan 1.6-1.8]**
+- A seeded registration is no longer unregistered by a wrong-type override (analysis 1.10). **[done, plan 1.6-1.8]**
 
 ## Removed and internal cleanup
 
@@ -251,7 +251,7 @@ allowed. The cost is about a microsecond per path. Standalone registries from `c
 - The frame branch of `buildLocatorChain`, the internal `LocatorRegistryInternal.unregister`, the seeded rollback,
   the per-path per-type definition cache of the query builder and the three-source merge of the update builder are
   removed; `createLocator` returns `Locator`; `LocatorRegistry` gains `verify`; `assertIdValue` becomes a call to a
-  generic `assertPrimaryValue`. **[planned, plan 1.6-1.8]**
+  generic `assertPrimaryValue`. **[done, plan 1.6-1.8]**
 
 ## Tooling, CI, and tests
 
@@ -278,12 +278,12 @@ allowed. The cost is about a microsecond per path. Standalone registries from `c
   `goto`, link and form POST, multi-origin chains, COOP, and the service-worker cases; unit tests for the pure
   parts and the type contract. The spec passes on Firefox and WebKit as well. **[done, plan 1.5]**
 - The harness pins `@playwright/test` 1.64.0; the three `toString` expectations that 1.64 renders as `.visible()`
-  follow, and the sticky `y` flag is asserted against DOM. **[planned, plan 1.6-1.8]**
+  follow, and the sticky `y` flag is asserted against DOM. **[done, plan 1.6-1.8]**
 - `/iframe` gains a hidden iframe section and the iframe page object gains stepped, hidden and any-frame paths;
   `/testids` gains a `data-testid=""` element; new specs for frame steps against DOM, registration validation per
   strategy, the Merge Patch rules and the strategy-switch error, pre-definition calls, seeded recovery, and
   `verify()` through the registry, the accessors and a page object; unit tests for the builders' guards, the update
-  parsing and merge, and the builder types. **[planned, plan 1.6-1.8]**
+  parsing and merge, and the builder types. The frame specs pass on Firefox and WebKit as well. **[done, plan 1.6-1.8]**
 
 ## Documentation
 
@@ -303,7 +303,7 @@ allowed. The cost is about a microsecond per path. Standalone registries from `c
   frames with the ancestor-context recommendation, the any-frame segment, the strategy-method requirements, the
   `update`/`replace` split with the Merge Patch rules, a `verify()` section, the error reference, the tested
   guarantees, and a 2.x to 3.0 migration subsection; the sticky-flag caveat removed; the floor in `overview.md` and
-  `session-storage.md`. **[planned, plan 1.6-1.8]**
+  `session-storage.md`. **[done, plan 1.6-1.8]**
 - A new documentation site built with Starlight and hosted on GitHub Pages, using `docs/v3` as its source.
   **[roadmap]**
 

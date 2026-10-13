@@ -135,6 +135,18 @@ answered.
 | 2026-10-12 | Docs: the `locator-registry.md` frame, filter, strategy, update/replace, reuse, error and guarantees sections plus a 2.x migration subsection; section 5 bullets [L345], [L668], "Missing: 1.6" and "Missing: 1.8" close here; "Missing: 1.10" waits for plan 8. The floor and sticky mentions are edited in step 0. | Every limitation found in review is a documented behaviour. |
 | 2026-10-12 | Unit layer: the builders' guards, the update parsing and merge, the recovery rule and the types in new colocated test files with a `{} as Page` registry; resolution and `verify()` in integration specs against the real page. One `major` changeset; the floor line is edited into the session-storage changeset and the version caveat removed from the getById changeset. | Registration never touches the page, so the guards are unit-testable in milliseconds; both changesets are unreleased. |
 
+### Execution-time decisions (2026-10-13)
+
+| Date | Decision | Why |
+| --- | --- | --- |
+| 2026-10-13 | The frame selector type is a plain `string` in `src` instead of `Parameters<Page["frameLocator"]>[0]`, done in step 0 before the frame work. | Playwright 1.64 made `page.frameLocator`'s selector optional, so the derived type widened to `string \| undefined` and the build broke on the floor bump alone; the 2.1 contract (selector required) was kept for that commit and the optional selector introduced deliberately in step 1. |
+| 2026-10-13 | The missing-value message reads `<method> requires a <field> value for "<path>".` (`an id value`); the empty-string message `<method> requires a non-empty <field> for "<path>".`; `assertIdValue` keeps its own `requires a non-empty id` wording for a missing id and delegates the rest to `assertPrimaryValue`. | "requires a text" read badly; "value" fits every field. The id wording was already documented and tested by plan 1.1-1.2. |
+| 2026-10-13 | `frameLocator` on the registration builder has two overloads: `()` returns `undefined` on an unseeded builder (the any-frame form) and the post-definition view on a seeded one (inherit); `(selector)` is typed `string \| undefined` on a seeded builder so the 2.1 `frameLocator(undefined)` inherit form still compiles. | Found by the unit types: the first draft dropped the seeded `frameLocator(undefined)` form. |
+| 2026-10-13 | The update builder's two-argument tuple is `[Primary, OptionsPatch \| null \| undefined]`. | `update().getByRole("button", undefined)` is the documented no-change form and has to compile. |
+| 2026-10-13 | `verify()` builds each path's terminal chain exactly as `getLocator` does, not through the `has`-reference entry point. | The reference entry point puts the root path into the cycle set first, so a mutual cycle read `resolving "a": "a"`; the plan's table promises `resolving "a": "b"`, which the terminal build gives. Found by `registry.verify.spec.ts`. |
+| 2026-10-13 | `/iframe`'s hidden iframe loads `/iframe/a` again; `/testids` gains one `data-testid=""` element. No new route. | The hidden frame's content is irrelevant to the specs, which assert the element and its hidden content only. |
+| 2026-10-13 | The `iframe` and `add.frameLocator` specs pass on firefox and webkit (42 tests). Step 5 found nothing to fix: `pnpm lint` clean, 224 unit tests, 351 chromium tests against the packed tarball on 1.64.0. | Recorded so the ledger shows the runs. |
+
 ## Open questions
 
 None as of 2026-10-12. The one question raised for plan 1.3-1.4 (enforcement of type-level tests) was decided the

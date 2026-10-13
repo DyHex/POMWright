@@ -10,8 +10,16 @@ links are relative to this folder. Written 2026-10-12, reviewed and redesigned t
 tabulated and the role check and the no-rollback rule confirmed on 2026-10-13 (frames kept as option A
 with the any-frame segment added; the empty-string rule narrowed to what Playwright cannot use; `update` restricted to
 the registered strategy with `null` as the delete value; `verify()` made automatic; the floor). Every decision in
-section 7 is taken and mirrored in [DECISIONS.md](DECISIONS.md) and [RELEASE-NOTES-3.0.0.md](RELEASE-NOTES-3.0.0.md)
-as *planned*.
+section 7 is taken and mirrored in [DECISIONS.md](DECISIONS.md) and [RELEASE-NOTES-3.0.0.md](RELEASE-NOTES-3.0.0.md).
+Executed 2026-10-13, see below.
+
+**Executed 2026-10-13** on `chore/bugfixes-quality-improvements-and-docs`, one commit per execution step: 7105c92
+(0, the floor and the harness pin), 4f83953 (1, the runtime and its unit tests), a38a841 (2, the fixtures and specs),
+9163a28 (3, `docs/v3`), 803455c (4, the changeset), and the ledger commit for step 6 that carries this note. Step 5
+found nothing to fix: `pnpm lint` clean, 224 unit tests, 351 chromium tests against the packed tarball on 1.64.0, and
+the frame specs green on firefox and webkit. Execution-time decisions (the frame selector type in step 0, the message
+wording, the `frameLocator` overloads, the update tuple, the `verify()` resolution path, the fixture details) are in
+[DECISIONS.md](DECISIONS.md).
 
 Every runtime claim below was verified on 2026-10-12 and 2026-10-13: Playwright's behaviour against Chromium through the 1.62.1
 install in `test/` and through a 1.64.0 install made in the session scratchpad for the comparison (both by
