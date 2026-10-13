@@ -1,4 +1,6 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
+import type { Page } from "@playwright/test";
+import { LocatorRegistryInternal } from "../../../../src/locators";
 
 test("nth applies numeric index to targeted sub-path", async ({ testFilters }) => {
 	const locator = testFilters.getLocatorSchema("body.section.button").nth("body.section.button", 1).getNestedLocator();
@@ -57,4 +59,14 @@ test("filter and nth ordering apply per sub-path when chained on getLocatorSchem
 	expect(`${locator.describe("")}`).toEqual(
 		"locator('div.one').filter({ hasText: 'outer' }).first().locator('div.two').filter({ hasText: 'inner' }).last()",
 	);
+});
+
+test("nth on a frame sub-path picks the iframe element before the frame is entered", async ({ page }) => {
+	type LocalPath = "frame" | "frame.button";
+	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	registry.add("frame").frameLocator("iframe");
+	registry.add("frame.button").getByRole("button");
+
+	const locator = registry.getLocatorSchema("frame.button").nth("frame", 1).getNestedLocator();
+	expect(`${locator.describe("")}`).toEqual(`${page.locator("iframe").nth(1).contentFrame().getByRole("button").describe("")}`);
 });

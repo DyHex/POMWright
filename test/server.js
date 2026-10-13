@@ -140,6 +140,13 @@ app.get("/iframe", (_req, res) => {
             style="width: 400px; height: 240px; border: 3px solid #cc6600;"
           ></iframe>
         </section>
+
+        <!-- A hidden iframe after the visible ones: a step on the iframe element (nth, last, filter
+             visible) is the only way to tell such frames apart when the parent context is identical. -->
+        <section id="sectionC" style="margin-bottom: 20px; border: 2px solid #333; padding: 10px;">
+          <h2>Section C</h2>
+          <iframe id="iframeHidden" title="iframeHidden" src="/iframe/a" style="display: none"></iframe>
+        </section>
       </body>
     </html>
   `);
@@ -234,6 +241,7 @@ app.get("/testids", (_req, res) => {
         <p id="back\\slash">backslash</p>
         <p id="a>>b">chain chars</p>
         <p id="résumé">unicode</p>
+        <p data-testid="">empty testid</p>
         <div id="generated">
           <button id="button.submit.af3b">one</button>
           <button id="button.submit.bd2a">two</button>

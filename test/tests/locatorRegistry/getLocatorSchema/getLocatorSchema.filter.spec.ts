@@ -120,14 +120,14 @@ test("multiple nesting/chaining retains filters across the chain", async ({ test
 		.getLocatorSchema("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText")
 		.update("fictional.filter@hasNotText")
 		.getByRole("button", { name: "roleOptions" })
-		.update("fictional.filter@hasNotText.filter@hasText")
+		.replace("fictional.filter@hasNotText.filter@hasText")
 		.locator("locator", {
 			hasText: "locatorOptionsHasText",
 			hasNotText: "locatorOptionshasNotText",
 		})
-		.update("fictional.filter@hasNotText.filter@hasText.filter@hasNotText")
+		.replace("fictional.filter@hasNotText.filter@hasText.filter@hasNotText")
 		.getByTestId("testId")
-		.update("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText")
+		.replace("fictional.filter@hasNotText.filter@hasText.filter@hasNotText.filter@hasText")
 		.getByLabel("label", { exact: true })
 		.getNestedLocator();
 
@@ -170,20 +170,22 @@ test("schema filters resolve path string references", async ({ testFilters, page
 	);
 });
 
-test("frameLocator keeps the chain inside the frame and skips frame-level filters", async ({ testFilters, page }) => {
+test("frameLocator keeps the chain inside the frame and applies frame-level steps", async ({ testFilters, page }) => {
+	// the segment carries filter({ hasText: "hasText" }) from its registration; the step applies to the
+	// iframe element, and a terminal frame is that element
 	const frameTerminalBuilder = testFilters
 		.getLocatorSchema("fictional.filter@hasNotText.filter@hasText")
-		.update("fictional.filter@hasNotText.filter@hasText")
+		.replace("fictional.filter@hasNotText.filter@hasText")
 		.frameLocator('iframe[title="name"]');
 
 	const directFrameLocator = frameTerminalBuilder.getLocator();
-	const manualFrame = page.frameLocator('iframe[title="name"]').owner();
+	const manualFrame = page.locator('iframe[title="name"]').filter({ hasText: "hasText" });
 
 	expect(`${directFrameLocator.describe("")}`).toEqual(`${manualFrame.describe("")}`);
 
 	const nestedBuilder = testFilters
 		.getLocatorSchema("fictional.filter@hasNotText.filter@hasText.filter@hasNotText")
-		.update("fictional.filter@hasNotText.filter@hasText")
+		.replace("fictional.filter@hasNotText.filter@hasText")
 		.frameLocator('iframe[title="name"]')
 		.update("fictional.filter@hasNotText.filter@hasText.filter@hasNotText")
 		.getByRole("button", { name: "inside frame" });
@@ -192,7 +194,9 @@ test("frameLocator keeps the chain inside the frame and skips frame-level filter
 	const manualNested = page
 		.getByRole("button")
 		.filter({ hasNotText: "hasNotText" })
-		.frameLocator('iframe[title="name"]')
+		.locator('iframe[title="name"]')
+		.filter({ hasText: "hasText" })
+		.contentFrame()
 		.getByRole("button", { name: "inside frame" })
 		.filter({ hasNotText: "hasNotText" });
 
@@ -230,7 +234,8 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 
 	for (const { definition, expected, label } of testCases) {
 		test(`definition ${label}: should apply filter`, async ({ testFilters }) => {
-			const builder = testFilters.getLocatorSchema("fictional.filter@undefined").update("fictional.filter@undefined");
+			// the path is registered as getByRole, so every other strategy is a replace
+			const builder = testFilters.getLocatorSchema("fictional.filter@undefined").replace("fictional.filter@undefined");
 
 			const query = (() => {
 				switch (definition.type) {
@@ -253,7 +258,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 					case "id":
 						return builder.getById(definition.id);
 					case "frameLocator":
-						return builder.frameLocator(definition.selector);
+						return definition.selector !== undefined ? builder.frameLocator(definition.selector) : builder.frameLocator();
 					default:
 						throw new Error(`Unhandled definition type ${(definition as { type: string }).type}`);
 				}
@@ -371,4 +376,17 @@ test("getLocatorSchema.filter supports visible true/false", async ({ page }) => 
 	const locator = registry.getLocatorSchema("item").filter({ visible: true }).filter({ visible: false }).getLocator();
 
 	expect(`${locator.describe("")}`).toEqual("getByRole('button').visible().filter({ visible: false })");
+});
+
+test("getLocatorSchema.filter on a frame sub-path filters the iframe element before the frame is entered", async ({ page }) => {
+	type LocatorSchemaPaths = "frame" | "frame.button";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	registry.add("frame").frameLocator("iframe");
+	registry.add("frame.button").getByRole("button");
+
+	const locator = registry.getLocatorSchema("frame.button").filter("frame", { visible: true }).getNestedLocator();
+	expect(`${locator.describe("")}`).toEqual(
+		`${page.locator("iframe").filter({ visible: true }).contentFrame().getByRole("button").describe("")}`,
+	);
 });

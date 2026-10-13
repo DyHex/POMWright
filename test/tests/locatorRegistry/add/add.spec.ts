@@ -157,3 +157,61 @@ test("add overloads support other strategies with options and chained steps", as
 		steps: [],
 	});
 });
+
+const STRATEGIES =
+	"getByRole, getByText, getByLabel, getByPlaceholder, getByAltText, getByTitle, locator, frameLocator, getByTestId or getById";
+
+test("filter, nth and describe need a locator strategy first", async ({ page }) => {
+	type LocalPath = "a";
+	const registry = new LocatorRegistryInternal<LocalPath>(page);
+
+	// the builder returned by add(path) has the ten strategies only; the runtime check covers JavaScript callers
+	const builder = registry.add("a") as unknown as {
+		filter: (filter: object) => unknown;
+		nth: (index: number) => unknown;
+		describe: (description: string) => unknown;
+	};
+	expect(() => builder.filter({ hasText: "x" })).toThrowError(
+		`filter() needs a locator strategy first for "a"; call ${STRATEGIES} before it.`,
+	);
+	expect(() => builder.nth(0)).toThrowError(`nth() needs a locator strategy first for "a"; call ${STRATEGIES} before it.`);
+	expect(() => builder.describe("d")).toThrowError(
+		`describe() needs a locator strategy first for "a"; call ${STRATEGIES} before it.`,
+	);
+	expect(registry.getIfExists("a")).toBeUndefined();
+
+	// @ts-expect-error filter is not available before a strategy
+	const _filterBefore = registry.add("a").filter;
+	// @ts-expect-error nth is not available before a strategy
+	const _nthBefore = registry.add("a").nth;
+	// @ts-expect-error describe is not available before a strategy
+	const _describeBefore = registry.add("a").describe;
+
+	registry.add("a").getByRole("button").filter({ hasText: "x" }).nth(0).describe("d");
+	expect(registry.get("a")).toEqual({
+		locatorSchemaPath: "a",
+		definition: { type: "role", role: "button" },
+		steps: [
+			{ kind: "filter", filter: { hasText: "x" } },
+			{ kind: "index", index: 0 },
+		],
+		description: "d",
+	});
+});
+
+test("a seeded registration keeps filter, nth and describe before its override", async ({ page }) => {
+	type LocalPath = "seeded";
+	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	const seed = registry.createReusable.getByRole("button", { name: "Submit" });
+
+	registry.add("seeded", { reuse: seed }).filter({ hasText: "x" }).nth(0).describe("d");
+	expect(registry.get("seeded")).toEqual({
+		locatorSchemaPath: "seeded",
+		definition: { type: "role", role: "button", options: { name: "Submit" } },
+		steps: [
+			{ kind: "filter", filter: { hasText: "x" } },
+			{ kind: "index", index: 0 },
+		],
+		description: "d",
+	});
+});

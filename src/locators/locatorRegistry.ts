@@ -423,7 +423,14 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 						throw new Error(anyFrameNotFirstMessage(path, ancestor));
 					}
 				} else {
-					this.getLocatorWithContext(path, this.createResolutionContext(path));
+					// the terminal-only build of getLocator, so a cycle is reported as getLocator would report it
+					this.buildLocatorChain(
+						path,
+						new Map<string, LocatorStrategyDefinition>([[path, record.definition]]),
+						new Map([[path, normalizeSteps(record.steps)]]),
+						undefined,
+						record.description,
+					);
 				}
 			} catch (error) {
 				failures.push(`"${path}": ${error instanceof Error ? error.message : String(error)}`);

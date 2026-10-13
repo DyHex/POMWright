@@ -129,20 +129,20 @@ test("add reuse enforces matching locator type overrides", async ({ page }) => {
 		'must use the "role" strategy',
 	);
 
-	registry.add("button", { reuse: button });
-
+	// a throwing DSL call changes nothing: the path keeps the seed it was registered with
 	expect(registry.get("button")).toEqual({
 		definition: { role: "button", options: { name: "Submit" }, type: "role" },
 		locatorSchemaPath: "button",
 		steps: [],
 	});
 
+	const builder = registry.add("button.reuseLocator", { reuse: button });
 	// @ts-expect-error mismatched locator strategies are not allowed when reusing a locator (getById attempt on role locator)
-	expect(() => registry.add("button.reuseLocator", { reuse: button }).getById("Submit")).toThrowError(
-		'must use the "role" strategy',
-	);
+	expect(() => builder.getById("Submit")).toThrowError('must use the "role" strategy');
+	expect(registry.get("button.reuseLocator").definition).toEqual({ role: "button", options: { name: "Submit" }, type: "role" });
 
-	registry.add("button.reuseLocator", { reuse: button }).getByRole({ name: "Submit" });
+	// the failed call consumed nothing: the one matching override is still available on the same builder
+	builder.getByRole({ name: "Submit" });
 
 	expect(registry.get("button.reuseLocator")).toEqual({
 		definition: { role: "button", options: { name: "Submit" }, type: "role" },
@@ -190,6 +190,7 @@ test("add reuse allows only one matching locator override", async ({ page }) => 
 	builder.getByRole("heading", { name: "Summary" });
 
 	expect(() => builder.getByRole("heading", { name: "Other" })).toThrowError("only one matching override is allowed");
+	expect(registry.get("heading").definition).toEqual({ role: "heading", options: { level: 2, name: "Summary" }, type: "role" });
 });
 
 test("createReusable.filter supports Playwright Locator instances for has/hasNot", async ({ page }) => {
