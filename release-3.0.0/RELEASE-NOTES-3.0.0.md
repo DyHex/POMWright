@@ -12,8 +12,8 @@
 > navigation), executed and committed on the same branch on 2026-10-08 (commits bc8d980 to 4682146); 1.5 (session
 > storage), executed and committed on the same branch on 2026-10-10 (commits a05e8fd to ab76175); 1.6-1.8
 > (registration guards, frames, `update` semantics, the Playwright 1.64 floor), executed and committed on the same
-> branch on 2026-10-13 (commits 7105c92 to 803455c); 1.7 (the `PageObject` lifecycle), decided 2026-10-13, items
-> marked *planned*.
+> branch on 2026-10-13 (commits 7105c92 to 803455c); 1.7 (the `PageObject` lifecycle), executed and committed on the
+> same branch on 2026-10-13 (commits 66e9481 to 2301bee).
 
 ## Overview
 
@@ -204,7 +204,7 @@ every failing path listed, instead of at the first action that resolves it (the 
 allowed. The cost is about a microsecond per path. Standalone registries from `createRegistryWithAccessors` call
 `registry.verify()` themselves.
 
-### Page objects define their locators after construction; the post-navigation hook is optional **[planned, plan 1.7]**
+### Page objects define their locators after construction; the post-navigation hook is optional **[done, plan 1.7]**
 
 `PageObject` no longer calls `defineLocators()` from its constructor. It runs, followed by the registry
 verification, right after the page object is constructed (once the code that called `new` has finished: in a
@@ -263,7 +263,7 @@ Pass values that `defineLocators()` depends on to the constructor.
   first (analysis 1.9e). **[done, plan 1.6-1.8]**
 - A seeded registration is no longer unregistered by a wrong-type override (analysis 1.10). **[done, plan 1.6-1.8]**
 - `defineLocators()` and `pageActionsToPerformAfterNavigation()` see the page object's constructor arguments, fields
-  and constructor-body assignments instead of `undefined` (analysis 1.7). **[planned, plan 1.7]**
+  and constructor-body assignments instead of `undefined` (analysis 1.7). **[done, plan 1.7]**
 
 ## Removed and internal cleanup
 
@@ -316,7 +316,7 @@ Pass values that `defineLocators()` depends on to the constructor.
 - New `pageObject/lifecycle.spec.ts` and `pageObject/actions.spec.ts`: what definitions and actions see of subclass
   state against DOM, when the definition, the verification and the actions hook run, how registry mistakes are
   reported from fixtures, hooks and first uses, `null` and `[]`; a unit-test file for the lifecycle, the errors and
-  their stacks, and the hook types. **[planned, plan 1.7]**
+  their stacks, and the hook types. **[done, plan 1.7]**
 
 ## Documentation
 
@@ -341,7 +341,7 @@ Pass values that `defineLocators()` depends on to the constructor.
   example, the optional actions hook with `null` and `[]` explained, one registry per instance, the `return [];`
   boilerplate removed from the examples and the `page as Page` cast removed (analysis section 5);
   `composing-locator-modules.md` shows a locator module that takes page-object state, such as a locale, as an extra
-  argument; `overview.md`, `locator-registry.md` and `session-storage.md` follow. **[planned, plan 1.7]**
+  argument; `overview.md`, `locator-registry.md` and `session-storage.md` follow. **[done, plan 1.7]**
 - A new documentation site built with Starlight and hosted on GitHub Pages, using `docs/v3` as its source.
   **[roadmap]**
 

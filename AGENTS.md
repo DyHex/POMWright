@@ -2,7 +2,7 @@
 
 Persistent context and working rules for AI agents and humans contributing to POMWright. Read it fully before
 changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-13, after the
-registration guards and frames plan (analysis items 1.6, 1.8, 1.9e, 3.2, 3.6) was executed.
+`PageObject` lifecycle plan (analysis items 1.7 and 3.7) was executed.
 
 ## 1. What POMWright is
 
@@ -26,10 +26,10 @@ registration guards and frames plan (analysis items 1.6, 1.8, 1.9e, 3.2, 3.6) wa
 | Path | What it is | Edit? |
 | --- | --- | --- |
 | `index.ts` | Package entry. tsup bundles from here. | yes |
-| `src/` | Runtime: 16 files, about 4,400 lines, plus colocated vitest unit tests (`**/*.test.ts`: `locators/utils.test.ts`, `locators/locatorRegistrationBuilder.test.ts`, `locators/locatorUpdateBuilder.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`, `helpers/sessionStorage.test.ts`, `helpers/sessionStorageSeed.test.ts`). | yes |
+| `src/` | Runtime: 16 files, about 4,500 lines, plus colocated vitest unit tests (`**/*.test.ts`: `pageObject.test.ts`, `locators/utils.test.ts`, `locators/locatorRegistrationBuilder.test.ts`, `locators/locatorUpdateBuilder.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`, `helpers/sessionStorage.test.ts`, `helpers/sessionStorageSeed.test.ts`). | yes |
 | `src/locators/` | `locatorRegistry.ts` (registry, resolution with frames as `locator` plus `contentFrame()` and the any-frame segment, cycle detection, `verify()`), `locatorRegistrationBuilder.ts` (`add(path).getByRole(...)` DSL, seeded registrations, the boundary checks), `locatorUpdateBuilder.ts` (`update` as a same-strategy JSON Merge Patch, `replace`), `locatorQueryBuilder.ts` (`getLocatorSchema(path)` chain: `filter`, `nth`, `remove`, `describe`, `getLocator`, `getNestedLocator`), `reusableLocatorBuilder.ts` (`createReusable`), `types.ts` (definitions, `OptionsPatch`, compile-time path validation), `utils.ts` (path validation, `assertPrimaryValue` and `assertIdValue`, the id selector helpers, `createLocator`, `isAnyFrameDefinition`, `methodForStrategy`, cloning, patching). | yes |
 | `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts` (`SessionStorage`: `page.sessionStorage` with batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `seed`), `sessionStorageSeed.ts` (the seed registry, one per page: the writer and redirect documents, the proxy while a seed is pending, the bypass and never-applied failures), `playwrightReportLogger.ts`, `stepDecorator.ts`. | yes |
-| `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject`; the `test` fixture that provides `log`. | yes |
+| `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject`: `defineLocators()` and `verify()` run once, right after construction (a check scheduled with `queueMicrotask`) or at the first locator call, through a facade on `locatorRegistry`; labelled, sticky errors with the construction site; the optional actions hook, evaluated per run. The `test` fixture that provides `log`. | yes |
 | `src/dist/` | Stray local build output, gitignored. Never read it as source. | no |
 | `test/` | Standalone pnpm project that installs the packed tarball and runs Playwright against it. Section 4. | yes |
 | `docs/v3/` | Working documentation for 3.0.0, created 2026-10-06 as a verbatim copy of `docs/v2`. The `getById` deep dive in `locator-registry.md` is already rewritten for 3.0.0. Every doc edit goes here. | yes |
@@ -74,11 +74,14 @@ registration guards and frames plan (analysis items 1.6, 1.8, 1.9e, 3.2, 3.6) wa
 - There is no `tsc` step yet; analysis section 4 covers adding one.
 - Verify runtime claims empirically before writing them into a plan or doc. `@playwright/test` 1.64.0 is installed
   under `test/node_modules`; a short Node script that launches chromium from there is the standard probe. Every
-  claim in the analysis was verified that way. Keep that standard. Two pitfalls: the helper methods are wrapped in
+  claim in the analysis was verified that way. Keep that standard. Three pitfalls: the helper methods are wrapped in
   `test.step` and cannot be driven outside the Playwright runner, so runner behaviour (listener errors, `test.info()`
   in teardown) is probed with a temporary spec in `test/tests/` that is deleted after the run; a script that imports
   `dist/index.mjs` must load chromium from the root package (`createRequire` of `./package.json`), otherwise
-  Playwright throws "Requiring @playwright/test second time".
+  Playwright throws "Requiring @playwright/test second time"; a page object defines and verifies its registry in a
+  microtask right after construction, so a probe, spec or unit test that builds a broken page object on purpose must
+  use it synchronously after `new` or capture the check (as `src/pageObject.test.ts` does), otherwise the check
+  throws outside the code under test.
 
 ## 4. Test harness (`test/`)
 
@@ -98,8 +101,8 @@ registration guards and frames plan (analysis items 1.6, 1.8, 1.9e, 3.2, 3.6) wa
   `teststorage/` also has `teststorage-second.page.ts`, a `PageObject` on the second origin. `fixtures/testApp.fixtures.ts`
   exposes them to specs.
 - Specs live under `tests/`: `locatorRegistry/` (`add`, `getLocator`, `getLocatorSchema`, `getNestedLocator`,
-  `registry`, `validation`), `pageObject/` (construction-time URL validation and registry verification), `step/`,
-  `testApp/`. 45 spec files, about 5,700 lines. One spec file per DSL method,
+  `registry`, `validation`), `pageObject/` (construction-time URL validation, registry verification, the lifecycle
+  and the actions hook), `step/`, `testApp/`. 47 spec files, about 6,200 lines. One spec file per DSL method,
   for example `add.getById.spec.ts` or `getLocatorSchema.update.spec.ts`; one DOM-level spec per fixture page under
   `testApp/`, for example `testIds.spec.ts`.
 - Know what each spec exercises. Most `locatorRegistry/` specs import `LocatorRegistryInternal` from
@@ -134,7 +137,11 @@ registration guards and frames plan (analysis items 1.6, 1.8, 1.9e, 3.2, 3.6) wa
 - A `frameLocator(selector)` segment is `locator(selector)` plus its steps, then `contentFrame()` for the descendants
   and the `<iframe>` element as a terminal; `frameLocator()` is Playwright's any-frame locator, first segment only, no
   steps, no terminal form. Never reintroduce `target.frameLocator(selector)` with dropped steps.
-- `PageObject` calls `verify()` right after `defineLocators()`; a standalone registry calls it itself.
+- `PageObject` never calls `defineLocators()` from its constructor: it runs, followed by `verify()`, once per instance,
+  right after construction (a check scheduled as the constructor's last statement) or at the first locator call if
+  that comes earlier; a registry mistake still fails the fixture, labelled `<label>: …` with the original as `cause`
+  and the construction site in the stack. `pageActionsToPerformAfterNavigation()` is optional and called each time the
+  actions run. A standalone registry calls `verify()` itself. Never move either hook back into the constructor.
 - Session storage mirrors `page.sessionStorage`: values are strings stored verbatim unless a codec is declared for the
   key (`json<T>()`, `Codec<T>`), `get` returns `null` for a missing key, a literal `[]` does not compile, and a helper
   with an origin touches only that origin. `seed` never navigates itself: it registers one route and two listeners on
@@ -161,9 +168,10 @@ become the basis for the changelog entry and announcement, and `docs/v3` becomes
 | --- | --- |
 | `POMWRIGHT-2.1.0-ANALYSIS.md` | Source-verified findings numbered 1.1 to 1.10, 2, 3.1 to 3.8, 4, 5. Each has `Fix / Skip / Discuss` boxes and a `Notes:` block. Section 6 is the working order. |
 | `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` (executed 2026-10-06), `PLAN-1.3-1.4-URL-NAVIGATION.md` (executed 2026-10-08) and
-  `PLAN-1.5-SESSION-STORAGE.md` (executed 2026-10-10) and `PLAN-1.6-1.8-REGISTRATION-AND-FRAMES.md` (executed
-  2026-10-13) are done, one commit per execution step each. The remaining plans, their scope, and their order are in
-  `PLANS.md`; the next one is `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md`. |
+  `PLAN-1.5-SESSION-STORAGE.md` (executed 2026-10-10), `PLAN-1.6-1.8-REGISTRATION-AND-FRAMES.md` (executed
+  2026-10-13) and `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md` (executed 2026-10-13) are done, one commit per execution step
+  each. The remaining plans, their scope, and their order are in `PLANS.md`; the next one is
+  `PLAN-4-PACKAGING-TOOLING-CI.md`. |
 | `PLANS.md` | The ordered list of remaining plans with the analysis items each covers and its status. Updated when a plan is written, split, or executed. |
 | `RELEASE-NOTES-3.0.0.md` | Consumer-facing notes. Only what is done or committed to by a plan in this folder, each item with a status marker. Never a copy of the analysis. |
 | `DECISIONS.md` | Current decisions across all plans, big and small, with date and reason. A reversed decision is replaced, not kept; git history has the rest. Open questions at the bottom. |
@@ -199,8 +207,8 @@ Rules:
 - `publish.yaml` is gated on the `CI` workflow (lint, unit tests, build) only, not on `test.yaml`. Analysis
   section 4 covers fixing that.
 - Pending 3.0.0 changesets so far: `.changeset/getbyid-verbatim-ids-and-regex.md`,
-  `.changeset/url-composition-and-navigation.md`, `.changeset/session-storage-on-webstorage.md` and
-  `.changeset/registration-guards-and-frames.md` (all `major`).
+  `.changeset/url-composition-and-navigation.md`, `.changeset/session-storage-on-webstorage.md`,
+  `.changeset/registration-guards-and-frames.md` and `.changeset/pageobject-lifecycle.md` (all `major`).
 
 ## 8. Do not
 
@@ -210,8 +218,9 @@ Rules:
 - Treat `src/dist/index.d.ts` or `dist/` as source when counting, grepping, or reasoning about behaviour.
 - Reintroduce behaviour listed as removed in `RELEASE-NOTES-3.0.0.md`, such as `#` and `id=` prefix handling in
   `getById`, JSON-encoding every session storage value, `setOnNextNavigation`, dropping steps on frame segments, a
-  cross-strategy `update` with a per-type cache, explicit `undefined` as the option-clearing value, or the rollback
-  of a failed seeded override.
+  cross-strategy `update` with a per-type cache, explicit `undefined` as the option-clearing value, the rollback
+  of a failed seeded override, or a call to `defineLocators()` or `pageActionsToPerformAfterNavigation()` from the
+  `PageObject` constructor.
 - Re-derive findings that are already in the analysis. Cite the item number instead.
 - Commit without being asked.
 - Expect `pnpm install` in `test/` to pick up a freshly packed tarball; use `pnpm add` as shown in section 3.

@@ -306,9 +306,16 @@ makes `nth` and `filter` work on frames for free.
 
 ### 1.7 `PageObject` calls abstract methods from its constructor
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Fixed 2026-10-13 by [PLAN-1.7-PAGEOBJECT-LIFECYCLE.md](PLAN-1.7-PAGEOBJECT-LIFECYCLE.md). `defineLocators()` and
+> `verify()` run once per instance, right after construction (a check scheduled with `queueMicrotask` as the
+> constructor's last statement) or at the first locator call if that comes earlier, through a facade on
+> `locatorRegistry` that also covers direct use by subclasses; registry mistakes still fail the fixture before the test
+> body, labelled with the page object and pointing at the construction site; the actions hook is called each time the
+> actions run. Correction for the record: the example below is not silent, `labels[this.locale].login` throws a
+> `TypeError` at construction; the silent cases were option values (`{ name: undefined }` drops the option), strings
+> built from state (`undefined-submit`) and branches on state (the wrong element).
 
 **Intent.** A subclass declares locators declaratively and the instance is ready after `new`.
 
@@ -498,7 +505,8 @@ an empty or missing id throws at registration in all three builders. The other s
   are referenced nowhere. None of the four appears in the published `dist/index.d.ts` (checked 2026-10-06 on a
   fresh build), so removing them is not a consumer-facing change.
 - [x] [pageObject.ts:25](../src/pageObject.ts#L25) `"" | string`: written as `string` by plan 1.3-1.4 (2026-10-08).
-- [ ] [pageObject.ts:83](../src/pageObject.ts#L83) plus [navigation.ts:41](../src/helpers/navigation.ts#L41) make
+- [x] Closed 2026-10-13 by plan 1.7: the hook has a default returning `[]`, `null` stays accepted and is documented as
+  identical to `[]`. [pageObject.ts:83](../src/pageObject.ts#L83) plus [navigation.ts:41](../src/helpers/navigation.ts#L41) make
   `null` and `[]` identical, and the abstract method forces `return [];` boilerplate in every page object.
 - [x] Withdrawn 2026-10-06. [locatorRegistrationBuilder.ts:479-484](../src/locators/locatorRegistrationBuilder.ts#L479-L484)
   was listed here as dead because the `PageObject` path discards the registry when the constructor throws. But
@@ -603,9 +611,12 @@ In `LocatorRegistrationBuilder.commit`: require the primary field when not seede
 
 ### 3.7 Registry per instance
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [ ] Fix  - [x] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Decided 2026-10-13 by plan 1.7: one registry per instance, defined once right after construction, no
+> per-class cache. Definitions may now read instance state, so a class-keyed cache would hand one instance's
+> definitions to another; defining and verifying cost about 1 µs per path per construction (measured), plus about
+> 1.2 µs for the scheduled check. Documented in `docs/v3/PageObject.md`.
 
 **Where.** [pageObject.ts:61-70](../src/pageObject.ts#L61-L70). Each `new SomePage(page)` re-runs `defineLocators()`.
 No measurable cost today; only worth a per-class definition cache if profiling ever shows it. Low priority.
@@ -709,9 +720,12 @@ property (that `add` clones the seed). Either return a new builder per call or d
 
 ### docs/v2/PageObject.md
 
-- [ ] [L70](../docs/v2/PageObject.md#L70) needs the 1.7 warning.
-- [ ] [L77](../docs/v2/PageObject.md#L77) implies `null` differs from `[]`.
-- [ ] [L279](../docs/v2/PageObject.md#L279) `page as Page` is noise.
+- [x] [L70](../docs/v2/PageObject.md#L70) needs the 1.7 warning. Closed 2026-10-13: `docs/v3/PageObject.md` documents
+  the lifecycle in *Hooks and lifecycle*; the trap is gone.
+- [x] [L77](../docs/v2/PageObject.md#L77) implies `null` differs from `[]`. Closed 2026-10-13: both mean no actions,
+  documented; the hook is optional.
+- [x] [L279](../docs/v2/PageObject.md#L279) `page as Page` is noise. Closed 2026-10-13 in `PageObject.md` and the
+  `overview.md` fixture example.
 
 ### docs/v2/session-storage.md
 

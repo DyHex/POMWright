@@ -10,6 +10,16 @@ test passes (1.7), and replaced "define at the first use" by "define right after
 if that comes earlier", so that registry mistakes fail in the fixture as in 2.1 (1.3, 3.2). Every decision in
 section 7 was taken with the user on 2026-10-13 and is mirrored in [DECISIONS.md](DECISIONS.md) and
 [RELEASE-NOTES-3.0.0.md](RELEASE-NOTES-3.0.0.md); the plan was then reviewed once more for mistakes and ambiguity.
+Executed 2026-10-13, see below.
+
+**Executed 2026-10-13** on `chore/bugfixes-quality-improvements-and-docs`, one commit per execution step: 66e9481 (1, the
+runtime and `src/pageObject.test.ts`), db4720b (2, the harness: `lifecycle.spec.ts`, `actions.spec.ts`, the
+`verify.spec.ts` change, the six page objects), 90f34c1 (3, `docs/v3`), 2301bee (4, the changeset), and the ledger
+commit for step 6 that carries this note. Step 5 found nothing to fix: `pnpm lint` clean, 262 unit tests with no type
+errors, 370 chromium tests against a freshly packed tarball, and the two new specs and `verify.spec.ts` green on
+firefox and webkit. Execution-time decisions (the message templates, the frame filter, red then green, the `setTimeout`
+after first-use assertions, `beforeAll` groups verified in all three describe modes) are in
+[DECISIONS.md](DECISIONS.md).
 
 Every runtime claim below was verified on 2026-10-13 against HEAD e3fea45: POMWright's behaviour through
 `dist/index.mjs` (built after HEAD; its runtime is byte-identical to the tarball installed in `test/`) with chromium

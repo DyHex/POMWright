@@ -168,6 +168,17 @@ answered.
 | 2026-10-13 | One `major` changeset, `pageobject-lifecycle`; the unreleased `registration-guards-and-frames` changeset is not edited. | Its "right after `defineLocators()`" and "fails at construction" still describe what a reader sees: the failure is in the fixture. |
 | 2026-10-13 | The construction site is captured as an `Error` at the end of `PageObject`'s constructor and formatted only on failure, by a private helper in `pageObject.ts` modelled on `captureCallSite` and `atSite`; sharing one helper with `seed` is left to plan 8. | Capturing costs about 1.1 µs, formatting 2.2 µs only on failure (measured); a shared helper would touch plan 1.5's module for no behaviour change. |
 
+### Execution-time decisions (2026-10-13, plan 1.7)
+
+| Date | Decision | Why |
+| --- | --- | --- |
+| 2026-10-13 | The message templates are as planned: `<label>: defineLocators() failed: <original message>` and `<label>: <verification message>`; the facade's `verify()` defines and verifies once on a first call and verifies again on later calls. | No wording problem came up in the specs. |
+| 2026-10-13 | The construction-site filter is `pageObject.(ts\|js\|mjs\|cjs)` plus POMWright's packaged `dist/index`, the pattern `seed` uses. | It removes the base constructor's frame both in the unit tests (source) and in the harness (tarball), so the first frame is the subclass's `super(...)` line in both (verified). |
+| 2026-10-13 | The unit tests were shown to fail against the HEAD runtime before the change (17 runtime failures and TS2515 in the typecheck), then pass. | The plan's red-then-green step; the tests were written next to the implementation. |
+| 2026-10-13 | The harness specs that assert a first use await a `setTimeout(0)` afterwards, so that a check that wrongly fired would fail the test. | Proves the "the check does nothing afterwards" half of each assertion instead of leaving it unobserved. |
+| 2026-10-13 | `beforeAll` groups were verified with the 3.0.0 runtime in all three describe modes: in `default` and `parallel` every test of the group fails, each body running until its first use; in `serial` the first test fails and the others do not run. The docs say "a group that is not `serial`". | The plan's probe had covered the harness's `fullyParallel` setting only. |
+| 2026-10-13 | Execution step 5 found nothing to fix: `pnpm lint` clean, 262 unit tests with no type errors, `pnpm build`, 370 chromium tests against a freshly packed tarball; the two new specs and `verify.spec.ts` pass on firefox and webkit (44 tests). | Recorded so the ledger shows the runs. |
+
 ## Open questions
 
 None as of 2026-10-13. The one question raised for plan 1.3-1.4 (enforcement of type-level tests) was decided the
