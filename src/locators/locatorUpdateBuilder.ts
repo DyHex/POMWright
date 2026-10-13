@@ -351,7 +351,7 @@ export class LocatorUpdateBuilder<
 	 * getLocatorSchema("frame.login").replace().frameLocator("iframe.auth").getNestedLocator();
 	 * ```
 	 */
-	frameLocator(...args: UpdateArgsWithoutOptions<string>) {
+	frameLocator(...args: UpdateArgsWithoutOptions<Parameters<Page["locator"]>[0]>) {
 		const [selector] = args;
 		if (selector !== undefined) {
 			assertPrimaryValue(selector, {

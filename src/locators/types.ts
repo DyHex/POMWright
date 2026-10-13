@@ -134,13 +134,14 @@ export type LocatorDefinition = {
 
 /**
  * A frame segment. With a selector it is the `<iframe>` element (`locator(selector)` plus the
- * segment's steps) whose descendants resolve inside the frame through `contentFrame()`; without a
- * selector it is Playwright's any-frame `page.frameLocator()`, valid only as the first segment of a
- * chain, with no steps and no terminal form.
+ * segment's steps, so the selector is `locator`'s argument) whose descendants resolve inside the
+ * frame through `contentFrame()`; without a selector it is Playwright's any-frame
+ * `page.frameLocator()`, valid only as the first segment of a chain, with no steps and no terminal
+ * form.
  */
 export type FrameLocatorDefinition = {
 	type: "frameLocator";
-	selector?: string;
+	selector?: Parameters<Page["locator"]>[0];
 };
 
 export type TestIdDefinition = {

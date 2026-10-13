@@ -337,9 +337,11 @@ export class LocatorRegistrationBuilder<
 		? LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>
 		: undefined;
 	frameLocator(
-		selector: Seeded extends true ? string | undefined : string,
+		selector: Seeded extends true ? Parameters<Page["locator"]>[0] | undefined : Parameters<Page["locator"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	frameLocator(selector?: string): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> | undefined {
+	frameLocator(
+		selector?: Parameters<Page["locator"]>[0],
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> | undefined {
 		if (selector === undefined) {
 			if (this.seededDefinition) {
 				return this.commit({ type: "frameLocator" });

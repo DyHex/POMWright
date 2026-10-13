@@ -190,7 +190,7 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	 * Seeds a frame segment. The selector is required: the any-frame form of `add(path).frameLocator()`
 	 * has no element and no steps, so there is nothing a seed could carry.
 	 */
-	frameLocator(selector: string) {
+	frameLocator(selector: Parameters<Page["locator"]>[0]) {
 		assertPrimaryValue(selector, { method: "createReusable.frameLocator", field: "selector", allowEmpty: false });
 		return this.create({ type: "frameLocator", selector });
 	}
