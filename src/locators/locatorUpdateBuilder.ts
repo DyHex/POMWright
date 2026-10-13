@@ -538,7 +538,7 @@ export class LocatorUpdateBuilder<
 	 * getLocatorSchema("frame.login").replace("frame.login").frameLocator("iframe.auth").getNestedLocator();
 	 * ```
 	 */
-	frameLocator(...args: UpdateArgsWithoutOptions<Parameters<Page["frameLocator"]>[0]>) {
+	frameLocator(...args: UpdateArgsWithoutOptions<string>) {
 		const [selector] = args;
 
 		const definition: LocatorUpdate = {

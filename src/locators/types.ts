@@ -134,7 +134,7 @@ export type LocatorDefinition = {
 
 export type FrameLocatorDefinition = {
 	type: "frameLocator";
-	selector: Parameters<Page["frameLocator"]>[0];
+	selector: string;
 };
 
 export type TestIdDefinition = {

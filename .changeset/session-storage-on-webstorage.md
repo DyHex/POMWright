@@ -7,7 +7,9 @@
 `SessionStorage` is rebuilt on Playwright's `page.sessionStorage` and adds only what Playwright lacks: batches, step
 titles, origin checks, typed values, and seeding before the app loads.
 
-- Requires `@playwright/test` 1.61 or later; the peer range is now `>=1.61.0 <2.0.0`.
+- Requires `@playwright/test` 1.64 or later; the peer range is now `>=1.64.0 <2.0.0`. `page.sessionStorage` needs
+  1.61, the any-frame `frameLocator()` needs 1.63, and the fix that makes every RegExp flag deterministic across
+  elements (microsoft/playwright#42818) is in 1.64.0.
 - Values are strings, stored and read exactly as given. 2.x JSON-encoded every value, so `set({ token: "abc" })`
   reached the app as `"abc"` with quotes. A structured value is declared once per key with a codec:
   `new SessionStorage(page, { schema: { user: json<User>() } })`, or on a page object the `storage` member of its

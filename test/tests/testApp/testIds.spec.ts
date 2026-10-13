@@ -71,6 +71,20 @@ test("update and replace accept ids verbatim and RegExp ids as patterns", async 
 	await expect(both).toHaveCount(2);
 });
 
+test("the sticky flag is a start anchor against DOM", async ({ testIds }) => {
+	// Playwright resets the regex state per element from 1.64.0, the peer floor, so /^gen/y and /gen/y both
+	// match only an id that starts with "gen", and /en/y (sticky at index 0) matches nothing.
+	const container = testIds.getLocatorSchema("body.item@first").update("body.item@first").getById(/^gen/y).getLocator();
+	await expect(container).toHaveCount(1);
+	await expect(container).toHaveId("generated");
+
+	const unanchoredSticky = testIds.getLocatorSchema("body.item@first").update("body.item@first").getById(/gen/y).getLocator();
+	await expect(unanchoredSticky).toHaveId("generated");
+
+	const inner = testIds.getLocatorSchema("body.item@first").update("body.item@first").getById(/en/y).getLocator();
+	await expect(inner).toHaveCount(0);
+});
+
 test("filter has: works with a reference whose terminal is a RegExp id", async ({ testIds }) => {
 	const container = testIds.getNestedLocator("body.div@containsFour");
 	await expect(container).toHaveCount(1);

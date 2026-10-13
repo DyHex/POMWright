@@ -21,7 +21,6 @@
   and anchor with `^` and `$` for whole-id matches. The rendered selector changes from `[id*="…"]` to
   `internal:attr=[id=/…/]`.
 - RegExp flags pass through to Playwright unchanged, as with Playwright's own locators. The sticky `y` flag acts as a
-  start anchor on Playwright 1.64 and later and is unreliable before that (Playwright bug fixed in
-  microsoft/playwright#42818); prefer `^`.
+  start anchor, because Playwright resets the regex state per element from 1.64.0, the peer floor; prefer `^`.
 - `getById("")` throws at registration, naming the registry path.
 - The rendered selector for string ids changes from `locator('#x')` to `locator('[id="x"]')`.

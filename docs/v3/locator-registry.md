@@ -316,10 +316,8 @@ Every flag is passed through to Playwright unchanged, so `getById(/x/i)` behaves
 Two notes:
 
 - `g` has no effect on matching.
-- `y` (sticky) depends on the Playwright version. On Playwright 1.64 and later it is deterministic and acts as a
-  start anchor, so `/foo/y` behaves as `/^foo/`. On earlier versions Playwright reuses one regex object across
-  elements, so a sticky regex skips every other match
-  ([microsoft/playwright#42818](https://github.com/microsoft/playwright/pull/42818)). Prefer `^`.
+- `y` (sticky) acts as a start anchor, so `/foo/y` behaves as `/^foo/`: Playwright tests each element's id from
+  index 0 and resets the regex state between elements. Prefer `^`, which says what it means.
 
 ### Validation
 

@@ -7,7 +7,9 @@ session storage plan (analysis item 1.5) was executed.
 ## 1. What POMWright is
 
 - A TypeScript companion library for `@playwright/test`, published to npm as `pomwright` under Apache-2.0. Peer
-  range `@playwright/test >=1.61.0 <2.0.0` (1.61 added `page.sessionStorage`). Playwright is never a runtime dependency.
+  range `@playwright/test >=1.64.0 <2.0.0` (1.61 added `page.sessionStorage`, 1.63 the any-frame `frameLocator()`,
+  1.64 the per-element regex reset that makes every RegExp flag deterministic). Playwright is never a runtime
+  dependency.
 - Core idea: register one locator definition per dot-delimited path (`"main.form.submit"`) in a `LocatorRegistry`,
   and POMWright composes the full Playwright locator chain from the path. The registry, `PageObject`,
   `SessionStorage`, the `log` fixture and the `step` decorator are each usable on their own.
@@ -69,7 +71,7 @@ session storage plan (analysis item 1.5) was executed.
   `grep -c <new symbol> test/node_modules/pomwright/dist/index.js` when in doubt. Use the line reporter, because
   the configured html reporter opens on failure and blocks. Append `tests/<spec>` to run one file.
 - There is no `tsc` step yet; analysis section 4 covers adding one.
-- Verify runtime claims empirically before writing them into a plan or doc. `@playwright/test` 1.62.1 is installed
+- Verify runtime claims empirically before writing them into a plan or doc. `@playwright/test` 1.64.0 is installed
   under `test/node_modules`; a short Node script that launches chromium from there is the standard probe. Every
   claim in the analysis was verified that way. Keep that standard. Two pitfalls: the helper methods are wrapped in
   `test.step` and cannot be driven outside the Playwright runner, so runner behaviour (listener errors, `test.info()`
@@ -80,7 +82,7 @@ session storage plan (analysis item 1.5) was executed.
 ## 4. Test harness (`test/`)
 
 - Own `package.json`, lockfile and `tsconfig.json` (path aliases `@page-object-models/*`, `@fixtures/*`,
-  `@test-data/*`). Depends on `pomwright` as `file:../pomwright-test-build.tgz`. Playwright is pinned to 1.62.1.
+  `@test-data/*`). Depends on `pomwright` as `file:../pomwright-test-build.tgz`. Playwright is pinned to 1.64.0.
 - `server.js` is an express app on port 9000. It serves `test-data/staticPage` (a W3 template page) and the routes
   `/testpath`, `/testpath/:color`, `/testfilters`, `/iframe` (with `/iframe/a`, `/b`, `/c`), `/testids` (ids
   that are valid HTML but awkward as CSS selectors), `/testnav` (with `/testnav/item/:id` and `/testnav/bounce`,

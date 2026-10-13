@@ -15,7 +15,7 @@
 Nothing is registered on the page unless a seed is pending, and everything is removed once it has been applied. A
 test that never calls `seed` runs exactly as it would without POMWright.
 
-Requires `@playwright/test` 1.61 or later, which added `page.sessionStorage`.
+Requires `@playwright/test` 1.64 or later, POMWright 3.0.0's peer floor; `page.sessionStorage` itself was added in 1.61.
 
 It is available as `PageObject.sessionStorage` or by direct construction.
 
@@ -360,4 +360,4 @@ export const test = base.extend<Fixtures>({
 grep -rnE 'setOnNextNavigation|waitForContext|reload: true' --include=*.ts .
 ```
 
-Requires `@playwright/test` 1.61 or later.
+Requires `@playwright/test` 1.64 or later.

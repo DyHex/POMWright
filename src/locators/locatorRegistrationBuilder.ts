@@ -351,9 +351,7 @@ export class LocatorRegistrationBuilder<
 	 * ```
 	 */
 	frameLocator(
-		selector: Seeded extends true
-			? Parameters<Page["frameLocator"]>[0] | undefined
-			: Parameters<Page["frameLocator"]>[0],
+		selector: Seeded extends true ? string | undefined : string,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
 		const definition: LocatorStrategyDefinitionPatch = selector
 			? { type: "frameLocator", selector }

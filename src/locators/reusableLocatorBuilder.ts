@@ -179,7 +179,7 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 		return this.create(definition);
 	}
 
-	frameLocator(selector: Parameters<Page["frameLocator"]>[0]) {
+	frameLocator(selector: string) {
 		return this.create({ type: "frameLocator", selector });
 	}
 
