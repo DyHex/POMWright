@@ -12,7 +12,8 @@
 > navigation), executed and committed on the same branch on 2026-10-08 (commits bc8d980 to 4682146); 1.5 (session
 > storage), executed and committed on the same branch on 2026-10-10 (commits a05e8fd to ab76175); 1.6-1.8
 > (registration guards, frames, `update` semantics, the Playwright 1.64 floor), executed and committed on the same
-> branch on 2026-10-13 (commits 7105c92 to 803455c).
+> branch on 2026-10-13 (commits 7105c92 to 803455c); 1.7 (the `PageObject` lifecycle), decided 2026-10-13, items
+> marked *planned*.
 
 ## Overview
 
@@ -198,10 +199,36 @@ it for a wrong-type override and kept it for a second override.
 ### Page objects verify their registry after `defineLocators()` **[done, plan 1.6-1.8]**
 
 `PageObject` resolves every registered path once right after `defineLocators()`, so a mistyped `has`/`hasNot` path
-reference, a cycle, or an any-frame segment used as a terminal fails at construction with every failing path listed,
-instead of at the first action that resolves it. Registration itself is unchanged: forward references are still
+reference, a cycle, or an any-frame segment used as a terminal fails right after construction, in the fixture, with
+every failing path listed, instead of at the first action that resolves it (the timing is plan 1.7's, next section). Registration itself is unchanged: forward references are still
 allowed. The cost is about a microsecond per path. Standalone registries from `createRegistryWithAccessors` call
 `registry.verify()` themselves.
+
+### Page objects define their locators after construction; the post-navigation hook is optional **[planned, plan 1.7]**
+
+`PageObject` no longer calls `defineLocators()` from its constructor. It runs, followed by the registry
+verification, right after the page object is constructed (once the code that called `new` has finished: in a
+fixture, before the test body), or at its first locator call if that comes earlier, once per instance. In 2.x it ran
+inside `super(...)`, before the subclass had stored anything, so a definition that used a constructor argument, a
+field or a constructor-body assignment silently registered `undefined` (a lost name option, `undefined-submit`, or
+the wrong branch). Now it sees the whole page object; nothing in page objects, locator files or fixtures needs to
+change.
+
+- A registry mistake still fails the fixture before the test body, now with the page object's label in the message
+  (`LoginPage: Locator registry verification failed …`, `LoginPage: defineLocators() failed: …`), the construction
+  site in the stack and the original error as `cause`. `new X(page)` itself no longer throws for it.
+- A page object built in `beforeEach` or `beforeAll` still fails the tests the hook runs for, but each body runs
+  until its first use of that page object, where the same error is rethrown. In a `beforeAll` group that is not
+  `serial`, every test of the group fails, where 2.x failed the first and did not run the rest.
+- A value assigned to a page object after an `await` that follows `new` is not seen by `defineLocators()`.
+- `pageActionsToPerformAfterNavigation()` is optional, with no actions by default, and is called each time the
+  actions run (after `goto()` and `expectThisPage()`) instead of once at construction, so it reads the page object's
+  current state. `null` and `[]` both mean no actions, as they always did.
+
+**Migration.** Delete `pageActionsToPerformAfterNavigation()` implementations that return `[]` or `null`; with the
+`noImplicitOverride` compiler flag, add `override` to the ones that stay. A test that expects `new X(page)` to throw
+for a registry mistake asserts on a first use instead: `expect(() => new X(page).getNestedLocator(path)).toThrow(…)`.
+Pass values that `defineLocators()` depends on to the constructor.
 
 ## Bug fixes
 
@@ -235,6 +262,8 @@ allowed. The cost is about a microsecond per path. Standalone registries from `c
 - `filter`, `nth` and `describe` before a strategy are compile errors and the runtime message says what to call
   first (analysis 1.9e). **[done, plan 1.6-1.8]**
 - A seeded registration is no longer unregistered by a wrong-type override (analysis 1.10). **[done, plan 1.6-1.8]**
+- `defineLocators()` and `pageActionsToPerformAfterNavigation()` see the page object's constructor arguments, fields
+  and constructor-body assignments instead of `undefined` (analysis 1.7). **[planned, plan 1.7]**
 
 ## Removed and internal cleanup
 
@@ -284,6 +313,10 @@ allowed. The cost is about a microsecond per path. Standalone registries from `c
   strategy, the Merge Patch rules and the strategy-switch error, pre-definition calls, seeded recovery, and
   `verify()` through the registry, the accessors and a page object; unit tests for the builders' guards, the update
   parsing and merge, and the builder types. The frame specs pass on Firefox and WebKit as well. **[done, plan 1.6-1.8]**
+- New `pageObject/lifecycle.spec.ts` and `pageObject/actions.spec.ts`: what definitions and actions see of subclass
+  state against DOM, when the definition, the verification and the actions hook run, how registry mistakes are
+  reported from fixtures, hooks and first uses, `null` and `[]`; a unit-test file for the lifecycle, the errors and
+  their stacks, and the hook types. **[planned, plan 1.7]**
 
 ## Documentation
 
@@ -304,6 +337,11 @@ allowed. The cost is about a microsecond per path. Standalone registries from `c
   `update`/`replace` split with the Merge Patch rules, a `verify()` section, the error reference, the tested
   guarantees, and a 2.x to 3.0 migration subsection; the sticky-flag caveat removed; the floor in `overview.md` and
   `session-storage.md`. **[done, plan 1.6-1.8]**
+- `docs/v3/PageObject.md`: a *Hooks and lifecycle* section written for page-object authors with a 2.x and 3.0
+  example, the optional actions hook with `null` and `[]` explained, one registry per instance, the `return [];`
+  boilerplate removed from the examples and the `page as Page` cast removed (analysis section 5);
+  `composing-locator-modules.md` shows a locator module that takes page-object state, such as a locale, as an extra
+  argument; `overview.md`, `locator-registry.md` and `session-storage.md` follow. **[planned, plan 1.7]**
 - A new documentation site built with Starlight and hosted on GitHub Pages, using `docs/v3` as its source.
   **[roadmap]**
 
@@ -343,5 +381,10 @@ Grows as plans land.
     `null`.
 18. Fix registrations, seeds, updates or replacements that pass an empty string to `locator`, `frameLocator` or
     `getByRole`, or no primary argument at all; they now throw at the call.
-19. Expect a page object whose registry has a mistyped `has`/`hasNot` path reference or a cycle to fail at
-    construction; fix the reference. Standalone registries can call `registry.verify()` for the same check.
+19. Expect a page object whose registry has a mistyped `has`/`hasNot` path reference or a cycle to fail right after
+    construction, in the fixture; fix the reference. Standalone registries can call `registry.verify()` for the same
+    check.
+20. Delete `pageActionsToPerformAfterNavigation()` implementations that return `[]` or `null`; with
+    `noImplicitOverride`, add `override` to the ones that stay.
+21. A test that expects `new X(page)` to throw for a registry mistake asserts on a first use instead; pass values
+    that `defineLocators()` depends on to the constructor rather than assigning them after an `await`.
