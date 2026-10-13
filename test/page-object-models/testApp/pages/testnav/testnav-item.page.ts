@@ -15,8 +15,4 @@ export default class TestNavItem extends TestApp<Paths, { urlPathType: RegExp }>
 	protected defineLocators(): void {
 		defineLocators(this.locatorRegistry);
 	}
-
-	protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {
-		return [];
-	}
 }

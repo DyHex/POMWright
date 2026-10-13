@@ -10,8 +10,4 @@ export default class IframePage extends TestApp<Paths> {
 	protected defineLocators(): void {
 		defineLocators(this.locatorRegistry);
 	}
-
-	protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {
-		return [];
-	}
 }
