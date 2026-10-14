@@ -25,7 +25,10 @@ every probe of 5.3 against the final tarball as expected. Execution-time decisio
 `scripts/ci-*.sh` helpers, the gate's check context, the unsafe lint fixes, the 1.63 `.visible()` observation) are in
 [DECISIONS.md](DECISIONS.md). Still open until the user's push: the first `PR` run on pull request #46 and the two
 scratch pull requests of 3.6 (a failing commit must fail the gate `build`; an `.md`-only change must pass it with
-`package` and `harness` skipped); `CI` and the Publish guard first run on the merge to `main`.
+`package` and `harness` skipped); `CI` and the Publish guard first run on the merge to `main`. Amended after
+execution, in a follow-up commit: pull requests run the harness on chromium only (a `browsers` input of `checks.yaml`),
+`main` on all three browsers (7.6). The scratch pull requests target this branch, not `main`: a `pull_request` run uses
+the workflow files of the merge result, and the `changes` job diffs against the pull request's base.
 
 Every claim below was verified on 2026-10-14 against HEAD ff57895. Packaging and install behaviour was probed in two
 fresh clones of the repository in the session scratchpad, never in the working tree (which stayed clean): `pnpm pack`
@@ -610,8 +613,8 @@ The matrix:
 
 | job | Playwright | browsers | role |
 | --- | --- | --- | --- |
-| harness at the pin | 1.64.0, from `test/pnpm-lock.yaml` | chromium, firefox, webkit | the floor; gating |
-| harness at the latest 1.x (decided, 7.6) | the newest version in `>=1.64.0 <2.0.0`, passed to `pack-test.sh` as `PLAYWRIGHT_VERSION`, which adds it to `test/` after the frozen install: a deliberate unfrozen install of one package (3.4) | chromium, firefox, webkit | the ceiling the peer range promises; gating |
+| harness at the pin | 1.64.0, from `test/pnpm-lock.yaml` | pull requests: chromium; `main`: chromium, firefox, webkit (amended after execution) | the floor; gating |
+| harness at the latest 1.x (decided, 7.6) | the newest version in `>=1.64.0 <2.0.0`, passed to `pack-test.sh` as `PLAYWRIGHT_VERSION`, which adds it to `test/` after the frozen install: a deliberate unfrozen install of one package (3.4) | as the pin row | the ceiling the peer range promises; gating |
 
 Each latest job first resolves the newest version in the range with `npm view "@playwright/test@>=1.64.0 <2.0.0"
 version --json`, which returns a string for one match and an array (ascending) for several, so the step takes the
@@ -721,7 +724,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium, firefox, webkit]
+        browser: ${{ fromJSON(inputs.browsers) }}  # pr.yaml: ["chromium"]; main.yaml: all three (amended)
         playwright: [pin, latest]
     # downloads the package job's tarball; pack-test with POMWRIGHT_TARBALL=<it> (no build of its own, 3.4);
     # pin: as committed; latest: resolve the newest ">=1.64.0 <2.0.0" (3.3), end green if it equals the pin,
@@ -982,8 +985,9 @@ was accepted; 7.6 and 7.10 were amended in review.
 - [x] 7.5 `@playwright/test` `1.64.0` (exact) in the root `devDependencies`; the peer floor, the root dev pin and the
   harness pin move together. A new dev dependency, recorded in DECISIONS.md. Rejected: `^1.64.0`; leaving it to
   `autoInstallPeers`.
-- [x] 7.6 CI runs the harness at the pin (1.64.0) and at the latest `>=1.64.0 <2.0.0`, each on chromium, firefox and
-  webkit, both gating; a latest job ends green at once while latest equals the pin. A difference the latest jobs find
+- [x] 7.6 CI runs the harness at the pin (1.64.0) and at the latest `>=1.64.0 <2.0.0`, on chromium for pull requests
+  and on chromium, firefox and webkit for pushes to `main` (amended after execution, 2026-10-14, at the user's request:
+  a firefox- or webkit-only failure then shows in `CI` after the merge and blocks Publish until fixed), both gating; a latest job ends green at once while latest equals the pin. A difference the latest jobs find
   is fixed when it appears: a rendered-string difference (Playwright-version dependent, P16) preferably by asserting
   against the DOM, a real browser difference with the `browserName` fixture; the existing string assertions stay as
   they are, and new specs prefer DOM assertions. Accepted cost: a Playwright release alone can turn CI red. Amended in

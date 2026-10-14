@@ -337,9 +337,9 @@ is `>=20`, Playwright 1.64's own requirement: npm warns on older Node, where Pla
   current build and its lockfile no longer changes with every build; it needs no sudo (the postinstall that called
   `playwright install-deps` is gone); `pnpm pack-test` builds, packs, installs, type-checks and runs every browser
   project, passing its arguments to `playwright test`. **[done, plan 4]**
-- CI runs the whole harness on chromium, firefox and webkit, at the Playwright floor (1.64.0) and at the latest 1.x,
-  for every pull request (draft or not) and every push to `main`, from one shared workflow; the separate test workflow
-  is gone. Each run builds and packs once and tests that tarball on every browser; a change to `.md` files only runs
+- CI runs the whole harness at the Playwright floor (1.64.0) and at the latest 1.x, on chromium for every pull request
+  (draft or not) and on chromium, firefox and webkit for every push to `main`, from one shared workflow; the separate
+  test workflow is gone. Each run builds and packs once and tests that tarball on each browser; a change to `.md` files only runs
   lint. Publishing waits for the `main` run, including the browser suite, so a release can no longer publish past a
   red suite (as 1.5.1 did), and the publish workflow itself refuses anything but a push to `main` in this repository.
   **[done, plan 4]**

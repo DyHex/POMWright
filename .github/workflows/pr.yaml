@@ -1,6 +1,7 @@
 name: PR
 
-# Every pull request, draft or not, from this repository or a fork. Publish never listens to this workflow.
+# Every pull request, draft or not, from this repository or a fork. The harness runs on chromium only; main.yaml
+# runs all three browsers after the merge. Publish never listens to this workflow.
 
 on:
   pull_request:
@@ -11,6 +12,8 @@ permissions:
 jobs:
   checks:
     uses: ./.github/workflows/checks.yaml
+    with:
+      browsers: '["chromium"]' # firefox and webkit run on main (main.yaml)
 
   # The gate. Its job id is the required status check of main ("build"): do not rename it without changing the
   # branch protection rule with it.

@@ -13,6 +13,8 @@ permissions:
 jobs:
   checks:
     uses: ./.github/workflows/checks.yaml
+    with:
+      browsers: '["chromium", "firefox", "webkit"]'
 
   # The gate. Its job id is the required status check of main ("build"): do not rename it without changing the
   # branch protection rule with it.

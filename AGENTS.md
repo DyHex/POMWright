@@ -40,7 +40,7 @@ packaging, tooling and CI plan (analysis section 4) was executed.
 | `docs/v1/`, `docs/v1-to-v2-migration/` | Archived. | no |
 | `release-3.0.0/` | Working folder for the 3.0.0 release: analysis, numbered plans, release notes, decisions log. Section 6. | yes |
 | `.changeset/` | Changesets config. `CHANGELOG.md` is generated from changesets at release time. | config only |
-| `.github/workflows/` | `checks.yaml` (reusable): `changes`, `lint` (always), `package` (unit tests, build and pack once, the tarball as a run artifact) and `harness` (chromium, firefox, webkit at the Playwright pin and at the latest 1.x, each testing that tarball); `package` and `harness` are skipped when only `*.md` files changed. `pr.yaml` (`PR`) runs it for every pull request, draft or not; `main.yaml` (`CI`) for pushes to `main` only; both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs the changesets action after `CI` succeeds on a push to `main`, guarded by its job condition. | yes |
+| `.github/workflows/` | `checks.yaml` (reusable): `changes`, `lint` (always), `package` (unit tests, build and pack once, the tarball as a run artifact) and `harness` (the browsers the caller passes, each at the Playwright pin and at the latest 1.x, each testing that tarball); `package` and `harness` are skipped when only `*.md` files changed. `pr.yaml` (`PR`) runs it for every pull request, draft or not, with the harness on chromium only; `main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit; both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs the changesets action after `CI` succeeds on a push to `main`, guarded by its job condition. | yes |
 | `pack-build.sh`, `pack-extract.sh`, `pack-test.sh`, `playwright.base.ts` | Build and pack the tarball and extract it into `.pack/pomwright`; the extraction; run the harness (section 3); shared Playwright config. | yes |
 | `scripts/` | `write-esm-entry.mjs` (part of `pnpm build`), `ci-changes.sh` and `ci-playwright-version.sh` (the two decisions of `checks.yaml`, runnable locally). | yes |
 | `vitest.config.ts` | Unit-test discovery limited to `src/**/*.test.ts`, node environment, so Playwright specs are never picked up; typecheck mode on, so `expectTypeOf` and `// @ts-expect-error` assertions are enforced. | yes |
@@ -118,8 +118,9 @@ packaging, tooling and CI plan (analysis section 4) was executed.
   tarball. A green source-level spec says nothing about a stale tarball install.
 - `validation.locatorSchemaPath.typecheck.ts` is a compile-only probe: Playwright does not match the file name, and
   `pnpm typecheck` (in `pack-test` and CI) enforces its `@ts-expect-error` directives.
-- The harness runs on chromium, firefox and webkit, in CI at the Playwright pin and at the latest 1.x in the peer
-  range. A real behaviour difference between browsers on one Playwright version uses the `browserName` fixture (as
+- The harness runs on chromium, firefox and webkit (`pnpm pack-test` and CI on `main`; pull requests run chromium
+  only, so a firefox- or webkit-only failure shows in `CI` after the merge and blocks Publish until fixed), in CI at
+  the Playwright pin and at the latest 1.x in the peer range. A real behaviour difference between browsers on one Playwright version uses the `browserName` fixture (as
   `sessionStorage.spec.ts` does for WebKit's iframe storage). Rendered locator strings depend on the Playwright
   version, not the browser.
 - When changing locator behaviour: add focused specs next to the existing ones, keep the existing coverage (add,

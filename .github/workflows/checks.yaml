@@ -2,10 +2,15 @@ name: Checks
 
 # The jobs of every CI run, called by pr.yaml (pull requests) and main.yaml (pushes to main). Lint always runs; the
 # unit tests, the build and the harness are skipped when only *.md files changed, which GitHub reports as success.
-# The package job builds and packs once; every harness job tests that tarball.
+# The package job builds and packs once; every harness job tests that tarball, on the browsers the caller asks for.
 
 on:
   workflow_call:
+    inputs:
+      browsers:
+        description: JSON array of the Playwright projects the harness runs, each at the pin and at the latest version
+        type: string
+        default: '["chromium", "firefox", "webkit"]'
 
 permissions:
   contents: read
@@ -74,7 +79,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium, firefox, webkit]
+        browser: ${{ fromJSON(inputs.browsers) }}
         playwright: [pin, latest]
     steps:
       - uses: actions/checkout@v4
