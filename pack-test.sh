@@ -32,6 +32,7 @@ if [[ -n "${PLAYWRIGHT_VERSION:-}" ]]; then
 fi
 
 pnpm -C "$SCRIPT_DIR" exec tsc --noEmit -p test
+pnpm -C "$SCRIPT_DIR" exec tsc -p test/tsconfig.declarations.json
 # shellcheck disable=SC2086 # PLAYWRIGHT_INSTALL_ARGS is a word list on purpose
 pnpm -C "$TEST_DIR" exec playwright install ${PLAYWRIGHT_INSTALL_ARGS:-}
 pnpm -C "$TEST_DIR" exec playwright test "$@"

@@ -227,8 +227,10 @@ test("replace switches locator strategies and keeps the filter and index steps; 
 	expect(() => schema.update(path).getByRole("region")).toThrowError(
 		'update("body.section") cannot change the strategy from "locator" to "role"; use replace("body.section").getByRole(…) instead.',
 	);
+	// replace takes page.getByRole's arguments: the role is required (a compile error; from JavaScript a throw)
+	// @ts-expect-error an options-only call is update's form, not replace's
 	expect(() => schema.replace(path).getByRole({ name: "Now a region" })).toThrowError(
-		'Locator replace for "body.section" of type "role" requires a "role" value.',
+		'getByRole requires a role value for "body.section".',
 	);
 
 	const lastRoleClearSteps = schema

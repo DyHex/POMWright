@@ -1,0 +1,11 @@
+{
+	// Declaration emit of a shared locator module against the published declarations: a module that returns a
+	// seed, a query builder or an update builder without annotations must emit (declaration: true reports
+	// TS4094 and TS2742 for types a consumer cannot name). Run by pnpm typecheck and pack-test.sh.
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"declaration": true,
+		"noEmit": true
+	},
+	"files": ["tests/packaging/publicTypes.emit.ts"]
+}

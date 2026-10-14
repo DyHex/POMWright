@@ -2,12 +2,12 @@ import type { Page } from "@playwright/test";
 import {
 	type NavigationOptions,
 	PageObject,
+	type PageObjectTypeOptions,
 	type StorageTypeFromOptions,
 	type UrlPathTypeFromOptions,
-	type UrlTypeOptions,
 } from "pomwright";
 
-type BaseOptions<Options extends UrlTypeOptions> = {
+type BaseOptions<Options extends PageObjectTypeOptions> = {
 	baseUrlType: string;
 	urlPathType: UrlPathTypeFromOptions<Options>;
 	storage: StorageTypeFromOptions<Options>;
@@ -15,7 +15,7 @@ type BaseOptions<Options extends UrlTypeOptions> = {
 
 export default abstract class TestApp<
 	Paths extends string,
-	Options extends UrlTypeOptions = { baseUrlType: string; urlPathType: string },
+	Options extends PageObjectTypeOptions = { baseUrlType: string; urlPathType: string },
 > extends PageObject<Paths, BaseOptions<Options>> {
 	protected constructor(
 		page: Page,
