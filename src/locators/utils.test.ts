@@ -1,6 +1,6 @@
 import type { Locator } from "@playwright/test";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import type { FrameLocatorDefinition, IdDefinition, LocatorBuilderTarget } from "./types";
+import type { FrameLocatorDefinition, IdDefinition, LocatorBuilderTarget, UnicodeWhitespaceChar } from "./types";
 import {
 	applyDefinitionPatch,
 	assertIdValue,
@@ -10,8 +10,11 @@ import {
 	createLocator,
 	escapeCssString,
 	escapeRegExpForSelector,
+	formatLocatorSchemaPathForError,
 	isAnyFrameDefinition,
+	LOCATOR_SCHEMA_PATH_WHITESPACE,
 	methodForStrategy,
+	validateLocatorSchemaPath,
 } from "./utils";
 
 describe("escapeCssString", () => {
@@ -290,5 +293,59 @@ describe("methodForStrategy", () => {
 			testId: "getByTestId",
 			id: "getById",
 		});
+	});
+});
+
+describe("path whitespace", () => {
+	const rejects = (path: string) => {
+		try {
+			validateLocatorSchemaPath(path);
+			return false;
+		} catch {
+			return true;
+		}
+	};
+
+	it("is Unicode White_Space plus U+FEFF, one list for the type and the runtime check", () => {
+		const whiteSpace = /\p{White_Space}/u;
+		const expected: string[] = [];
+		for (let codePoint = 0; codePoint <= 0x10ffff; codePoint++) {
+			const char = String.fromCodePoint(codePoint);
+			if (whiteSpace.test(char) || codePoint === 0xfeff) {
+				expected.push(char);
+			}
+		}
+		expect([...LOCATOR_SCHEMA_PATH_WHITESPACE].sort()).toEqual(expected.sort());
+		expectTypeOf<UnicodeWhitespaceChar>().toEqualTypeOf<(typeof LOCATOR_SCHEMA_PATH_WHITESPACE)[number]>();
+		expectTypeOf<"\uFEFF">().toExtend<UnicodeWhitespaceChar>();
+	});
+
+	it("rejects a code point at runtime exactly when it is in the list", () => {
+		const listed = new Set<string>(LOCATOR_SCHEMA_PATH_WHITESPACE);
+		const mismatches: string[] = [];
+		for (let codePoint = 0; codePoint <= 0x10ffff; codePoint++) {
+			const char = String.fromCodePoint(codePoint);
+			if (rejects(`main${char}form`) !== listed.has(char)) {
+				mismatches.push(`U+${codePoint.toString(16).toUpperCase().padStart(4, "0")}`);
+			}
+		}
+		expect(mismatches).toEqual([]);
+	});
+
+	it("shows every listed character escaped in the message, except the plain space", () => {
+		expect(formatLocatorSchemaPathForError("a\u00A0b")).toBe("a\\u00A0b");
+		expect(formatLocatorSchemaPathForError("a\uFEFFb")).toBe("a\\uFEFFb");
+		expect(formatLocatorSchemaPathForError("a\u2028b")).toBe("a\\u2028b");
+		expect(formatLocatorSchemaPathForError("a\u0085b")).toBe("a\\u0085b");
+		expect(formatLocatorSchemaPathForError("a\u3000b")).toBe("a\\u3000b");
+		expect(formatLocatorSchemaPathForError("a\tb\n")).toBe("a\\tb\\n");
+		expect(formatLocatorSchemaPathForError("a b")).toBe("a b");
+		for (const char of LOCATOR_SCHEMA_PATH_WHITESPACE) {
+			const shown = formatLocatorSchemaPathForError(char);
+			expect(shown === " " || shown.startsWith("\\"), JSON.stringify(char)).toBe(true);
+		}
+		expect(() => validateLocatorSchemaPath("main\uFEFF.form")).toThrowError(
+			"LocatorSchemaPath string cannot contain whitespace chars: main\\uFEFF.form",
+		);
 	});
 });

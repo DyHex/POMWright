@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type { LocatorRegistrationPreDefinitionBuilder } from "./locatorRegistrationBuilder";
 import { type LocatorRegistry, LocatorRegistryInternal } from "./locatorRegistry";
+import type { ReusableLocator } from "./types";
 
 // Registration never touches the page, so a bare object is enough; resolution is covered by the
 // integration specs against the real page.
@@ -287,5 +288,16 @@ const typeContract = (registry: LocatorRegistryInternal<Paths>) => {
 	const frameSeed = registry.createReusable.frameLocator("iframe");
 	registry.add("seeded", { reuse: frameSeed }).frameLocator().nth(1);
 	registry.add("seeded", { reuse: frameSeed }).frameLocator(undefined);
+	// a seed has one public type, covariant in its strategy
+	const roleSeed: ReusableLocator<Paths, "role"> = registry.createReusable.getByRole("button").nth(0);
+	const anySeed: ReusableLocator<Paths> = registry.createReusable.locator("li").filter({ hasText: "x" });
+	const widened: ReusableLocator<Paths> = roleSeed;
+	// @ts-expect-error a locator seed is not a role seed
+	const wrongSeed: ReusableLocator<Paths, "role"> = registry.createReusable.locator("li");
+	registry.add("seeded", { reuse: roleSeed }).getByRole({ name: "y" });
+	// @ts-expect-error a role seed offers only the getByRole override
+	registry.add("seeded", { reuse: roleSeed }).getByText("y");
+	registry.add("seeded", { reuse: anySeed }).getByText("y");
+	void [widened, wrongSeed];
 };
 void typeContract;

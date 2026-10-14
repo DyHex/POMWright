@@ -7,16 +7,23 @@ export type { UrlMatcher } from "./src/helpers/url";
 export {
 	type AddAccessor,
 	createRegistryWithAccessors,
+	type FilterDefinition,
 	type GetLocatorAccessor,
 	type GetLocatorSchemaAccessor,
 	type GetNestedLocatorAccessor,
+	type IndexSelector,
+	type LocatorQueryBuilder,
 	type LocatorRegistry,
+	type LocatorSchemaPathArgument,
+	type LocatorSchemaPathFormat,
+	type LocatorUpdateBuilder,
+	type ReusableLocator,
 } from "./src/locators";
 export {
 	type BaseUrlTypeFromOptions,
 	type FullUrlTypeFromOptions,
 	PageObject,
+	type PageObjectTypeOptions,
 	type StorageTypeFromOptions,
 	type UrlPathTypeFromOptions,
-	type UrlTypeOptions,
 } from "./src/pageObject";

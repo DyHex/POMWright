@@ -12,7 +12,8 @@ import {
 } from "./locators";
 
 /**
- * UrlTypeOptions declare which of baseUrl and urlPath are RegExps; both default to string.
+ * PageObjectTypeOptions, the second type argument of PageObject. `baseUrlType` and `urlPathType`
+ * declare which of baseUrl and urlPath are RegExps; both default to string.
  * With two strings, fullUrl is the resolved URL string and every navigation method is available.
  * When either is a RegExp, fullUrl is a UrlMatcher (the base is matched against the URL's origin,
  * the path against the rest), `goto()` without a target is unavailable, and on a RegExp baseUrl
@@ -23,20 +24,24 @@ import {
  * bag rather than in a generic of its own because generics cannot be skipped: a subclass with a
  * schema would otherwise have to spell out the URL defaults.
  */
-export type UrlTypeOptions = {
+export type PageObjectTypeOptions = {
 	baseUrlType?: string | RegExp;
 	urlPathType?: string | RegExp;
 	storage?: SessionStorageSchema;
 };
 
-export type BaseUrlTypeFromOptions<T extends UrlTypeOptions> = T extends { baseUrlType: RegExp } ? RegExp : string;
-export type UrlPathTypeFromOptions<T extends UrlTypeOptions> = T extends { urlPathType: RegExp } ? RegExp : string;
-export type FullUrlTypeFromOptions<T extends UrlTypeOptions> = T extends
+export type BaseUrlTypeFromOptions<T extends PageObjectTypeOptions> = T extends { baseUrlType: RegExp }
+	? RegExp
+	: string;
+export type UrlPathTypeFromOptions<T extends PageObjectTypeOptions> = T extends { urlPathType: RegExp }
+	? RegExp
+	: string;
+export type FullUrlTypeFromOptions<T extends PageObjectTypeOptions> = T extends
 	| { baseUrlType: RegExp }
 	| { urlPathType: RegExp }
 	? UrlMatcher
 	: string;
-export type StorageTypeFromOptions<T extends UrlTypeOptions> = T extends {
+export type StorageTypeFromOptions<T extends PageObjectTypeOptions> = T extends {
 	storage: infer S extends SessionStorageSchema;
 }
 	? S
@@ -67,7 +72,7 @@ const atConstructionSite = (error: Error, site: Error): Error => {
  */
 export abstract class PageObject<
 	LocatorSchemaPathType extends string,
-	Options extends UrlTypeOptions = { baseUrlType: string; urlPathType: string },
+	Options extends PageObjectTypeOptions = { baseUrlType: string; urlPathType: string },
 > {
 	readonly page: Page;
 	readonly baseUrl: BaseUrlTypeFromOptions<Options>;

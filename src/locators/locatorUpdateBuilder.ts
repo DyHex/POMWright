@@ -69,6 +69,19 @@ type UpdateArgsWithOptions<Primary, Options> =
 
 type UpdateArgsWithoutOptions<Primary> = [] | [Primary];
 
+/** `update` patches the registered definition; `replace` installs a complete one of any strategy. */
+export type LocatorUpdateMode = "update" | "replace";
+
+/**
+ * The arguments of a strategy method in each mode: in `replace` mode Playwright's own parameter list
+ * (the first argument required, Playwright's option types), in `update` mode the patch shapes.
+ */
+type ArgsFor<
+	Mode extends LocatorUpdateMode,
+	ReplaceArgs extends unknown[],
+	UpdateArgs extends unknown[],
+> = Mode extends "replace" ? ReplaceArgs : UpdateArgs;
+
 type TextLikeDefinition = Extract<LocatorStrategyDefinition, { text: string | RegExp }>;
 type TextLikeUpdate = Extract<LocatorUpdate, { type: TextLikeDefinition["type"] }>;
 
@@ -201,22 +214,35 @@ const buildReplacementDefinition = (updates: LocatorUpdate, path: string): Locat
 	}
 };
 
-export class LocatorUpdateBuilder<
+/**
+ * What `getLocatorSchema(path).update(subPath?)` (`Mode` `"update"`) and `replace(subPath?)` (`Mode`
+ * `"replace"`) return: the ten strategy methods, each returning the query builder.
+ */
+export type LocatorUpdateBuilder<
+	LocatorSchemaPathType extends string,
+	Path extends RegistryPath<LocatorSchemaPathType>,
+	SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, Path>,
+	Mode extends LocatorUpdateMode = "update",
+> = LocatorUpdateBuilderInternal<LocatorSchemaPathType, Path, SubPath, Mode>;
+
+export class LocatorUpdateBuilderInternal<
 	LocatorSchemaPathType extends string,
 	LocatorSubstring extends RegistryPath<LocatorSchemaPathType>,
 	SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>,
+	Mode extends LocatorUpdateMode = "update",
 > {
 	constructor(
-		private readonly parent: LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>,
 		private readonly subPath: SubPath,
-		private readonly mode: "update" | "replace" = "update",
+		private readonly mode: Mode,
+		private readonly apply: (definition: LocatorUpdate) => LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>,
 	) {}
 
 	/**
 	 * Patches (`update`) or replaces (`replace`) a `getByRole` definition for the target sub-path. In
 	 * `update` mode the registered strategy must be `role`, the role is optional and the options
 	 * follow JSON Merge Patch: `{ name: null }` deletes one option, a `null` options argument deletes
-	 * them all, and `undefined` leaves them alone. In `replace` mode the role is required.
+	 * them all, and `undefined` leaves them alone. In `replace` mode the arguments are those of
+	 * `page.getByRole`: the role is required and the options are Playwright's own, without `null`.
 	 *
 	 * @example
 	 * ```ts
@@ -224,13 +250,19 @@ export class LocatorUpdateBuilder<
 	 * getLocatorSchema("form.button").update().getByRole("button", null).getNestedLocator();
 	 * ```
 	 */
-	getByRole(...args: UpdateArgsWithOptions<RoleDefinition["role"], RoleDefinition["options"]>) {
+	getByRole(
+		...args: ArgsFor<
+			Mode,
+			[role: RoleDefinition["role"], options?: RoleDefinition["options"]],
+			UpdateArgsWithOptions<RoleDefinition["role"], RoleDefinition["options"]>
+		>
+	) {
 		const [roleOrOptions, options] = args;
 		const parsed = parseUpdateArguments<RoleDefinition["role"], OptionsPatch<RoleDefinition["options"]>>(
 			roleOrOptions,
 			options,
 		);
-		if (parsed.primary !== undefined) {
+		if (parsed.primary !== undefined || this.mode === "replace") {
 			assertPrimaryValue(parsed.primary, { method: "getByRole", field: "role", path: this.subPath, allowEmpty: false });
 		}
 		return this.commit({
@@ -249,7 +281,13 @@ export class LocatorUpdateBuilder<
 	 * getLocatorSchema("banner.message").replace().getByText(/Updated/, { exact: false }).getNestedLocator();
 	 * ```
 	 */
-	getByText(...args: UpdateArgsWithOptions<Parameters<Page["getByText"]>[0], Parameters<Page["getByText"]>[1]>) {
+	getByText(
+		...args: ArgsFor<
+			Mode,
+			[text: Parameters<Page["getByText"]>[0], options?: Parameters<Page["getByText"]>[1]],
+			UpdateArgsWithOptions<Parameters<Page["getByText"]>[0], Parameters<Page["getByText"]>[1]>
+		>
+	) {
 		return this.commitTextLike("text", "getByText", args);
 	}
 
@@ -262,7 +300,13 @@ export class LocatorUpdateBuilder<
 	 * getLocatorSchema("form.email").update().getByLabel({ exact: true }).getNestedLocator();
 	 * ```
 	 */
-	getByLabel(...args: UpdateArgsWithOptions<Parameters<Page["getByLabel"]>[0], Parameters<Page["getByLabel"]>[1]>) {
+	getByLabel(
+		...args: ArgsFor<
+			Mode,
+			[text: Parameters<Page["getByLabel"]>[0], options?: Parameters<Page["getByLabel"]>[1]],
+			UpdateArgsWithOptions<Parameters<Page["getByLabel"]>[0], Parameters<Page["getByLabel"]>[1]>
+		>
+	) {
 		return this.commitTextLike("label", "getByLabel", args);
 	}
 
@@ -276,7 +320,11 @@ export class LocatorUpdateBuilder<
 	 * ```
 	 */
 	getByPlaceholder(
-		...args: UpdateArgsWithOptions<Parameters<Page["getByPlaceholder"]>[0], Parameters<Page["getByPlaceholder"]>[1]>
+		...args: ArgsFor<
+			Mode,
+			[text: Parameters<Page["getByPlaceholder"]>[0], options?: Parameters<Page["getByPlaceholder"]>[1]],
+			UpdateArgsWithOptions<Parameters<Page["getByPlaceholder"]>[0], Parameters<Page["getByPlaceholder"]>[1]>
+		>
 	) {
 		return this.commitTextLike("placeholder", "getByPlaceholder", args);
 	}
@@ -291,7 +339,11 @@ export class LocatorUpdateBuilder<
 	 * ```
 	 */
 	getByAltText(
-		...args: UpdateArgsWithOptions<Parameters<Page["getByAltText"]>[0], Parameters<Page["getByAltText"]>[1]>
+		...args: ArgsFor<
+			Mode,
+			[text: Parameters<Page["getByAltText"]>[0], options?: Parameters<Page["getByAltText"]>[1]],
+			UpdateArgsWithOptions<Parameters<Page["getByAltText"]>[0], Parameters<Page["getByAltText"]>[1]>
+		>
 	) {
 		return this.commitTextLike("altText", "getByAltText", args);
 	}
@@ -305,7 +357,13 @@ export class LocatorUpdateBuilder<
 	 * getLocatorSchema("icon.info").update().getByTitle({ exact: true }).getNestedLocator();
 	 * ```
 	 */
-	getByTitle(...args: UpdateArgsWithOptions<Parameters<Page["getByTitle"]>[0], Parameters<Page["getByTitle"]>[1]>) {
+	getByTitle(
+		...args: ArgsFor<
+			Mode,
+			[text: Parameters<Page["getByTitle"]>[0], options?: Parameters<Page["getByTitle"]>[1]],
+			UpdateArgsWithOptions<Parameters<Page["getByTitle"]>[0], Parameters<Page["getByTitle"]>[1]>
+		>
+	) {
 		return this.commitTextLike("title", "getByTitle", args);
 	}
 
@@ -319,13 +377,19 @@ export class LocatorUpdateBuilder<
 	 * getLocatorSchema("list.items").replace().locator("ul > li", { hasText: /Row/ }).getNestedLocator();
 	 * ```
 	 */
-	locator(...args: UpdateArgsWithOptions<Parameters<Page["locator"]>[0], Parameters<Page["locator"]>[1]>) {
+	locator(
+		...args: ArgsFor<
+			Mode,
+			[selector: Parameters<Page["locator"]>[0], options?: Parameters<Page["locator"]>[1]],
+			UpdateArgsWithOptions<Parameters<Page["locator"]>[0], Parameters<Page["locator"]>[1]>
+		>
+	) {
 		const [selectorOrOptions, options] = args;
 		const parsed = parseUpdateArguments<Parameters<Page["locator"]>[0], OptionsPatch<Parameters<Page["locator"]>[1]>>(
 			selectorOrOptions,
 			options,
 		);
-		if (parsed.primary !== undefined) {
+		if (parsed.primary !== undefined || this.mode === "replace") {
 			assertPrimaryValue(parsed.primary, {
 				method: "locator",
 				field: "selector",
@@ -376,9 +440,15 @@ export class LocatorUpdateBuilder<
 	 * getLocatorSchema("card.title").update().getByTestId().getNestedLocator();
 	 * ```
 	 */
-	getByTestId(...args: UpdateArgsWithoutOptions<Parameters<Page["getByTestId"]>[0]>) {
+	getByTestId(
+		...args: ArgsFor<
+			Mode,
+			[testId: Parameters<Page["getByTestId"]>[0]],
+			UpdateArgsWithoutOptions<Parameters<Page["getByTestId"]>[0]>
+		>
+	) {
 		const [testId] = args;
-		if (testId !== undefined) {
+		if (testId !== undefined || this.mode === "replace") {
 			assertPrimaryValue(testId, { method: "getByTestId", field: "testId", path: this.subPath, allowEmpty: true });
 		}
 		return this.commit({
@@ -397,9 +467,9 @@ export class LocatorUpdateBuilder<
 	 * getLocatorSchema("modal.close").update().getById().getNestedLocator();
 	 * ```
 	 */
-	getById(...args: UpdateArgsWithoutOptions<string | RegExp>) {
+	getById(...args: ArgsFor<Mode, [id: string | RegExp], UpdateArgsWithoutOptions<string | RegExp>>) {
 		const [id] = args;
-		if (id !== undefined) {
+		if (id !== undefined || this.mode === "replace") {
 			assertIdValue(id, { method: "getById", path: this.subPath });
 		}
 		return this.commit({
@@ -411,14 +481,16 @@ export class LocatorUpdateBuilder<
 	private commitTextLike(
 		type: TextLikeDefinition["type"],
 		method: string,
-		args: UpdateArgsWithOptions<string | RegExp, TextLikeDefinition["options"]>,
+		args:
+			| UpdateArgsWithOptions<string | RegExp, TextLikeDefinition["options"]>
+			| [text: string | RegExp, options?: TextLikeDefinition["options"]],
 	) {
 		const [textOrOptions, options] = args;
 		const parsed = parseUpdateArguments<string | RegExp, OptionsPatch<TextLikeDefinition["options"]>>(
 			textOrOptions,
 			options,
 		);
-		if (parsed.primary !== undefined) {
+		if (parsed.primary !== undefined || this.mode === "replace") {
 			assertPrimaryValue(parsed.primary, { method, field: "text", path: this.subPath, allowEmpty: true });
 		}
 		return this.commit({
@@ -429,9 +501,7 @@ export class LocatorUpdateBuilder<
 	}
 
 	private commit(definition: LocatorUpdate) {
-		return this.mode === "replace"
-			? this.parent.applyReplacement(this.subPath, definition)
-			: this.parent.applyUpdate(this.subPath, definition);
+		return this.apply(definition);
 	}
 }
 

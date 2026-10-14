@@ -5,6 +5,7 @@ import type {
 	IndexSelector,
 	LabelDefinition,
 	LocatorDefinition,
+	LocatorDefinitionByType,
 	LocatorDescription,
 	LocatorStep,
 	LocatorStrategyDefinition,
@@ -19,36 +20,37 @@ import { assertIdValue, assertPrimaryValue, normalizeSteps } from "./utils";
 
 export class ReusableLocatorBuilder<
 	LocatorSchemaPathType extends string,
-	AllowedPaths extends string = RegistryPath<LocatorSchemaPathType>,
 	Type extends LocatorStrategyDefinition["type"] = LocatorStrategyDefinition["type"],
-> implements ReusableLocator<LocatorSchemaPathType, AllowedPaths, Type>
+> implements ReusableLocator<LocatorSchemaPathType, Type>
 {
-	private readonly stepsList: LocatorStep<LocatorSchemaPathType, AllowedPaths>[];
-	private readonly definitionValue: Extract<LocatorStrategyDefinition, { type: Type }>;
+	private readonly stepsList: LocatorStep<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>[];
+	private readonly definitionValue: LocatorDefinitionByType[Type];
 	private descriptionValue?: LocatorDescription;
 
 	readonly type: Type;
 
 	constructor(
-		definition: Extract<LocatorStrategyDefinition, { type: Type }>,
-		steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[] = [],
+		definition: LocatorDefinitionByType[Type],
+		steps: LocatorStep<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>[] = [],
 	) {
 		this.definitionValue = definition;
-		this.type = definition.type;
-		this.stepsList = normalizeSteps<LocatorSchemaPathType, AllowedPaths>(steps);
+		this.type = definition.type as Type;
+		this.stepsList = normalizeSteps<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>(steps);
 	}
 
-	filter(filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, AllowedPaths>) {
+	filter(
+		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
+	): ReusableLocator<LocatorSchemaPathType, Type> {
 		this.stepsList.push({ kind: "filter", filter });
 		return this;
 	}
 
-	nth(index: IndexSelector) {
+	nth(index: IndexSelector): ReusableLocator<LocatorSchemaPathType, Type> {
 		this.stepsList.push({ kind: "index", index });
 		return this;
 	}
 
-	describe(description: LocatorDescription) {
+	describe(description: LocatorDescription): ReusableLocator<LocatorSchemaPathType, Type> {
 		this.descriptionValue = description;
 		return this;
 	}
@@ -58,7 +60,7 @@ export class ReusableLocatorBuilder<
 	}
 
 	get steps() {
-		return normalizeSteps<LocatorSchemaPathType, AllowedPaths>(this.stepsList);
+		return normalizeSteps<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>(this.stepsList);
 	}
 
 	get description() {
@@ -70,10 +72,8 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	getByRole(
 		role: RoleDefinition["role"],
 		options: RoleDefinition["options"],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "role">;
-	getByRole(
-		role: RoleDefinition["role"],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "role">;
+	): ReusableLocator<LocatorSchemaPathType, "role">;
+	getByRole(role: RoleDefinition["role"]): ReusableLocator<LocatorSchemaPathType, "role">;
 	getByRole(role: RoleDefinition["role"], options?: RoleDefinition["options"]) {
 		assertPrimaryValue(role, { method: "createReusable.getByRole", field: "role", allowEmpty: false });
 		const definition =
@@ -87,10 +87,8 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	getByText(
 		text: Parameters<Page["getByText"]>[0],
 		options: Parameters<Page["getByText"]>[1],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "text">;
-	getByText(
-		text: Parameters<Page["getByText"]>[0],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "text">;
+	): ReusableLocator<LocatorSchemaPathType, "text">;
+	getByText(text: Parameters<Page["getByText"]>[0]): ReusableLocator<LocatorSchemaPathType, "text">;
 	getByText(text: Parameters<Page["getByText"]>[0], options?: Parameters<Page["getByText"]>[1]) {
 		assertPrimaryValue(text, { method: "createReusable.getByText", field: "text", allowEmpty: true });
 		const definition =
@@ -104,10 +102,8 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	getByLabel(
 		text: Parameters<Page["getByLabel"]>[0],
 		options: Parameters<Page["getByLabel"]>[1],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "label">;
-	getByLabel(
-		text: Parameters<Page["getByLabel"]>[0],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "label">;
+	): ReusableLocator<LocatorSchemaPathType, "label">;
+	getByLabel(text: Parameters<Page["getByLabel"]>[0]): ReusableLocator<LocatorSchemaPathType, "label">;
 	getByLabel(text: Parameters<Page["getByLabel"]>[0], options?: Parameters<Page["getByLabel"]>[1]) {
 		assertPrimaryValue(text, { method: "createReusable.getByLabel", field: "text", allowEmpty: true });
 		const definition =
@@ -121,10 +117,10 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	getByPlaceholder(
 		text: Parameters<Page["getByPlaceholder"]>[0],
 		options: Parameters<Page["getByPlaceholder"]>[1],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "placeholder">;
+	): ReusableLocator<LocatorSchemaPathType, "placeholder">;
 	getByPlaceholder(
 		text: Parameters<Page["getByPlaceholder"]>[0],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "placeholder">;
+	): ReusableLocator<LocatorSchemaPathType, "placeholder">;
 	getByPlaceholder(text: Parameters<Page["getByPlaceholder"]>[0], options?: Parameters<Page["getByPlaceholder"]>[1]) {
 		assertPrimaryValue(text, { method: "createReusable.getByPlaceholder", field: "text", allowEmpty: true });
 		const definition =
@@ -138,10 +134,8 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	getByAltText(
 		text: Parameters<Page["getByAltText"]>[0],
 		options: Parameters<Page["getByAltText"]>[1],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "altText">;
-	getByAltText(
-		text: Parameters<Page["getByAltText"]>[0],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "altText">;
+	): ReusableLocator<LocatorSchemaPathType, "altText">;
+	getByAltText(text: Parameters<Page["getByAltText"]>[0]): ReusableLocator<LocatorSchemaPathType, "altText">;
 	getByAltText(text: Parameters<Page["getByAltText"]>[0], options?: Parameters<Page["getByAltText"]>[1]) {
 		assertPrimaryValue(text, { method: "createReusable.getByAltText", field: "text", allowEmpty: true });
 		const definition =
@@ -155,10 +149,8 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	getByTitle(
 		text: Parameters<Page["getByTitle"]>[0],
 		options: Parameters<Page["getByTitle"]>[1],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "title">;
-	getByTitle(
-		text: Parameters<Page["getByTitle"]>[0],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "title">;
+	): ReusableLocator<LocatorSchemaPathType, "title">;
+	getByTitle(text: Parameters<Page["getByTitle"]>[0]): ReusableLocator<LocatorSchemaPathType, "title">;
 	getByTitle(text: Parameters<Page["getByTitle"]>[0], options?: Parameters<Page["getByTitle"]>[1]) {
 		assertPrimaryValue(text, { method: "createReusable.getByTitle", field: "text", allowEmpty: true });
 		const definition =
@@ -172,10 +164,8 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	locator(
 		selector: Parameters<Page["locator"]>[0],
 		options: Parameters<Page["locator"]>[1],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "locator">;
-	locator(
-		selector: Parameters<Page["locator"]>[0],
-	): ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, "locator">;
+	): ReusableLocator<LocatorSchemaPathType, "locator">;
+	locator(selector: Parameters<Page["locator"]>[0]): ReusableLocator<LocatorSchemaPathType, "locator">;
 	locator(selector: Parameters<Page["locator"]>[0], options?: Parameters<Page["locator"]>[1]) {
 		assertPrimaryValue(selector, { method: "createReusable.locator", field: "selector", allowEmpty: false });
 		const definition =
@@ -190,12 +180,12 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	 * Seeds a frame segment. The selector is required: the any-frame form of `add(path).frameLocator()`
 	 * has no element and no steps, so there is nothing a seed could carry.
 	 */
-	frameLocator(selector: Parameters<Page["locator"]>[0]) {
+	frameLocator(selector: Parameters<Page["locator"]>[0]): ReusableLocator<LocatorSchemaPathType, "frameLocator"> {
 		assertPrimaryValue(selector, { method: "createReusable.frameLocator", field: "selector", allowEmpty: false });
 		return this.create({ type: "frameLocator", selector });
 	}
 
-	getByTestId(testId: Parameters<Page["getByTestId"]>[0]) {
+	getByTestId(testId: Parameters<Page["getByTestId"]>[0]): ReusableLocator<LocatorSchemaPathType, "testId"> {
 		assertPrimaryValue(testId, { method: "createReusable.getByTestId", field: "testId", allowEmpty: true });
 		return this.create({ type: "testId", testId });
 	}
@@ -204,14 +194,16 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	 * Seeds an `id` locator. The value is stored verbatim: strings match the `id` attribute exactly,
 	 * RegExps are evaluated as patterns with their flags. An empty string throws.
 	 */
-	getById(id: string | RegExp) {
+	getById(id: string | RegExp): ReusableLocator<LocatorSchemaPathType, "id"> {
 		assertIdValue(id, { method: "createReusable.getById" });
 		return this.create({ type: "id", id });
 	}
 
-	private create<Type extends LocatorStrategyDefinition["type"]>(
-		definition: Extract<LocatorStrategyDefinition, { type: Type }>,
-	) {
-		return new ReusableLocatorBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, Type>(definition);
+	private create<Definition extends LocatorStrategyDefinition>(
+		definition: Definition,
+	): ReusableLocator<LocatorSchemaPathType, Definition["type"]> {
+		return new ReusableLocatorBuilder<LocatorSchemaPathType, Definition["type"]>(
+			definition as unknown as LocatorDefinitionByType[Definition["type"]],
+		);
 	}
 }

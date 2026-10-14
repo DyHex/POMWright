@@ -1,6 +1,11 @@
 import type { Locator } from "@playwright/test";
 import type { LocatorRegistryInternal } from "./locatorRegistry";
-import { buildReplacementDefinition, LocatorUpdateBuilder, mergeLocatorDefinition } from "./locatorUpdateBuilder";
+import {
+	buildReplacementDefinition,
+	type LocatorUpdateBuilder,
+	LocatorUpdateBuilderInternal,
+	mergeLocatorDefinition,
+} from "./locatorUpdateBuilder";
 import type {
 	FilterDefinition,
 	IndexSelector,
@@ -19,15 +24,22 @@ import {
 	normalizeSteps,
 } from "./utils";
 
-export type LocatorQueryBuilderPublic<
+/**
+ * What `getLocatorSchema(path)` returns, and every step of its chain: a clone of the path's chain whose
+ * `filter`, `nth`, `clearSteps`, `remove`, `describe`, `update` and `replace` calls change only the clone.
+ *
+ * @example
+ * ```ts
+ * export const lastRow = (registry: LocatorRegistry<Paths>): LocatorQueryBuilder<Paths, "list.item"> =>
+ *   registry.getLocatorSchema("list.item").nth("last");
+ * ```
+ */
+export type LocatorQueryBuilder<
 	LocatorSchemaPathType extends string,
-	LocatorSubstring extends RegistryPath<LocatorSchemaPathType>,
-> = Pick<
-	LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>,
-	"filter" | "clearSteps" | "nth" | "describe" | "update" | "replace" | "remove" | "getLocator" | "getNestedLocator"
->;
+	Path extends RegistryPath<LocatorSchemaPathType>,
+> = LocatorQueryBuilderInternal<LocatorSchemaPathType, Path>;
 
-export class LocatorQueryBuilder<
+export class LocatorQueryBuilderInternal<
 	LocatorSchemaPathType extends string,
 	LocatorSubstring extends RegistryPath<LocatorSchemaPathType>,
 > {
@@ -98,9 +110,10 @@ export class LocatorQueryBuilder<
 			LocatorSubstring
 		>;
 		this.ensureSubPath(resolvedSubPath);
-		return new LocatorUpdateBuilder<LocatorSchemaPathType, LocatorSubstring, typeof resolvedSubPath>(
-			this,
+		return new LocatorUpdateBuilderInternal<LocatorSchemaPathType, LocatorSubstring, typeof resolvedSubPath, "update">(
 			resolvedSubPath,
+			"update",
+			(definition) => this.applyUpdate(resolvedSubPath, definition),
 		);
 	}
 
@@ -116,11 +129,13 @@ export class LocatorQueryBuilder<
 	 *   .filter("list.item", { hasText: "Row" });
 	 * ```
 	 */
-	filter(filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>): this;
+	filter(
+		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
+	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
 	filter<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
-	): this;
+	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
 	filter<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		...args:
 			| [FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>]
@@ -155,10 +170,10 @@ export class LocatorQueryBuilder<
 	 * getLocatorSchema("list.item").clearSteps("list.item").getNestedLocator();
 	 * ```
 	 */
-	clearSteps(): this;
+	clearSteps(): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
 	clearSteps<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
-	): this;
+	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
 	clearSteps<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath?: SubPath,
 	) {
@@ -182,11 +197,11 @@ export class LocatorQueryBuilder<
 	 * getLocatorSchema("list.item").nth("list.item", 2).getNestedLocator();
 	 * ```
 	 */
-	nth(index: IndexSelector): this;
+	nth(index: IndexSelector): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
 	nth<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
 		index: IndexSelector,
-	): this;
+	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
 	nth<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		...args: [IndexSelector] | [SubPath, IndexSelector]
 	) {
@@ -217,14 +232,13 @@ export class LocatorQueryBuilder<
 	 *   .getNestedLocator();
 	 * ```
 	 */
-	describe(description: LocatorDescription) {
+	describe(description: LocatorDescription): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring> {
 		this.ensureSubPath(this.path);
 		this.descriptions.set(this.path, description);
 		return this;
 	}
 
-	/** @internal */
-	applyUpdate<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
+	private applyUpdate<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
 		updates: LocatorUpdate,
 	) {
@@ -263,26 +277,26 @@ export class LocatorQueryBuilder<
 	replace(): LocatorUpdateBuilder<
 		LocatorSchemaPathType,
 		LocatorSubstring,
-		LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>
+		LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>,
+		"replace"
 	>;
 	replace<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
-	): LocatorUpdateBuilder<LocatorSchemaPathType, LocatorSubstring, SubPath>;
+	): LocatorUpdateBuilder<LocatorSchemaPathType, LocatorSubstring, SubPath, "replace">;
 	replace<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(subPath?: SubPath) {
 		const resolvedSubPath = (subPath ?? this.path) as LocatorChainPaths<
 			RegistryPath<LocatorSchemaPathType>,
 			LocatorSubstring
 		>;
 		this.ensureSubPath(resolvedSubPath);
-		return new LocatorUpdateBuilder<LocatorSchemaPathType, LocatorSubstring, typeof resolvedSubPath>(
-			this,
+		return new LocatorUpdateBuilderInternal<LocatorSchemaPathType, LocatorSubstring, typeof resolvedSubPath, "replace">(
 			resolvedSubPath,
 			"replace",
+			(definition) => this.applyReplacement(resolvedSubPath, definition),
 		);
 	}
 
-	/** @internal */
-	applyReplacement<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
+	private applyReplacement<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
 		updates: LocatorUpdate,
 	) {
@@ -309,10 +323,10 @@ export class LocatorQueryBuilder<
 	 * expect(() => builder.getNestedLocator()).toThrow();
 	 * ```
 	 */
-	remove(): this;
+	remove(): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
 	remove<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
 		subPath: SubPath,
-	): this;
+	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
 	remove<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(subPath?: SubPath) {
 		const resolvedSubPath = (subPath ?? this.path) as LocatorChainPaths<
 			RegistryPath<LocatorSchemaPathType>,

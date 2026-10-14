@@ -17,19 +17,59 @@ import type {
 	TitleDefinition,
 } from "./types";
 
-// Used only at runtime for messages: escape all special chars so
-// whitespace, quotes, etc. are visible and testable.
-export const formatLocatorSchemaPathForError = (path: string): string => {
-	// JSON.stringify returns a quoted string literal; strip the outer quotes.
-	// Example:
-	//   path = "\n"         -> JSON.stringify -> "\"\\n\""      -> "\\n"
-	//   path = "a\u00A0b"   -> "\"a\\u00a0b\"" -> "a\\u00a0b"
-	const json = JSON.stringify(path);
-	return json.slice(1, -1);
-};
+/**
+ * The characters a locator schema path may not contain: Unicode White_Space (UAX #44) plus U+FEFF,
+ * which JavaScript's `\s` has always matched. `UnicodeWhitespaceChar` is derived from this list, so the
+ * type-level check and the runtime check cannot drift.
+ */
+export const LOCATOR_SCHEMA_PATH_WHITESPACE = [
+	"\u0009",
+	"\u000A",
+	"\u000B",
+	"\u000C",
+	"\u000D",
+	"\u0020",
+	"\u0085",
+	"\u00A0",
+	"\u1680",
+	"\u2000",
+	"\u2001",
+	"\u2002",
+	"\u2003",
+	"\u2004",
+	"\u2005",
+	"\u2006",
+	"\u2007",
+	"\u2008",
+	"\u2009",
+	"\u200A",
+	"\u2028",
+	"\u2029",
+	"\u202F",
+	"\u205F",
+	"\u3000",
+	"\uFEFF",
+] as const;
 
-// Precompiled regex for "any JS whitespace OR U+0085"
-const RUNTIME_WHITESPACE_REGEX = /[\s\u0085]/u;
+const RUNTIME_WHITESPACE_REGEX = new RegExp(`[${LOCATOR_SCHEMA_PATH_WHITESPACE.join("")}]`, "u");
+// The listed characters JSON.stringify leaves as they are, except the plain space, which is visible.
+const UNESCAPED_WHITESPACE_REGEX = new RegExp(
+	`[${LOCATOR_SCHEMA_PATH_WHITESPACE.filter((char) => char !== " ").join("")}]`,
+	"gu",
+);
+
+/**
+ * Formats a path for an error message so that its whitespace is visible: `JSON.stringify` escapes
+ * quotes, backslashes and the C0 controls (`"a\tb"` shows as `a\\tb`), and every other listed
+ * character but the plain space is shown as a `\u` escape (`"a\u00A0b"` shows as `a\\u00A0b`).
+ */
+export const formatLocatorSchemaPathForError = (path: string): string =>
+	JSON.stringify(path)
+		.slice(1, -1)
+		.replace(
+			UNESCAPED_WHITESPACE_REGEX,
+			(char) => `\\u${char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0")}`,
+		);
 
 export const validateLocatorSchemaPath = (path: string) => {
 	if (!path) {

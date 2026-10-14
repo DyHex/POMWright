@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { LocatorQueryBuilder, type LocatorQueryBuilderPublic } from "./locatorQueryBuilder";
+import { type LocatorQueryBuilder, LocatorQueryBuilderInternal } from "./locatorQueryBuilder";
 import {
 	LocatorRegistrationBuilder,
 	type LocatorRegistrationPreDefinitionBuilder,
@@ -18,7 +18,6 @@ import type {
 	LocatorStrategyDefinition,
 	PlaywrightFilterDefinition,
 	RegistryPath,
-	ResolvedFilterDefinition,
 	ReusableLocator,
 } from "./types";
 import {
@@ -36,7 +35,21 @@ import {
 	validateLocatorSchemaPath,
 } from "./utils";
 
-type PathArgument<Paths extends string, Path extends Paths> =
+/**
+ * The type of every accessor's path parameter: the path itself when it is well-formed, otherwise the
+ * tuple of `LocatorSchemaPathFormat` naming the rule it breaks. A helper that forwards a path from a
+ * class generic in its path union declares its parameter with it.
+ *
+ * @example
+ * ```ts
+ * abstract class ShopApp<Paths extends string> extends PageObject<Paths> {
+ *   async clickOn<Path extends Paths>(path: LocatorSchemaPathArgument<Path>) {
+ *     await this.getNestedLocator(path).click();
+ *   }
+ * }
+ * ```
+ */
+export type LocatorSchemaPathArgument<Path extends string> =
 	LocatorSchemaPathFormat<Path> extends Path ? Path : LocatorSchemaPathFormat<Path>;
 
 type InvalidReusePath<Path extends string> = [
@@ -44,7 +57,7 @@ type InvalidReusePath<Path extends string> = [
 ];
 
 type ReusePathArgument<Paths extends string, Path extends Paths, ReusePath extends Paths> =
-	Exclude<ReusePath, Path> extends never ? InvalidReusePath<Path> : PathArgument<Paths, ReusePath>;
+	Exclude<ReusePath, Path> extends never ? InvalidReusePath<Path> : LocatorSchemaPathArgument<ReusePath>;
 
 export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	private readonly schemas = new Map<
@@ -109,26 +122,16 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 */
 	add<
 		Path extends LocatorSchemaPathType,
-		Reuse extends
-			| LocatorSchemaPathType
-			| ReusableLocator<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, LocatorStrategyDefinition["type"]>
-			| undefined = undefined,
+		Reuse extends LocatorSchemaPathType | ReusableLocator<LocatorSchemaPathType> | undefined = undefined,
 	>(
-		path: PathArgument<LocatorSchemaPathType, Path>,
+		path: LocatorSchemaPathArgument<Path>,
 		...args: Reuse extends undefined
 			? []
 			: [
 					options: {
 						reuse: Reuse extends LocatorSchemaPathType
 							? ReusePathArgument<LocatorSchemaPathType, Path, Reuse>
-							: Extract<
-									Reuse,
-									ReusableLocator<
-										LocatorSchemaPathType,
-										RegistryPath<LocatorSchemaPathType>,
-										LocatorStrategyDefinition["type"]
-									>
-								>;
+							: Extract<Reuse, ReusableLocator<LocatorSchemaPathType>>;
 					},
 				]
 	): Reuse extends undefined
@@ -138,23 +141,12 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			: LocatorRegistrationSeededBuilderForType<
 					LocatorSchemaPathType,
 					RegistryPath<LocatorSchemaPathType>,
-					Extract<
-						Reuse,
-						ReusableLocator<
-							LocatorSchemaPathType,
-							RegistryPath<LocatorSchemaPathType>,
-							LocatorStrategyDefinition["type"]
-						>
-					>["type"]
+					Extract<Reuse, ReusableLocator<LocatorSchemaPathType>>["type"]
 				> {
 		const options = args[0] as
 			| {
 					reuse?:
-						| ReusableLocator<
-								LocatorSchemaPathType,
-								RegistryPath<LocatorSchemaPathType>,
-								LocatorStrategyDefinition["type"]
-						  >
+						| ReusableLocator<LocatorSchemaPathType>
 						| LocatorSchemaPathType
 						| InvalidReusePath<RegistryPath<LocatorSchemaPathType>>;
 			  }
@@ -336,10 +328,10 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		},
 	) {
 		if (!filters || filters.length === 0) {
-			return [] as ResolvedFilterDefinition[];
+			return [] as PlaywrightFilterDefinition[];
 		}
 
-		const resolved: ResolvedFilterDefinition[] = [];
+		const resolved: PlaywrightFilterDefinition[] = [];
 		for (const filter of filters) {
 			if (filter && typeof filter === "object" && ("has" in filter || "hasNot" in filter)) {
 				const { has, hasNot, ...rest } = filter as FilterDefinition<
@@ -350,9 +342,9 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 					hasNot?: FilterLocatorReference<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>;
 				};
 
-				const normalizedFilter: ResolvedFilterDefinition = {
+				const normalizedFilter: PlaywrightFilterDefinition = {
 					...(rest as PlaywrightFilterDefinition),
-				} as ResolvedFilterDefinition;
+				} as PlaywrightFilterDefinition;
 
 				if (has !== undefined) {
 					normalizedFilter.has = this.resolveFilterLocator(has, context);
@@ -366,7 +358,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				continue;
 			}
 
-			resolved.push(filter as ResolvedFilterDefinition);
+			resolved.push(filter as PlaywrightFilterDefinition);
 		}
 
 		return resolved;
@@ -387,9 +379,9 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * ```
 	 */
 	getLocatorSchema<Path extends LocatorSchemaPathType>(
-		path: PathArgument<LocatorSchemaPathType, Path>,
-	): LocatorQueryBuilderPublic<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>> {
-		return new LocatorQueryBuilder<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>>(
+		path: LocatorSchemaPathArgument<Path>,
+	): LocatorQueryBuilder<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>> {
+		return new LocatorQueryBuilderInternal<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>>(
 			this,
 			path as Extract<Path, RegistryPath<LocatorSchemaPathType>>,
 		);
@@ -453,7 +445,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * await button.click();
 	 * ```
 	 */
-	getLocator<Path extends LocatorSchemaPathType>(path: PathArgument<LocatorSchemaPathType, Path>): Locator {
+	getLocator<Path extends LocatorSchemaPathType>(path: LocatorSchemaPathArgument<Path>): Locator {
 		return this.getLocatorSchema(path).getLocator();
 	}
 
@@ -467,7 +459,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * await expect(nested).toBeVisible();
 	 * ```
 	 */
-	getNestedLocator<Path extends LocatorSchemaPathType>(path: PathArgument<LocatorSchemaPathType, Path>): Locator {
+	getNestedLocator<Path extends LocatorSchemaPathType>(path: LocatorSchemaPathArgument<Path>): Locator {
 		return this.getLocatorSchema(path).getNestedLocator();
 	}
 
@@ -495,7 +487,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		const debugSteps: {
 			path: string;
 			definition: LocatorStrategyDefinition;
-			appliedFilters: ResolvedFilterDefinition[];
+			appliedFilters: PlaywrightFilterDefinition[];
 			index?: IndexSelector | null | undefined;
 			recordedSteps: LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[];
 		}[] = [];
@@ -538,7 +530,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			// terminal segment it is the <iframe> element itself.
 			const recordedSteps = steps.get(part) ?? [];
 			let resolvedLocator = createLocator(currentTarget, definition);
-			const appliedFilters: ResolvedFilterDefinition[] = [];
+			const appliedFilters: PlaywrightFilterDefinition[] = [];
 			let appliedIndex: IndexSelector | null | undefined;
 
 			for (const step of recordedSteps) {
@@ -576,17 +568,17 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 }
 
 export type GetLocatorAccessor<LocatorSchemaPathType extends string> = <Path extends LocatorSchemaPathType>(
-	path: LocatorSchemaPathFormat<Path> extends Path ? Path : LocatorSchemaPathFormat<Path>,
+	path: LocatorSchemaPathArgument<Path>,
 ) => Locator;
 
 export type AddAccessor<LocatorSchemaPathType extends string> = LocatorRegistryInternal<LocatorSchemaPathType>["add"];
 
 export type GetLocatorSchemaAccessor<LocatorSchemaPathType extends string> = <Path extends LocatorSchemaPathType>(
-	path: LocatorSchemaPathFormat<Path> extends Path ? Path : LocatorSchemaPathFormat<Path>,
-) => LocatorQueryBuilderPublic<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>>;
+	path: LocatorSchemaPathArgument<Path>,
+) => LocatorQueryBuilder<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>>;
 
 export type GetNestedLocatorAccessor<LocatorSchemaPathType extends string> = <Path extends LocatorSchemaPathType>(
-	path: LocatorSchemaPathFormat<Path> extends Path ? Path : LocatorSchemaPathFormat<Path>,
+	path: LocatorSchemaPathArgument<Path>,
 ) => Locator;
 
 export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<

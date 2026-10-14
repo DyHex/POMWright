@@ -1,5 +1,6 @@
+import type { Page } from "@playwright/test";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import type { LocatorRegistryInternal } from "./locatorRegistry";
+import { LocatorRegistryInternal } from "./locatorRegistry";
 import {
 	buildReplacementDefinition,
 	mergeLocatorDefinition,
@@ -237,7 +238,33 @@ const typeContract = (registry: LocatorRegistryInternal<"a">) => {
 	schema.update().frameLocator();
 	schema.update().getByTestId();
 	schema.replace().getByRole("button", { name: "x" });
+	schema.replace().getByRole("button", undefined);
+	schema.replace().getByText(/x/, { exact: true });
+	schema.replace().locator("li", { hasText: "x" });
 	schema.replace().frameLocator();
+	schema.replace().frameLocator("iframe");
+	schema.replace().getByTestId("t");
+	schema.replace().getById(/x/);
+	// @ts-expect-error replace needs the role, as page.getByRole does
+	schema.replace().getByRole();
+	// @ts-expect-error an options-only call is update's form, not replace's
+	schema.replace().getByRole({ name: "x" });
+	// @ts-expect-error a null primary is not a value
+	schema.replace().getByRole(null);
+	// @ts-expect-error replace takes Playwright's options, where null deletes nothing
+	schema.replace().getByRole("button", null);
+	// @ts-expect-error replace takes Playwright's options, where null deletes nothing
+	schema.replace().getByRole("button", { name: null });
+	// @ts-expect-error replace needs the text
+	schema.replace().getByText();
+	// @ts-expect-error replace needs the text
+	schema.replace().getByLabel({ exact: true });
+	// @ts-expect-error replace needs the selector
+	schema.replace().locator({ hasText: "x" });
+	// @ts-expect-error replace needs the test id
+	schema.replace().getByTestId();
+	// @ts-expect-error replace needs the id
+	schema.replace().getById();
 	// @ts-expect-error a null primary is not a value
 	schema.update().getByRole(null, null);
 	// @ts-expect-error not an ARIA role
@@ -246,3 +273,73 @@ const typeContract = (registry: LocatorRegistryInternal<"a">) => {
 	schema.update().getByRole({ name: 1 });
 };
 void typeContract;
+
+// Replacing never touches the page until resolution; resolution records the strategy calls on a chainable stub.
+const createStubPage = () => {
+	const calls: { method: string; args: unknown[] }[] = [];
+	const chain: object = new Proxy(
+		{},
+		{
+			get: (_target, key) =>
+				typeof key === "symbol" || key === "then"
+					? undefined
+					: (...args: unknown[]) => {
+							calls.push({ method: key, args });
+							return chain;
+						},
+		},
+	);
+	return { page: chain as Page, calls };
+};
+
+describe("replace from JavaScript", () => {
+	const createRegistry = () => {
+		const stub = createStubPage();
+		const registry = new LocatorRegistryInternal<"form" | "form.button">(stub.page);
+		registry.add("form").locator("form");
+		registry.add("form.button").getByRole("button", { name: "Save" });
+		return { registry, calls: stub.calls };
+	};
+
+	it("throws the shared message at the call when the first argument is missing", () => {
+		const { registry } = createRegistry();
+		const replace = () =>
+			registry.getLocatorSchema("form.button").replace() as unknown as Record<string, (...args: unknown[]) => unknown>;
+		const cases: [string, unknown[], string][] = [
+			["getByRole", [], 'getByRole requires a role value for "form.button".'],
+			["getByRole", [{ name: "x" }], 'getByRole requires a role value for "form.button".'],
+			["getByRole", [null], 'getByRole requires a role value for "form.button".'],
+			["getByText", [], 'getByText requires a text value for "form.button".'],
+			["getByLabel", [{ exact: true }], 'getByLabel requires a text value for "form.button".'],
+			["getByPlaceholder", [], 'getByPlaceholder requires a text value for "form.button".'],
+			["getByAltText", [], 'getByAltText requires a text value for "form.button".'],
+			["getByTitle", [], 'getByTitle requires a text value for "form.button".'],
+			["locator", [{ hasText: "x" }], 'locator requires a selector value for "form.button".'],
+			["getByTestId", [], 'getByTestId requires a testId value for "form.button".'],
+			["getById", [], 'getById requires a non-empty id for "form.button".'],
+		];
+		for (const [method, args, message] of cases) {
+			expect(() => replace()[method]?.(...args), `${method}(${JSON.stringify(args)})`).toThrowError(message);
+		}
+	});
+
+	it("keeps treating a null options argument or option as omission", () => {
+		const { registry, calls } = createRegistry();
+		const replace = () =>
+			registry.getLocatorSchema("form.button").replace() as unknown as {
+				getByRole: (...args: unknown[]) => { getLocator: () => unknown };
+			};
+		replace().getByRole("button", null).getLocator();
+		replace().getByRole("button", { name: null }).getLocator();
+		const roles = calls.filter((call) => call.method === "getByRole").map((call) => call.args);
+		expect(roles).toEqual([
+			["button", undefined],
+			["button", undefined],
+		]);
+	});
+
+	it("still installs the any-frame form without a selector", () => {
+		const { registry } = createRegistry();
+		expect(() => registry.getLocatorSchema("form").replace().frameLocator()).not.toThrow();
+	});
+});
