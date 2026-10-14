@@ -1,23 +1,30 @@
 #!/bin/bash
 
-# Decides whether a CI run needs the unit tests, the build and the harness: code=true unless every file changed since
-# <base> is a *.md file. <base> is the pull request's base commit or the push's previous commit. Anything uncertain
-# (no base, an all-zero base for a new ref, a base git cannot diff against, an empty diff) runs everything.
+# Decides whether a CI run needs the unit tests, the build and the harness: code=false when, for any <base>, the files
+# changed between it and <head> (git diff <base>...<head>, so from their merge base) are all *.md files; code=true
+# otherwise. The bases are commits it is safe to compare against: the last green commit of the branch
+# (ci-last-green.sh) and, on a pull request, its base branch. <head> is the commit under test (on a pull request its
+# head commit, not GitHub's merge commit). An empty base, an all-zero base, a base git cannot diff against and an empty
+# diff never allow a skip.
 # Writes code=<true|false> to $GITHUB_OUTPUT when set, and always to stdout.
 
 set -euo pipefail
 
-BASE="${1:-}"
+HEAD_SHA="${1:?usage: ci-changes.sh <head> [<base>...]}"
+shift
 code=true
 
-if [[ -n "$BASE" && ! "$BASE" =~ ^0+$ ]] && files="$(git diff --name-only "$BASE" HEAD)"; then
-	printf 'Changed files since %s:\n%s\n' "$BASE" "${files:-(none)}"
-	if [[ -n "$files" ]] && ! grep -qv '\.md$' <<<"$files"; then
-		code=false
+for BASE in "$@"; do
+	if [[ -n "$BASE" && ! "$BASE" =~ ^0+$ ]] && files="$(git diff --name-only "$BASE...$HEAD_SHA" 2>/dev/null)"; then
+		printf 'Changed files since %s:\n%s\n' "$BASE" "${files:-(none)}"
+		if [[ -n "$files" ]] && ! grep -qv '\.md$' <<<"$files"; then
+			code=false
+			break
+		fi
+	else
+		echo "No usable base commit ('$BASE')."
 	fi
-else
-	echo "No usable base commit ('$BASE'); running everything."
-fi
+done
 
 echo "code=$code"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then

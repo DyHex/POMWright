@@ -9,12 +9,14 @@ on:
 
 permissions:
   contents: read
+  actions: read # checks.yaml reads the runs of this workflow to find the last green commit
 
 jobs:
   checks:
     uses: ./.github/workflows/checks.yaml
     with:
       browsers: '["chromium", "firefox", "webkit"]'
+      workflow: main.yaml
 
   # The gate. Its job id is the required status check of main ("build"): do not rename it without changing the
   # branch protection rule with it.

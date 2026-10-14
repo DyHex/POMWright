@@ -1,7 +1,9 @@
 name: Checks
 
 # The jobs of every CI run, called by pr.yaml (pull requests) and main.yaml (pushes to main). Lint always runs; the
-# unit tests, the build and the harness are skipped when only *.md files changed, which GitHub reports as success.
+# unit tests, the build and the harness are skipped, which GitHub reports as success, when only *.md files changed since
+# the last green commit of the branch (the newest commit whose run of the caller's workflow succeeded) or, on a pull
+# request, since its base. Never since the previous push alone: that would let a docs-only push turn a red run green.
 # The package job builds and packs once; every harness job tests that tarball, on the browsers the caller asks for.
 
 on:
@@ -11,9 +13,14 @@ on:
         description: JSON array of the Playwright projects the harness runs, each at the pin and at the latest version
         type: string
         default: '["chromium", "firefox", "webkit"]'
+      workflow:
+        description: The caller's workflow file (pr.yaml or main.yaml), whose successful runs mark the green commits
+        type: string
+        required: true
 
 permissions:
   contents: read
+  actions: read # the runs API, to find the last green commit
 
 jobs:
   changes:
@@ -25,11 +32,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - id: green
+        name: Last green commit of the branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW: ${{ inputs.workflow }}
+          EVENT: ${{ github.event_name }}
+          BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          HEAD_REPO: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: echo "sha=$(bash scripts/ci-last-green.sh "$GITHUB_REPOSITORY" "$WORKFLOW" "$EVENT" "$BRANCH" "$HEAD_REPO" "$HEAD_SHA")" >>"$GITHUB_OUTPUT"
       - id: changes
         name: Anything other than *.md changed?
         env:
-          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-        run: bash scripts/ci-changes.sh "$BASE"
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          GREEN: ${{ steps.green.outputs.sha }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: bash scripts/ci-changes.sh "$HEAD_SHA" "$GREEN" "$PR_BASE"
 
   lint:
     name: Lint
