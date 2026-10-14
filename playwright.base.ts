@@ -13,7 +13,9 @@ export const baseConfig: PlaywrightTestConfig = {
 	},
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 1 : 1,
+	// CI retries a failure once to record a trace and a video, then fails the run anyway (failOnFlakyTests).
+	retries: process.env.CI ? 1 : 0,
+	failOnFlakyTests: !!process.env.CI,
 	workers: "50%",
 	reporter: process.env.CI
 		? [
@@ -30,7 +32,7 @@ export const baseConfig: PlaywrightTestConfig = {
 		headless: true,
 		viewport: { width: 1280, height: 720 },
 		ignoreHTTPSErrors: false,
-		video: "retry-with-video",
+		video: "on-first-retry",
 		screenshot: {
 			mode: "only-on-failure",
 			fullPage: true,

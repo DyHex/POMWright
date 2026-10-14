@@ -78,6 +78,9 @@ web_modules/
 *.tgz
 pomwright-test-build.tgz
 
+# Extracted package the harness in test/ installs (pack-build.sh, pack-extract.sh)
+.pack/
+
 # Yarn Integrity file
 .yarn-integrity
 

@@ -25,4 +25,8 @@ PACKED_FILE="$(pnpm pack --pack-destination "$TEMP_PACK_DIR" | tail -n 1)" || {
 rm -f "$SCRIPT_DIR/$ARTIFACT_NAME"
 mv "$PACKED_FILE" "$SCRIPT_DIR/$ARTIFACT_NAME" || { echo "Failed to move packed artifact"; exit 1; }
 
-echo "Built $ARTIFACT_NAME"
+# The harness in test/ depends on file:../.pack/pomwright: the packed tarball, extracted. A directory dependency has
+# no integrity hash in test/pnpm-lock.yaml, so a frozen install always installs the current contents.
+"$SCRIPT_DIR/pack-extract.sh" "$SCRIPT_DIR/$ARTIFACT_NAME"
+
+echo "Built $ARTIFACT_NAME and extracted it into .pack/pomwright"

@@ -25,8 +25,8 @@ importers:
         specifier: ^5.1.0
         version: 5.2.1
       pomwright:
-        specifier: file:../pomwright-test-build.tgz
-        version: file:../pomwright-test-build.tgz(@playwright/test@1.64.0)
+        specifier: file:../.pack/pomwright
+        version: file:../.pack/pomwright(@playwright/test@1.64.0)
 
 packages:
 
@@ -260,9 +260,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  pomwright@file:../pomwright-test-build.tgz:
-    resolution: {integrity: sha512-umLNrTreZaFOk2x9eOoshlAJC2Bhw603xVsZY5RPwICHpEWAXqnw+TZT4+S+v53dV/OoMoZfflkvj6S1gV4HBw==, tarball: file:../pomwright-test-build.tgz}
-    version: 2.1.0
+  pomwright@file:../.pack/pomwright:
+    resolution: {directory: ../.pack/pomwright, type: directory}
     peerDependencies:
       '@playwright/test': '>=1.64.0 <2.0.0'
 
@@ -588,7 +587,7 @@ snapshots:
     dependencies:
       playwright-core: 1.64.0
 
-  pomwright@file:../pomwright-test-build.tgz(@playwright/test@1.64.0):
+  pomwright@file:../.pack/pomwright(@playwright/test@1.64.0):
     dependencies:
       '@playwright/test': 1.64.0
 

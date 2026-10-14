@@ -325,12 +325,17 @@ app.get("/testnav/bounce", (_req, res) => {
 // navigation the seed must survive. Query flags: coop=1 and coep=1 add the isolation headers, frames=1
 // embeds /teststorage/frame from both origins, worker=1 and worker=passthrough register a service worker.
 const SECOND_ORIGIN = "http://127.0.0.1:9000";
+/** @param {unknown} value */
 const escapeHtml = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 const STARTUP_SNAPSHOT =
 	"<script>window.__startup = JSON.stringify(Object.fromEntries(Object.entries(sessionStorage)));</script>";
 
 app.use(express.urlencoded({ extended: false }));
 
+/**
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ */
 const renderStoragePage = (req, res) => {
 	if (req.query.coop) res.set("Cross-Origin-Opener-Policy", "same-origin");
 	if (req.query.coep) res.set("Cross-Origin-Embedder-Policy", "require-corp");
@@ -437,6 +442,7 @@ app.get("/teststorage/frame", (_req, res) => {
   `);
 });
 
+/** @param {string} value */
 const isFixtureUrl = (value) => /^http:\/\/(localhost|127\.0\.0\.1):9000\//.test(value);
 
 app.get("/teststorage/redirect", (req, res) => {

@@ -4,8 +4,7 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"start": "node ./server.js",
-		"postinstall": "npx -y only-allow pnpm && npx playwright install-deps"
+		"start": "node ./server.js"
 	},
 	"keywords": [],
 	"devDependencies": {
@@ -13,7 +12,7 @@
 		"@types/express": "^5.0.3",
 		"@types/node": "^24.5.2",
 		"express": "^5.1.0",
-		"pomwright": "file:../pomwright-test-build.tgz"
+		"pomwright": "file:../.pack/pomwright"
 	},
 	"dependencies": {
 		"dotenv": "^17.2.2"
