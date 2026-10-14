@@ -390,6 +390,10 @@ A path literal containing U+FEFF (the byte-order mark) is a compile error, as it
   pinned root dev dependency at the floor; CI retries a failure once for a trace and a video and fails on flaky tests,
   local runs do not retry; a new spec checks the ESM entry against the CommonJS build. **[done, plan 4]**
 
+- CI skips the unit tests, the build and the harness for a docs-only push only when nothing but `.md` files changed
+  since the last commit of the branch whose checks passed (or, on a pull request, since its base): a docs-only push on
+  a pull request that touched code no longer re-runs everything, and a docs-only push after a red run, on a pull
+  request or on `main`, no longer turns it green; on `main` that could have started Publish. **[done, plan 4 follow-up]**
 - Unit tests for the replace-mode types and messages, the query-builder chain types, seed variance and the path
   whitespace list over every code point; a compile-only probe of the public types against the published
   declarations, and a declaration-emit check (`declaration: true`) run by `pnpm typecheck` and `pnpm pack-test`.

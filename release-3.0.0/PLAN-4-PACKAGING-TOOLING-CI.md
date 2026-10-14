@@ -28,7 +28,10 @@ scratch pull requests of 3.6 (a failing commit must fail the gate `build`; an `.
 `package` and `harness` skipped); `CI` and the Publish guard first run on the merge to `main`. Amended after
 execution, in a follow-up commit: pull requests run the harness on chromium only (a `browsers` input of `checks.yaml`),
 `main` on all three browsers (7.6). The scratch pull requests target this branch, not `main`: a `pull_request` run uses
-the workflow files of the merge result, and the `changes` job diffs against the pull request's base.
+the workflow files of the merge result, and the `changes` job diffs against the pull request's base. A second follow-up commit,
+95975cf (2026-10-14, raised in the plan 1.9 review): the docs-only skip compares with the last green commit of the
+branch, found through the runs API (`scripts/ci-last-green.sh`), or with a pull request's base, instead of the pull
+request's base alone or, on `main`, the previous commit, whose run may have failed; see [DECISIONS.md](DECISIONS.md).
 
 Every claim below was verified on 2026-10-14 against HEAD ff57895. Packaging and install behaviour was probed in two
 fresh clones of the repository in the session scratchpad, never in the working tree (which stayed clean): `pnpm pack`
