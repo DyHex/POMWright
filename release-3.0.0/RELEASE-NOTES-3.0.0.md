@@ -14,7 +14,8 @@
 > (registration guards, frames, `update` semantics, the Playwright 1.64 floor), executed and committed on the same
 > branch on 2026-10-13 (commits 7105c92 to 803455c); 1.7 (the `PageObject` lifecycle), executed and committed on the
 > same branch on 2026-10-13 (commits 66e9481 to 2301bee); 4 (packaging, tooling and CI), executed and committed on
-> the same branch on 2026-10-14 (commits fc33244 to 837f1c8).
+> the same branch on 2026-10-14 (commits fc33244 to 837f1c8); 1.9 (types and exports), written and agreed on
+> 2026-10-14, not yet implemented.
 
 ## Overview
 
@@ -182,7 +183,7 @@ back for free is gone.
 ### Every builder requires the strategy's primary argument **[done, plan 1.6-1.8]**
 
 `add`, seeded `add`, `createReusable`, `update` and `replace` throw at the call, naming the method and the path,
-when the primary argument is missing (`getByRole requires a role for "main.button"`), and when it is an empty string
+when the primary argument is missing (`getByRole requires a role value for "main.button".`), and when it is an empty string
 for `locator`, `frameLocator` and `getByRole`, which Playwright cannot use (`locator requires a non-empty selector
 for "list"`); `getById("")` already threw. `getByTestId("")`, `getByText("")`, `getByLabel("")`,
 `getByPlaceholder("")`, `getByAltText("")` and `getByTitle("")` are stored verbatim, because Playwright matches
@@ -243,6 +244,32 @@ is `>=20`, Playwright 1.64's own requirement: npm warns on older Node, where Pla
 
 **Migration.** Replace deep imports with imports from `"pomwright"`.
 
+### `replace()` takes Playwright's arguments **[planned, plan 1.9]**
+
+`getLocatorSchema(path).replace(subPath?)` takes the parameter lists of Playwright's own methods: the first argument is
+required and the options are Playwright's option types. `replace().getByRole({ name: "Save" })`,
+`replace().getByTestId()` and the other calls without a first argument, which always threw, no longer compile, and
+neither do `null` options (`replace().getByRole("button", null)` or `{ name: null }`), which meant omission.
+`replace().frameLocator()` (the any-frame form) and `replace().getByRole("button", undefined)` still compile; `update()`
+is unchanged. From JavaScript a missing first argument now throws the message every other builder uses,
+`getByRole requires a role value for "form.button".`, instead of `Locator replace for "form.button" of type "role"
+requires a "role" value.`; `null` options still mean omission there.
+
+**Migration.** Pass the first argument to `replace()` methods and drop `null` options from them.
+
+### `UrlTypeOptions` is renamed `PageObjectTypeOptions`; builder, seed and path types are exported **[planned, plan 1.9]**
+
+`PageObject`'s second type argument, which also carries the `storage` schema since 3.0.0, is `PageObjectTypeOptions`;
+`UrlTypeOptions` is gone. New type exports, so that shared locator modules, helpers and domain base classes can name
+what the registry hands out, and a project compiled with `declaration: true` can export functions that return them:
+`LocatorQueryBuilder` (what `getLocatorSchema(path)` and each of its steps return), `LocatorUpdateBuilder` (what
+`update()` and `replace()` return), `ReusableLocator` (a seed from `createReusable`, the `reuse` option of `add`),
+`FilterDefinition`, `IndexSelector`, `LocatorSchemaPathFormat` (the path rules as a type) and
+`LocatorSchemaPathArgument` (the accessors' path parameter, for helpers that forward a path in a generic base class).
+A path literal containing U+FEFF (the byte-order mark) is a compile error, as it always was a runtime error.
+
+**Migration.** Rename `UrlTypeOptions` to `PageObjectTypeOptions` in imports and constraints.
+
 ## Bug fixes
 
 - `getById(string)` no longer breaks on ids with punctuation, whitespace, quotes, or a leading digit (analysis 1.1).
@@ -280,6 +307,15 @@ is `>=20`, Playwright 1.64's own requirement: npm warns on older Node, where Pla
 - The package's `license` is the SPDX id `Apache-2.0` instead of `Apache 2.0`, and its `repository.url` is in the
   form npm expects (analysis section 4). **[done, plan 4]**
 
+- `replace()` no longer compiles calls that always throw (analysis 1.9a). **[planned, plan 1.9]**
+- The query builder's internal `applyUpdate` and `applyReplacement`, which skip the argument checks, are no longer
+  reachable through its types after one chained call (analysis 1.9b). **[planned, plan 1.9]**
+- The type-level path check rejects the same characters as the runtime check, U+FEFF included, and the whitespace
+  error shows the offending character escaped (`main\u00A0.form`) instead of printing it invisibly (analysis 1.9c).
+  **[planned, plan 1.9]**
+- The types a consumer needs to name the builder chain, seeds, filters and path arguments are exported (analysis
+  1.9d). **[planned, plan 1.9]**
+
 ## Removed and internal cleanup
 
 - The internal helpers `cssEscape` and `normalizeIdValue` are removed from `src/locators/utils.ts`. Neither was
@@ -297,6 +333,12 @@ is `>=20`, Playwright 1.64's own requirement: npm warns on older Node, where Pla
   removed; `createLocator` returns `Locator`; `LocatorRegistry` gains `verify`; `assertIdValue` becomes a call to a
   generic `assertPrimaryValue`. **[done, plan 1.6-1.8]**
 - The redundant `.npmignore` is removed (the `files` allowlist alone decides what is packed). **[done, plan 4]**
+
+- `LocatorQueryBuilderPublic` and the unused or duplicate internal type aliases (`LocatorSchemaPathErrors`,
+  `ValidLocatorPath`, `FilterPatch`, `PathIndexMap`, `LocatorSchemaPathAlias`, `ResolvedFilterDefinition`) are
+  removed; the internal builder classes are `LocatorQueryBuilderInternal` and `LocatorUpdateBuilderInternal`; the
+  path whitespace list exists once for the type and the runtime check; no `stripInternal` (analysis sections 2 and 4).
+  **[planned, plan 1.9]**
 
 ## Tooling, CI, and tests
 
@@ -348,6 +390,11 @@ is `>=20`, Playwright 1.64's own requirement: npm warns on older Node, where Pla
   pinned root dev dependency at the floor; CI retries a failure once for a trace and a video and fails on flaky tests,
   local runs do not retry; a new spec checks the ESM entry against the CommonJS build. **[done, plan 4]**
 
+- Unit tests for the replace-mode types and messages, the query-builder chain types, seed variance and the path
+  whitespace list over every code point; a compile-only probe of the public types against the published
+  declarations, and a declaration-emit check (`declaration: true`) run by `pnpm typecheck` and `pnpm pack-test`.
+  **[planned, plan 1.9]**
+
 ## Documentation
 
 - `docs/v3` created as the working documentation set for 3.0.0. `docs/v2` is frozen as the 2.x reference.
@@ -372,6 +419,10 @@ is `>=20`, Playwright 1.64's own requirement: npm warns on older Node, where Pla
   boilerplate removed from the examples and the `page as Page` cast removed (analysis section 5);
   `composing-locator-modules.md` shows a locator module that takes page-object state, such as a locale, as an extra
   argument; `overview.md`, `locator-registry.md` and `session-storage.md` follow. **[done, plan 1.7]**
+- `docs/v3/locator-registry.md`: the importable types with a forwarding helper, `replace()`'s arguments, typed seed
+  modules, the 26 path whitespace characters; `composing-locator-modules.md`: what a module may return and how it is
+  typed, and why a registering function returns `void`; `PageObject.md`: `PageObjectTypeOptions`; `overview.md`: the
+  type exports. **[planned, plan 1.9]**
 - A new documentation site built with Starlight and hosted on GitHub Pages, using `docs/v3` as its source.
   **[roadmap]**
 
@@ -420,3 +471,5 @@ Grows as plans land.
     that `defineLocators()` depends on to the constructor rather than assigning them after an `await`.
 22. Replace deep imports such as `pomwright/dist/index.js` with imports from `"pomwright"`, and run on Node 20 or
     later. **[done, plan 4]**
+23. Pass the first argument to every `replace()` strategy method and drop `null` options from them. **[planned, plan 1.9]**
+24. Rename `UrlTypeOptions` to `PageObjectTypeOptions`. **[planned, plan 1.9]**
