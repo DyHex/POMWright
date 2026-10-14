@@ -17,7 +17,7 @@ It is intentionally minimal: you provide locator definitions and any post-naviga
 ```ts
 export abstract class PageObject<
   LocatorSchemaPathType extends string,
-  Options extends UrlTypeOptions = { baseUrlType: string; urlPathType: string },
+  Options extends PageObjectTypeOptions = { baseUrlType: string; urlPathType: string },
 > {
   protected constructor(
     page: Page,
@@ -46,13 +46,13 @@ type Paths =
   | "main.button@login";
 ```
 
-### `Options` (`UrlTypeOptions`)
+### `Options` (`PageObjectTypeOptions`)
 
-`UrlTypeOptions` declares which of `baseUrl` and `urlPath` are RegExps, both defaulting to `string`, and names
+`PageObjectTypeOptions` declares which of `baseUrl` and `urlPath` are RegExps, both defaulting to `string`, and names
 the session storage schema the page object's helper is typed with:
 
 ```ts
-type UrlTypeOptions = {
+type PageObjectTypeOptions = {
   baseUrlType?: string | RegExp;
   urlPathType?: string | RegExp;
   storage?: SessionStorageSchema; // codecs by key; see session-storage.md
@@ -262,7 +262,7 @@ above), so they are not shared or cached between instances. Defining and verifyi
 | Property | Type | Purpose |
 | --- | --- | --- |
 | `page` | `Page` | Playwright `Page` instance. |
-| `baseUrl` / `urlPath` | `string` or `RegExp` | The values passed to the constructor, typed by `UrlTypeOptions`. |
+| `baseUrl` / `urlPath` | `string` or `RegExp` | The values passed to the constructor, typed by `PageObjectTypeOptions`. |
 | `fullUrl` | `string` or `UrlMatcher` | The resolved URL for two strings; a structured matcher when either part is a RegExp. |
 | `label` | `string` | Label used for navigation and session storage steps. |
 | `sessionStorage` | `SessionStorage<StorageTypeFromOptions<Options>>` | Session storage helper, labeled with `label`, bound to the origin of a string `baseUrl`, typed by the `storage` option. |
@@ -487,6 +487,8 @@ class OrdersTabPage extends PageObject<"main", { urlPathType: RegExp }> {
 - `pageActionsToPerformAfterNavigation()` is optional, and it is called each time the actions run instead of once at
   construction. Delete implementations that return `[]` or `null`; with `noImplicitOverride`, add `override` to the
   ones that stay.
+- `UrlTypeOptions` is renamed `PageObjectTypeOptions`, since it also carries `storage`; there is no alias. Rename it
+  in imports and constraints (`grep -rn 'UrlTypeOptions' --include=*.ts .`).
 
 ---
 
@@ -504,6 +506,21 @@ const filtered = loginPage
   .getLocatorSchema("main.form@login.input@username")
   .filter("main.form@login.input@username", { hasText: /User/i })
   .getNestedLocator();
+```
+
+A helper in a domain base class that is generic in its paths forwards a path with `LocatorSchemaPathArgument`; a
+parameter typed with the bare union does not compile there (see *Types you can import* in `locator-registry.md`):
+
+```ts
+import type { Locator } from "@playwright/test";
+import { type LocatorSchemaPathArgument, PageObject } from "pomwright";
+
+abstract class ShopApp<Paths extends string> extends PageObject<Paths> {
+  protected async clickOn<Path extends Paths>(path: LocatorSchemaPathArgument<Path>): Promise<void> {
+    await this.getNestedLocator(path).click();
+  }
+}
+// a subclass calls this.clickOn("main.button@login"); a misspelt path is a compile error at that call
 ```
 
 ---

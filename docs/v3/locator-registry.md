@@ -11,7 +11,7 @@
 4. [Factory and accessors](#factory-and-accessors)
     1. [`createRegistryWithAccessors`](#createregistrywithaccessors)
     2. [Accessor types](#accessor-types)
-    3. [Public `LocatorRegistry` vs internal registry](#public-locatorregistry-vs-internal-registry)
+    3. [Types you can import](#types-you-can-import)
 5. [Registering locators with `add`](#registering-locators-with-add)
     1. [All strategy methods](#all-strategy-methods)
     2. [Post-definition chain methods](#post-definition-chain-methods)
@@ -55,7 +55,8 @@
     2. [Reuse by object seed](#reuse-by-object-seed)
     3. [Reuse by existing path string](#reuse-by-existing-path-string)
     4. [Reuse patch rules and limitations](#reuse-patch-rules-and-limitations)
-    5. [Seed immutability](#seed-immutability)
+    5. [Typing seeds in shared modules](#typing-seeds-in-shared-modules)
+    6. [Seed immutability](#seed-immutability)
 14. [`describe` semantics](#describe-semantics)
     1. [Default descriptions](#default-descriptions)
     2. [Registry-level descriptions](#registry-level-descriptions)
@@ -120,7 +121,8 @@ Rules:
 - Path cannot be empty.
 - Path cannot start or end with `.`.
 - Path cannot contain consecutive dots (`..`).
-- Path cannot contain Unicode whitespace characters.
+- Path cannot contain whitespace: the 25 characters with the Unicode `White_Space` property and U+FEFF (the
+  byte-order mark), which JavaScript's `\s` also matches. The type-level check and the runtime check use one list.
 
 ```ts
 type Paths =
@@ -133,7 +135,8 @@ type Paths =
 
 If invalid literals are included in the union, TypeScript blocks those values at locator accessor argument usage
 (`add`, `getLocator`, `getNestedLocator`, `getLocatorSchema`) with path-format diagnostics while preserving
-valid path autocomplete suggestions. Runtime validation still applies for non-literal strings.
+valid path autocomplete suggestions. Runtime validation still applies for non-literal strings. The check is
+exported as a type, `LocatorSchemaPathFormat<Path>` (see [Types you can import](#types-you-can-import)).
 
 ### Runtime validation rules
 
@@ -143,7 +146,7 @@ Runtime validation applies the same structure checks:
 - leading dot
 - trailing dot
 - consecutive dots
-- whitespace characters
+- whitespace characters (the same 26 as the type-level check)
 
 This means even if a path reaches runtime as a plain string, it is still validated.
 
@@ -155,7 +158,8 @@ Typical runtime errors:
 - `LocatorSchemaPath string cannot start with a dot: .foo`
 - `LocatorSchemaPath string cannot end with a dot: foo.`
 - `LocatorSchemaPath string cannot contain consecutive dots: foo..bar`
-- `LocatorSchemaPath string cannot contain whitespace chars: ...`
+- `LocatorSchemaPath string cannot contain whitespace chars: ...` (every whitespace character but the plain space is
+  shown as an escape, so a no-break space reads `main\u00A0.form` instead of looking like a space)
 
 ---
 
@@ -208,19 +212,59 @@ class MyPage<Paths extends string> {
 }
 ```
 
-### Public `LocatorRegistry` vs internal registry
+### Types you can import
 
-The **public** `LocatorRegistry` intentionally exposes only:
+Every type the registry hands out can be named from `"pomwright"` (the package root is the only importable entry):
 
-- `add`
-- `createReusable`
-- `getLocator`
-- `getNestedLocator`
-- `getLocatorSchema`
-- `verify`
+| type | what it is |
+| --- | --- |
+| `LocatorRegistry<Paths>` | the registry: `add`, `createReusable`, `getLocator`, `getNestedLocator`, `getLocatorSchema`, `verify`. Internal lifecycle methods (`register`, `replace`, `get`) are not part of it. |
+| `AddAccessor`, `GetLocatorAccessor`, `GetNestedLocatorAccessor`, `GetLocatorSchemaAccessor` | the four accessors (above) |
+| `LocatorQueryBuilder<Paths, Path>` | what `getLocatorSchema(path)` returns, and every step of its chain |
+| `LocatorUpdateBuilder<Paths, Path, SubPath, Mode>` | what `update(subPath?)` (`Mode` `"update"`) and `replace(subPath?)` (`"replace"`) return |
+| `ReusableLocator<Paths, Strategy>` | a seed from `createReusable`, what `add(path, { reuse })` accepts (see [Typing seeds in shared modules](#typing-seeds-in-shared-modules)) |
+| `FilterDefinition<Paths>` | the argument of `filter`, with `has`/`hasNot` path references |
+| `IndexSelector` | the argument of `nth`: a number, `"first"` or `"last"` |
+| `LocatorSchemaPathFormat<Path>` | the path rules as a type: `Path` when it is well-formed, otherwise a tuple naming the rule |
+| `LocatorSchemaPathArgument<Path>` | the path parameter of `add` and the accessors |
 
-Internal lifecycle methods (`register`, `replace`, `get`) exist on the internal implementation and are intentionally
-not part of the public API.
+The builders that `add(path)` returns are not exported: they register as a side effect and are not meant to be held.
+
+A shared module can annotate what it returns, and in a project compiled with `declaration: true` (a page-object
+package built with declarations, for example) it has to be able to name it:
+
+```ts
+// list.locators.ts
+import type { LocatorQueryBuilder, LocatorRegistry } from "pomwright";
+
+export type Paths = "list" | "list.item";
+
+export const lastRow = (registry: LocatorRegistry<Paths>): LocatorQueryBuilder<Paths, "list.item"> =>
+    registry.getLocatorSchema("list.item").nth("last");
+
+// a function that registers returns nothing: a block body (or `: void`) keeps the builder out of its type
+export function defineLocators(registry: LocatorRegistry<Paths>) {
+    registry.add("list").locator("ul");
+    registry.add("list.item").getByRole("listitem");
+}
+```
+
+A helper in a base class that is generic in its path union forwards a path with `LocatorSchemaPathArgument`. A
+parameter typed with the bare union does not compile there, because the accessors check each path at the call and
+TypeScript cannot check a path that is still a type parameter:
+
+```ts
+import type { Locator } from "@playwright/test";
+import { type LocatorSchemaPathArgument, PageObject } from "pomwright";
+
+export abstract class ShopApp<Paths extends string> extends PageObject<Paths> {
+    nested<Path extends Paths>(path: LocatorSchemaPathArgument<Path>): Locator {
+        return this.getNestedLocator(path); // `nested(path: Paths)` would be TS2345 here
+    }
+}
+
+// a misspelt path is still an error where the helper is called: page.nested("main.buton")
+```
 
 ---
 
@@ -692,8 +736,22 @@ rejected).
 
 ### `replace`: a new definition of any strategy
 
-`replace(subPath?)` installs a complete definition, of any strategy, with the first argument required as on
-Playwright's own methods. The options are taken as given; `null` has no delete meaning here and equals omission.
+`replace(subPath?)` installs a complete definition, of any strategy, with Playwright's own arguments: the first
+argument is required and the options are Playwright's option types, exactly as on `page.getByRole(…)`,
+`page.locator(…)` and the others. In TypeScript a call without the first argument, an options-only call and `null`
+options do not compile, with the diagnostics Playwright gives:
+
+```ts
+const schema = registry.getLocatorSchema("main.button");
+
+schema.replace().getByRole({ name: "Save" });           // ❌ compile error, as page.getByRole({ name: "Save" })
+schema.replace().getByTestId();                         // ❌ Expected 1 arguments, but got 0.
+schema.replace().getByRole("button", { name: null });   // ❌ null deletes nothing in replace: omit the key
+schema.replace().getByRole("button", { name: "Save" }); // ✅
+```
+
+From JavaScript the calls without a first argument throw at the call with the message every builder uses
+(`getByRole requires a role value for "main.button".`), and a `null` options argument or option equals omission.
 
 ```ts
 const replaced = registry
@@ -809,9 +867,32 @@ const seed = registry.createReusable.getByRole("heading", { level: 2 });
 
 registry.add("heading.summary", { reuse: seed }).getByRole({ name: "Summary" }); // ✅
 
-// ❌ mismatched strategy, throws at runtime and compile-time should also guide against this
+// ❌ mismatched strategy: a compile error (a role seed offers only getByRole), and a throw from JavaScript
 // registry.add("heading.bad", { reuse: seed }).locator("h2");
 ```
+
+### Typing seeds in shared modules
+
+A seed is a `ReusableLocator<Paths, Strategy>`. A module that hands out seeds can name them:
+
+```ts
+// headings.locators.ts
+import type { LocatorRegistry, ReusableLocator } from "pomwright";
+
+export type Paths = "card" | "card.title";
+
+export const headingSeed = (registry: LocatorRegistry<Paths>): ReusableLocator<Paths, "role"> =>
+    registry.createReusable.getByRole("heading", { level: 2 });
+
+export function defineLocators(registry: LocatorRegistry<Paths>) {
+    registry.add("card").locator("article");
+    registry.add("card.title", { reuse: headingSeed(registry) }).getByRole({ name: "Summary" });
+}
+```
+
+`ReusableLocator<Paths, "role">` keeps the strategy, so the seeded builder offers only the `getByRole` override.
+`ReusableLocator<Paths>` accepts a seed of any strategy (a narrow seed assigns to it); the seeded builder then offers
+all ten overrides and a wrong one throws at runtime, as for a seed whose strategy TypeScript cannot see.
 
 ### Seed immutability
 
@@ -932,6 +1013,7 @@ The integration suite (`test`) verifies Locator Registry behavior in depth, incl
 - reusable locators and reuse constraints, including that a failed override changes nothing
 - frames: steps on the iframe element against real frames, nested frames, the any-frame segment
 - `verify()` through the registry, the accessors and a page object
+- the exported types against the published declarations, including declaration emit of a shared module
 
 For implementation-level examples, see the Locator Registry tests under `test/tests/locatorRegistry`.
 
@@ -955,6 +1037,14 @@ For implementation-level examples, see the Locator Registry tests under `test/te
 - **A failed seeded override keeps the seed** instead of unregistering the path.
 - **Page objects verify after `defineLocators()`:** a mistyped `has`/`hasNot` path reference or a cycle fails right
   after construction, in the fixture. Standalone registries can call `registry.verify()`.
+- **`replace` takes Playwright's arguments.** `replace().getByRole({ name })`, `replace().getByTestId()` and other calls
+  without a first argument, which always threw, no longer compile, and neither do `null` options, which meant
+  omission: pass the first argument and drop `null` from `replace()` calls. From JavaScript the missing argument throws
+  `getByRole requires a role value for "…".` instead of `Locator replace for "…" of type "role" requires a "role"
+  value.`
+- **The builder and seed types are exported** (see [Types you can import](#types-you-can-import)); a `ReturnType<…>`
+  workaround can give way to `LocatorQueryBuilder` or `ReusableLocator`.
+- **A path literal with U+FEFF is a compile error,** as it always was a runtime error.
 
 ## Migration notes from v1
 

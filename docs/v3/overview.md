@@ -463,11 +463,13 @@ This section separates public API from internal implementation details and expla
 
 #### Type exports
 
-- `UrlTypeOptions`, `BaseUrlTypeFromOptions`, `UrlPathTypeFromOptions`, `FullUrlTypeFromOptions`,
+- `PageObjectTypeOptions`, `BaseUrlTypeFromOptions`, `UrlPathTypeFromOptions`, `FullUrlTypeFromOptions`,
   `StorageTypeFromOptions`.
 - `Codec`, `SessionStorageSchema`, and the `json` codec.
 - `NavigationOptions`, `ThisPageOptions`, `NavigationFor`, `UrlMatcher`.
-- `LocatorRegistry` type.
+- `LocatorRegistry`, the accessor types, and what the registry hands out: `LocatorQueryBuilder`,
+  `LocatorUpdateBuilder`, `ReusableLocator`, `FilterDefinition`, `IndexSelector`, `LocatorSchemaPathFormat` and
+  `LocatorSchemaPathArgument` (see *Types you can import* in `locator-registry.md`).
 
 ### 3.2 Internal API (implementation details and dependencies)
 
@@ -487,19 +489,21 @@ This is not intended for direct usage but explains the building blocks used by t
 - **Purpose**: Implements `add(path)` fluent chaining and enforces the “one locator strategy per registration” rule.
 - **Used by**: `LocatorRegistryInternal.add` (public `add` method returns its fluent surface).
 
-#### `LocatorQueryBuilder`
+#### `LocatorQueryBuilderInternal` (public type `LocatorQueryBuilder`)
 
 - **Purpose**: Implements `getLocatorSchema(path)` mutable clones for filters, indices, update/replace/remove, and resolution.
 - **Used by**: `LocatorRegistryInternal.getLocatorSchema` (public `getLocatorSchema`).
 
-#### `LocatorUpdateBuilder`
+#### `LocatorUpdateBuilderInternal` (public type `LocatorUpdateBuilder`)
 
-- **Purpose**: Patch/replace logic for locator strategies, with correct overload parsing.
-- **Used by**: `LocatorQueryBuilder.update` and `LocatorQueryBuilder.replace` (public schema builder API).
+- **Purpose**: Patch/replace logic for locator strategies, with correct overload parsing; a `Mode` type parameter
+  gives `replace` Playwright's own argument lists.
+- **Used by**: `update` and `replace` of the query builder (public schema builder API).
 
 #### `ReusableLocatorFactory` and `ReusableLocatorBuilder`
 
-- **Purpose**: Build reusable locator seeds (definition + steps) without registry mutation.
+- **Purpose**: Build reusable locator seeds (definition + steps) without registry mutation; a seed's public type is
+  `ReusableLocator`.
 - **Used by**: `LocatorRegistryInternal.createReusable` and public `{ reuse }` registration flows.
 
 #### Locator types and validation helpers (`types.ts`, `utils.ts`)

@@ -245,6 +245,35 @@ requires it at every call. This works because `defineLocators()` runs right afte
 `this.locale` is set (see *Hooks and lifecycle* in `PageObject.md`); in 2.x it ran inside the constructor and passed
 `undefined`.
 
+## What A Module May Return
+
+A locator module usually returns nothing: `defineLocators` registers and ends. When a module also hands out a seed or a
+query, name what it returns with the exported types:
+
+```ts
+// list.locators.ts
+import type { LocatorQueryBuilder, LocatorRegistry, ReusableLocator } from "pomwright";
+
+export type Paths = "list" | "list.item";
+
+export const rowSeed = (registry: LocatorRegistry<Paths>): ReusableLocator<Paths, "role"> =>
+ registry.createReusable.getByRole("listitem");
+
+export const lastRow = (registry: LocatorRegistry<Paths>): LocatorQueryBuilder<Paths, "list.item"> =>
+ registry.getLocatorSchema("list.item").nth("last");
+
+export function defineLocators(registry: LocatorRegistry<Paths>) {
+ registry.add("list").locator("ul");
+ registry.add("list.item", { reuse: rowSeed(registry) });
+}
+```
+
+The annotations are optional in a test project; a project compiled with `declaration: true` (a shared page-object
+package, for example) needs every exported value's type to be nameable, and these are. Keep functions that register
+free of a return value: an arrow whose body is `registry.add(…).locator(…)` returns the registration builder by
+accident, and that builder is not exported, so `declaration: true` reports TS4023 for it. A block body, as in
+`defineLocators` above, or a `: void` annotation avoids it.
+
 ## Shared Slot Paths
 
 Sometimes a path name should be shared across multiple or every PageObject in a domain, while its concrete locator definition varies by page. Treat these as shared slot paths.
