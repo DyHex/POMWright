@@ -1,0 +1,118 @@
+name: Checks
+
+# The jobs of every CI run, called by pr.yaml (pull requests) and main.yaml (pushes to main). Lint always runs; the
+# unit tests, the build and the harness are skipped when only *.md files changed, which GitHub reports as success.
+# The package job builds and packs once; every harness job tests that tarball.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.changes.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: changes
+        name: Anything other than *.md changed?
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: bash scripts/ci-changes.sh "$BASE"
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+  package:
+    name: Unit tests and package
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:unit
+      - name: Build and pack
+        run: bash pack-build.sh pomwright-test-build.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pomwright-package
+          path: pomwright-test-build.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  harness:
+    name: Harness (${{ matrix.browser }}, Playwright ${{ matrix.playwright }})
+    needs: [changes, package]
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+        playwright: [pin, latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            test/pnpm-lock.yaml
+      - id: playwright
+        name: Resolve the Playwright version
+        env:
+          ROW: ${{ matrix.playwright }}
+        run: bash scripts/ci-playwright-version.sh "$ROW"
+      - if: steps.playwright.outputs.skip == 'true'
+        name: The latest Playwright is the pin; the pin row runs it
+        run: echo "Nothing to run."
+      - if: steps.playwright.outputs.skip != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: pomwright-package
+          path: ${{ runner.temp }}/package
+      - if: steps.playwright.outputs.skip != 'true'
+        name: Run the harness against the packed package
+        env:
+          CI: "true"
+          POMWRIGHT_TARBALL: ${{ runner.temp }}/package/pomwright-test-build.tgz
+          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
+          PLAYWRIGHT_INSTALL_ARGS: --with-deps ${{ matrix.browser }}
+          PROJECT: ${{ matrix.browser }}
+        run: bash pack-test.sh --project="$PROJECT"
+      - if: failure() && steps.playwright.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.browser }}-${{ matrix.playwright }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test/playwright-report
+          retention-days: 30

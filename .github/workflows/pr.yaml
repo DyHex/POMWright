@@ -1,0 +1,27 @@
+name: PR
+
+# Every pull request, draft or not, from this repository or a fork. Publish never listens to this workflow.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    uses: ./.github/workflows/checks.yaml
+
+  # The gate. Its job id is the required status check of main ("build"): do not rename it without changing the
+  # branch protection rule with it.
+  build:
+    needs: checks
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the checks to have passed
+        env:
+          RESULT: ${{ needs.checks.result }}
+        run: |
+          echo "checks: $RESULT"
+          test "$RESULT" = "success"
