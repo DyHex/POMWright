@@ -258,7 +258,9 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 					case "id":
 						return builder.getById(definition.id);
 					case "frameLocator":
-						return definition.selector !== undefined ? builder.frameLocator(definition.selector) : builder.frameLocator();
+						return definition.selector !== undefined
+							? builder.frameLocator(definition.selector)
+							: builder.frameLocator();
 					default:
 						throw new Error(`Unhandled definition type ${(definition as { type: string }).type}`);
 				}
@@ -378,7 +380,9 @@ test("getLocatorSchema.filter supports visible true/false", async ({ page }) => 
 	expect(`${locator.describe("")}`).toEqual("getByRole('button').visible().filter({ visible: false })");
 });
 
-test("getLocatorSchema.filter on a frame sub-path filters the iframe element before the frame is entered", async ({ page }) => {
+test("getLocatorSchema.filter on a frame sub-path filters the iframe element before the frame is entered", async ({
+	page,
+}) => {
 	type LocatorSchemaPaths = "frame" | "frame.button";
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);

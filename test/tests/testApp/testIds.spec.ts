@@ -78,7 +78,11 @@ test("the sticky flag is a start anchor against DOM", async ({ testIds }) => {
 	await expect(container).toHaveCount(1);
 	await expect(container).toHaveId("generated");
 
-	const unanchoredSticky = testIds.getLocatorSchema("body.item@first").update("body.item@first").getById(/gen/y).getLocator();
+	const unanchoredSticky = testIds
+		.getLocatorSchema("body.item@first")
+		.update("body.item@first")
+		.getById(/gen/y)
+		.getLocator();
 	await expect(unanchoredSticky).toHaveId("generated");
 
 	const inner = testIds.getLocatorSchema("body.item@first").update("body.item@first").getById(/en/y).getLocator();

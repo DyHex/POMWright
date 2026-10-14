@@ -25,7 +25,9 @@ test("add frameLocator to registry", async ({ page }) => {
 	});
 });
 
-test("a frame segment is locator(selector) plus its steps, then contentFrame() for the descendants", async ({ page }) => {
+test("a frame segment is locator(selector) plus its steps, then contentFrame() for the descendants", async ({
+	page,
+}) => {
 	type LocatorSchemaPaths = "frames" | "frames.button";
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
@@ -52,7 +54,9 @@ test("a step-less frame renders exactly as page.frameLocator does", async ({ pag
 	expect(render(registry.getNestedLocator("shell.frame.button"))).toEqual(
 		render(page.locator("main").frameLocator("iframe").getByRole("button")),
 	);
-	expect(render(registry.getNestedLocator("shell.frame"))).toEqual(render(page.locator("main").frameLocator("iframe").owner()));
+	expect(render(registry.getNestedLocator("shell.frame"))).toEqual(
+		render(page.locator("main").frameLocator("iframe").owner()),
+	);
 });
 
 test("an ancestor frame with filter and last renders Playwright's own chain", async ({ page }) => {
@@ -67,7 +71,9 @@ test("an ancestor frame with filter and last renders Playwright's own chain", as
 	expect(render(nested)).toEqual(
 		render(page.locator("main").locator("iframe").filter({ visible: true }).last().contentFrame().getByRole("button")),
 	);
-	expect(render(nested)).toEqual("locator('main').locator('iframe').visible().last().contentFrame().getByRole('button')");
+	expect(render(nested)).toEqual(
+		"locator('main').locator('iframe').visible().last().contentFrame().getByRole('button')",
+	);
 });
 
 test("nested frames apply steps on each level", async ({ page }) => {
@@ -101,14 +107,18 @@ test("a seeded frame keeps its step, accepts more, and inherits on an omitted se
 
 	registry.add("frames.copy", { reuse: seed }).frameLocator(undefined);
 	expect(registry.get("frames.copy").definition).toEqual({ type: "frameLocator", selector: "iframe" });
-	expect(render(registry.getLocator("frames"))).toEqual(render(page.locator("iframe").nth(1).filter({ visible: true })));
+	expect(render(registry.getLocator("frames"))).toEqual(
+		render(page.locator("iframe").nth(1).filter({ visible: true })),
+	);
 });
 
 test("frameLocator('') throws on every builder and registers nothing", async ({ page }) => {
 	type LocatorSchemaPaths = "frames" | "frames.copy";
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
-	expect(() => registry.add("frames").frameLocator("")).toThrowError('frameLocator requires a non-empty selector for "frames".');
+	expect(() => registry.add("frames").frameLocator("")).toThrowError(
+		'frameLocator requires a non-empty selector for "frames".',
+	);
 	expect(registry.getIfExists("frames")).toBeUndefined();
 
 	const seed = registry.createReusable.frameLocator("iframe");
@@ -131,7 +141,12 @@ test("frameLocator('') throws on every builder and registers nothing", async ({ 
 });
 
 test("the any-frame segment must be the first resolved segment of its chain", async ({ page }) => {
-	type LocatorSchemaPaths = "shell" | "shell.anyFrame" | "shell.anyFrame.button" | "root.anyFrame" | "root.anyFrame.button";
+	type LocatorSchemaPaths =
+		| "shell"
+		| "shell.anyFrame"
+		| "shell.anyFrame.button"
+		| "root.anyFrame"
+		| "root.anyFrame.button";
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 	registry.add("shell").locator("main");
@@ -160,7 +175,11 @@ test("the any-frame segment has no element: no terminal form, no reference, no s
 	expect(result).toBeUndefined();
 	registry.add("anyFrame.button").getByRole("button");
 
-	expect(registry.get("anyFrame")).toEqual({ locatorSchemaPath: "anyFrame", definition: { type: "frameLocator" }, steps: [] });
+	expect(registry.get("anyFrame")).toEqual({
+		locatorSchemaPath: "anyFrame",
+		definition: { type: "frameLocator" },
+		steps: [],
+	});
 	expect(render(registry.getNestedLocator("anyFrame.button"))).toEqual("frameLocator().getByRole('button')");
 	expect(render(registry.getLocator("anyFrame.button"))).toEqual("getByRole('button')");
 
@@ -188,7 +207,9 @@ test("an any-frame segment may be followed by a selector frame", async ({ page }
 	);
 });
 
-test("replace().frameLocator() makes a sub-path any-frame; update().frameLocator() changes nothing", async ({ page }) => {
+test("replace().frameLocator() makes a sub-path any-frame; update().frameLocator() changes nothing", async ({
+	page,
+}) => {
 	type LocatorSchemaPaths = "root" | "root.button";
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
@@ -201,5 +222,7 @@ test("replace().frameLocator() makes a sub-path any-frame; update().frameLocator
 	expect(render(registry.getLocatorSchema("root.button").update("root").frameLocator().getNestedLocator())).toEqual(
 		render(page.frameLocator("iframe").getByRole("button")),
 	);
-	expect(render(registry.getNestedLocator("root.button"))).toEqual(render(page.frameLocator("iframe").getByRole("button")));
+	expect(render(registry.getNestedLocator("root.button"))).toEqual(
+		render(page.frameLocator("iframe").getByRole("button")),
+	);
 });

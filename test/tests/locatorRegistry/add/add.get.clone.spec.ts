@@ -52,7 +52,7 @@ test("registry.getIfExists returns a cloned definition copy", async ({ page }) =
 	const firstRecord = registry.getIfExists("banner");
 	expect(firstRecord).toBeDefined();
 
-	if (!firstRecord || firstRecord.definition.type !== "locator") {
+	if (firstRecord?.definition.type !== "locator") {
 		throw new Error("Expected locator definition for mutation test");
 	}
 

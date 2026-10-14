@@ -65,7 +65,9 @@ test.describe("set, get and clear", () => {
 		expect(await testStorage.sessionStorage.get()).toEqual({ empty: "", user, token: "abc" });
 	});
 
-	test("clear removes everything, one key, or a list; a computed empty list removes nothing", async ({ testStorage }) => {
+	test("clear removes everything, one key, or a list; a computed empty list removes nothing", async ({
+		testStorage,
+	}) => {
 		await testStorage.navigation.goto();
 		await testStorage.sessionStorage.set({ a: "1", b: "2", c: "3" });
 
@@ -89,7 +91,9 @@ test.describe("set, get and clear", () => {
 			"Fresh.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()",
 		);
 		await expect(storage.get()).rejects.toThrow("Fresh.SessionStorage.get: the page has no origin yet (about:blank)");
-		await expect(storage.clear()).rejects.toThrow("Fresh.SessionStorage.clear: the page has no origin yet (about:blank)");
+		await expect(storage.clear()).rejects.toThrow(
+			"Fresh.SessionStorage.clear: the page has no origin yet (about:blank)",
+		);
 	});
 
 	test("a page object's helper refuses another origin, naming both; a standalone helper follows the page", async ({
@@ -107,7 +111,9 @@ test.describe("set, get and clear", () => {
 		await expect(testStorage.sessionStorage.set({ token: "x" })).rejects.toThrow(
 			/^TestStorage\.SessionStorage\.set: the page is on/,
 		);
-		await expect(testStorage.sessionStorage.clear()).rejects.toThrow(/^TestStorage\.SessionStorage\.clear: the page is on/);
+		await expect(testStorage.sessionStorage.clear()).rejects.toThrow(
+			/^TestStorage\.SessionStorage\.clear: the page is on/,
+		);
 
 		await testStorageSecond.sessionStorage.set({ token: "on-b" });
 		expect(await testStorageSecond.sessionStorage.get("token")).toBe("on-b");
@@ -191,17 +197,63 @@ test.describe("seed", () => {
 		method: "GET" | "POST";
 		posted?: Record<string, unknown>;
 	}[] = [
-		{ name: "link", trigger: (p) => p.getLocator("body.link@toSecondOrigin").click(), url: `${B}/teststorage?hop=link`, method: "GET" },
-		{ name: "script redirect", trigger: (p) => p.getLocator("body.button@scriptToSecondOrigin").click(), url: `${B}/teststorage?hop=script`, method: "GET" },
-		{ name: "meta refresh", trigger: (p) => p.getLocator("body.button@metaToSecondOrigin").click(), url: `${B}/teststorage?hop=meta`, method: "GET" },
-		{ name: "form POST", trigger: (p) => p.getLocator("body.button@submitToSecondOrigin").click(), url: `${B}/teststorage`, method: "POST", posted },
-		{ name: "server 302", trigger: (p) => p.getLocator("body.link@redirect302").click(), url: `${B}/teststorage?hop=302`, method: "GET" },
-		{ name: "POST then 303", trigger: (p) => p.getLocator("body.button@submit303").click(), url: `${B}/teststorage?hop=303`, method: "GET" },
-		{ name: "POST then 307", trigger: (p) => p.getLocator("body.button@submit307").click(), url: `${B}/teststorage?hop=307`, method: "POST", posted: { u: "x y" } },
-		{ name: "two-hop redirect chain", trigger: (p) => p.getLocator("body.link@chain").click(), url: `${B}/teststorage?hop=chain`, method: "GET" },
+		{
+			name: "link",
+			trigger: (p) => p.getLocator("body.link@toSecondOrigin").click(),
+			url: `${B}/teststorage?hop=link`,
+			method: "GET",
+		},
+		{
+			name: "script redirect",
+			trigger: (p) => p.getLocator("body.button@scriptToSecondOrigin").click(),
+			url: `${B}/teststorage?hop=script`,
+			method: "GET",
+		},
+		{
+			name: "meta refresh",
+			trigger: (p) => p.getLocator("body.button@metaToSecondOrigin").click(),
+			url: `${B}/teststorage?hop=meta`,
+			method: "GET",
+		},
+		{
+			name: "form POST",
+			trigger: (p) => p.getLocator("body.button@submitToSecondOrigin").click(),
+			url: `${B}/teststorage`,
+			method: "POST",
+			posted,
+		},
+		{
+			name: "server 302",
+			trigger: (p) => p.getLocator("body.link@redirect302").click(),
+			url: `${B}/teststorage?hop=302`,
+			method: "GET",
+		},
+		{
+			name: "POST then 303",
+			trigger: (p) => p.getLocator("body.button@submit303").click(),
+			url: `${B}/teststorage?hop=303`,
+			method: "GET",
+		},
+		{
+			name: "POST then 307",
+			trigger: (p) => p.getLocator("body.button@submit307").click(),
+			url: `${B}/teststorage?hop=307`,
+			method: "POST",
+			posted: { u: "x y" },
+		},
+		{
+			name: "two-hop redirect chain",
+			trigger: (p) => p.getLocator("body.link@chain").click(),
+			url: `${B}/teststorage?hop=chain`,
+			method: "GET",
+		},
 	];
 	for (const hop of hops) {
-		test(`a seed for the second origin is applied on a hop by ${hop.name}`, async ({ page, testStorage, testStorageSecond }) => {
+		test(`a seed for the second origin is applied on a hop by ${hop.name}`, async ({
+			page,
+			testStorage,
+			testStorageSecond,
+		}) => {
 			await testStorage.navigation.goto();
 			await testStorageSecond.sessionStorage.seed({ token: "from-A", user });
 			expect(page.url()).toBe(testStorage.fullUrl);
@@ -245,7 +297,10 @@ test.describe("seed", () => {
 		// request and never reaches it, a native navigation is answered by it.
 		const secondPage = (url: URL) => url.href === `${A}/teststorage?second=1`;
 		await page.route(secondPage, (route) =>
-			route.fulfill({ contentType: "text/html", body: '<!doctype html><title>mocked</title><pre id="served-by">mock</pre>' }),
+			route.fulfill({
+				contentType: "text/html",
+				body: '<!doctype html><title>mocked</title><pre id="served-by">mock</pre>',
+			}),
 		);
 
 		// no seed: native, so the mock answers; a native 302 hop carries the browser's own Sec-Fetch-Site
@@ -282,7 +337,9 @@ test.describe("seed", () => {
 		await testStorage.navigation.goto("/teststorage?frames=1");
 		await testStorageSecond.sessionStorage.seed({ token: "from-A" });
 
-		expect(await page.evaluate((url) => fetch(url).then((r) => r.json()), `${B}/teststorage/api`)).toEqual({ ok: true });
+		expect(await page.evaluate((url) => fetch(url).then((r) => r.json()), `${B}/teststorage/api`)).toEqual({
+			ok: true,
+		});
 		const secondFrame = page.frames().find((frame) => frame.url().startsWith(`${B}/teststorage/frame`));
 		expect(secondFrame).toBeDefined();
 		await secondFrame?.goto(`${B}/teststorage/frame?again=1`);
@@ -352,7 +409,10 @@ test.describe("seed", () => {
 		});
 	}
 
-	test("a seed that is never applied fails the test when the page closes", async ({ testStorage, testStorageSecond }) => {
+	test("a seed that is never applied fails the test when the page closes", async ({
+		testStorage,
+		testStorageSecond,
+	}) => {
 		test.fail(true, "the never-applied seed must fail this test at close");
 		await testStorage.navigation.goto();
 		await testStorageSecond.sessionStorage.seed({ token: "never" });
@@ -412,7 +472,10 @@ test.describe("seed", () => {
 	}) => {
 		const secondPage = (url: URL) => url.href === `${A}/teststorage?second=1`;
 		const mock = (route: Route) =>
-			route.fulfill({ contentType: "text/html", body: '<!doctype html><title>mocked</title><pre id="served-by">mock</pre>' });
+			route.fulfill({
+				contentType: "text/html",
+				body: '<!doctype html><title>mocked</title><pre id="served-by">mock</pre>',
+			});
 		await testStorage.navigation.goto();
 		await page.route(secondPage, mock);
 		await page.route(
@@ -546,7 +609,11 @@ test.describe("service workers", () => {
 		await expect(page.locator("#served-by")).toHaveText("service-worker");
 	});
 
-	test("a worker that lets navigations through does not bypass the seed", async ({ page, testStorage, testStorageSecond }) => {
+	test("a worker that lets navigations through does not bypass the seed", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
 		await testStorageSecond.navigation.goto("/teststorage?worker=passthrough");
 		await controlled(page);
 		await testStorage.navigation.goto();
@@ -561,7 +628,11 @@ test.describe("service workers", () => {
 	test.describe("with serviceWorkers blocked", () => {
 		test.use({ serviceWorkers: "block" });
 
-		test("the same flow seeds, because the worker never registers", async ({ page, testStorage, testStorageSecond }) => {
+		test("the same flow seeds, because the worker never registers", async ({
+			page,
+			testStorage,
+			testStorageSecond,
+		}) => {
 			await testStorageSecond.navigation.goto("/teststorage?worker=1");
 			await expect(page.locator("#controlled")).toHaveText("no");
 			await testStorage.navigation.goto();

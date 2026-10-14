@@ -88,11 +88,18 @@ test.describe("steps on frame segments and the any-frame segment", () => {
 			.getNestedLocator();
 		await expect(first).toHaveText("Toggle A: Off");
 
-		const unstepped = iframePage.getLocatorSchema("iframes@second.toggle").clearSteps("iframes@second").getNestedLocator();
+		const unstepped = iframePage
+			.getLocatorSchema("iframes@second.toggle")
+			.clearSteps("iframes@second")
+			.getNestedLocator();
 		await expect(unstepped.textContent({ timeout: 1000 })).rejects.toThrow(/strict mode violation/);
 
 		// hasText on an iframe element never matches: the frame's document is not the parent's text
-		const byText = iframePage.getLocatorSchema("iframes@second").clearSteps().filter({ hasText: "Toggle" }).getNestedLocator();
+		const byText = iframePage
+			.getLocatorSchema("iframes@second")
+			.clearSteps()
+			.filter({ hasText: "Toggle" })
+			.getNestedLocator();
 		await expect(byText).toHaveCount(0);
 	});
 
@@ -106,7 +113,9 @@ test.describe("steps on frame segments and the any-frame segment", () => {
 		expect(`${iframePage.getNestedLocator("sectionB.frame.innerFrame.toggle").describe("")}`).toEqual(
 			`${page.locator("#sectionB").frameLocator("#iframeB").frameLocator("#iframeC").getByTestId("toggle-c").describe("")}`,
 		);
-		expect(`${iframePage.getNestedLocator("anyFrame.toggleC").describe("")}`).toEqual("frameLocator().getByTestId('toggle-c')");
+		expect(`${iframePage.getNestedLocator("anyFrame.toggleC").describe("")}`).toEqual(
+			"frameLocator().getByTestId('toggle-c')",
+		);
 	});
 
 	test("the any-frame segment finds elements in whichever single frame holds them", async ({ iframePage }) => {
@@ -124,7 +133,8 @@ test.describe("steps on frame segments and the any-frame segment", () => {
 		);
 
 		// no terminal form
-		const noElement = 'frameLocator() without a selector does not point to a particular iframe; "anyFrame" cannot be resolved';
+		const noElement =
+			'frameLocator() without a selector does not point to a particular iframe; "anyFrame" cannot be resolved';
 		expect(() => iframePage.getLocator("anyFrame")).toThrowError(noElement);
 		expect(() => iframePage.getNestedLocator("anyFrame")).toThrowError(noElement);
 	});

@@ -36,7 +36,7 @@ app.get("/testpath/:color", (req, res) => {
 });
 
 // Route to handle "/testpath" with a link that generates a new random color on click
-app.get("/testpath", (req, res) => {
+app.get("/testpath", (_req, res) => {
 	res.send(`
     <html>
       <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
@@ -65,7 +65,7 @@ app.get("/testpath", (req, res) => {
 });
 
 // Route to handle "/testfilters"
-app.get("/testfilters", (req, res) => {
+app.get("/testfilters", (_req, res) => {
 	res.send(`
     <html>
       <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">
@@ -456,7 +456,10 @@ app.get("/teststorage/redirect", (req, res) => {
 });
 
 app.get("/teststorage/chain", (_req, res) => {
-	res.redirect(302, `/teststorage/redirect?status=302&to=${encodeURIComponent(`${SECOND_ORIGIN}/teststorage?hop=chain`)}`);
+	res.redirect(
+		302,
+		`/teststorage/redirect?status=302&to=${encodeURIComponent(`${SECOND_ORIGIN}/teststorage?hop=chain`)}`,
+	);
 });
 
 app.post("/teststorage/login", (_req, res) => {

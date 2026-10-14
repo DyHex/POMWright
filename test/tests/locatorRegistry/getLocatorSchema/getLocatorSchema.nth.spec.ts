@@ -1,5 +1,4 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
-import type { Page } from "@playwright/test";
 import { LocatorRegistryInternal } from "../../../../src/locators";
 
 test("nth applies numeric index to targeted sub-path", async ({ testFilters }) => {
@@ -68,5 +67,7 @@ test("nth on a frame sub-path picks the iframe element before the frame is enter
 	registry.add("frame.button").getByRole("button");
 
 	const locator = registry.getLocatorSchema("frame.button").nth("frame", 1).getNestedLocator();
-	expect(`${locator.describe("")}`).toEqual(`${page.locator("iframe").nth(1).contentFrame().getByRole("button").describe("")}`);
+	expect(`${locator.describe("")}`).toEqual(
+		`${page.locator("iframe").nth(1).contentFrame().getByRole("button").describe("")}`,
+	);
 });

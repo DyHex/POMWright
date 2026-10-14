@@ -27,8 +27,7 @@ test("stepWithTitleAndAllOptions should return the expected message", async ({ t
 });
 
 test("stepWithArgs should support required/default parameters", async ({ testPage }) => {
-	await expect(testPage.stepWithArgs("Starter"))
-		.resolves.toBe("Starter:1");
+	await expect(testPage.stepWithArgs("Starter")).resolves.toBe("Starter:1");
 	await expect(testPage.stepWithArgs("Starter", 3)).resolves.toBe("Starter:3");
 });
 

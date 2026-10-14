@@ -4,10 +4,10 @@ import TestIds from "@page-object-models/testApp/pages/testids/testids.page";
 import TestNav from "@page-object-models/testApp/pages/testnav/testnav.page";
 import TestNavItem from "@page-object-models/testApp/pages/testnav/testnav-item.page";
 import TestPage from "@page-object-models/testApp/pages/testPage.page";
-import TestStorage from "@page-object-models/testApp/pages/teststorage/teststorage.page";
-import TestStorageSecond from "@page-object-models/testApp/pages/teststorage/teststorage-second.page";
 import Color from "@page-object-models/testApp/pages/testPath/[color]/color.page";
 import TestPath from "@page-object-models/testApp/pages/testPath/testPath.page";
+import TestStorage from "@page-object-models/testApp/pages/teststorage/teststorage.page";
+import TestStorageSecond from "@page-object-models/testApp/pages/teststorage/teststorage-second.page";
 import { expect } from "@playwright/test";
 import { test as base } from "pomwright";
 

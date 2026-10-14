@@ -174,7 +174,9 @@ test("filter, nth and describe need a locator strategy first", async ({ page }) 
 	expect(() => builder.filter({ hasText: "x" })).toThrowError(
 		`filter() needs a locator strategy first for "a"; call ${STRATEGIES} before it.`,
 	);
-	expect(() => builder.nth(0)).toThrowError(`nth() needs a locator strategy first for "a"; call ${STRATEGIES} before it.`);
+	expect(() => builder.nth(0)).toThrowError(
+		`nth() needs a locator strategy first for "a"; call ${STRATEGIES} before it.`,
+	);
 	expect(() => builder.describe("d")).toThrowError(
 		`describe() needs a locator strategy first for "a"; call ${STRATEGIES} before it.`,
 	);

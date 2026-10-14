@@ -239,7 +239,10 @@ test("replace switches locator strategies and keeps the filter and index steps; 
 		.getNestedLocator();
 	expect(`${lastRoleClearSteps.describe("")}`).toEqual("locator('body').getByRole('region', { name: 'Now a region' })");
 
-	const stillNoFiltersAndIndicesOnAdditionalSwitch = schema.replace(path).locator('[data-cy="new-cy"]').getNestedLocator();
+	const stillNoFiltersAndIndicesOnAdditionalSwitch = schema
+		.replace(path)
+		.locator('[data-cy="new-cy"]')
+		.getNestedLocator();
 	expect(`${stillNoFiltersAndIndicesOnAdditionalSwitch.describe("")}`).toEqual(
 		"locator('body').locator('[data-cy=\"new-cy\"]')",
 	);
@@ -373,7 +376,9 @@ test("update follows JSON Merge Patch for options", async ({ page }) => {
 		"locator('body').locator('section').filter({ hasText: 'x' })",
 	);
 	expect(render(sel().locator({ hasText: null }).getNestedLocator())).toEqual("locator('body').locator('section')");
-	expect(render(sel().locator("div").getNestedLocator())).toEqual("locator('body').locator('div').filter({ hasText: 'x' })");
+	expect(render(sel().locator("div").getNestedLocator())).toEqual(
+		"locator('body').locator('div').filter({ hasText: 'x' })",
+	);
 	// the registry is untouched
 	expect(render(registry.getNestedLocator("root.btn"))).toEqual(unchanged);
 });
@@ -419,9 +424,12 @@ test("update and replace reject an empty primary only where Playwright cannot us
 	expect(() => registry.getLocatorSchema("root.frame").update().frameLocator("")).toThrowError(
 		'frameLocator requires a non-empty selector for "root.frame".',
 	);
-	expect(() => registry.getLocatorSchema("root.btn").update().getByRole("" as never)).toThrowError(
-		'getByRole requires a non-empty role for "root.btn".',
-	);
+	expect(() =>
+		registry
+			.getLocatorSchema("root.btn")
+			.update()
+			.getByRole("" as never),
+	).toThrowError('getByRole requires a non-empty role for "root.btn".');
 	expect(`${registry.getLocatorSchema("root.tid").update().getByTestId("").getNestedLocator().describe("")}`).toEqual(
 		"locator('body').getByTestId('')",
 	);

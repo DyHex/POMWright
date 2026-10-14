@@ -82,7 +82,9 @@ const strategies: {
 ];
 
 for (const { method, field, allowEmpty, missing, empty, emptyDefinition } of strategies) {
-	test(`${method}: a missing primary throws naming the method and the path, and registers nothing`, async ({ page }) => {
+	test(`${method}: a missing primary throws naming the method and the path, and registers nothing`, async ({
+		page,
+	}) => {
 		const registry = createRegistry(page);
 		const article = /^[aeiou]/.test(field) ? "an" : "a";
 		expect(() => missing(registry)).toThrowError(`${method} requires ${article} ${field} value for "a".`);
@@ -142,9 +144,15 @@ test("a seeded builder inherits on undefined and stores or rejects an empty stri
 test("createReusable applies the same rules under its own label", async ({ page }) => {
 	const { createReusable } = createRegistry(page);
 	expect(() => createReusable.locator("")).toThrowError("createReusable.locator requires a non-empty selector.");
-	expect(() => createReusable.frameLocator("")).toThrowError("createReusable.frameLocator requires a non-empty selector.");
-	expect(() => createReusable.getByRole("" as never)).toThrowError("createReusable.getByRole requires a non-empty role.");
-	expect(() => createReusable.getByText(undefined as never)).toThrowError("createReusable.getByText requires a text value.");
+	expect(() => createReusable.frameLocator("")).toThrowError(
+		"createReusable.frameLocator requires a non-empty selector.",
+	);
+	expect(() => createReusable.getByRole("" as never)).toThrowError(
+		"createReusable.getByRole requires a non-empty role.",
+	);
+	expect(() => createReusable.getByText(undefined as never)).toThrowError(
+		"createReusable.getByText requires a text value.",
+	);
 	expect(createReusable.getByTestId("").definition).toEqual({ type: "testId", testId: "" });
 	expect(createReusable.getByText("").definition).toEqual({ type: "text", text: "" });
 });

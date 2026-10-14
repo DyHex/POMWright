@@ -14,6 +14,9 @@ if (names.length === 0) {
 	throw new Error("write-esm-entry: dist/index.js exports nothing; run tsup first");
 }
 
-writeFileSync(`${dist}index.mjs`, `import pomwright from "./index.js";\n\nexport const { ${names.join(", ")} } = pomwright;\n`);
+writeFileSync(
+	`${dist}index.mjs`,
+	`import pomwright from "./index.js";\n\nexport const { ${names.join(", ")} } = pomwright;\n`,
+);
 writeFileSync(`${dist}index.d.mts`, `export * from "./index.js";\n`);
 console.log(`write-esm-entry: dist/index.mjs and dist/index.d.mts re-export ${names.length} names`);

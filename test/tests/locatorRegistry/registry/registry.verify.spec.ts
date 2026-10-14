@@ -35,7 +35,10 @@ test("a clean registry and an empty one pass", async ({ page }) => {
 test("a has reference to an unregistered path fails naming the holding path and the reference", async ({ page }) => {
 	const registry = createRegistry(page);
 	registry.add("list").locator("ul");
-	registry.add("list.item").getByRole("listitem").filter({ has: "list.titel" as "list.badge" });
+	registry
+		.add("list.item")
+		.getByRole("listitem")
+		.filter({ has: "list.titel" as "list.badge" });
 	expect(() => registry.verify()).toThrowError(
 		'Locator registry verification failed for 1 of 2 paths:\n  "list.item": No locator schema registered for path "list.titel".',
 	);

@@ -9,7 +9,7 @@ importers:
   .:
     devDependencies:
       '@biomejs/biome':
-        specifier: ^2.2.4
+        specifier: ^2.5.6
         version: 2.5.6
       '@changesets/changelog-github':
         specifier: ^0.5.1
