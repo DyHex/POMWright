@@ -12,6 +12,20 @@ Key ideas:
 - **Explicit navigation flows**: URL typing (string vs RegExp) determines available navigation methods and enforces correct usage.
 - **Opt-in logging**: Logging is provided as a fixture and can be threaded into POMs only where needed.
 
+### Requirements
+
+- **Node.js 20 or later**, Playwright's own floor (Playwright 1.64 refuses to start on older versions). The package
+  declares it in `engines`, so npm warns on an older Node.
+- **`@playwright/test` 1.64 or later, below 2.0**, as a peer dependency: install it in your project; POMWright never
+  brings its own copy.
+- **CommonJS and ESM projects alike.** Playwright's default (no `"type"` in `package.json`) loads the CommonJS build;
+  a `"type": "module"` project loads an ESM entry that re-exports that same build, so a test run never holds two
+  copies of POMWright, even when some files `import` it and others `require` it. TypeScript picks the matching
+  declarations under every `moduleResolution`.
+- **Import from the package root only**: `import { PageObject, test } from "pomwright"`. Deep imports such as
+  `pomwright/dist/index.js` are not part of the API and do not resolve (`ERR_PACKAGE_PATH_NOT_EXPORTED`);
+  `pomwright/package.json` stays available for tools.
+
 ---
 
 ## 2) Public API feature set (mid-to-high level with complete examples)
