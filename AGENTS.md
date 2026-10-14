@@ -1,15 +1,19 @@
 # AGENTS.md
 
 Persistent context and working rules for AI agents and humans contributing to POMWright. Read it fully before
-changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-13, after the
-`PageObject` lifecycle plan (analysis items 1.7 and 3.7) was executed.
+changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-14, after the
+packaging, tooling and CI plan (analysis section 4) was executed.
 
 ## 1. What POMWright is
 
 - A TypeScript companion library for `@playwright/test`, published to npm as `pomwright` under Apache-2.0. Peer
   range `@playwright/test >=1.64.0 <2.0.0` (1.61 added `page.sessionStorage`, 1.63 the any-frame `frameLocator()`,
   1.64 the per-element regex reset that makes every RegExp flag deterministic). Playwright is never a runtime
-  dependency.
+  dependency. Node 20 or later (`engines`), Playwright's own floor; re-read it from Playwright's `engines` whenever
+  the peer floor moves.
+- Packaging mirrors `@playwright/test`: one CommonJS build (`dist/index.js`, `dist/index.d.ts`) behind an `exports`
+  map; `dist/index.mjs` and `dist/index.d.mts` are written by `scripts/write-esm-entry.mjs` and re-export that build
+  by name, so `import` and `require` share one copy. Only the root and `pomwright/package.json` are importable.
 - Core idea: register one locator definition per dot-delimited path (`"main.form.submit"`) in a `LocatorRegistry`,
   and POMWright composes the full Playwright locator chain from the path. The registry, `PageObject`,
   `SessionStorage`, the `log` fixture and the `step` decorator are each usable on their own.
@@ -25,53 +29,54 @@ changing anything. Repo-specific facts here override generic defaults. Last revi
 
 | Path | What it is | Edit? |
 | --- | --- | --- |
-| `index.ts` | Package entry. tsup bundles from here. | yes |
+| `index.ts` | Package entry. tsup bundles the CommonJS build from here; `scripts/write-esm-entry.mjs` then writes the ESM entry. | yes |
 | `src/` | Runtime: 16 files, about 4,500 lines, plus colocated vitest unit tests (`**/*.test.ts`: `pageObject.test.ts`, `locators/utils.test.ts`, `locators/locatorRegistrationBuilder.test.ts`, `locators/locatorUpdateBuilder.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`, `helpers/sessionStorage.test.ts`, `helpers/sessionStorageSeed.test.ts`). | yes |
 | `src/locators/` | `locatorRegistry.ts` (registry, resolution with frames as `locator` plus `contentFrame()` and the any-frame segment, cycle detection, `verify()`), `locatorRegistrationBuilder.ts` (`add(path).getByRole(...)` DSL, seeded registrations, the boundary checks), `locatorUpdateBuilder.ts` (`update` as a same-strategy JSON Merge Patch, `replace`), `locatorQueryBuilder.ts` (`getLocatorSchema(path)` chain: `filter`, `nth`, `remove`, `describe`, `getLocator`, `getNestedLocator`), `reusableLocatorBuilder.ts` (`createReusable`), `types.ts` (definitions, `OptionsPatch`, compile-time path validation), `utils.ts` (path validation, `assertPrimaryValue` and `assertIdValue`, the id selector helpers, `createLocator`, `isAnyFrameDefinition`, `methodForStrategy`, cloning, patching). | yes |
 | `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts` (`SessionStorage`: `page.sessionStorage` with batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `seed`), `sessionStorageSeed.ts` (the seed registry, one per page: the writer and redirect documents, the proxy while a seed is pending, the bypass and never-applied failures), `playwrightReportLogger.ts`, `stepDecorator.ts`. | yes |
 | `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject`: `defineLocators()` and `verify()` run once, right after construction (a check scheduled with `queueMicrotask`) or at the first locator call, through a facade on `locatorRegistry`; labelled, sticky errors with the construction site; the optional actions hook, evaluated per run. The `test` fixture that provides `log`. | yes |
-| `src/dist/` | Stray local build output, gitignored. Never read it as source. | no |
-| `test/` | Standalone pnpm project that installs the packed tarball and runs Playwright against it. Section 4. | yes |
+| `test/` | Standalone pnpm project that installs the packed package from `.pack/pomwright` and runs Playwright against it. Section 4. | yes |
 | `docs/v3/` | Working documentation for 3.0.0, created 2026-10-06 as a verbatim copy of `docs/v2`. The `getById` deep dive in `locator-registry.md` is already rewritten for 3.0.0. Every doc edit goes here. | yes |
 | `docs/v2/` | Frozen 2.x reference. | no |
 | `docs/v1/`, `docs/v1-to-v2-migration/` | Archived. | no |
 | `release-3.0.0/` | Working folder for the 3.0.0 release: analysis, numbered plans, release notes, decisions log. Section 6. | yes |
 | `.changeset/` | Changesets config. `CHANGELOG.md` is generated from changesets at release time. | config only |
-| `.github/workflows/` | `main.yaml` runs lint, unit tests and build on every push. `test.yaml` runs `pack-test` (chromium) on PRs and on `main`. `publish.yaml` runs the changesets action after `CI` succeeds on `main`. | yes |
-| `pack-build.sh`, `pack-test.sh`, `playwright.base.ts` | Build and pack the tarball; run the harness; shared Playwright config. | yes |
+| `.github/workflows/` | `checks.yaml` (reusable): `changes`, `lint` (always), `package` (unit tests, build and pack once, the tarball as a run artifact) and `harness` (chromium, firefox, webkit at the Playwright pin and at the latest 1.x, each testing that tarball); `package` and `harness` are skipped when only `*.md` files changed. `pr.yaml` (`PR`) runs it for every pull request, draft or not; `main.yaml` (`CI`) for pushes to `main` only; both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs the changesets action after `CI` succeeds on a push to `main`, guarded by its job condition. | yes |
+| `pack-build.sh`, `pack-extract.sh`, `pack-test.sh`, `playwright.base.ts` | Build and pack the tarball and extract it into `.pack/pomwright`; the extraction; run the harness (section 3); shared Playwright config. | yes |
+| `scripts/` | `write-esm-entry.mjs` (part of `pnpm build`), `ci-changes.sh` and `ci-playwright-version.sh` (the two decisions of `checks.yaml`, runnable locally). | yes |
 | `vitest.config.ts` | Unit-test discovery limited to `src/**/*.test.ts`, node environment, so Playwright specs are never picked up; typecheck mode on, so `expectTypeOf` and `// @ts-expect-error` assertions are enforced. | yes |
 | `tsconfig.vitest.json` | The tsconfig vitest's typecheck uses: extends the root, scoped to `src/`, target `es2024` (the root has no `include` and would sweep `dist/` and `test/`). | yes |
 | `biome.json`, `tsconfig.json`, `.editorconfig` | Lint and format, strict TypeScript, tabs. | yes |
-| `dist/`, `*.tgz`, `node_modules/`, `.pnpm-store/` | Build and install artefacts, gitignored. | no |
+| `dist/`, `*.tgz`, `.pack/`, `node_modules/`, `.pnpm-store/` | Build and install artefacts, gitignored. | no |
 
 ## 3. Toolchain and commands
 
-- Node 24 and pnpm 9.12.0 (the `packageManager` field; CI uses the same). Use pnpm only.
+- Node 24 and pnpm 9.12.0 for contributors (the `packageManager` field; CI uses the same; vitest needs 22.12 or
+  later). Use pnpm only. `@playwright/test` is an exact root dev dependency at the peer floor (1.64.0): the peer
+  floor, the root dev pin and the harness pin in `test/package.json` move together, by decision.
 - `pnpm install --frozen-lockfile`
-- `pnpm lint` runs `biome check ./src` (lint plus format check). `pnpm format` rewrites. Root `index.ts`,
-  `playwright.base.ts` and `test/` are not covered by the script even though `biome.json` includes them.
-- `pnpm build` runs `tsup index.ts --format cjs,esm --dts` into `dist/`.
+- `pnpm lint` runs `biome check .` (lint, import order and format check over the whole repository; biome does not
+  process `.md`; `test/test-data` and `.pack` are excluded). `pnpm format` (`biome format --write .`) rewrites
+  formatting only; import order and lint fixes come from `biome check --write`.
+- `pnpm build` runs `tsup index.ts --format cjs --dts` into `dist/`, then `scripts/write-esm-entry.mjs`.
 - `pnpm test:unit` runs the vitest unit tests for the pure helpers in seconds and type-checks the test files and
   what they import (vitest typecheck mode; `vitest` is pinned exactly because the mode is experimental). `pnpm test`
   runs them and then `pack-test`.
-- `pnpm pack-test` is the authoritative integration run. It installs, builds, packs `pomwright-test-build.tgz`,
-  installs that into `test/`, installs browsers and OS dependencies, and runs the Playwright `chromium` project.
-  It takes minutes, and it needs sudo: `playwright install --with-deps` and the harness postinstall both call it,
-  so without a terminal or passwordless sudo it fails at the `test/` install step.
-- Non-interactive equivalent, once browsers are installed:
-
-  ```sh
-  ./pack-build.sh
-  cd test
-  pnpm add -D "pomwright@file:../pomwright-test-build.tgz" --ignore-scripts
-  pnpm exec playwright test --project=chromium --reporter=line
-  ```
-
-  Use `pnpm add`, not `pnpm install`: a plain install does not refresh a `file:` tarball whose specifier is
-  unchanged, so the harness silently keeps testing the previous build. Check with
-  `grep -c <new symbol> test/node_modules/pomwright/dist/index.js` when in doubt. Use the line reporter, because
-  the configured html reporter opens on failure and blocks. Append `tests/<spec>` to run one file.
-- There is no `tsc` step yet; analysis section 4 covers adding one.
+- `pnpm pack-test` is the authoritative integration run and needs no sudo: `pack-build.sh` (frozen root install,
+  build, pack `pomwright-test-build.tgz`, extract into `.pack/pomwright`), a frozen install of `test/`, `tsc` over
+  `test/`, `playwright install` (browsers only), then every project (chromium, firefox, webkit). Arguments go to
+  `playwright test`, for example `pnpm pack-test --project=chromium tests/testApp/testIds.spec.ts --reporter=line`.
+  Use the line reporter in non-interactive runs, because the local html reporter opens on failure and blocks.
+  Playwright's system libraries are a once-per-machine step (`pnpm -C test exec playwright install-deps`, with
+  sudo; `install-deps --dry-run` lists what is missing without it).
+- `test/` depends on `file:../.pack/pomwright`, a directory, so a frozen install always installs the current
+  extraction and `test/pnpm-lock.yaml` does not change with builds. `pnpm harness:install` packs and installs without
+  running anything, for `pnpm typecheck` or a quick `pnpm -C test exec playwright test …` of one spec.
+- `pnpm typecheck` runs `tsc --noEmit -p test` against the installed package: specs, page objects, fixtures,
+  `playwright.base.ts`, the `src/locators` files the source-level specs import, and the compile-only path probe.
+- CI switches of `pack-test.sh`: `POMWRIGHT_TARBALL=<path>` tests that tarball instead of building (it installs the
+  root for `tsc` only); `PLAYWRIGHT_VERSION=<version>` swaps `@playwright/test` at the root and in `test/` together
+  (one version for `tsc`; it rewrites both manifests and lockfiles, so restore them after a local try);
+  `PLAYWRIGHT_INSTALL_ARGS` (CI passes `--with-deps <browser>`).
 - Verify runtime claims empirically before writing them into a plan or doc. `@playwright/test` 1.64.0 is installed
   under `test/node_modules`; a short Node script that launches chromium from there is the standard probe. Every
   claim in the analysis was verified that way. Keep that standard. Three pitfalls: the helper methods are wrapped in
@@ -86,7 +91,8 @@ changing anything. Repo-specific facts here override generic defaults. Last revi
 ## 4. Test harness (`test/`)
 
 - Own `package.json`, lockfile and `tsconfig.json` (path aliases `@page-object-models/*`, `@fixtures/*`,
-  `@test-data/*`). Depends on `pomwright` as `file:../pomwright-test-build.tgz`. Playwright is pinned to 1.64.0.
+  `@test-data/*`). Depends on `pomwright` as `file:../.pack/pomwright`, the packed tarball extracted (section 3).
+  Playwright is pinned to 1.64.0.
 - `server.js` is an express app on port 9000. It serves `test-data/staticPage` (a W3 template page) and the routes
   `/testpath`, `/testpath/:color`, `/testfilters`, `/iframe` (with `/iframe/a`, `/b`, `/c`, a nested frame and a
   hidden iframe section), `/testids` (ids that are valid HTML but awkward as CSS selectors, and one empty
@@ -102,17 +108,24 @@ changing anything. Repo-specific facts here override generic defaults. Last revi
   exposes them to specs.
 - Specs live under `tests/`: `locatorRegistry/` (`add`, `getLocator`, `getLocatorSchema`, `getNestedLocator`,
   `registry`, `validation`), `pageObject/` (construction-time URL validation, registry verification, the lifecycle
-  and the actions hook), `step/`, `testApp/`. 47 spec files, about 6,200 lines. One spec file per DSL method,
+  and the actions hook), `step/`, `testApp/`, `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness:
+  the published entries, one shared copy, closed deep imports, the manifest). 48 spec files, about 6,300 lines. One spec file per DSL method,
   for example `add.getById.spec.ts` or `getLocatorSchema.update.spec.ts`; one DOM-level spec per fixture page under
   `testApp/`, for example `testIds.spec.ts`.
 - Know what each spec exercises. Most `locatorRegistry/` specs import `LocatorRegistryInternal` from
   `../../../../src/locators`, so they run against source. Fixture-based specs and anything importing from
   `pomwright` (the page objects, `testApp/`, `remove`, `replace`, `registry.binding`) run against the packed
   tarball. A green source-level spec says nothing about a stale tarball install.
-- `validation.locatorSchemaPath.typecheck.ts` is a compile-only probe that nothing runs today: there is no `tsc`
-  in CI and Playwright does not match the file name.
+- `validation.locatorSchemaPath.typecheck.ts` is a compile-only probe: Playwright does not match the file name, and
+  `pnpm typecheck` (in `pack-test` and CI) enforces its `@ts-expect-error` directives.
+- The harness runs on chromium, firefox and webkit, in CI at the Playwright pin and at the latest 1.x in the peer
+  range. A real behaviour difference between browsers on one Playwright version uses the `browserName` fixture (as
+  `sessionStorage.spec.ts` does for WebKit's iframe storage). Rendered locator strings depend on the Playwright
+  version, not the browser.
 - When changing locator behaviour: add focused specs next to the existing ones, keep the existing coverage (add,
-  do not replace), and assert against real DOM where possible rather than only against `toString()`.
+  do not replace), and assert against real DOM where possible rather than only against `toString()`. New specs
+  prefer DOM assertions over rendered locator strings; an existing string assertion is converted when a newer
+  Playwright renders it differently.
 
 ## 5. Coding conventions
 
@@ -169,9 +182,9 @@ become the basis for the changelog entry and announcement, and `docs/v3` becomes
 | `POMWRIGHT-2.1.0-ANALYSIS.md` | Source-verified findings numbered 1.1 to 1.10, 2, 3.1 to 3.8, 4, 5. Each has `Fix / Skip / Discuss` boxes and a `Notes:` block. Section 6 is the working order. |
 | `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` (executed 2026-10-06), `PLAN-1.3-1.4-URL-NAVIGATION.md` (executed 2026-10-08) and
   `PLAN-1.5-SESSION-STORAGE.md` (executed 2026-10-10), `PLAN-1.6-1.8-REGISTRATION-AND-FRAMES.md` (executed
-  2026-10-13) and `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md` (executed 2026-10-13) are done, one commit per execution step
-  each. The remaining plans, their scope, and their order are in `PLANS.md`; the next one is
-  `PLAN-4-PACKAGING-TOOLING-CI.md`. |
+  2026-10-13), `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md` (executed 2026-10-13) and `PLAN-4-PACKAGING-TOOLING-CI.md` (executed
+  2026-10-14) are done, one commit per execution step each. The remaining plans, their scope, and their order are in
+  `PLANS.md`; the next one is `PLAN-1.9-TYPES-AND-EXPORTS.md`. |
 | `PLANS.md` | The ordered list of remaining plans with the analysis items each covers and its status. Updated when a plan is written, split, or executed. |
 | `RELEASE-NOTES-3.0.0.md` | Consumer-facing notes. Only what is done or committed to by a plan in this folder, each item with a status marker. Never a copy of the analysis. |
 | `DECISIONS.md` | Current decisions across all plans, big and small, with date and reason. A reversed decision is replaced, not kept; git history has the rest. Open questions at the bottom. |
@@ -204,18 +217,22 @@ Rules:
   Packages" PR and publishes when it merges. Do not edit `package.json#version` or `CHANGELOG.md` by hand.
 - Call out consumer-facing API or behaviour changes in the changeset body, with a migration hint whenever something
   a 2.x user wrote stops working.
-- `publish.yaml` is gated on the `CI` workflow (lint, unit tests, build) only, not on `test.yaml`. Analysis
-  section 4 covers fixing that.
+- `publish.yaml` starts after `CI` succeeds, and `CI` runs only for pushes to `main` and includes the whole harness;
+  its job condition also requires a push run on `main` in this repository. Pull requests run the same jobs through
+  `PR`, which Publish does not listen to. CI runs only for pull requests (drafts included) and `main`. The gate job
+  `build` of `pr.yaml` and `main.yaml` is `main`'s required status check. The published package is rebuilt by
+  `pnpm run release`, not taken from the CI artifact (left for after 3.0.0).
 - Pending 3.0.0 changesets so far: `.changeset/getbyid-verbatim-ids-and-regex.md`,
   `.changeset/url-composition-and-navigation.md`, `.changeset/session-storage-on-webstorage.md`,
-  `.changeset/registration-guards-and-frames.md` and `.changeset/pageobject-lifecycle.md` (all `major`).
+  `.changeset/registration-guards-and-frames.md`, `.changeset/pageobject-lifecycle.md` and
+  `.changeset/package-exports-and-engines.md` (all `major`).
 
 ## 8. Do not
 
 - Edit `docs/v2`, `docs/v1*`, `CHANGELOG.md`, or `package.json#version`.
-- Commit `dist/`, `src/dist/`, `*.tgz`, `test/node_modules`, or Playwright reports.
+- Commit `dist/`, `.pack/`, `*.tgz`, `test/node_modules`, or Playwright reports.
 - Change the Playwright peer range or the `test/` pin without a decision.
-- Treat `src/dist/index.d.ts` or `dist/` as source when counting, grepping, or reasoning about behaviour.
+- Treat `dist/` or `.pack/` as source when counting, grepping, or reasoning about behaviour.
 - Reintroduce behaviour listed as removed in `RELEASE-NOTES-3.0.0.md`, such as `#` and `id=` prefix handling in
   `getById`, JSON-encoding every session storage value, `setOnNextNavigation`, dropping steps on frame segments, a
   cross-strategy `update` with a per-type cache, explicit `undefined` as the option-clearing value, the rollback
@@ -223,4 +240,6 @@ Rules:
   `PageObject` constructor.
 - Re-derive findings that are already in the analysis. Cite the item number instead.
 - Commit without being asked.
-- Expect `pnpm install` in `test/` to pick up a freshly packed tarball; use `pnpm add` as shown in section 3.
+- Reintroduce a `file:` tarball dependency, a second build in a harness job, or sudo in the harness scripts.
+- Let `CI` (`main.yaml`) run on pull requests, remove the publish guard, or rename the gate job `build` without
+  changing the branch-protection rule with it (every pull request would be blocked for non-admins).

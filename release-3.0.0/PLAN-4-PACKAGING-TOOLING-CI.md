@@ -14,7 +14,18 @@ package shape with the exact ESM entry the build writes (P17). A third review th
 unit tests, the build and the harness for changes to `.md` files only (lint always runs), made every harness job test
 the one tarball the build job packed, and kept the required status check `build` through a gate job (P19). Every
 decision in section 7 was taken with the user on 2026-10-14 and is mirrored in [DECISIONS.md](DECISIONS.md) and
-[RELEASE-NOTES-3.0.0.md](RELEASE-NOTES-3.0.0.md).
+[RELEASE-NOTES-3.0.0.md](RELEASE-NOTES-3.0.0.md). Executed 2026-10-14, see below.
+
+**Executed 2026-10-14** on `chore/bugfixes-quality-improvements-and-docs`, one commit per execution step: fc33244 (1,
+the harness), 24d843d (2, the package and `esmEntry.spec.mts`, red then green), 39fb86a (3, the lint scope), aa3fd0e
+(4, the workflows), b2668f6 (5, `docs/v3`), 837f1c8 (6, the changeset), and the ledger commit for step 8 that carries
+this note, the deleted local `src/dist` and its `tsconfig.vitest.json` exclude. Step 7 found nothing to fix: `pnpm
+lint` clean, 262 unit tests with no type errors, `pnpm build`, `pnpm pack-test` 1122 passed (374 per browser), and
+every probe of 5.3 against the final tarball as expected. Execution-time decisions (`pack-extract.sh`, the two
+`scripts/ci-*.sh` helpers, the gate's check context, the unsafe lint fixes, the 1.63 `.visible()` observation) are in
+[DECISIONS.md](DECISIONS.md). Still open until the user's push: the first `PR` run on pull request #46 and the two
+scratch pull requests of 3.6 (a failing commit must fail the gate `build`; an `.md`-only change must pass it with
+`package` and `harness` skipped); `CI` and the Publish guard first run on the merge to `main`.
 
 Every claim below was verified on 2026-10-14 against HEAD ff57895. Packaging and install behaviour was probed in two
 fresh clones of the repository in the session scratchpad, never in the working tree (which stayed clean): `pnpm pack`
@@ -235,7 +246,7 @@ fields as HEAD apart from the peer range (`>=1.57.0`); no `exports`, `engines` o
 `"Apache 2.0"` is rejected by the SPDX expression parser npm bundles (`spdx-expression-parse`: "Unexpected `A` at
 offset 0"); `"Apache-2.0"` parses. Correction to the analysis for the record: npm 11.17.0's `npm publish --dry-run`
 does not warn about the licence. It does warn about `repository.url`: "npm auto-corrected some errors in your
-package.json when publishing … "repository.url" was normalized to "git+https://github.com/DyHex/POMWright.git"". And
+package.json when publishing … "repository.url" was normalized to `"git+https://github.com/DyHex/POMWright.git"`". And
 `npm pkg fix --dry-run` rewrote `package.json` in the clone despite the flag (P2).
 
 ### 2.2 How the package resolves

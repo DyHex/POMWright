@@ -13,8 +13,8 @@
 > storage), executed and committed on the same branch on 2026-10-10 (commits a05e8fd to ab76175); 1.6-1.8
 > (registration guards, frames, `update` semantics, the Playwright 1.64 floor), executed and committed on the same
 > branch on 2026-10-13 (commits 7105c92 to 803455c); 1.7 (the `PageObject` lifecycle), executed and committed on the
-> same branch on 2026-10-13 (commits 66e9481 to 2301bee); 4 (packaging, tooling and CI), decisions taken on
-> 2026-10-14, awaiting implementation.
+> same branch on 2026-10-13 (commits 66e9481 to 2301bee); 4 (packaging, tooling and CI), executed and committed on
+> the same branch on 2026-10-14 (commits fc33244 to 837f1c8).
 
 ## Overview
 
@@ -26,7 +26,7 @@ Requirements: peer dependency `@playwright/test >=1.64.0 <2.0.0`, raised from `>
 `page.sessionStorage` (Playwright 1.61) **[done, plan 1.5]**; the any-frame `frameLocator()` needs 1.63 and the regex
 fix that makes every RegExp flag deterministic is in 1.64.0, so the floor is 1.64.0 and the harness runs it
 **[done, plan 1.6-1.8]**. Node 20 or later, Playwright 1.64's own requirement, declared in `engines`
-**[planned, plan 4]**.
+**[done, plan 4]**.
 
 ## Breaking changes
 
@@ -232,7 +232,7 @@ change.
 for a registry mistake asserts on a first use instead: `expect(() => new X(page).getNestedLocator(path)).toThrow(…)`.
 Pass values that `defineLocators()` depends on to the constructor.
 
-### The package has an `exports` map and declares Node 20 **[planned, plan 4]**
+### The package has an `exports` map and declares Node 20 **[done, plan 4]**
 
 The package root is the public API: `import { … } from "pomwright"` works as before, in CommonJS and ESM projects
 alike, and deep imports such as `pomwright/dist/index.js` fail with `ERR_PACKAGE_PATH_NOT_EXPORTED`
@@ -278,7 +278,7 @@ is `>=20`, Playwright 1.64's own requirement: npm warns on older Node, where Pla
 - `defineLocators()` and `pageActionsToPerformAfterNavigation()` see the page object's constructor arguments, fields
   and constructor-body assignments instead of `undefined` (analysis 1.7). **[done, plan 1.7]**
 - The package's `license` is the SPDX id `Apache-2.0` instead of `Apache 2.0`, and its `repository.url` is in the
-  form npm expects (analysis section 4). **[planned, plan 4]**
+  form npm expects (analysis section 4). **[done, plan 4]**
 
 ## Removed and internal cleanup
 
@@ -296,7 +296,7 @@ is `>=20`, Playwright 1.64's own requirement: npm warns on older Node, where Pla
   the per-path per-type definition cache of the query builder and the three-source merge of the update builder are
   removed; `createLocator` returns `Locator`; `LocatorRegistry` gains `verify`; `assertIdValue` becomes a call to a
   generic `assertPrimaryValue`. **[done, plan 1.6-1.8]**
-- The redundant `.npmignore` is removed (the `files` allowlist alone decides what is packed). **[planned, plan 4]**
+- The redundant `.npmignore` is removed (the `files` allowlist alone decides what is packed). **[done, plan 4]**
 
 ## Tooling, CI, and tests
 
@@ -336,17 +336,17 @@ is `>=20`, Playwright 1.64's own requirement: npm warns on older Node, where Pla
 - The harness installs the packed package from an extracted directory with a frozen lockfile, so it always tests the
   current build and its lockfile no longer changes with every build; it needs no sudo (the postinstall that called
   `playwright install-deps` is gone); `pnpm pack-test` builds, packs, installs, type-checks and runs every browser
-  project, passing its arguments to `playwright test`. **[planned, plan 4]**
+  project, passing its arguments to `playwright test`. **[done, plan 4]**
 - CI runs the whole harness on chromium, firefox and webkit, at the Playwright floor (1.64.0) and at the latest 1.x,
   for every pull request (draft or not) and every push to `main`, from one shared workflow; the separate test workflow
   is gone. Each run builds and packs once and tests that tarball on every browser; a change to `.md` files only runs
   lint. Publishing waits for the `main` run, including the browser suite, so a release can no longer publish past a
   red suite (as 1.5.1 did), and the publish workflow itself refuses anything but a push to `main` in this repository.
-  **[planned, plan 4]**
+  **[done, plan 4]**
 - `tsc --noEmit -p test` (`pnpm typecheck`) checks the specs, the page objects and the compile-only path validation
   probe against the published declarations; lint and format cover the whole repository; `@playwright/test` is a
   pinned root dev dependency at the floor; CI retries a failure once for a trace and a video and fails on flaky tests,
-  local runs do not retry; a new spec checks the ESM entry against the CommonJS build. **[planned, plan 4]**
+  local runs do not retry; a new spec checks the ESM entry against the CommonJS build. **[done, plan 4]**
 
 ## Documentation
 
@@ -419,4 +419,4 @@ Grows as plans land.
 21. A test that expects `new X(page)` to throw for a registry mistake asserts on a first use instead; pass values
     that `defineLocators()` depends on to the constructor rather than assigning them after an `await`.
 22. Replace deep imports such as `pomwright/dist/index.js` with imports from `"pomwright"`, and run on Node 20 or
-    later. **[planned, plan 4]**
+    later. **[done, plan 4]**

@@ -512,9 +512,13 @@ an empty or missing id throws at registration in all three builders. The other s
   was listed here as dead because the `PageObject` path discards the registry when the constructor throws. But
   `createRegistryWithAccessors` is public, so a standalone registry survives a builder error and the rollback is
   live. Keep it. The asymmetric recovery is tracked in 1.10.
-- [ ] [playwright.base.ts:16](../playwright.base.ts#L16) `retries: process.env.CI ? 1 : 1`.
-- [ ] `.npmignore` is redundant with `package.json#files`.
-- [ ] Local only: a stray `src/dist/` build output from January, gitignored. Delete it.
+- [x] Fixed 2026-10-14 by plan 4 ([plan](PLAN-4-PACKAGING-TOOLING-CI.md)): no local retries, one in CI with `failOnFlakyTests`, and
+  `video: "on-first-retry"` for the deprecated `retry-with-video`. [playwright.base.ts:16](../playwright.base.ts#L16)
+  `retries: process.env.CI ? 1 : 1`.
+- [x] Fixed 2026-10-14 by plan 4: deleted; the packed file list is identical without it. `.npmignore` is redundant
+  with `package.json#files`.
+- [x] Done 2026-10-14 by plan 4: deleted locally, with the `tsconfig.vitest.json` exclude that named it. Local only:
+  a stray `src/dist/` build output from January, gitignored. Delete it.
 
 ---
 
@@ -638,13 +642,26 @@ property (that `add` clones the seed). Either return a new builder per call or d
 
 > Notes:
 
-- [ ] [package.json:16](../package.json#L16) `"Apache 2.0"` is not an SPDX id. Use `"Apache-2.0"`; npm and licence
-  scanners warn otherwise.
-- [ ] No `exports` map, `engines`, or `sideEffects`. `index.d.mts` is emitted but never selected by TypeScript.
-- [ ] `@playwright/test` is undeclared at root and pinned only by the lockfile
+- [x] Fixed 2026-10-14 by plan 4: `"Apache-2.0"`, and `repository.url` in the form npm expects. Correction for the
+  record: npm 11 did not warn about the licence (the SPDX parser it bundles rejects it); it did auto-correct and warn
+  about `repository.url` on every publish. [package.json:16](../package.json#L16) `"Apache 2.0"` is not an SPDX id.
+  Use `"Apache-2.0"`; npm and licence scanners warn otherwise.
+- [x] Fixed 2026-10-14 by plan 4: an `exports` map over one CommonJS build, with an ESM entry and `index.d.mts` that
+  re-export it by name (`@playwright/test`'s layout, one copy per process); `engines.node` `>=20` (Playwright's own
+  floor); no `sideEffects` (no effect on a one-file build). Note for the record: the 2.1 package was consistent (Node
+  and TypeScript selected the CommonJS build for both `import` and `require`; attw found no problem), so the unused
+  `.mjs` and `.d.mts` were dead weight rather than a wrong resolution. No `exports` map, `engines`, or `sideEffects`.
+  `index.d.mts` is emitted but never selected by TypeScript.
+- [x] Fixed 2026-10-14 by plan 4: declared as an exact root dev dependency at the floor (1.64.0), moving together
+  with the peer floor and the harness pin; CI runs the harness at the pin and at the latest 1.x in the peer range on
+  all three browsers. `@playwright/test` is undeclared at root and pinned only by the lockfile
   ([pnpm-lock.yaml:356](../pnpm-lock.yaml#L356)). The floor `>=1.57.0` is never exercised. Raised to `>=1.61.0` by plan 1.5 on 2026-10-10 (`page.sessionStorage`) and to `>=1.64.0` by plan 1.6-1.8 on 2026-10-13 (the regex fix #42818, the any-frame `frameLocator()`), with the harness pinned to 1.64.0 so the floor is what the suite runs; the floor matrix remains for plan 6.
   [test/package.json:12](../test/package.json#L12) hard-pins 1.64.0. Declare it, and consider a CI matrix on the floor.
-- [ ] [pack-test.sh:18](../pack-test.sh#L18) `--no-frozen-lockfile` leaves `test/pnpm-lock.yaml` decorative for the
+- [x] Fixed 2026-10-14 by plan 4: the harness depends on `file:../.pack/pomwright`, the extracted tarball, and installs
+  it with a frozen lockfile that records a directory, not a hash; no script calls sudo; `pnpm pack-test` and CI run
+  chromium, firefox and webkit (370 tests passed on each before the plan). Correction for the record: `pnpm pack` is
+  deterministic, so the hash changed whenever the packed content changed, not with every pack.
+  [pack-test.sh:18](../pack-test.sh#L18) `--no-frozen-lockfile` leaves `test/pnpm-lock.yaml` decorative for the
   harness's own dependencies. The flag itself is required, not a defect (corrected 2026-10-06): the lockfile pins
   `pomwright` by tarball integrity hash and still records 2.0.0, and every fresh pack changes the hash, so a frozen
   install can never pass with a `file:` tarball. The fix is a harness design choice, for example a frozen install of
@@ -659,17 +676,26 @@ property (that `add` clones the seed). Either return a new builder per call or d
   `pnpm add -D pomwright@file:../pomwright-test-build.tgz --ignore-scripts` and
   `pnpm exec playwright test --project=chromium`.
   [L20](../pack-test.sh#L20) runs chromium only. Firefox/WebKit never run (relevant for `SessionStorage` on `about:blank`).
-- [ ] **NEW: publishing is not gated on tests.** [publish.yaml:4](../.github/workflows/publish.yaml#L4) triggers on the
+- [x] Fixed 2026-10-14 by plan 4: the harness runs inside `CI`, which runs only for pushes to `main`; pull requests
+  run the same jobs through `PR`; `publish.yaml` also requires a push run on `main` in this repository. The gap had
+  published 1.5.1 on 2026-02-26 with a red test run on `main`. **NEW: publishing is not gated on tests.** [publish.yaml:4](../.github/workflows/publish.yaml#L4) triggers on the
   `CI` workflow (lint plus build). The test workflow is separate, so a release can publish with a red suite on `main`.
-- [ ] **NEW: compile-time guarantees are untested.** No `tsc` step exists anywhere, and
+- [x] Fixed 2026-10-14 by plan 4: `pnpm typecheck` (`tsc --noEmit -p test`) in `pack-test` and CI, against the
+  published declarations; the probe file's 31 directives are consumed and an unused one fails.
+  **NEW: compile-time guarantees are untested.** No `tsc` step exists anywhere, and
   [validation.locatorSchemaPath.typecheck.ts](../test/tests/locatorRegistry/validation/validation.locatorSchemaPath.typecheck.ts)
   is not a `*.spec.ts`, so Playwright never loads it either. Add `tsc --noEmit -p test` to CI.
-- [ ] [package.json:29](../package.json#L29) lints `./src` only. Root `index.ts`, `playwright.base.ts` and `test/` are
+- [x] Fixed 2026-10-14 by plan 4: `pnpm lint` and `pnpm format` cover the repository, minus the third-party W3
+  template page; the findings fixed. [package.json:29](../package.json#L29) lints `./src` only. Root `index.ts`, `playwright.base.ts` and `test/` are
   unlinted although `biome.json` already includes them.
-- [ ] No `stripInternal` in [tsconfig.json](../tsconfig.json) (1.9b).
-- [ ] No unit-test layer. `utils.ts`, `locatorUpdateBuilder.ts` and `composeFullUrl` are pure; a `node:test` file with
+- [ ] Left open by plan 4 for plan 7 (1.9b). No `stripInternal` in [tsconfig.json](../tsconfig.json) (1.9b).
+- [x] Fixed 2026-10-06 by plan 1.1-1.2 with vitest (colocated `src/**/*.test.ts`, typecheck mode), ticked by plan 4.
+  No unit-test layer. `utils.ts`, `locatorUpdateBuilder.ts` and `composeFullUrl` are pure; a `node:test` file with
   zero dependencies would have caught 1.1 to 1.3 in milliseconds.
-- [ ] [CHANGELOG.md:26](../CHANGELOG.md#L26) says `pack-test.sh` was removed in 2.0.0; it exists.
+- [x] Skipped 2026-10-14 by plan 4: `CHANGELOG.md` is not edited by hand. The line is accurate for 795e948 (PR #42),
+  which deleted v1's `pack-test.sh`; 8a9a1f7 in the same release renamed `pack-test-v2.sh` to `pack-test.sh`. The
+  3.0.0 entry describes the current harness. [CHANGELOG.md:26](../CHANGELOG.md#L26) says `pack-test.sh` was removed
+  in 2.0.0; it exists.
 
 ---
 
