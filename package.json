@@ -4,7 +4,7 @@
 	"description": "POMWright is a complementary test framework for Playwright written in TypeScript.",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/DyHex/POMWright"
+		"url": "git+https://github.com/DyHex/POMWright.git"
 	},
 	"homepage": "https://github.com/DyHex/POMWright#readme",
 	"bugs": {
@@ -13,10 +13,22 @@
 	"author": {
 		"name": "Magnus Blütecher Dysthe"
 	},
-	"license": "Apache 2.0",
-	"main": "dist/index.js",
-	"module": "dist/index.mjs",
-	"types": "dist/index.d.ts",
+	"license": "Apache-2.0",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
+			},
+			"require": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			}
+		},
+		"./package.json": "./package.json"
+	},
 	"files": [
 		"dist/**",
 		"README.md",
@@ -24,7 +36,7 @@
 		"CHANGELOG.md"
 	],
 	"scripts": {
-		"build": "tsup index.ts --format cjs,esm --dts",
+		"build": "tsup index.ts --format cjs --dts && node scripts/write-esm-entry.mjs",
 		"release": "pnpm run build && changeset publish",
 		"lint": "biome check ./src",
 		"format": "biome format ./src --write",
@@ -58,6 +70,7 @@
 		"@biomejs/biome": "^2.2.4",
 		"@changesets/changelog-github": "^0.5.1",
 		"@changesets/cli": "^2.29.7",
+		"@playwright/test": "1.64.0",
 		"@types/node": "^24.5.2",
 		"tsup": "^8.5.0",
 		"typescript": "^5.9.2",
@@ -65,6 +78,9 @@
 	},
 	"peerDependencies": {
 		"@playwright/test": ">=1.64.0 <2.0.0"
+	},
+	"engines": {
+		"node": ">=20"
 	},
 	"packageManager": "pnpm@9.12.0"
 }
