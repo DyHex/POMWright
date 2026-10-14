@@ -14,8 +14,8 @@
 > (registration guards, frames, `update` semantics, the Playwright 1.64 floor), executed and committed on the same
 > branch on 2026-10-13 (commits 7105c92 to 803455c); 1.7 (the `PageObject` lifecycle), executed and committed on the
 > same branch on 2026-10-13 (commits 66e9481 to 2301bee); 4 (packaging, tooling and CI), executed and committed on
-> the same branch on 2026-10-14 (commits fc33244 to 837f1c8); 1.9 (types and exports), written and agreed on
-> 2026-10-14, not yet implemented.
+> the same branch on 2026-10-14 (commits fc33244 to 837f1c8, with the CI follow-ups 8c2eb1b, 9d95a78 and 95975cf);
+> 1.9 (types and exports), executed and committed on the same branch on 2026-10-14 (commits 46a04e9 to 4220bfa).
 
 ## Overview
 
@@ -244,7 +244,7 @@ is `>=20`, Playwright 1.64's own requirement: npm warns on older Node, where Pla
 
 **Migration.** Replace deep imports with imports from `"pomwright"`.
 
-### `replace()` takes Playwright's arguments **[planned, plan 1.9]**
+### `replace()` takes Playwright's arguments **[done, plan 1.9]**
 
 `getLocatorSchema(path).replace(subPath?)` takes the parameter lists of Playwright's own methods: the first argument is
 required and the options are Playwright's option types. `replace().getByRole({ name: "Save" })`,
@@ -257,7 +257,7 @@ requires a "role" value.`; `null` options still mean omission there.
 
 **Migration.** Pass the first argument to `replace()` methods and drop `null` options from them.
 
-### `UrlTypeOptions` is renamed `PageObjectTypeOptions`; builder, seed and path types are exported **[planned, plan 1.9]**
+### `UrlTypeOptions` is renamed `PageObjectTypeOptions`; builder, seed and path types are exported **[done, plan 1.9]**
 
 `PageObject`'s second type argument, which also carries the `storage` schema since 3.0.0, is `PageObjectTypeOptions`;
 `UrlTypeOptions` is gone. New type exports, so that shared locator modules, helpers and domain base classes can name
@@ -307,14 +307,14 @@ A path literal containing U+FEFF (the byte-order mark) is a compile error, as it
 - The package's `license` is the SPDX id `Apache-2.0` instead of `Apache 2.0`, and its `repository.url` is in the
   form npm expects (analysis section 4). **[done, plan 4]**
 
-- `replace()` no longer compiles calls that always throw (analysis 1.9a). **[planned, plan 1.9]**
+- `replace()` no longer compiles calls that always throw (analysis 1.9a). **[done, plan 1.9]**
 - The query builder's internal `applyUpdate` and `applyReplacement`, which skip the argument checks, are no longer
-  reachable through its types after one chained call (analysis 1.9b). **[planned, plan 1.9]**
+  reachable through its types after one chained call (analysis 1.9b). **[done, plan 1.9]**
 - The type-level path check rejects the same characters as the runtime check, U+FEFF included, and the whitespace
   error shows the offending character escaped (`main\u00A0.form`) instead of printing it invisibly (analysis 1.9c).
-  **[planned, plan 1.9]**
+  **[done, plan 1.9]**
 - The types a consumer needs to name the builder chain, seeds, filters and path arguments are exported (analysis
-  1.9d). **[planned, plan 1.9]**
+  1.9d). **[done, plan 1.9]**
 
 ## Removed and internal cleanup
 
@@ -338,7 +338,7 @@ A path literal containing U+FEFF (the byte-order mark) is a compile error, as it
   `ValidLocatorPath`, `FilterPatch`, `PathIndexMap`, `LocatorSchemaPathAlias`, `ResolvedFilterDefinition`) are
   removed; the internal builder classes are `LocatorQueryBuilderInternal` and `LocatorUpdateBuilderInternal`; the
   path whitespace list exists once for the type and the runtime check; no `stripInternal` (analysis sections 2 and 4).
-  **[planned, plan 1.9]**
+  **[done, plan 1.9]**
 
 ## Tooling, CI, and tests
 
@@ -397,7 +397,7 @@ A path literal containing U+FEFF (the byte-order mark) is a compile error, as it
 - Unit tests for the replace-mode types and messages, the query-builder chain types, seed variance and the path
   whitespace list over every code point; a compile-only probe of the public types against the published
   declarations, and a declaration-emit check (`declaration: true`) run by `pnpm typecheck` and `pnpm pack-test`.
-  **[planned, plan 1.9]**
+  **[done, plan 1.9]**
 
 ## Documentation
 
@@ -426,7 +426,7 @@ A path literal containing U+FEFF (the byte-order mark) is a compile error, as it
 - `docs/v3/locator-registry.md`: the importable types with a forwarding helper, `replace()`'s arguments, typed seed
   modules, the 26 path whitespace characters; `composing-locator-modules.md`: what a module may return and how it is
   typed, and why a registering function returns `void`; `PageObject.md`: `PageObjectTypeOptions`; `overview.md`: the
-  type exports. **[planned, plan 1.9]**
+  type exports. **[done, plan 1.9]**
 - A new documentation site built with Starlight and hosted on GitHub Pages, using `docs/v3` as its source.
   **[roadmap]**
 
@@ -475,5 +475,5 @@ Grows as plans land.
     that `defineLocators()` depends on to the constructor rather than assigning them after an `await`.
 22. Replace deep imports such as `pomwright/dist/index.js` with imports from `"pomwright"`, and run on Node 20 or
     later. **[done, plan 4]**
-23. Pass the first argument to every `replace()` strategy method and drop `null` options from them. **[planned, plan 1.9]**
-24. Rename `UrlTypeOptions` to `PageObjectTypeOptions`. **[planned, plan 1.9]**
+23. Pass the first argument to every `replace()` strategy method and drop `null` options from them. **[done, plan 1.9]**
+24. Rename `UrlTypeOptions` to `PageObjectTypeOptions`. **[done, plan 1.9]**

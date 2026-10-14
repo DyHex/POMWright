@@ -2,7 +2,7 @@
 
 Persistent context and working rules for AI agents and humans contributing to POMWright. Read it fully before
 changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-14, after the
-packaging, tooling and CI plan (analysis section 4) was executed.
+types and exports plan (analysis 1.9) was executed.
 
 ## 1. What POMWright is
 
@@ -18,11 +18,14 @@ packaging, tooling and CI plan (analysis section 4) was executed.
   and POMWright composes the full Playwright locator chain from the path. The registry, `PageObject`,
   `SessionStorage`, the `log` fixture and the `step` decorator are each usable on their own.
 - The public API is exactly what the root [index.ts](index.ts) re-exports: `test` (fixture providing `log`),
-  `PageObject` and its URL and storage typing helpers, `createRegistryWithAccessors`, the accessor types and the
-  `LocatorRegistry` type (`add`, `createReusable`, `getLocator`, `getLocatorSchema`, `getNestedLocator`, `verify`),
-  `SessionStorage` with the `json` codec and the `Codec` and `SessionStorageSchema` types, `PlaywrightReportLogger`,
-  `step`, `NavigationOptions`. Everything else under `src/` is internal even when it
-  carries an `export` keyword, so renaming or deleting it is not by itself a breaking change.
+  `PageObject` with `PageObjectTypeOptions` and the `*TypeFromOptions` helpers, `createRegistryWithAccessors`, the
+  accessor types, the `LocatorRegistry` type (`add`, `createReusable`, `getLocator`, `getLocatorSchema`,
+  `getNestedLocator`, `verify`), what the registry hands out (`LocatorQueryBuilder`, `LocatorUpdateBuilder`,
+  `ReusableLocator`, `FilterDefinition`, `IndexSelector`) and the path types (`LocatorSchemaPathFormat`,
+  `LocatorSchemaPathArgument`), `SessionStorage` with the `json` codec and the `Codec` and `SessionStorageSchema`
+  types, `PlaywrightReportLogger` with `LogEntry` and `LogLevel`, `step`, `NavigationFor`, `NavigationOptions`,
+  `ThisPageOptions` and `UrlMatcher`. Everything else under `src/` is internal even when it carries an `export`
+  keyword, so renaming or deleting it is not by itself a breaking change.
 - Published version: 2.1.0. The next release is 3.0.0, a major. Section 6 describes how that work is organised.
 
 ## 2. Repository map
@@ -30,8 +33,8 @@ packaging, tooling and CI plan (analysis section 4) was executed.
 | Path | What it is | Edit? |
 | --- | --- | --- |
 | `index.ts` | Package entry. tsup bundles the CommonJS build from here; `scripts/write-esm-entry.mjs` then writes the ESM entry. | yes |
-| `src/` | Runtime: 16 files, about 4,500 lines, plus colocated vitest unit tests (`**/*.test.ts`: `pageObject.test.ts`, `locators/utils.test.ts`, `locators/locatorRegistrationBuilder.test.ts`, `locators/locatorUpdateBuilder.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`, `helpers/sessionStorage.test.ts`, `helpers/sessionStorageSeed.test.ts`). | yes |
-| `src/locators/` | `locatorRegistry.ts` (registry, resolution with frames as `locator` plus `contentFrame()` and the any-frame segment, cycle detection, `verify()`), `locatorRegistrationBuilder.ts` (`add(path).getByRole(...)` DSL, seeded registrations, the boundary checks), `locatorUpdateBuilder.ts` (`update` as a same-strategy JSON Merge Patch, `replace`), `locatorQueryBuilder.ts` (`getLocatorSchema(path)` chain: `filter`, `nth`, `remove`, `describe`, `getLocator`, `getNestedLocator`), `reusableLocatorBuilder.ts` (`createReusable`), `types.ts` (definitions, `OptionsPatch`, compile-time path validation), `utils.ts` (path validation, `assertPrimaryValue` and `assertIdValue`, the id selector helpers, `createLocator`, `isAnyFrameDefinition`, `methodForStrategy`, cloning, patching). | yes |
+| `src/` | Runtime: 16 files, about 4,500 lines, plus colocated vitest unit tests (`**/*.test.ts`: `pageObject.test.ts`, `locators/utils.test.ts`, `locators/locatorRegistrationBuilder.test.ts`, `locators/locatorUpdateBuilder.test.ts`, `locators/locatorQueryBuilder.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`, `helpers/sessionStorage.test.ts`, `helpers/sessionStorageSeed.test.ts`). | yes |
+| `src/locators/` | `locatorRegistry.ts` (registry, resolution with frames as `locator` plus `contentFrame()` and the any-frame segment, cycle detection, `verify()`), `locatorRegistrationBuilder.ts` (`add(path).getByRole(...)` DSL, seeded registrations, the boundary checks), `locatorUpdateBuilder.ts` (`update` as a same-strategy JSON Merge Patch, `replace` with Playwright's argument lists through a `Mode` type parameter; the class `LocatorUpdateBuilderInternal`, the public alias `LocatorUpdateBuilder`), `locatorQueryBuilder.ts` (`getLocatorSchema(path)` chain: `filter`, `nth`, `remove`, `describe`, `getLocator`, `getNestedLocator`; the class `LocatorQueryBuilderInternal`, the public alias `LocatorQueryBuilder`), `reusableLocatorBuilder.ts` (`createReusable`), `types.ts` (definitions, `ReusableLocator`, `FilterDefinition`, `IndexSelector`, `OptionsPatch`, compile-time path validation), `utils.ts` (path validation with `LOCATOR_SCHEMA_PATH_WHITESPACE`, `assertPrimaryValue` and `assertIdValue`, the id selector helpers, `createLocator`, `isAnyFrameDefinition`, `methodForStrategy`, cloning, patching). | yes |
 | `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts` (`SessionStorage`: `page.sessionStorage` with batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `seed`), `sessionStorageSeed.ts` (the seed registry, one per page: the writer and redirect documents, the proxy while a seed is pending, the bypass and never-applied failures), `playwrightReportLogger.ts`, `stepDecorator.ts`. | yes |
 | `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject`: `defineLocators()` and `verify()` run once, right after construction (a check scheduled with `queueMicrotask`) or at the first locator call, through a facade on `locatorRegistry`; labelled, sticky errors with the construction site; the optional actions hook, evaluated per run. The `test` fixture that provides `log`. | yes |
 | `test/` | Standalone pnpm project that installs the packed package from `.pack/pomwright` and runs Playwright against it. Section 4. | yes |
@@ -72,7 +75,9 @@ packaging, tooling and CI plan (analysis section 4) was executed.
   extraction and `test/pnpm-lock.yaml` does not change with builds. `pnpm harness:install` packs and installs without
   running anything, for `pnpm typecheck` or a quick `pnpm -C test exec playwright test …` of one spec.
 - `pnpm typecheck` runs `tsc --noEmit -p test` against the installed package: specs, page objects, fixtures,
-  `playwright.base.ts`, the `src/locators` files the source-level specs import, and the compile-only path probe.
+  `playwright.base.ts`, the `src/locators` files the source-level specs import, and the compile-only probes; then
+  `tsc -p test/tsconfig.declarations.json` (`declaration: true`, `noEmit`), the declaration emit of
+  `tests/packaging/publicTypes.emit.ts`. `pack-test.sh` runs both.
 - CI switches of `pack-test.sh`: `POMWRIGHT_TARBALL=<path>` tests that tarball instead of building (it installs the
   root for `tsc` only); `PLAYWRIGHT_VERSION=<version>` swaps `@playwright/test` at the root and in `test/` together
   (one version for `tsc`; it rewrites both manifests and lockfiles, so restore them after a local try);
@@ -109,15 +114,19 @@ packaging, tooling and CI plan (analysis section 4) was executed.
 - Specs live under `tests/`: `locatorRegistry/` (`add`, `getLocator`, `getLocatorSchema`, `getNestedLocator`,
   `registry`, `validation`), `pageObject/` (construction-time URL validation, registry verification, the lifecycle
   and the actions hook), `step/`, `testApp/`, `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness:
-  the published entries, one shared copy, closed deep imports, the manifest). 48 spec files, about 6,300 lines. One spec file per DSL method,
+  the published entries, one shared copy, closed deep imports, the manifest; `publicTypes.typecheck.ts` and
+  `publicTypes.emit.ts`, compile-only). 48 spec files, about 6,300 lines. One spec file per DSL method,
   for example `add.getById.spec.ts` or `getLocatorSchema.update.spec.ts`; one DOM-level spec per fixture page under
   `testApp/`, for example `testIds.spec.ts`.
 - Know what each spec exercises. Most `locatorRegistry/` specs import `LocatorRegistryInternal` from
   `../../../../src/locators`, so they run against source. Fixture-based specs and anything importing from
   `pomwright` (the page objects, `testApp/`, `remove`, `replace`, `registry.binding`) run against the packed
   tarball. A green source-level spec says nothing about a stale tarball install.
-- `validation.locatorSchemaPath.typecheck.ts` is a compile-only probe: Playwright does not match the file name, and
-  `pnpm typecheck` (in `pack-test` and CI) enforces its `@ts-expect-error` directives.
+- `validation.locatorSchemaPath.typecheck.ts` and `packaging/publicTypes.typecheck.ts` are compile-only probes:
+  Playwright does not match the file names, and `pnpm typecheck` (in `pack-test` and CI) enforces their
+  `@ts-expect-error` directives. `publicTypes.typecheck.ts` holds the public types against the published declarations
+  (every export, replace's arguments, the private internals, seeds, path forwarding); `publicTypes.emit.ts` must emit
+  declarations without annotations. A change to the public types adds to both.
 - The harness runs on chromium, firefox and webkit (`pnpm pack-test` and CI on `main`; pull requests run chromium
   only, so a firefox- or webkit-only failure shows in `CI` after the merge and blocks Publish until fixed), in CI at
   the Playwright pin and at the latest 1.x in the peer range. A real behaviour difference between browsers on one Playwright version uses the `browserName` fixture (as
@@ -137,7 +146,13 @@ packaging, tooling and CI plan (analysis section 4) was executed.
   `getLocator()`, `getNestedLocator()`; `createReusable`; clone-on-read; cycle detection; terminal-only `has:`
   path references. Builders are synchronous. There are no thenables anywhere in `src`; do not add any.
 - Keep the dot-delimited path guarantees. The runtime `validateLocatorSchemaPath` and the type-level
-  `LocatorSchemaPathFormat` family in `types.ts` must stay in agreement.
+  `LocatorSchemaPathFormat` family in `types.ts` must stay in agreement; the whitespace both reject comes from one
+  list, `LOCATOR_SCHEMA_PATH_WHITESPACE` in `utils.ts`.
+- Public types are type aliases declared under their public name (`LocatorQueryBuilder` over
+  `LocatorQueryBuilderInternal`), never a class re-exported as a type: tsup's bundle writes such a class into the
+  export list as a value. Every public method returns a type a consumer can import from the root, except the
+  registration builders of `add(path)`; a builder step returns the public alias, not `this`. Internals are
+  TypeScript-`private`, never hidden with `@internal` and `stripInternal`.
 - Error messages name the registry path (`formatLocatorSchemaPathForError`) and the DSL method the user called.
   Validate DSL input at the boundary, before anything is registered; `assertIdValue` is the pattern.
 - `getById` stores values verbatim: strings resolve as `[id="…"]` (exact, case-sensitive, no prefix handling),
@@ -147,7 +162,8 @@ packaging, tooling and CI plan (analysis section 4) was executed.
   where Playwright cannot use it (`locator`, `frameLocator`, `getByRole`, `getById`) and stored verbatim otherwise;
   `undefined` means "not provided" (it inherits on seeded and update builders). A throwing DSL call changes nothing.
   `update` keeps the registered strategy and follows JSON Merge Patch (`null` deletes); `replace` changes the
-  strategy; neither touches steps. Roles are Playwright's compile-time type; there is no runtime role list.
+  strategy and takes Playwright's argument lists (the first argument required, Playwright's option types); neither
+  touches steps. Roles are Playwright's compile-time type; there is no runtime role list.
 - A `frameLocator(selector)` segment is `locator(selector)` plus its steps, then `contentFrame()` for the descendants
   and the `<iframe>` element as a terminal; `frameLocator()` is Playwright's any-frame locator, first segment only, no
   steps, no terminal form. Never reintroduce `target.frameLocator(selector)` with dropped steps.
@@ -183,9 +199,9 @@ become the basis for the changelog entry and announcement, and `docs/v3` becomes
 | `POMWRIGHT-2.1.0-ANALYSIS.md` | Source-verified findings numbered 1.1 to 1.10, 2, 3.1 to 3.8, 4, 5. Each has `Fix / Skip / Discuss` boxes and a `Notes:` block. Section 6 is the working order. |
 | `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` (executed 2026-10-06), `PLAN-1.3-1.4-URL-NAVIGATION.md` (executed 2026-10-08) and
   `PLAN-1.5-SESSION-STORAGE.md` (executed 2026-10-10), `PLAN-1.6-1.8-REGISTRATION-AND-FRAMES.md` (executed
-  2026-10-13), `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md` (executed 2026-10-13) and `PLAN-4-PACKAGING-TOOLING-CI.md` (executed
-  2026-10-14) are done, one commit per execution step each. The remaining plans, their scope, and their order are in
-  `PLANS.md`; the next one is `PLAN-1.9-TYPES-AND-EXPORTS.md`. |
+  2026-10-13), `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md` (executed 2026-10-13), `PLAN-4-PACKAGING-TOOLING-CI.md` (executed
+  2026-10-14) and `PLAN-1.9-TYPES-AND-EXPORTS.md` (executed 2026-10-14) are done, one commit per execution step each.
+  The remaining plans, their scope, and their order are in `PLANS.md`; the next one is `PLAN-1.10-2-SMALL-FIXES.md`. |
 | `PLANS.md` | The ordered list of remaining plans with the analysis items each covers and its status. Updated when a plan is written, split, or executed. |
 | `RELEASE-NOTES-3.0.0.md` | Consumer-facing notes. Only what is done or committed to by a plan in this folder, each item with a status marker. Never a copy of the analysis. |
 | `DECISIONS.md` | Current decisions across all plans, big and small, with date and reason. A reversed decision is replaced, not kept; git history has the rest. Open questions at the bottom. |
@@ -225,8 +241,8 @@ Rules:
   `pnpm run release`, not taken from the CI artifact (left for after 3.0.0).
 - Pending 3.0.0 changesets so far: `.changeset/getbyid-verbatim-ids-and-regex.md`,
   `.changeset/url-composition-and-navigation.md`, `.changeset/session-storage-on-webstorage.md`,
-  `.changeset/registration-guards-and-frames.md`, `.changeset/pageobject-lifecycle.md` and
-  `.changeset/package-exports-and-engines.md` (all `major`).
+  `.changeset/registration-guards-and-frames.md`, `.changeset/pageobject-lifecycle.md`,
+  `.changeset/package-exports-and-engines.md` and `.changeset/types-and-exports.md` (all `major`).
 
 ## 8. Do not
 
@@ -237,8 +253,10 @@ Rules:
 - Reintroduce behaviour listed as removed in `RELEASE-NOTES-3.0.0.md`, such as `#` and `id=` prefix handling in
   `getById`, JSON-encoding every session storage value, `setOnNextNavigation`, dropping steps on frame segments, a
   cross-strategy `update` with a per-type cache, explicit `undefined` as the option-clearing value, the rollback
-  of a failed seeded override, or a call to `defineLocators()` or `pageActionsToPerformAfterNavigation()` from the
-  `PageObject` constructor.
+  of a failed seeded override, a call to `defineLocators()` or `pageActionsToPerformAfterNavigation()` from the
+  `PageObject` constructor, `update()`'s optional patch arguments on `replace()`, or the `UrlTypeOptions` name.
+- Re-export a class as a public type, return `this` from a public builder step, or hide internals with `@internal`
+  and `stripInternal` (section 5).
 - Re-derive findings that are already in the analysis. Cite the item number instead.
 - Commit without being asked.
 - Reintroduce a `file:` tarball dependency, a second build in a harness job, or sudo in the harness scripts.

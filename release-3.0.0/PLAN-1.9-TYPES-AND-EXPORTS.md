@@ -10,6 +10,17 @@ plan 4 left open. 1.9e was closed by plan 1.6-1.8. File links are relative to th
 `stripInternal` failure mode (P5b) and the history of the four unused aliases (2.9), and corrected where the new
 declaration check is wired (`pack-test.sh` calls `tsc` itself, 4.2). Every decision in section 7 was taken with the
 user on 2026-10-14 and is mirrored in [DECISIONS.md](DECISIONS.md) and [RELEASE-NOTES-3.0.0.md](RELEASE-NOTES-3.0.0.md).
+Executed 2026-10-14, see below.
+
+**Executed 2026-10-14** on `chore/bugfixes-quality-improvements-and-docs`, one commit per execution step: 46a04e9 (1,
+the types and the runtime with the unit tests, red then green), 5cca796 (2, the harness: the public-types probe, the
+declaration-emit check wired into `pnpm typecheck` and `pack-test.sh`, the spec edits), 6ca76cd (3, `docs/v3`), 4220bfa
+(4, the changeset), and the ledger commit for step 6 that carries this note. Step 5 found nothing to fix: `pnpm lint`
+clean, 276 unit tests with no type errors, `pnpm build`, `pnpm pack-test` 1122 passed (374 per browser) with both type
+checks, and the probes of 5.3 against the final tarball as planned. The three details left to execution (per-method
+argument names, `FilterDefinition` exported as it is, the plain space unescaped) and the folding of `PathArgument`
+into `LocatorSchemaPathArgument` are in [DECISIONS.md](DECISIONS.md). The CI follow-up raised in review was
+implemented ahead of this plan as 95975cf (plan 4's section of DECISIONS.md).
 
 Every claim below was verified on 2026-10-14 against HEAD 9d95a78, never in the working tree: a fresh clone in the
 session scratchpad, `pnpm install --frozen-lockfile`, `pnpm build`, `pnpm pack`; temporary consumer projects that

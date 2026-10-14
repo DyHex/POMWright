@@ -392,16 +392,23 @@ an empty or missing id throws at registration in all three builders. The other s
 
 ### 1.9 Type-level gaps (each proven with `tsc` against `dist/index.d.ts`)
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Fixed 2026-10-14 by [PLAN-1.9-TYPES-AND-EXPORTS.md](PLAN-1.9-TYPES-AND-EXPORTS.md) (e was fixed by plan
+> 1.6-1.8). a: `replace()` takes Playwright's parameter lists through a `Mode` type parameter, and a missing first
+> argument throws the shared message from JavaScript too (it threw the old template, which the docs no longer
+> promised). b: the two methods are TypeScript-`private`, reached through a commit callback, and every step returns
+> the exported `LocatorQueryBuilder` alias; no `stripInternal`. c: one list drives both checks. d: seven types
+> exported, `UrlTypeOptions` renamed `PageObjectTypeOptions`. Addition for the record: without the exports a shared
+> module compiled with `declaration: true` that returned a seed or a builder failed to emit (TS4094), and a base class
+> generic in its paths could not forward a path to an accessor (TS2345); both work now.
 
-- [ ] **a) Replace mode is not in the types.** `mode` is a runtime constructor value at
+- [x] **a) Replace mode is not in the types.** `mode` is a runtime constructor value at
   [locatorUpdateBuilder.ts:305](../src/locators/locatorUpdateBuilder.ts#L305); the argument tuple at
   [L62](../src/locators/locatorUpdateBuilder.ts#L62) is mode-agnostic. `replace().getByRole()` compiles and throws
   `Locator replace for "…" of type "role" requires a "role" value.` Fix: add a `Mode` type parameter and select the
   tuple from it.
-- [ ] **b) `LocatorQueryBuilderPublic` leaks internals after one call.**
+- [x] **b) `LocatorQueryBuilderPublic` leaks internals after one call.**
   [locatorQueryBuilder.ts:16-22](../src/locators/locatorQueryBuilder.ts#L16-L22) uses `Pick`, under which
   `filter(): this` ([L119-123](../src/locators/locatorQueryBuilder.ts#L119-L123)) resolves to the full class.
   `LocatorUpdateBuilder.commit` ([locatorUpdateBuilder.ts:595-599](../src/locators/locatorUpdateBuilder.ts#L595-L599))
@@ -410,10 +417,10 @@ an empty or missing id throws at registration in all three builders. The other s
   [tsconfig.json](../tsconfig.json) lacks `stripInternal`. Proof:
   `getLocatorSchema("a").filter({ hasText: "x" }).applyReplacement("a", { type: "locator", selector: "div" })`
   compiles.
-- [ ] **c) Whitespace parity.** [types.ts:4-29](../src/locators/types.ts#L4-L29) lists 25 characters without `\uFEFF`;
+- [x] **c) Whitespace parity.** [types.ts:4-29](../src/locators/types.ts#L4-L29) lists 25 characters without `\uFEFF`;
   [utils.ts:32](../src/locators/utils.ts#L32) uses `\s`, which includes it. `add("main\uFEFF.form")` compiles and throws
   `cannot contain whitespace chars`.
-- [ ] **d) Missing exports.** [index.ts](../index.ts) omits `ReusableLocator`, `ReusableLocatorBuilder`,
+- [x] **d) Missing exports.** [index.ts](../index.ts) omits `ReusableLocator`, `ReusableLocatorBuilder`,
   `LocatorQueryBuilderPublic`, `FilterDefinition`, `IndexSelector`, `LocatorDescription`, `LocatorSchemaPathFormat`,
   `SessionStorageState`. The `export *` at [locators/index.ts:14-15](../src/locators/index.ts#L14-L15) is not re-exported
   by root. A user cannot name the type of `registry.createReusable.getByRole(...)` in a shared locators file.
@@ -497,7 +504,11 @@ an empty or missing id throws at registration in all three builders. The other s
 - [ ] Triple cloning per segment: [locatorQueryBuilder.ts:47-57](../src/locators/locatorQueryBuilder.ts#L47-L57),
   [locatorRegistry.ts:267-272](../src/locators/locatorRegistry.ts#L267-L272),
   [locatorQueryBuilder.ts:420](../src/locators/locatorQueryBuilder.ts#L420).
-- [ ] [types.ts:183](../src/locators/types.ts#L183) `index: IndexSelector | null` has no producer.
+- [x] Fixed 2026-10-14 by plan 1.9: the four unused aliases deleted (all left over from the v2 registry's development
+  and superseded before 2.0.0), `RegistryPath` the one valid-path alias, `ResolvedFilterDefinition` gone in favour of
+  its identical `PlaywrightFilterDefinition` (an addition), `LocatorStep`'s index non-null and `FilterDefinition` a
+  single member; the nullable index of `buildLocatorChain`'s debug-step record stays with `debugSteps` (plan 9).
+  [types.ts:183](../src/locators/types.ts#L183) `index: IndexSelector | null` has no producer.
   [L73-77](../src/locators/types.ts#L73-L77) and [L90-91](../src/locators/types.ts#L90-L91) are three identical aliases.
   [L201-209](../src/locators/types.ts#L201-L209): the first union member is a subset of the second.
   `LocatorSchemaPathErrors`, `ValidLocatorPath`, `FilterPatch`, `PathIndexMap` ([L65](../src/locators/types.ts#L65),
@@ -688,7 +699,10 @@ property (that `add` clones the seed). Either return a new builder per call or d
 - [x] Fixed 2026-10-14 by plan 4: `pnpm lint` and `pnpm format` cover the repository, minus the third-party W3
   template page; the findings fixed. [package.json:29](../package.json#L29) lints `./src` only. Root `index.ts`, `playwright.base.ts` and `test/` are
   unlinted although `biome.json` already includes them.
-- [ ] Left open by plan 4 for plan 7 (1.9b). No `stripInternal` in [tsconfig.json](../tsconfig.json) (1.9b).
+- [x] Skipped 2026-10-14 by plan 1.9: the internals are TypeScript-`private` instead. `stripInternal` works with tsup
+  but, in TypeScript's words, its result is not checked: a tag on a type a public type still uses built and silently
+  dropped the compile-time path checks for `skipLibCheck: true` consumers; it also left the emit failures of 1.9d.
+  Left open by plan 4 for plan 7 (1.9b). No `stripInternal` in [tsconfig.json](../tsconfig.json) (1.9b).
 - [x] Fixed 2026-10-06 by plan 1.1-1.2 with vitest (colocated `src/**/*.test.ts`, typecheck mode), ticked by plan 4.
   No unit-test layer. `utils.ts`, `locatorUpdateBuilder.ts` and `composeFullUrl` are pure; a `node:test` file with
   zero dependencies would have caught 1.1 to 1.3 in milliseconds.
