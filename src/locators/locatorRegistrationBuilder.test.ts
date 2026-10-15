@@ -217,6 +217,35 @@ describe("steps and describe before a strategy", () => {
 	});
 });
 
+describe("describe takes a string", () => {
+	it('stores "" verbatim on a registration, the chained view and a seed', () => {
+		const registry = createRegistry();
+		registry.add("a").locator("x").describe("");
+		registry.add("a.b").locator("y").filter({ hasText: "z" }).describe("");
+		expect(registry.get("a").description).toBe("");
+		expect(registry.get("a.b").description).toBe("");
+		expect(registry.createReusable.locator("x").describe("").description).toBe("");
+	});
+
+	it("rejects anything else from JavaScript, naming the method and the path, and records nothing", () => {
+		const registry = createRegistry();
+		const message = 'describe requires a string for "a"; pass "" to remove the description.';
+		const registration = registry.add("a").locator("x") as unknown as { describe: (value: unknown) => unknown };
+		expect(() => registration.describe(null)).toThrowError(message);
+		const chained = registry.add("a.b").locator("y").filter({ hasText: "z" }) as unknown as {
+			describe: (value: unknown) => unknown;
+		};
+		expect(() => chained.describe(undefined)).toThrowError(
+			'describe requires a string for "a.b"; pass "" to remove the description.',
+		);
+		const seed = registry.createReusable.locator("x") as unknown as { describe: (value: unknown) => unknown };
+		expect(() => seed.describe(null)).toThrowError(
+			'createReusable.describe requires a string; pass "" to remove the description.',
+		);
+		expect(registry.get("a").description).toBeUndefined();
+	});
+});
+
 describe("a throwing DSL call changes nothing", () => {
 	it("keeps the seed after a wrong-type override", () => {
 		const registry = createRegistry();

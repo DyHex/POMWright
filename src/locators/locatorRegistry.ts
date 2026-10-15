@@ -86,7 +86,8 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	private normalizeRecord(record: LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>) {
 		return {
 			locatorSchemaPath: record.locatorSchemaPath,
-			definition: record.definition,
+			// copies: the registry keeps nothing a caller still holds
+			definition: cloneLocatorStrategyDefinition(record.definition),
 			steps: normalizeSteps<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>(record.steps),
 			...(record.description !== undefined ? { description: record.description } : {}),
 		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
@@ -207,15 +208,9 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		record: LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>,
 	) {
 		validateLocatorSchemaPath(path);
-		if (this.schemas.has(path)) {
-			const existing = this.schemas.get(path);
-			if (!existing) {
-				throw new Error(`A locator schema with the path "${path}" already exists.`);
-			}
-			const errorDetails = stringifyForLog({
-				existing: existing,
-				attempted: record,
-			});
+		const existing = this.schemas.get(path);
+		if (existing) {
+			const errorDetails = stringifyForLog({ existing, attempted: record });
 			throw new Error(`A locator schema with the path "${path}" already exists.\nExisting Schema: ${errorDetails}`);
 		}
 		this.schemas.set(path, this.normalizeRecord(record));
@@ -235,16 +230,11 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	get(
 		path: RegistryPath<LocatorSchemaPathType>,
 	): LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>> {
-		const record = this.schemas.get(path);
+		const record = this.getIfExists(path);
 		if (!record) {
 			throw new Error(`No locator schema registered for path "${path}".`);
 		}
-		return {
-			locatorSchemaPath: record.locatorSchemaPath,
-			definition: cloneLocatorStrategyDefinition(record.definition),
-			steps: normalizeSteps(record.steps),
-			...(record.description !== undefined ? { description: record.description } : {}),
-		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
+		return record;
 	}
 
 	getIfExists(
@@ -252,7 +242,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	): LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>> | undefined {
 		const record = this.schemas.get(path);
 		if (!record) {
-			return undefined as never;
+			return undefined;
 		}
 
 		return {
@@ -304,64 +294,51 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 
 		context.resolvingPaths.add(path);
 		try {
-			const record = this.get(path);
-			const definitions = new Map<string, LocatorStrategyDefinition>([[path, record.definition]]);
-			const steps = new Map<
-				string,
-				LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]
-			>([[path, normalizeSteps(record.steps)]]);
-			const { locator } = this.buildLocatorChain(path, definitions, steps, undefined, record.description, context);
-			if (!locator) {
-				throw new Error(`Unable to resolve direct locator for path "${path}".`);
-			}
-			return locator as Locator;
+			return this.resolveRecord(path, this.get(path), context);
 		} finally {
 			context.resolvingPaths.delete(path);
 		}
 	}
 
-	private resolveFiltersForTarget(
-		filters: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[] | undefined,
+	private resolveFilter(
+		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 		context: {
 			rootPath: RegistryPath<LocatorSchemaPathType>;
 			resolvingPaths: Set<string>;
 		},
-	) {
-		if (!filters || filters.length === 0) {
-			return [] as PlaywrightFilterDefinition[];
+	): PlaywrightFilterDefinition {
+		if (typeof filter !== "object" || filter === null || !("has" in filter || "hasNot" in filter)) {
+			return filter as PlaywrightFilterDefinition;
 		}
-
-		const resolved: PlaywrightFilterDefinition[] = [];
-		for (const filter of filters) {
-			if (filter && typeof filter === "object" && ("has" in filter || "hasNot" in filter)) {
-				const { has, hasNot, ...rest } = filter as FilterDefinition<
-					RegistryPath<LocatorSchemaPathType>,
-					RegistryPath<LocatorSchemaPathType>
-				> & {
-					has?: FilterLocatorReference<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>;
-					hasNot?: FilterLocatorReference<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>;
-				};
-
-				const normalizedFilter: PlaywrightFilterDefinition = {
-					...(rest as PlaywrightFilterDefinition),
-				} as PlaywrightFilterDefinition;
-
-				if (has !== undefined) {
-					normalizedFilter.has = this.resolveFilterLocator(has, context);
-				}
-
-				if (hasNot !== undefined) {
-					normalizedFilter.hasNot = this.resolveFilterLocator(hasNot, context);
-				}
-
-				resolved.push(normalizedFilter);
-				continue;
-			}
-
-			resolved.push(filter as PlaywrightFilterDefinition);
+		const { has, hasNot, ...rest } = filter;
+		const resolved: PlaywrightFilterDefinition = { ...rest };
+		if (has !== undefined) {
+			resolved.has = this.resolveFilterLocator(has, context);
 		}
-
+		if (hasNot !== undefined) {
+			resolved.hasNot = this.resolveFilterLocator(hasNot, context);
+		}
 		return resolved;
+	}
+
+	/** The terminal-only resolution of a record: its definition and its own steps, no ancestors. */
+	private resolveRecord(
+		path: RegistryPath<LocatorSchemaPathType>,
+		record: LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>,
+		context?: {
+			rootPath: RegistryPath<LocatorSchemaPathType>;
+			resolvingPaths: Set<string>;
+		},
+	): Locator {
+		return this.buildLocatorChain(
+			path,
+			record.definition,
+			new Map(),
+			new Map([[path, record.steps ?? []]]),
+			undefined,
+			record.description,
+			context,
+		).locator;
 	}
 
 	/**
@@ -416,13 +393,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 					}
 				} else {
 					// the terminal-only build of getLocator, so a cycle is reported as getLocator would report it
-					this.buildLocatorChain(
-						path,
-						new Map<string, LocatorStrategyDefinition>([[path, record.definition]]),
-						new Map([[path, normalizeSteps(record.steps)]]),
-						undefined,
-						record.description,
-					);
+					this.resolveRecord(path, this.get(path));
 				}
 			} catch (error) {
 				failures.push(`"${path}": ${error instanceof Error ? error.message : String(error)}`);
@@ -446,7 +417,9 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * ```
 	 */
 	getLocator<Path extends LocatorSchemaPathType>(path: LocatorSchemaPathArgument<Path>): Locator {
-		return this.getLocatorSchema(path).getLocator();
+		const target = path as RegistryPath<LocatorSchemaPathType>;
+		validateLocatorSchemaPath(target);
+		return this.resolveRecord(target, this.get(target));
 	}
 
 	/**
@@ -463,11 +436,16 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		return this.getLocatorSchema(path).getNestedLocator();
 	}
 
+	/**
+	 * Resolves `path`: its registered ancestors in `definitions`, minus the `skipped` ones, in chain order,
+	 * then `terminal`. An empty `definitions` map is the terminal-only resolution of `getLocator`.
+	 */
 	buildLocatorChain(
 		path: RegistryPath<LocatorSchemaPathType>,
-		definitions: Map<string, LocatorStrategyDefinition>,
-		steps: Map<string, LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]>,
-		tombstones?: Set<string>,
+		terminal: LocatorStrategyDefinition,
+		definitions: ReadonlyMap<string, LocatorStrategyDefinition>,
+		steps: ReadonlyMap<string, LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]>,
+		skipped?: ReadonlySet<string>,
 		terminalDescription?: LocatorDescription,
 		context?: {
 			rootPath: RegistryPath<LocatorSchemaPathType>;
@@ -475,15 +453,16 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		},
 	) {
 		const resolutionContext = context ?? this.createResolutionContext(path);
-		const chain = expandSchemaPath(path);
-		const registeredChain = chain.filter((part) => definitions.has(part));
-
-		if (tombstones?.has(path) || !definitions.has(path)) {
-			throw new Error(`No locator schema registered for path "${path}".`);
-		}
+		// the registered ancestors in chain order; an unregistered or skipped one is left out
+		const ancestors = expandSchemaPath(path)
+			.slice(0, -1)
+			.flatMap((part) => {
+				const definition = definitions.get(part);
+				return definition === undefined || skipped?.has(part) ? [] : [{ part, definition }];
+			});
 
 		let currentTarget: LocatorBuilderTarget = this.page;
-		let lastLocator: Locator | null = null;
+		let previousPart: string | undefined;
 		const debugSteps: {
 			path: string;
 			definition: LocatorStrategyDefinition;
@@ -492,78 +471,55 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			recordedSteps: LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[];
 		}[] = [];
 
-		const lastIndex = registeredChain.length - 1;
-		let previousPart: string | undefined;
-
-		for (const [index, part] of registeredChain.entries()) {
-			const isTerminalStep = index === lastIndex;
-			const definition = definitions.get(part);
-			if (tombstones?.has(part)) {
-				if (isTerminalStep) {
-					throw new Error(`No locator schema registered for path "${path}".`);
+		// Every strategy, frames included, is an element locator followed by its steps in chain order.
+		const resolveSegment = (part: string, definition: LocatorStrategyDefinition): Locator => {
+			const recordedSteps = steps.get(part) ?? [];
+			let resolvedLocator = createLocator(currentTarget, definition);
+			const appliedFilters: PlaywrightFilterDefinition[] = [];
+			let appliedIndex: IndexSelector | null | undefined;
+			for (const step of recordedSteps) {
+				if (step.kind === "filter") {
+					const resolvedFilter = this.resolveFilter(step.filter, resolutionContext);
+					resolvedLocator = resolvedLocator.filter(resolvedFilter);
+					appliedFilters.push(resolvedFilter);
+				} else {
+					appliedIndex = step.index ?? null;
+					resolvedLocator = applyIndexSelector(resolvedLocator, step.index);
 				}
-				continue;
 			}
+			previousPart = part;
+			debugSteps.push({ path: part, definition, appliedFilters, index: appliedIndex, recordedSteps });
+			return resolvedLocator;
+		};
 
-			if (!definition) {
-				throw new Error(`Missing locator definition for "${part}" while resolving "${path}".`);
-			}
-
+		for (const { part, definition } of ancestors) {
 			// The any-frame segment is Playwright's page.frameLocator(): it exists only at the start of a
 			// selector, has no element to step on or to return, and enters whichever single frame matches.
 			if (isAnyFrameDefinition(definition)) {
 				if (currentTarget !== this.page) {
 					throw new Error(anyFrameNotFirstMessage(part, previousPart ?? path));
 				}
-				if (isTerminalStep || (steps.get(part) ?? []).length > 0) {
+				if ((steps.get(part) ?? []).length > 0) {
 					throw new Error(anyFrameNoElementMessage(part));
 				}
 				currentTarget = this.page.frameLocator();
-				lastLocator = null;
 				previousPart = part;
 				debugSteps.push({ path: part, definition, appliedFilters: [], recordedSteps: [] });
 				continue;
 			}
+			const locator = resolveSegment(part, definition);
+			// a frame segment enters the frame for its descendants; as the terminal it is the <iframe> element
+			currentTarget = isFrameLocatorDefinition(definition) ? locator.contentFrame() : locator;
+		}
 
-			// Every other strategy, frames included, is an element locator followed by its steps in chain
-			// order. A frame segment then enters the frame for its descendants through contentFrame(); as the
-			// terminal segment it is the <iframe> element itself.
-			const recordedSteps = steps.get(part) ?? [];
-			let resolvedLocator = createLocator(currentTarget, definition);
-			const appliedFilters: PlaywrightFilterDefinition[] = [];
-			let appliedIndex: IndexSelector | null | undefined;
-
-			for (const step of recordedSteps) {
-				if (step.kind === "filter") {
-					const [resolvedFilter] = this.resolveFiltersForTarget([step.filter], resolutionContext);
-					if (resolvedFilter) {
-						resolvedLocator = resolvedLocator.filter(resolvedFilter);
-						appliedFilters.push(resolvedFilter);
-					}
-				} else {
-					appliedIndex = step.index ?? null;
-					resolvedLocator = applyIndexSelector(resolvedLocator, appliedIndex ?? undefined);
-				}
+		if (isAnyFrameDefinition(terminal)) {
+			if (currentTarget !== this.page) {
+				throw new Error(anyFrameNotFirstMessage(path, previousPart ?? path));
 			}
-
-			lastLocator = resolvedLocator;
-			currentTarget =
-				isFrameLocatorDefinition(definition) && !isTerminalStep ? resolvedLocator.contentFrame() : resolvedLocator;
-			previousPart = part;
-			debugSteps.push({
-				path: part,
-				definition,
-				appliedFilters,
-				index: appliedIndex,
-				recordedSteps,
-			});
+			throw new Error(anyFrameNoElementMessage(path));
 		}
-
-		if (lastLocator) {
-			lastLocator = lastLocator.describe(terminalDescription ?? path);
-		}
-
-		return { locator: lastLocator, steps: debugSteps };
+		const locator = resolveSegment(path, terminal).describe(terminalDescription ?? path);
+		return { locator, steps: debugSteps };
 	}
 }
 

@@ -16,7 +16,14 @@ import type {
 	TextDefinition,
 	TitleDefinition,
 } from "./types";
-import { assertIdValue, assertPrimaryValue, normalizeSteps } from "./utils";
+import {
+	assertDescription,
+	assertIdValue,
+	assertPrimaryValue,
+	cloneLocatorStrategyDefinition,
+	copyFilter,
+	normalizeSteps,
+} from "./utils";
 
 export class ReusableLocatorBuilder<
 	LocatorSchemaPathType extends string,
@@ -33,7 +40,8 @@ export class ReusableLocatorBuilder<
 		definition: LocatorDefinitionByType[Type],
 		steps: LocatorStep<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>[] = [],
 	) {
-		this.definitionValue = definition;
+		// a copy: the seed keeps no options object the caller still holds
+		this.definitionValue = cloneLocatorStrategyDefinition(definition) as LocatorDefinitionByType[Type];
 		this.type = definition.type as Type;
 		this.stepsList = normalizeSteps<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>(steps);
 	}
@@ -41,7 +49,7 @@ export class ReusableLocatorBuilder<
 	filter(
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	): ReusableLocator<LocatorSchemaPathType, Type> {
-		this.stepsList.push({ kind: "filter", filter });
+		this.stepsList.push({ kind: "filter", filter: copyFilter(filter) });
 		return this;
 	}
 
@@ -51,6 +59,7 @@ export class ReusableLocatorBuilder<
 	}
 
 	describe(description: LocatorDescription): ReusableLocator<LocatorSchemaPathType, Type> {
+		assertDescription(description, { method: "createReusable.describe" });
 		this.descriptionValue = description;
 		return this;
 	}

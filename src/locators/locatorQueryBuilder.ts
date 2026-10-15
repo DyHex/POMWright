@@ -18,15 +18,16 @@ import type {
 } from "./types";
 import {
 	anyFrameNoElementMessage,
+	assertDescription,
 	cloneLocatorStrategyDefinition,
+	copyFilter,
 	expandSchemaPath,
 	isAnyFrameDefinition,
-	normalizeSteps,
 } from "./utils";
 
 /**
  * What `getLocatorSchema(path)` returns, and every step of its chain: a clone of the path's chain whose
- * `filter`, `nth`, `clearSteps`, `remove`, `describe`, `update` and `replace` calls change only the clone.
+ * `filter`, `nth`, `clearSteps`, `skip`, `unskip`, `describe`, `update` and `replace` calls change only the clone.
  *
  * @example
  * ```ts
@@ -49,24 +50,25 @@ export class LocatorQueryBuilderInternal<
 		LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]
 	>();
 	private readonly descriptions = new Map<string, LocatorDescription>();
-	private readonly tombstones = new Set<string>();
+	/** Ancestors left out of the chain by `skip`; their definition, steps and description stay as they are. */
+	private readonly skipped = new Set<string>();
+	private readonly chain: ReadonlySet<string>;
 
 	constructor(
 		private readonly registry: LocatorRegistryInternal<LocatorSchemaPathType>,
 		private readonly path: LocatorSubstring,
 	) {
 		const chain = expandSchemaPath(path);
+		this.chain = new Set(chain);
 		let hasTerminal = false;
 		for (const part of chain) {
+			// getIfExists returns a clone, which this query owns from here on
 			const record = this.registry.getIfExists(part as RegistryPath<LocatorSchemaPathType>);
 			if (!record) {
 				continue;
 			}
-			this.definitions.set(part, cloneLocatorStrategyDefinition(record.definition));
-			const recordSteps = normalizeSteps<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>(
-				record.steps,
-			);
-			this.steps.set(part, recordSteps);
+			this.definitions.set(part, record.definition);
+			this.steps.set(part, record.steps ?? []);
 			if (record.description !== undefined) {
 				this.descriptions.set(part, record.description);
 			}
@@ -86,7 +88,8 @@ export class LocatorQueryBuilderInternal<
 	 * you resolve with `getLocator`/`getNestedLocator`.
 	 *
 	 * If `subPath` is omitted, the terminal path for this builder (`path` passed to
-	 * `getLocatorSchema`) is used.
+	 * `getLocatorSchema`) is used. The steps and the description are left as they are, and a segment
+	 * left out with `skip` must be brought back with `unskip` first.
 	 *
 	 * @example
 	 * ```ts
@@ -110,6 +113,7 @@ export class LocatorQueryBuilderInternal<
 			LocatorSubstring
 		>;
 		this.ensureSubPath(resolvedSubPath);
+		this.ensureNotSkipped("update", resolvedSubPath);
 		return new LocatorUpdateBuilderInternal<LocatorSchemaPathType, LocatorSubstring, typeof resolvedSubPath, "update">(
 			resolvedSubPath,
 			"update",
@@ -153,9 +157,10 @@ export class LocatorQueryBuilderInternal<
 		>;
 
 		this.ensureSubPath(resolvedSubPath);
+		this.ensureNotSkipped("filter", resolvedSubPath);
 		this.ensureStepTarget(resolvedSubPath);
 		const existing = this.steps.get(resolvedSubPath) ?? [];
-		existing.push({ kind: "filter", filter });
+		existing.push({ kind: "filter", filter: copyFilter(filter) });
 		this.steps.set(resolvedSubPath, existing);
 		return this;
 	}
@@ -182,6 +187,7 @@ export class LocatorQueryBuilderInternal<
 			LocatorSubstring
 		>;
 		this.ensureSubPath(resolvedSubPath);
+		this.ensureNotSkipped("clearSteps", resolvedSubPath);
 		this.steps.set(resolvedSubPath, []);
 		return this;
 	}
@@ -214,6 +220,7 @@ export class LocatorQueryBuilderInternal<
 		const index = (hasExplicitSubPath ? maybeIndex : subPathOrIndex) as IndexSelector;
 
 		this.ensureSubPath(resolvedSubPath);
+		this.ensureNotSkipped("nth", resolvedSubPath);
 		this.ensureStepTarget(resolvedSubPath);
 		const existing = this.steps.get(resolvedSubPath) ?? [];
 		existing.push({ kind: "index", index });
@@ -233,7 +240,7 @@ export class LocatorQueryBuilderInternal<
 	 * ```
 	 */
 	describe(description: LocatorDescription): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring> {
-		this.ensureSubPath(this.path);
+		assertDescription(description, { method: "describe", path: this.path });
 		this.descriptions.set(this.path, description);
 		return this;
 	}
@@ -242,19 +249,7 @@ export class LocatorQueryBuilderInternal<
 		subPath: SubPath,
 		updates: LocatorUpdate,
 	) {
-		this.ensureSubPath(subPath);
-		if (!this.definitions.has(subPath) && this.tombstones.has(subPath)) {
-			const baseline = this.registry.get(subPath as RegistryPath<LocatorSchemaPathType>).definition;
-			this.definitions.set(subPath, cloneLocatorStrategyDefinition(baseline));
-			this.steps.set(subPath, []);
-			this.tombstones.delete(subPath);
-		}
-
-		const current = this.definitions.get(subPath);
-		if (!current) {
-			throw new Error(`No locator schema registered for sub-path "${subPath}".`);
-		}
-		const merged = mergeLocatorDefinition(current, updates, subPath);
+		const merged = mergeLocatorDefinition(this.ensureSubPath(subPath), updates, subPath);
 		this.definitions.set(subPath, cloneLocatorStrategyDefinition(merged));
 		return this;
 	}
@@ -264,7 +259,8 @@ export class LocatorQueryBuilderInternal<
 	 * builder. Returns a builder exposing the same locator-type methods as `registry.add`, requiring
 	 * primary arguments where Playwright does. Registry state is unchanged; the replacement applies
 	 * to the builder clone when resolved. If `subPath` is omitted, the terminal path for this
-	 * builder is used.
+	 * builder is used. The steps and the description are left as they are, and a segment left out
+	 * with `skip` must be brought back with `unskip` first.
 	 *
 	 * @example
 	 * ```ts
@@ -289,6 +285,7 @@ export class LocatorQueryBuilderInternal<
 			LocatorSubstring
 		>;
 		this.ensureSubPath(resolvedSubPath);
+		this.ensureNotSkipped("replace", resolvedSubPath);
 		return new LocatorUpdateBuilderInternal<LocatorSchemaPathType, LocatorSubstring, typeof resolvedSubPath, "replace">(
 			resolvedSubPath,
 			"replace",
@@ -300,92 +297,73 @@ export class LocatorQueryBuilderInternal<
 		subPath: SubPath,
 		updates: LocatorUpdate,
 	) {
-		this.ensureSubPath(subPath);
-		if (this.tombstones.has(subPath) && !this.definitions.has(subPath)) {
-			this.steps.set(subPath, []);
-			this.tombstones.delete(subPath);
-		}
 		const nextDefinition = buildReplacementDefinition(updates, subPath);
 		this.definitions.set(subPath, cloneLocatorStrategyDefinition(nextDefinition));
 		return this;
 	}
 
 	/**
-	 * Soft-deletes the definition and steps for the given `subPath` on this builder clone, adding a
-	 * tombstone. Non-terminal removals are skipped during resolution; terminal removals throw unless
-	 * repopulated with `update`/`replace` before resolving. If `subPath` is omitted, the terminal
-	 * path for this builder is used.
+	 * Leaves an ancestor out of the chain when this query resolves, as if it were not registered. Nothing
+	 * is deleted: `unskip` brings it back exactly as it was. The terminal path cannot be skipped, and a
+	 * skipped segment rejects `update`, `replace`, `filter`, `nth` and `clearSteps` until `unskip`.
 	 *
 	 * @example
 	 * ```ts
-	 * const builder = getLocatorSchema("section.button");
-	 * builder.remove("section.button");
-	 * expect(() => builder.getNestedLocator()).toThrow();
+	 * getLocatorSchema("main.list.item").skip("main.list").getNestedLocator(); // locator('main').locator('li')
 	 * ```
 	 */
-	remove(): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	remove<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
+	skip<SubPath extends SkippablePaths<LocatorSchemaPathType, LocatorSubstring>>(
 		subPath: SubPath,
-	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
-	remove<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(subPath?: SubPath) {
-		const resolvedSubPath = (subPath ?? this.path) as LocatorChainPaths<
-			RegistryPath<LocatorSchemaPathType>,
-			LocatorSubstring
-		>;
-		this.ensureSubPath(resolvedSubPath);
-		this.definitions.delete(resolvedSubPath);
-		this.steps.delete(resolvedSubPath);
-		this.descriptions.delete(resolvedSubPath);
-		this.tombstones.add(resolvedSubPath);
+	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring> {
+		this.ensureSubPath(subPath);
+		// the type excludes the terminal; JavaScript callers can still pass it
+		if ((subPath as string) === this.path) {
+			throw new Error(
+				`skip() cannot skip "${subPath}": it is the path this query resolves; skip one of its ancestors.`,
+			);
+		}
+		if (this.skipped.has(subPath)) {
+			throw new Error(`skip() cannot skip "${subPath}": it is already skipped in this query.`);
+		}
+		this.skipped.add(subPath);
+		return this;
+	}
+
+	/** Puts a segment left out with `skip` back into the chain, exactly as it was. */
+	unskip<SubPath extends SkippablePaths<LocatorSchemaPathType, LocatorSubstring>>(
+		subPath: SubPath,
+	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring> {
+		this.ensureSubPath(subPath);
+		if (!this.skipped.has(subPath)) {
+			throw new Error(`unskip() cannot unskip "${subPath}": it is not skipped in this query.`);
+		}
+		this.skipped.delete(subPath);
 		return this;
 	}
 
 	/**
 	 * Resolves and returns the Playwright {@link Locator} for the terminal path of this builder,
-	 * applying only the terminal definition and its steps. Throws if the terminal path has been
-	 * removed or is otherwise missing.
+	 * applying only the terminal definition and its steps; skipped ancestors make no difference.
 	 *
 	 * @example
 	 * ```ts
 	 * const locator = getLocatorSchema("form.submit").getLocator();
 	 * ```
 	 */
-	getLocator() {
-		const definition = this.definitions.get(this.path);
-
-		if (!definition) {
-			throw new Error(`No locator schema registered for path "${this.path}".`);
-		}
-
-		const stepsForPath = this.steps.get(this.path) ?? [];
-
-		const definitions = new Map<string, LocatorStrategyDefinition>([[this.path, definition]]);
-		const steps = new Map<
-			string,
-			LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[]
-		>([
-			[
-				this.path,
-				normalizeSteps<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>(stepsForPath),
-			],
-		]);
-
-		const { locator } = this.registry.buildLocatorChain(
+	getLocator(): Locator {
+		return this.registry.buildLocatorChain(
 			this.path,
-			definitions,
-			steps,
-			this.tombstones,
+			this.ensureSubPath(this.path),
+			new Map(),
+			this.steps,
+			undefined,
 			this.descriptions.get(this.path),
-		);
-		if (!locator) {
-			throw new Error(`Unable to resolve direct locator for path "${this.path}".`);
-		}
-		return locator as Locator;
+		).locator;
 	}
 
 	/**
 	 * Resolves the chained Playwright {@link Locator} for this builder’s root path, traversing each
-	 * registered segment and applying recorded steps. Throws if any required segment is missing.
+	 * registered segment that is not skipped and applying recorded steps.
 	 *
 	 * @example
 	 * ```ts
@@ -394,35 +372,47 @@ export class LocatorQueryBuilderInternal<
 	 *   .getNestedLocator();
 	 * ```
 	 */
-	getNestedLocator() {
-		const { locator } = this.resolve();
-		if (!locator) {
-			throw new Error(`Unable to resolve nested locator for path "${this.path}".`);
-		}
-		return locator;
+	getNestedLocator(): Locator {
+		return this.registry.buildLocatorChain(
+			this.path,
+			this.ensureSubPath(this.path),
+			this.definitions,
+			this.steps,
+			this.skipped,
+			this.descriptions.get(this.path),
+		).locator;
 	}
 
-	private ensureSubPath(subPath: string) {
-		if (!this.definitions.has(subPath) && !this.tombstones.has(subPath)) {
-			throw new Error(`"${subPath}" is not a valid sub-path of "${this.path}".`);
+	/** A sub-path is a registered segment of this query's chain; returns its definition in this query. */
+	private ensureSubPath(subPath: string): LocatorStrategyDefinition {
+		const definition = this.definitions.get(subPath);
+		if (definition !== undefined) {
+			return definition;
+		}
+		const reason = this.chain.has(subPath)
+			? " It is a segment of that path, but no locator schema is registered for it."
+			: "";
+		throw new Error(`"${subPath}" is not a valid sub-path of "${this.path}".${reason}`);
+	}
+
+	private ensureNotSkipped(method: "update" | "replace" | "filter" | "nth" | "clearSteps", subPath: string) {
+		if (this.skipped.has(subPath)) {
+			throw new Error(
+				`${method}() cannot apply to "${subPath}": it is skipped in this query; call unskip("${subPath}") first.`,
+			);
 		}
 	}
 
 	/** An any-frame segment has no element, so a filter or index step on it is rejected at the call. */
 	private ensureStepTarget(subPath: string) {
-		const definition = this.definitions.get(subPath);
-		if (definition !== undefined && isAnyFrameDefinition(definition)) {
+		if (isAnyFrameDefinition(this.ensureSubPath(subPath))) {
 			throw new Error(anyFrameNoElementMessage(subPath));
 		}
 	}
-
-	private resolve() {
-		return this.registry.buildLocatorChain(
-			this.path,
-			this.definitions,
-			this.steps,
-			this.tombstones,
-			this.descriptions.get(this.path),
-		);
-	}
 }
+
+/** The sub-paths `skip` and `unskip` accept: the query's registered-path ancestors, never the path itself. */
+type SkippablePaths<LocatorSchemaPathType extends string, Path extends RegistryPath<LocatorSchemaPathType>> = Exclude<
+	LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, Path>,
+	Path
+>;

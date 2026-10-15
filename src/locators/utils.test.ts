@@ -1,8 +1,18 @@
 import type { Locator } from "@playwright/test";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import type { FrameLocatorDefinition, IdDefinition, LocatorBuilderTarget, UnicodeWhitespaceChar } from "./types";
+import { FakeLocator } from "./fakePage";
+import type {
+	FrameLocatorDefinition,
+	IdDefinition,
+	IndexSelector,
+	LocatorBuilderTarget,
+	LocatorStep,
+	UnicodeWhitespaceChar,
+} from "./types";
 import {
 	applyDefinitionPatch,
+	applyIndexSelector,
+	assertDescription,
 	assertIdValue,
 	assertPrimaryValue,
 	buildIdSelector,
@@ -12,8 +22,11 @@ import {
 	escapeRegExpForSelector,
 	formatLocatorSchemaPathForError,
 	isAnyFrameDefinition,
+	isLocatorInstance,
 	LOCATOR_SCHEMA_PATH_WHITESPACE,
 	methodForStrategy,
+	normalizeSteps,
+	stringifyForLog,
 	validateLocatorSchemaPath,
 } from "./utils";
 
@@ -347,5 +360,104 @@ describe("path whitespace", () => {
 		expect(() => validateLocatorSchemaPath("main\uFEFF.form")).toThrowError(
 			"LocatorSchemaPath string cannot contain whitespace chars: main\\uFEFF.form",
 		);
+	});
+});
+
+describe("isLocatorInstance", () => {
+	const fn = () => undefined;
+	it("accepts an object with filter, nth and locator methods, as a Playwright Locator has", () => {
+		expect(isLocatorInstance(new FakeLocator("locator('b')"))).toBe(true);
+		expect(isLocatorInstance({ filter: fn, nth: fn, locator: fn })).toBe(true);
+	});
+
+	it("rejects arrays, filter-only objects, frame locators, pages and non-objects", () => {
+		const cases: [string, unknown][] = [
+			["an empty array", []],
+			["an array of locators", [new FakeLocator("locator('b')")]],
+			["an object with only filter", { filter: fn }],
+			["a FrameLocator (nth and locator, no filter)", { nth: fn, locator: fn, first: fn, last: fn }],
+			["a Page (locator only)", { locator: fn, goto: fn }],
+			["null", null],
+			["undefined", undefined],
+			["a path string", "list.item"],
+		];
+		for (const [label, value] of cases) {
+			expect(isLocatorInstance(value), label).toBe(false);
+		}
+	});
+});
+
+describe("stringifyForLog", () => {
+	it("renders a Locator as Playwright prints it, not its internals", () => {
+		const output = stringifyForLog({ filter: { has: new FakeLocator("locator('b')"), hasText: "x" } });
+		expect(output).toContain(`"has": "locator('b')"`);
+		expect(output).not.toContain("chain");
+	});
+
+	it("keeps rendering RegExps and cycles as before", () => {
+		const circular: Record<string, unknown> = { name: "c" };
+		circular.self = circular;
+		expect(JSON.parse(stringifyForLog({ re: /a.b/i, circular }))).toEqual({
+			re: { type: "RegExp", source: "a.b", flags: "i" },
+			circular: { name: "c", self: "[Circular]" },
+		});
+	});
+});
+
+describe("normalizeSteps", () => {
+	it("copies every step and every filter object, so a copy shares nothing that can change", () => {
+		const filter = { hasText: "Save" };
+		const steps: LocatorStep<"a", "a">[] = [
+			{ kind: "filter", filter },
+			{ kind: "index", index: 1 },
+		];
+		const copy = normalizeSteps(steps);
+		expect(copy).toEqual(steps);
+		expect(copy[0]).not.toBe(steps[0]);
+		expect((copy[0] as { filter: object }).filter).not.toBe(filter);
+		filter.hasText = "Other";
+		expect(copy[0]).toEqual({ kind: "filter", filter: { hasText: "Save" } });
+	});
+
+	it("keeps a Locator in a filter by reference", () => {
+		const has = new FakeLocator("locator('b')");
+		const copy = normalizeSteps<"a", "a">([{ kind: "filter", filter: { has: has as never } }]);
+		expect((copy[0] as { filter: { has: unknown } }).filter.has).toBe(has);
+	});
+});
+
+describe("assertDescription", () => {
+	it("accepts any string; an empty string removes the description", () => {
+		expect(() => assertDescription("", { method: "describe", path: "a" })).not.toThrow();
+		expect(() => assertDescription("Save button", { method: "describe", path: "a" })).not.toThrow();
+	});
+
+	it("rejects anything else, naming the method and the path when there is one", () => {
+		for (const value of [null, undefined, 1, {}]) {
+			expect(() => assertDescription(value, { method: "describe", path: "list.item" })).toThrowError(
+				'describe requires a string for "list.item"; pass "" to remove the description.',
+			);
+		}
+		expect(() => assertDescription(null, { method: "createReusable.describe" })).toThrowError(
+			'createReusable.describe requires a string; pass "" to remove the description.',
+		);
+	});
+});
+
+describe("applyIndexSelector", () => {
+	const nthOf = (index: unknown) => String(applyIndexSelector(new FakeLocator("li") as never, index as IndexSelector));
+
+	it('maps "first" and "last" to first() and last()', () => {
+		expect(nthOf("first")).toBe("li.first()");
+		expect(nthOf("last")).toBe("li.last()");
+	});
+
+	it("hands every other value to Playwright's nth as given, null and undefined included", () => {
+		expect(nthOf(0)).toBe("li.nth(0)");
+		expect(nthOf(-1)).toBe("li.nth(-1)");
+		expect(nthOf(1.5)).toBe("li.nth(1.5)");
+		expect(nthOf("2")).toBe("li.nth('2')");
+		expect(nthOf(null)).toBe("li.nth(null)");
+		expect(nthOf(undefined)).toBe("li.nth(undefined)");
 	});
 });

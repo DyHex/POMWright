@@ -11,7 +11,14 @@ import type {
 	RegistryPath,
 	RoleDefinition,
 } from "./types";
-import { applyDefinitionPatch, assertIdValue, assertPrimaryValue, normalizeSteps } from "./utils";
+import {
+	applyDefinitionPatch,
+	assertDescription,
+	assertIdValue,
+	assertPrimaryValue,
+	copyFilter,
+	normalizeSteps,
+} from "./utils";
 
 export type LocatorRegistrationPostDefinitionBuilder<
 	LocatorSchemaPathType extends string,
@@ -110,8 +117,7 @@ export class LocatorRegistrationBuilder<
 
 	describe(description: LocatorDescription): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
 		this.ensureDefinition("describe");
-		this.description = description;
-		this.persist();
+		this.applyDescription(description);
 		return this.getPostDefinitionView();
 	}
 
@@ -443,13 +449,19 @@ export class LocatorRegistrationBuilder<
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	) {
 		this.ensureDefinition("filter");
-		this.steps.push({ kind: "filter", filter });
+		this.steps.push({ kind: "filter", filter: copyFilter(filter) });
 		this.persist();
 	}
 
 	private applyIndex(index: IndexSelector) {
 		this.ensureDefinition("nth");
 		this.steps.push({ kind: "index", index });
+		this.persist();
+	}
+
+	private applyDescription(description: LocatorDescription) {
+		assertDescription(description, { method: "describe", path: this.path });
+		this.description = description;
 		this.persist();
 	}
 
@@ -524,8 +536,7 @@ export class LocatorRegistrationBuilder<
 				return view;
 			},
 			describe: (description: LocatorDescription) => {
-				this.description = description;
-				this.persist();
+				this.applyDescription(description);
 				return view;
 			},
 		};

@@ -175,15 +175,39 @@ export function assertIdValue(
 	assertPrimaryValue(id, { ...source, field: "id", allowEmpty: false });
 }
 
+/** A filter as given, copied one level deep: its values are strings, booleans, RegExps and Locators. */
+export const copyFilter = <Filter>(filter: Filter): Filter =>
+	typeof filter === "object" && filter !== null ? { ...filter } : filter;
+
+/** Copies steps and their filter objects, so no copy shares anything a caller or another copy can change. */
 export const normalizeSteps = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
 	steps?: LocatorStep<LocatorSchemaPathType, AllowedPaths>[],
-) => (steps ? steps.map((step) => ({ ...step })) : []);
+) =>
+	steps
+		? steps.map((step) => (step.kind === "filter" ? { ...step, filter: copyFilter(step.filter) } : { ...step }))
+		: [];
+
+/** Validates `describe`'s argument at the DSL boundary: a string; `""` removes the description. */
+export function assertDescription(
+	description: unknown,
+	source: { method: string; path?: string },
+): asserts description is string {
+	if (typeof description === "string") {
+		return;
+	}
+	const where = source.path === undefined ? "" : ` for "${source.path}"`;
+	throw new Error(`${source.method} requires a string${where}; pass "" to remove the description.`);
+}
 
 export const stringifyForLog = (value: unknown) => {
 	const seen = new WeakSet();
 	return JSON.stringify(
 		value,
 		(_key, current) => {
+			// a Playwright Locator as Playwright prints it, not its internals
+			if (isLocatorInstance(current)) {
+				return String(current);
+			}
 			if (typeof current === "object" && current !== null) {
 				if (seen.has(current)) {
 					return "[Circular]";
@@ -199,10 +223,8 @@ export const stringifyForLog = (value: unknown) => {
 	);
 };
 
-export const applyIndexSelector = (locator: Locator, selector: IndexSelector | null | undefined) => {
-	if (selector === undefined || selector === null) {
-		return locator;
-	}
+/** `"first"` and `"last"` are POMWright's; every other value goes to Playwright's `nth` as given. */
+export const applyIndexSelector = (locator: Locator, selector: IndexSelector) => {
 	if (selector === "first") {
 		return locator.first();
 	}
@@ -426,6 +448,13 @@ export const methodForStrategy: Record<LocatorStrategyDefinition["type"], string
 	id: "getById",
 };
 
-export const isLocatorInstance = (value: unknown): value is Locator => {
-	return !!value && typeof value === "object" && typeof (value as Locator).filter === "function";
-};
+/**
+ * Whether a value is a Playwright `Locator`: an object with `filter`, `nth` and `locator` methods. An
+ * array (which has `filter`), a `FrameLocator` (no `filter`) and a `Page` (no `filter` or `nth`) are not.
+ */
+export const isLocatorInstance = (value: unknown): value is Locator =>
+	typeof value === "object" &&
+	value !== null &&
+	typeof (value as Locator).filter === "function" &&
+	typeof (value as Locator).nth === "function" &&
+	typeof (value as Locator).locator === "function";
