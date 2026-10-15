@@ -11,7 +11,11 @@ const firstFrame = (stack: string) => stack.split("\n").find((line) => line.trim
 test.describe("a page object's registry error", () => {
 	test.describe.configure({ mode: "serial" });
 	// the failing test's worker is replaced, so its stack is handed to the next test through a file
-	const stackFile = () => path.join(test.info().project.outputDir, `call-site-${test.info().project.name}.txt`);
+	const stackFile = () =>
+		path.join(
+			test.info().project.outputDir,
+			`call-site-${test.info().project.name}-${test.info().repeatEachIndex}.txt`,
+		);
 
 	test("fails the test from the check right after construction", async ({ page }) => {
 		test.fail(true, "the registry mistake fails this test, as it fails a fixture");
@@ -51,9 +55,10 @@ test("a pending seed's error points at the seed call in the consumer's sessionSt
 	expect(error?.message).toMatch(/^TestStorageSecond\.SessionStorage\.seed: could not fetch /);
 	expect(firstFrame(error?.stack ?? "")).toMatch(/[\\/]callSite[\\/]sessionStorage\.ts:\d+:\d+/);
 
-	// back on a real document, the seed still applies
+	// back on a real document, the seed still applies; waiting for it keeps the page open until it has
 	await expect(async () => {
 		await testStorage.navigation.goto();
 	}).toPass({ timeout: 5_000 });
 	await testStorageSecond.navigation.goto();
+	await expect.poll(() => testStorageSecond.sessionStorage.get("token")).toBe("later");
 });
