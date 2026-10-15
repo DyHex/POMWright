@@ -98,10 +98,11 @@ test("replace defaults to the terminal path when subPath is omitted", async ({ t
 	);
 });
 
-test("remove defaults to the terminal path when subPath is omitted", async ({ testFilters }) => {
-	const builder = testFilters.getLocatorSchema(terminalPath).remove();
+test("clearSteps rejects a skipped segment and names unskip", async ({ testFilters }) => {
+	const query = testFilters.getLocatorSchema(terminalPath).skip("body.section");
 
-	await expect(async () => builder.getNestedLocator()).rejects.toThrow(
-		'No locator schema registered for path "body.section.button".',
+	expect(() => query.clearSteps("body.section")).toThrowError(
+		'clearSteps() cannot apply to "body.section": it is skipped in this query; call unskip("body.section") first.',
 	);
+	expect(`${query.clearSteps().getNestedLocator().describe("")}`).toEqual("locator('body').getByRole('button')");
 });

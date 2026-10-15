@@ -171,3 +171,22 @@ test("verify() has no state: it reports the same result twice and changes nothin
 	expect(() => registry.verify()).toThrowError("1 of 2 paths");
 	expect(registry.get("list")).toEqual(before);
 });
+
+test("an array or a filter-only object in has is an unsupported reference, as a FrameLocator is", async ({ page }) => {
+	const unsupported =
+		'"a": Unsupported filter reference while resolving "a". Filter has/hasNot supports Playwright Locator instances or registry path strings.';
+	const values: unknown[] = [
+		[],
+		[page.locator("li")],
+		{ filter: () => page.locator("li") },
+		page.frameLocator("iframe"),
+	];
+	for (const has of values) {
+		const registry = createRegistry(page);
+		registry
+			.add("a")
+			.getByRole("button")
+			.filter({ has } as unknown as FilterDefinition<Paths, Paths>);
+		expect(() => registry.verify()).toThrowError(unsupported);
+	}
+});

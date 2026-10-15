@@ -335,3 +335,16 @@ test("reusable getById seeds store the id verbatim, inherit on omission, and rej
 
 	expect(() => registry.createReusable.getById("")).toThrowError("createReusable.getById requires a non-empty id.");
 });
+
+test('a seed\'s describe("") removes the description; anything but a string throws', async ({ page }) => {
+	type LocatorSchemaPaths = "heading";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	const seed = registry.createReusable.getByRole("heading", { level: 2 }).describe("");
+	registry.add("heading", { reuse: seed });
+	expect(registry.getLocator("heading").description()).toBeNull();
+	// @ts-expect-error describe takes a string
+	expect(() => registry.createReusable.getByRole("heading").describe(null)).toThrowError(
+		'createReusable.describe requires a string; pass "" to remove the description.',
+	);
+});

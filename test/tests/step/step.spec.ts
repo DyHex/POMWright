@@ -1,4 +1,5 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
+import TestPage from "@page-object-models/testApp/pages/testPage.page";
 
 // These tests need to be verified manually by checking the test report
 
@@ -45,4 +46,8 @@ test("stepWithArgsAndObjectReturn should preserve typed argument/return flows", 
 		mode: "advanced",
 		retry: 2,
 	});
+});
+
+test("a static @step method returns its value", async () => {
+	await expect(TestPage.stepStatic("x")).resolves.toBe("static:x");
 });

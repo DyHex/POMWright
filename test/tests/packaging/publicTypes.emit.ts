@@ -1,7 +1,7 @@
 // Compile-only, through tsconfig.declarations.json (declaration: true): a shared locator module whose exported
 // functions return pomwright's builders and seeds without annotations. It emits only if each type can be named
 // from "pomwright". Playwright does not match the file name.
-import type { LocatorRegistry } from "pomwright";
+import { type LocatorRegistry, step } from "pomwright";
 
 export type Paths = "main" | "main.heading" | "list" | "list.item";
 
@@ -24,4 +24,13 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 	registry.add("main.heading", { reuse: headingSeed(registry) });
 	registry.add("list").locator("ul");
 	registry.add("list.item").getByRole("listitem").filter(rowFilter("Row"));
+}
+
+export const skippedList = (registry: LocatorRegistry<Paths>) => registry.getLocatorSchema("list.item").skip("list");
+
+export class Steps {
+	@step()
+	async load(): Promise<number> {
+		return 1;
+	}
 }

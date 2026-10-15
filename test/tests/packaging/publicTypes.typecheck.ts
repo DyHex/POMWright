@@ -136,6 +136,47 @@ class ListPage extends ShopApp<Paths> {
 	}
 }
 
+// skip and unskip take the ancestors only; remove() is gone
+getLocatorSchema("list.item").skip("list").unskip("list");
+// @ts-expect-error the terminal path cannot be skipped
+getLocatorSchema("list.item").skip("list.item");
+// @ts-expect-error skip needs a sub-path
+getLocatorSchema("list.item").skip();
+// @ts-expect-error remove() is replaced by skip() and unskip()
+getLocatorSchema("list.item").remove("list");
+// @ts-expect-error a one-segment query has nothing to skip
+getLocatorSchema("list").skip("list");
+
+// describe takes a string ("" removes the description), nth an index, has a Locator or a path
+getLocatorSchema("list.item").describe("");
+// @ts-expect-error describe takes a string
+getLocatorSchema("list.item").describe(null);
+// @ts-expect-error null is not an index, in Playwright either
+getLocatorSchema("list.item").nth(null);
+// @ts-expect-error an array is neither a Locator nor a path
+const arrayHas: FilterDefinition<Paths> = { has: [] };
+
+// @step decorates methods that return a Promise
+class Steps {
+	@step()
+	async load(): Promise<number> {
+		return 1;
+	}
+	@step()
+	static async create(): Promise<string> {
+		return "c";
+	}
+	@step()
+	promised(): Promise<number> {
+		return Promise.resolve(1);
+	}
+	// @ts-expect-error "@step decorates methods that return a Promise: make the method async"
+	@step()
+	sync(): number {
+		return 1;
+	}
+}
+
 export type Probe = [Urls, Storage, Navigation, Logging, UrlTypeOptions];
 void [accessors, typedRegistry, options, values, afterUpdate, afterReplace, notAValue, wrongSeed, misspelt];
-void [wellFormed, malformed, ListPage];
+void [wellFormed, malformed, ListPage, arrayHas, Steps];

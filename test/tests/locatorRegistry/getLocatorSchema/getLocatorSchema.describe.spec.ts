@@ -82,3 +82,20 @@ test("describe uses the terminal child path inside frames and supports nested qu
 	expect(overridden.description()).toEqual("Submit button inside frame");
 	expect(registry.getNestedLocator("frame.button").description()).toEqual("frame.button");
 });
+
+test('a query\'s describe("") removes the description; anything but a string throws', async ({ page }) => {
+	type LocatorSchemaPaths = "panel" | "panel.button";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	registry.add("panel").locator("section.panel");
+	registry.add("panel.button").getByRole("button").describe("Panel button");
+
+	const plain = registry.getLocatorSchema("panel.button").describe("").getNestedLocator();
+	expect(plain.description()).toBeNull();
+	expect(`${plain}`).toEqual("locator('section.panel').getByRole('button')");
+	// @ts-expect-error describe takes a string
+	expect(() => registry.getLocatorSchema("panel.button").describe(null)).toThrowError(
+		'describe requires a string for "panel.button"; pass "" to remove the description.',
+	);
+	expect(registry.getNestedLocator("panel.button").description()).toEqual("Panel button");
+});

@@ -156,8 +156,8 @@ test("the any-frame segment must be the first resolved segment of its chain", as
 	expect(() => registry.getNestedLocator("shell.anyFrame.button")).toThrowError(
 		'frameLocator() without a selector must be the first segment of the chain; "shell.anyFrame" has the ancestor "shell".',
 	);
-	// a removed ancestor leaves the page as the target, so the any-frame segment is first again
-	expect(render(registry.getLocatorSchema("shell.anyFrame.button").remove("shell").getNestedLocator())).toEqual(
+	// a skipped ancestor leaves the page as the target, so the any-frame segment is first again
+	expect(render(registry.getLocatorSchema("shell.anyFrame.button").skip("shell").getNestedLocator())).toEqual(
 		"frameLocator().getByRole('button')",
 	);
 

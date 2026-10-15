@@ -217,3 +217,90 @@ test("a seeded registration keeps filter, nth and describe before its override",
 		description: "d",
 	});
 });
+
+test("the duplicate-registration message shows a Locator in a step as Playwright prints it", async ({ page }) => {
+	type LocatorSchemaPaths = "item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	registry
+		.add("item")
+		.locator("li")
+		.filter({ has: page.locator("b") });
+
+	let message = "";
+	try {
+		registry.add("item").locator("li");
+	} catch (error) {
+		message = (error as Error).message;
+	}
+	expect(message).toMatch(/^A locator schema with the path "item" already exists\.\nExisting Schema: \{/);
+	expect(message).toContain(`"has": "locator('b')"`);
+	expect(message).not.toContain("_guid");
+	expect(message).not.toContain("_frame");
+});
+
+test.describe("a registered locator cannot change after registration", () => {
+	type LocatorSchemaPaths = "body" | "body.button" | "body.row" | "body.seeded";
+
+	test.beforeEach(async ({ testFilters }) => {
+		await testFilters.page.goto(testFilters.fullUrl);
+	});
+
+	test("changing the options object after add has no effect", async ({ page }) => {
+		const registry = createTestRegistry<LocatorSchemaPaths>(page);
+		const options = { name: "Red" };
+		registry.add("body").locator("body");
+		registry.add("body.button").getByRole("button", options);
+		options.name = "Blue";
+		await expect(registry.getNestedLocator("body.button").first()).toHaveText("Red");
+	});
+
+	test("changing the filter object after add has no effect", async ({ page }) => {
+		const registry = createTestRegistry<LocatorSchemaPaths>(page);
+		const filter = { hasText: "Red" };
+		registry.add("body").locator("body");
+		registry.add("body.row").getByRole("button").filter(filter);
+		filter.hasText = "Blue";
+		await expect(registry.getNestedLocator("body.row").first()).toHaveText("Red");
+	});
+
+	test("changing a seed's options, filter or returned steps has no effect", async ({ page }) => {
+		const registry = createTestRegistry<LocatorSchemaPaths>(page);
+		const options = { level: 2 };
+		const filter = { hasText: "Playground" };
+		const seed = registry.createReusable.getByRole("heading", options).filter(filter);
+		options.level = 3;
+		filter.hasText = "Explorer";
+		registry.add("body").locator("body");
+		registry.add("body.seeded", { reuse: seed });
+		const step = seed.steps[0];
+		if (step?.kind === "filter") {
+			(step.filter as { hasText?: string }).hasText = "Test";
+		}
+		const locator = registry.getNestedLocator("body.seeded");
+		await expect(locator).toHaveCount(1);
+		await expect(locator).toHaveText("Primary Colors Playground");
+	});
+
+	test("changing a query's filter object after the call has no effect on that query", async ({ testFilters }) => {
+		const filter = { hasText: "Red" };
+		const query = testFilters.getLocatorSchema("body.section@playground.button").filter(filter);
+		filter.hasText = "Blue";
+		await expect(query.getNestedLocator()).toHaveText("Red");
+	});
+});
+
+test("nth hands null and undefined from JavaScript to Playwright, which matches nothing", async ({ testFilters }) => {
+	await testFilters.page.goto(testFilters.fullUrl);
+	type LocatorSchemaPaths = "body" | "body.nullIndex" | "body.undefinedIndex";
+	const registry = createTestRegistry<LocatorSchemaPaths>(testFilters.page);
+	registry.add("body").locator("body");
+	// @ts-expect-error null is not an index, in Playwright either
+	registry.add("body.nullIndex").getByRole("button").nth(null);
+	// @ts-expect-error undefined is not an index, in Playwright either
+	registry.add("body.undefinedIndex").getByRole("button").nth(undefined);
+	await expect(registry.getNestedLocator("body.nullIndex")).toHaveCount(0);
+	await expect(registry.getNestedLocator("body.undefinedIndex")).toHaveCount(0);
+	// @ts-expect-error the same call on Playwright's own locator
+	await expect(testFilters.page.locator("body").getByRole("button").nth(undefined)).toHaveCount(0);
+});
