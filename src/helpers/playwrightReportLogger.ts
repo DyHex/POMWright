@@ -1,3 +1,4 @@
+import { inspect } from "node:util";
 import type { TestInfo } from "@playwright/test";
 
 // Defines valid log levels as a union of string literal types.
@@ -19,7 +20,7 @@ export type LogEntry = {
  * within the scope of a single test, independant of other tests run in parallell.
  * In the same way each fixture will share a single logEntry for recording all log
  * statements produced throughout the tests execution, when the test is done, all log
- * entries are chronologically sorted and attached to the playwright HTML report.
+ * entries are attached to the playwright HTML report in the order they were logged.
  *
  * Log messages can be recorded with various log levels (debug, info, warn, error).
  *
@@ -28,6 +29,7 @@ export type LogEntry = {
  * and LogEntry with the 'parent' fixture.
  *
  * @example
+ * attachment names in the nb-NO locale:
  * 20:49:50 05.05.2023 - DEBUG : [TestCase]
  * 20:49:50 05.05.2023 - DEBUG : [TestCase -> MobilEier]
  * 20:49:51 05.05.2023 - ERROR : [TestCase -> MobilEier -> Axe]
@@ -58,7 +60,9 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Logs a message with the specified log level, prefix, and additional arguments if the current log level permits.
+	 * Records a message if the current log level permits. The message and every string argument are kept exactly
+	 * as given; any other argument is printed as `console.log` prints it (`util.inspect`); the parts are joined by
+	 * a blank line. For nested data, pass `JSON.stringify(data, null, 2)`.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: logger accepts arbitrary payloads for debug output.
 	private log(level: LogLevel, message: string, ...args: any[]) {
@@ -72,7 +76,8 @@ export class PlaywrightReportLogger {
 			timestamp: new Date(),
 			logLevel: level,
 			prefix: this.contextName,
-			message: `${message}\n\n${args.join("\n\n")}`,
+			// each argument as console.log prints it: strings as they are, anything else through util.inspect
+			message: [message, ...args.map((arg) => (typeof arg === "string" ? arg : inspect(arg)))].join("\n\n"),
 		});
 	}
 
@@ -157,40 +162,43 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Attaches the recorded log entries to the Playwright HTML report in a sorted and formatted manner.
+	 * Attaches the recorded entries to the test, one attachment per entry in call order, each body exactly as
+	 * logged (`application/json` when the message is a JSON object or array, otherwise `text/plain`). The names
+	 * carry the time in `format.locale` and `format.timeZone`; the `log` fixture passes Playwright's `locale` and
+	 * `timezoneId`, and without them the machine's are used.
 	 */
-	attachLogsToTest(testInfo: TestInfo) {
-		this.sharedLogEntry.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-
+	attachLogsToTest(testInfo: TestInfo, format?: { locale?: string; timeZone?: string }) {
+		// the entries are in call order already
 		for (const log of this.sharedLogEntry) {
-			const printTime = log.timestamp.toLocaleTimeString("nb-NO", {
+			const printTime = log.timestamp.toLocaleTimeString(format?.locale, {
 				hour: "2-digit",
 				minute: "2-digit",
 				second: "2-digit",
+				timeZone: format?.timeZone,
 			});
-			const printDate = log.timestamp.toLocaleDateString("nb-NO", {
+			const printDate = log.timestamp.toLocaleDateString(format?.locale, {
 				day: "2-digit",
 				month: "2-digit",
 				year: "numeric",
+				timeZone: format?.timeZone,
 			});
 			const printLogLevel = `${log.logLevel.toUpperCase()}`;
 			const printPrefix = log.prefix ? `: [${log.prefix}]` : "";
 
-			let messageBody = "";
-			let messageContentType = "";
-			try {
-				const parsedMessage = JSON.parse(log.message);
-				messageContentType = "application/json";
-				messageBody = JSON.stringify(parsedMessage, null, 2);
-			} catch (_error) {
-				messageContentType = "text/plain";
-				messageBody = log.message;
-			}
-
+			// the body exactly as logged; JSON only names the content type of a message that is a JSON object or array
 			testInfo.attach(`${printTime} ${printDate} - ${printLogLevel} ${printPrefix}`, {
-				contentType: messageContentType,
-				body: Buffer.from(messageBody),
+				contentType: isJsonDocument(log.message) ? "application/json" : "text/plain",
+				body: Buffer.from(log.message),
 			});
 		}
 	}
 }
+
+const isJsonDocument = (text: string): boolean => {
+	try {
+		const parsed: unknown = JSON.parse(text);
+		return typeof parsed === "object" && parsed !== null;
+	} catch {
+		return false;
+	}
+};

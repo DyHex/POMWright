@@ -5,6 +5,16 @@ type AnyMethod<This = unknown, Args extends unknown[] = unknown[], Return = unkn
 	...args: Args
 ) => Return;
 
+/** What TypeScript reports for a method that does not return a Promise (the parameter type of the last overloads). */
+type StepRequiresPromise = "@step decorates methods that return a Promise: make the method async";
+
+/** A method `@step` can wrap: `test.step` always returns a Promise, so the method must return one too. */
+type AsyncMethod<This = unknown, Args extends unknown[] = unknown[], Return = unknown> = AnyMethod<
+	This,
+	Args,
+	Promise<Return>
+>;
+
 type StepTitle = Parameters<typeof test.step>[0];
 type StepOptions = Parameters<typeof test.step>[2];
 
@@ -16,18 +26,27 @@ type Stage3MethodDecoratorArgs<T extends AnyMethod = AnyMethod> = [T, ClassMetho
 
 interface StepDecoratorFactory {
 	<This, Args extends unknown[], Return>(
-		value: AnyMethod<This, Args, Return>,
-		context: ClassMethodDecoratorContext<This, AnyMethod<This, Args, Return>>,
-	): AnyMethod<This, Args, Return> | undefined;
+		value: AsyncMethod<This, Args, Return>,
+		context: ClassMethodDecoratorContext<This, AsyncMethod<This, Args, Return>>,
+	): AsyncMethod<This, Args, Return> | undefined;
 	<This, Args extends unknown[], Return>(
 		target: object,
 		propertyKey: string | symbol,
-		descriptor: TypedPropertyDescriptor<AnyMethod<This, Args, Return>>,
-	): TypedPropertyDescriptor<AnyMethod<This, Args, Return>> | undefined;
+		descriptor: TypedPropertyDescriptor<AsyncMethod<This, Args, Return>>,
+	): TypedPropertyDescriptor<AsyncMethod<This, Args, Return>> | undefined;
+	// last, so that a method returning something else is reported with this message
+	<This, Args extends unknown[], Return>(
+		value: StepRequiresPromise,
+		context: ClassMethodDecoratorContext<This, AnyMethod<This, Args, Return>>,
+	): undefined;
+	(target: object, propertyKey: string | symbol, descriptor: StepRequiresPromise): undefined;
 }
 
+// the target is the prototype for an instance method and the class itself for a static one
 const isMethodDecoratorArgs = (args: unknown[]): args is LegacyMethodDecoratorArgs<AnyMethod> =>
-	args.length === 3 && typeof args[0] === "object" && (typeof args[1] === "string" || typeof args[1] === "symbol");
+	args.length === 3 &&
+	(typeof args[0] === "object" || typeof args[0] === "function") &&
+	(typeof args[1] === "string" || typeof args[1] === "symbol");
 
 const isStage3MethodDecoratorArgs = (args: unknown[]): args is Stage3MethodDecoratorArgs<AnyMethod> =>
 	args.length === 2 && typeof args[0] === "function" && args[1] !== null && typeof args[1] === "object";
@@ -46,7 +65,9 @@ const createWrappedMethod = <T extends AnyMethod>(
 	options?: StepOptions,
 ) =>
 	function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
-		const rawClassName = (this as { constructor?: { name?: string } }).constructor?.name ?? "";
+		// in a static method `this` is the class itself
+		const owner = typeof this === "function" ? this : (this as { constructor?: { name?: string } }).constructor;
+		const rawClassName = owner?.name ?? "";
 		const className = rawClassName && rawClassName !== "Object" ? rawClassName : "Anonymous";
 		const resolvedTitle = title ?? `${className}.${String(methodName)}`;
 		return test.step(resolvedTitle, () => original.apply(this, methodArgs), options) as ReturnType<T>;
@@ -61,6 +82,9 @@ const createStepDecorator =
 	): T | undefined | TypedPropertyDescriptor<T> => {
 		if (typeof valueOrTarget === "function" && isStage3MethodDecoratorArgs([valueOrTarget, contextOrKey])) {
 			const [original, context] = [valueOrTarget, contextOrKey] as Stage3MethodDecoratorArgs<T>;
+			if (context.kind !== "method") {
+				throw new Error("@step decorator can only be applied to methods.");
+			}
 			return createWrappedMethod(original, context.name, title, options);
 		}
 
@@ -75,7 +99,9 @@ const createStepDecorator =
 	};
 
 /**
- * Wraps a method in Playwright `test.step`, defaulting the title to `ClassName.methodName`.
+ * Wraps a method in Playwright `test.step`, defaulting the title to `ClassName.methodName` (for a static
+ * method too). The method must return a Promise, as an `async` method does: `test.step` always returns one
+ * and runs the body after the caller's current line, so a decorated sync method is a compile error.
  *
  * Examples:
  * - `@step`
@@ -88,11 +114,20 @@ export function step(title: StepTitle): StepDecoratorFactory;
 export function step(options: StepOptions): StepDecoratorFactory;
 export function step(title: StepTitle, options: StepOptions): StepDecoratorFactory;
 export function step<This, Args extends unknown[], Return>(
-	value: AnyMethod<This, Args, Return>,
+	value: AsyncMethod<This, Args, Return>,
+	context: ClassMethodDecoratorContext<This, AsyncMethod<This, Args, Return>>,
+): AsyncMethod<This, Args, Return> | undefined;
+export function step<This, Args extends unknown[], Return>(
+	value: StepRequiresPromise,
 	context: ClassMethodDecoratorContext<This, AnyMethod<This, Args, Return>>,
-): AnyMethod<This, Args, Return> | undefined;
+): undefined;
 export function step(
-	...args: StepDecoratorArgs | LegacyMethodDecoratorArgs<AnyMethod> | Stage3MethodDecoratorArgs<AnyMethod>
+	...args:
+		| StepDecoratorArgs
+		| LegacyMethodDecoratorArgs<AnyMethod>
+		| Stage3MethodDecoratorArgs<AnyMethod>
+		// the message overload exists for the compiler only; at runtime the first argument is the method
+		| [StepRequiresPromise, ClassMethodDecoratorContext]
 ): StepDecoratorFactory | AnyMethod | undefined | TypedPropertyDescriptor<AnyMethod> {
 	if (isStage3MethodDecoratorArgs(args)) {
 		return createStepDecorator(normalizeStepArguments([]))(...args);
@@ -102,5 +137,6 @@ export function step(
 		return createStepDecorator(normalizeStepArguments([]))(...args);
 	}
 
-	return createStepDecorator(normalizeStepArguments(args as StepDecoratorArgs));
+	// the message signatures of the factory are never called with a message at runtime
+	return createStepDecorator(normalizeStepArguments(args as StepDecoratorArgs)) as StepDecoratorFactory;
 }

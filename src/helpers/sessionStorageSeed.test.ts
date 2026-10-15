@@ -4,7 +4,6 @@ import {
 	buildRedirectDocument,
 	buildSeedDocument,
 	bypassError,
-	captureCallSite,
 	escapeForScript,
 	existingRegistryFor,
 	neverAppliedError,
@@ -146,15 +145,6 @@ describe("buildRedirectDocument", () => {
 	});
 });
 
-describe("captureCallSite", () => {
-	it("keeps the caller's frames and drops POMWright's own", () => {
-		const site = captureCallSite();
-		expect(site).toContain("sessionStorageSeed.test.ts");
-		expect(site).not.toMatch(/[\\/]sessionStorageSeed\.ts/);
-		expect(site).not.toMatch(/[\\/]sessionStorage\.ts/);
-	});
-});
-
 // ---------------------------------------------------------------------------------------------------
 // The registry, driven by a fake page.
 
@@ -266,7 +256,8 @@ const fakeRoute = (request: Request, fetch?: () => Promise<APIResponse>) => {
 };
 
 const passed: TestOutcome = { status: "passed", errors: [] };
-const site = "    at Object.<anonymous> (/suite/tests/login.spec.ts:12:34)";
+const siteFrame = "    at Object.<anonymous> (/suite/tests/login.spec.ts:12:34)";
+const site = Object.assign(new Error(), { stack: `Error\n${siteFrame}` });
 const title = "Login.SessionStorage.seed";
 
 const setup = (outcome: () => TestOutcome | undefined = () => passed) => {
@@ -363,7 +354,7 @@ describe("SeedRegistry", () => {
 		expect(error?.message).toBe(
 			`${title}: the page navigated to ${B}/orders but the pending seed for ${B} was not applied; the navigation was not intercepted: a service worker registered by the app answered it, or a route the test registered after seed() fulfilled it; the app ran without the entries. Fixes: set use: { serviceWorkers: "block" } in the Playwright config; seed before the app's first load in this context; unregister the worker in the test before seeding; or let the test's own route call route.fallback() for that navigation`,
 		);
-		expect(error?.stack).toBe(`Error: ${error?.message}\n${site}`);
+		expect(error?.stack).toBe(`Error: ${error?.message}\n${siteFrame}`);
 	});
 
 	it("reports a commit at another URL of the origin after the writer was served as a bypass", async () => {
@@ -542,7 +533,7 @@ describe("SeedRegistry", () => {
 			expect(error?.message).toBe(
 				`${title}: the seed for ${B} (keys: token, user) and the seed for http://127.0.0.2:9000 (keys: other) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
 			);
-			expect(error?.stack).toBe(`Error: ${error?.message}\n${site}`);
+			expect(error?.stack).toBe(`Error: ${error?.message}\n${siteFrame}`);
 		});
 
 		it("stays quiet when the test did not pass, already has errors, or is not running", async () => {
@@ -584,13 +575,13 @@ describe("error builders", () => {
 
 	it("carry the seed call site as their stack", () => {
 		expect(bypassError(pending, B, `${B}/x`).stack).toBe(
-			`Error: ${bypassError(pending, B, `${B}/x`).message}\n${site}`,
+			`Error: ${bypassError(pending, B, `${B}/x`).message}\n${siteFrame}`,
 		);
-		expect(neverAppliedError([[B, pending]]).stack).toContain(site);
+		expect(neverAppliedError([[B, pending]]).stack).toContain(siteFrame);
 	});
 
 	it("leave the stack alone when no site was captured", () => {
-		const error = bypassError({ ...pending, site: "" }, B, `${B}/x`);
+		const error = bypassError({ ...pending, site: Object.assign(new Error(), { stack: "Error" }) }, B, `${B}/x`);
 		expect(error.stack).toContain("sessionStorageSeed");
 	});
 });

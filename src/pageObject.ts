@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { atCallSite, captureCallSite } from "./helpers/callSite";
 import { createNavigation, type NavigationFor, type NavigationOptions } from "./helpers/navigation";
 import { SessionStorage, type SessionStorageSchema } from "./helpers/sessionStorage";
 import { assertBaseUrl, assertUrlPath, composeFullUrl, type UrlMatcher } from "./helpers/url";
@@ -46,21 +47,6 @@ export type StorageTypeFromOptions<T extends PageObjectTypeOptions> = T extends 
 }
 	? S
 	: Record<never, never>;
-
-/** POMWright's own frames, left out of the construction site that the scheduled check reports. */
-const INTERNAL_FRAME = /[\\/]pageObject\.(ts|js|mjs|cjs)|[\\/]pomwright[\\/]dist[\\/]index\.(js|mjs|cjs)/;
-
-/** Points an error raised by the check after construction at the code that called `new`, not at the microtask. */
-const atConstructionSite = (error: Error, site: Error): Error => {
-	const frames = (site.stack ?? "")
-		.split("\n")
-		.slice(1)
-		.filter((line) => !INTERNAL_FRAME.test(line));
-	if (frames.length > 0) {
-		error.stack = `${error.name}: ${error.message}\n${frames.join("\n")}`;
-	}
-	return error;
-};
 
 /**
  * Base class for page objects. `defineLocators()` does not run inside this constructor, where the
@@ -153,7 +139,7 @@ export abstract class PageObject<
 		);
 
 		// last, after everything above that can throw: define and verify once the code that called `new` is done
-		const site = new Error();
+		const site = captureCallSite(PageObject);
 		queueMicrotask(() => {
 			if (this.#locators !== "pending") {
 				return;
@@ -161,7 +147,7 @@ export abstract class PageObject<
 			try {
 				define();
 			} catch (error) {
-				throw atConstructionSite(error as Error, site);
+				throw atCallSite(error as Error, site);
 			}
 		});
 	}

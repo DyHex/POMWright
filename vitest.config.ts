@@ -14,7 +14,8 @@ export default defineConfig({
 		environment: "node",
 		typecheck: {
 			enabled: true,
-			include: ["src/**/*.test.ts"],
+			// *.test-d.ts files are type-checked only, never run: decorator syntax, which the runtime cannot load
+			include: ["src/**/*.test.ts", "src/**/*.test-d.ts"],
 			// Scoped tsconfig: the root one has no `include`, so tsc would otherwise
 			// sweep dist/ and test/ (which has its own tsconfig and path aliases).
 			tsconfig: "./tsconfig.vitest.json",

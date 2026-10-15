@@ -12,6 +12,7 @@
  * See release-3.0.0/PLAN-1.5-SESSION-STORAGE.md, section 3.2.
  */
 import type { APIResponse, Frame, Route } from "@playwright/test";
+import { atCallSite } from "./callSite";
 
 /** The subset of `Page` the registry uses. A real `Page` satisfies it; unit tests pass a fake. */
 export interface SeedPage {
@@ -37,7 +38,7 @@ export type PendingSeed = {
 	/** Step title of the `seed` call that created the entry, for error messages. */
 	title: string;
 	/** Stack frames of that `seed` call, so errors raised from listeners point at the test. */
-	site: string;
+	site: Error;
 	/** The writer document has been served for `target`. */
 	fired: boolean;
 	/** The writer document has committed; its own replace request comes next and is let through. */
@@ -165,26 +166,10 @@ export const buildRedirectDocument = (url: string, method: string, postData: str
 		postData,
 	)} })();</script></body>`;
 
-const INTERNAL_FRAME = /[\\/]sessionStorage(Seed)?\.(ts|js|mjs|cjs)|[\\/]pomwright[\\/]dist[\\/]index\.(js|mjs|cjs)/;
-
-/** The stack frames of the caller outside POMWright, captured where `seed` is called. */
-export const captureCallSite = (): string => {
-	const lines = (new Error().stack ?? "").split("\n").slice(1);
-	return lines.filter((line) => !INTERNAL_FRAME.test(line)).join("\n");
-};
-
-/** Rewrites the stack so the error points at the `seed` call rather than at a listener. */
-const atSite = (error: Error, site: string): Error => {
-	if (site !== "") {
-		error.stack = `${error.name}: ${error.message}\n${site}`;
-	}
-	return error;
-};
-
 const describeKeys = (entries: Record<string, string>): string => Object.keys(entries).join(", ");
 
 export const bypassError = (pending: PendingSeed, origin: string, url: string): Error =>
-	atSite(
+	atCallSite(
 		new Error(
 			`${pending.title}: the page navigated to ${url} but the pending seed for ${origin} was not applied; ` +
 				"the navigation was not intercepted: a service worker registered by the app answered it, or a route the " +
@@ -202,7 +187,7 @@ export const unsupportedNavigationError = (
 	method: string,
 	contentType: string | undefined,
 ): Error =>
-	atSite(
+	atCallSite(
 		new Error(
 			`${pending.title}: cannot re-issue a ${method} ${contentType ?? "(no content-type)"} navigation to ${origin}; ` +
 				`the app loaded without the entries. Only GET and ${FORM_URLENCODED} POST navigations can be seeded`,
@@ -211,7 +196,7 @@ export const unsupportedNavigationError = (
 	);
 
 export const proxyFailureError = (pending: PendingSeed, url: string, origin: string, cause: unknown): Error =>
-	atSite(
+	atCallSite(
 		new Error(`${pending.title}: could not fetch ${url} while a seed for ${origin} was pending`, { cause }),
 		pending.site,
 	);
@@ -224,7 +209,7 @@ export const neverAppliedError = (pendings: readonly (readonly [string, PendingS
 	const details = pendings
 		.map(([origin, pending]) => `the seed for ${origin} (keys: ${describeKeys(pending.entries)})`)
 		.join(" and ");
-	return atSite(
+	return atCallSite(
 		new Error(
 			`${first[1].title}: ${details} was never applied: the page closed without navigating there; ` +
 				"remove the seed call, or navigate to the origin before the test ends",
@@ -262,7 +247,7 @@ export class SeedRegistry {
 	}
 
 	/** Records entries for `origin`; the first pending seed on the page registers the route and listeners. */
-	async add(origin: string, entries: Record<string, string>, title: string, site: string): Promise<void> {
+	async add(origin: string, entries: Record<string, string>, title: string, site: Error): Promise<void> {
 		const first = this.pending.size === 0;
 		const existing = this.pending.get(origin);
 		if (existing === undefined) {

@@ -6,8 +6,7 @@ type BaseFixtures = {
 };
 
 export const test = base.extend<BaseFixtures>({
-	// biome-ignore lint/correctness/noEmptyPattern: Playwright does not support the use of _
-	log: async ({}, use, testInfo) => {
+	log: async ({ locale, timezoneId }, use, testInfo) => {
 		const contextName = "TestCase";
 		const sharedLogEntry: LogEntry[] = [];
 
@@ -18,6 +17,7 @@ export const test = base.extend<BaseFixtures>({
 
 		await use(log);
 
-		log.attachLogsToTest(testInfo);
+		// timestamps in the locale and time zone the tests run with
+		log.attachLogsToTest(testInfo, { locale, timeZone: timezoneId });
 	},
 });

@@ -11,13 +11,8 @@
  * See release-3.0.0/PLAN-1.5-SESSION-STORAGE.md.
  */
 import { type Page, test } from "@playwright/test";
-import {
-	captureCallSite,
-	existingRegistryFor,
-	originOf,
-	type ReadTestOutcome,
-	registryFor,
-} from "./sessionStorageSeed";
+import { captureCallSite } from "./callSite";
+import { existingRegistryFor, originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSeed";
 
 /** How a key's value is stored as a string and read back. `json<T>()` ships; anything else is yours. */
 export type Codec<T> = {
@@ -296,7 +291,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		valueOrOptions?: unknown,
 		maybeOptions?: SeedOptions,
 	): Promise<void> {
-		const site = captureCallSite();
+		const site = captureCallSite(SessionStorage.prototype.seed);
 		const [entries, options] =
 			typeof keyOrEntries === "string"
 				? [{ [keyOrEntries]: valueOrOptions }, maybeOptions]
