@@ -46,10 +46,10 @@
     1. [`update`: a PATCH of the registered definition](#update-a-patch-of-the-registered-definition)
     2. [`replace`: a new definition of any strategy](#replace-a-new-definition-of-any-strategy)
     3. [Steps and descriptions are untouched](#steps-and-descriptions-are-untouched)
-12. [`remove` and tombstones](#remove-and-tombstones)
-    1. [Non-terminal removal](#non-terminal-removal)
-    2. [Terminal removal behavior](#terminal-removal-behavior)
-    3. [Rehydrating removed segments](#rehydrating-removed-segments)
+12. [Skipping a segment: `skip` and `unskip`](#skipping-a-segment-skip-and-unskip)
+    1. [What `skip` hides and `unskip` brings back](#what-skip-hides-and-unskip-brings-back)
+    2. [What a skipped segment rejects](#what-a-skipped-segment-rejects)
+    3. [The terminal path cannot be skipped](#the-terminal-path-cannot-be-skipped)
 13. [Reusable locators: `createReusable`](#reusable-locators-createreusable)
     1. [Seed creation](#seed-creation)
     2. [Reuse by object seed](#reuse-by-object-seed)
@@ -80,7 +80,7 @@ At a high level it provides:
 - **Two resolution modes**:
   - `getLocator(path)` resolves only the terminal segment.
   - `getNestedLocator(path)` resolves the full chain.
-- **Clone-based query mutation** (`getLocatorSchema(path)`) for temporary overrides (`update`, `replace`, `remove`, `filter`, `nth`, `clearSteps`, `describe`) without mutating the registry.
+- **Clone-based query mutation** (`getLocatorSchema(path)`) for temporary overrides (`update`, `replace`, `skip`, `unskip`, `filter`, `nth`, `clearSteps`, `describe`) without mutating the registry.
 
 You can use it directly via `createRegistryWithAccessors(page)` or through `PageObject` (`this.add`, `this.getLocator`, `this.getNestedLocator`, `this.getLocatorSchema`).
 
@@ -316,8 +316,10 @@ inheriting forms: on a seeded `add` or an `update`, an omitted argument keeps th
 After a strategy is set, you can chain:
 
 - `filter(filterDefinition)`
-- `nth(index)` where index is `number | "first" | "last"`
-- `describe(description)`
+- `nth(index)` where index is `number | "first" | "last"`; `"first"` and `"last"` become `first()` and `last()`, every
+  number goes to Playwright's `nth` as given (`-1` is the last element, as in Playwright)
+- `describe(description)` where description is a string; `describe("")` removes the description (see
+  [`describe` semantics](#describe-semantics))
 
 ```ts
 registry
@@ -350,7 +352,44 @@ in the message.
 
 ### Duplicate path behavior
 
-A path can only be registered once. Attempting to register the same path again throws with details about existing vs attempted schema.
+A path can only be registered once. Registering it again throws at the second strategy call, before any step chained
+after it runs, and shows both records: the existing one and the attempted one (its strategy only). A `Locator` in a
+step is shown as Playwright prints it:
+
+```ts
+registry.add("item").locator("li").filter({ has: page.locator("b") });
+registry.add("item").locator("li");
+// A locator schema with the path "item" already exists.
+// Existing Schema: {
+//   "existing": {
+//     "locatorSchemaPath": "item",
+//     "definition": { "type": "locator", "selector": "li" },
+//     "steps": [{ "kind": "filter", "filter": { "has": "locator('b')" } }]
+//   },
+//   "attempted": {
+//     "locatorSchemaPath": "item",
+//     "definition": { "type": "locator", "selector": "li" },
+//     "steps": []
+//   }
+// }
+```
+
+(The message is indented over more lines; it is shortened here.)
+
+### Registered locators do not change
+
+A builder keeps a copy of every options and filter object it is given, so changing the object afterwards has no
+effect on the registered locator, and every resolution works on its own copy of the record:
+
+```ts
+const options = { name: "Save" };
+registry.add("form.button").getByRole("button", options);
+options.name = "Cancel";
+registry.getLocator("form.button"); // getByRole('button', { name: 'Save' })
+```
+
+The copy is one level deep: a `Locator` or a RegExp inside an options or filter object is kept as it is, since neither
+can change through Playwright's API.
 
 ---
 
@@ -640,9 +679,12 @@ errors (a duplicate path, a missing argument, a step before a strategy) throw in
 
 ### Clone semantics (registry is not mutated)
 
-`getLocatorSchema(path)` creates a mutable clone of the selected chain.
+`getLocatorSchema(path)` creates a mutable clone of the selected chain; every call creates a new one, so several
+queries of the same path can be changed independently.
 
-Any `filter`, `nth`, `clearSteps`, `update`, `replace`, `remove`, or `describe` call affects only the builder instance.
+Any `filter`, `nth`, `clearSteps`, `update`, `replace`, `skip`, `unskip`, or `describe` call affects only the builder
+instance, and no method can change what is registered for a path. A filter object passed to the query is copied as
+well.
 
 ```ts
 const builder = registry.getLocatorSchema("main.form.username");
@@ -653,11 +695,13 @@ const patched = builder.update().getByLabel("Username", { exact: true }).getNest
 
 ### Sub-path scope rules
 
-For a builder rooted at `"a.b.c"`, valid sub-paths are chain segments within that root (`"a"`, `"a.b"`, `"a.b.c"`) **if they exist in the builder clone**.
+For a builder rooted at `"a.b.c"`, valid sub-paths are chain segments within that root (`"a"`, `"a.b"`, `"a.b.c"`) **that are registered**.
 
 If a sub-path is not valid in that context, methods throw:
 
-- `"<subPath>" is not a valid sub-path of "<rootPath>".`
+- `"<subPath>" is not a valid sub-path of "<rootPath>".` for a path outside the chain;
+- the same sentence followed by `It is a segment of that path, but no locator schema is registered for it.` for a
+  segment of the chain that has no registration (a sparse chain).
 
 ### Method-by-method reference
 
@@ -669,7 +713,8 @@ On query builder:
 - `describe(description)` (terminal path only)
 - `update(subPath?)` -> returns update builder (PATCH semantics)
 - `replace(subPath?)` -> returns update builder in replace mode (POST semantics)
-- `remove(subPath?)`
+- `skip(subPath)` and `unskip(subPath)` -> leave an ancestor out of the chain and bring it back (see
+  [Skipping a segment](#skipping-a-segment-skip-and-unskip))
 - `getLocator()`
 - `getNestedLocator()`
 
@@ -699,7 +744,7 @@ If `subPath` is omitted, the terminal path passed to `getLocatorSchema(path)` is
 | `clearSteps(subPath?)` | Yes | Uses terminal path |
 | `update(subPath?)` | Yes | Uses terminal path |
 | `replace(subPath?)` | Yes | Uses terminal path |
-| `remove(subPath?)` | Yes | Uses terminal path |
+| `skip(subPath)`, `unskip(subPath)` | No | Required: an ancestor, never the terminal path |
 | `describe(description)` | N/A | Always terminal path |
 
 ---
@@ -779,38 +824,63 @@ registry.getLocatorSchema("list.item").replace().getByRole("listitem").clearStep
 // getByRole('listitem')
 ```
 
-In 2.x `update` could switch strategies and remembered each strategy's last definition inside the builder; 3.0.0
-has one meaning per verb and no hidden state.
+To take steps or a description away, say so: `clearSteps(subPath?)` removes the steps and `describe("")` the
+description. In 2.x `update` could switch strategies and remembered each strategy's last definition inside the
+builder; 3.0.0 has one meaning per verb and no hidden state.
 
 ---
 
-## `remove` and tombstones
+## Skipping a segment: `skip` and `unskip`
 
-### Non-terminal removal
+### What `skip` hides and `unskip` brings back
 
-Removing an ancestor sub-path soft-deletes that segment in the builder clone. During nested resolution, removed non-terminal segments are skipped.
-
-### Terminal removal behavior
-
-If terminal segment is removed and not restored, resolving throws (no schema for terminal path).
+`skip(subPath)` leaves an ancestor out of the chain when the query resolves, as if it were not registered.
+`unskip(subPath)` puts it back. Skipping is a flag: nothing is deleted, so the segment comes back exactly as it was,
+with its definition, steps and description, including anything the query gave it before the skip.
 
 ```ts
-const builder = registry.getLocatorSchema("main.form.username").remove();
-// builder.getNestedLocator() => throws
+registry.add("main").locator("main");
+registry.add("main.list").locator("ul").filter({ hasText: "Orders" });
+registry.add("main.list.item").locator("li").nth(0);
+
+const query = registry.getLocatorSchema("main.list.item");
+
+query.skip("main.list").getNestedLocator();
+// locator('main').locator('li').first()
+
+query.unskip("main.list").getNestedLocator();
+// locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()
 ```
 
-### Rehydrating removed segments
+`getLocator()` resolves the terminal segment only, so skipped ancestors make no difference to it. A skipped ancestor
+in front of an any-frame segment makes that segment the first of the chain again.
 
-A removed segment can be repopulated within the same builder chain via `update` or `replace`, then resolved successfully.
+### What a skipped segment rejects
+
+A change to a skipped segment would have no effect until `unskip`, and would be lost without it, so `update`,
+`replace`, `filter`, `nth` and `clearSteps` on a skipped segment throw at the call; nothing changes:
 
 ```ts
-const locator = registry
-    .getLocatorSchema("main.form.username")
-    .remove()
-    .replace()
-    .getByLabel("Email")
-    .getNestedLocator();
+registry.getLocatorSchema("main.list.item").skip("main.list").filter("main.list", { hasText: "Open" });
+// filter() cannot apply to "main.list": it is skipped in this query; call unskip("main.list") first.
 ```
+
+Skipping a segment that is already skipped, or unskipping one that is not, throws too
+(`skip() cannot skip "main.list": it is already skipped in this query.`,
+`unskip() cannot unskip "main.list": it is not skipped in this query.`).
+
+### The terminal path cannot be skipped
+
+A query resolves its terminal path, so `skip` and `unskip` take the ancestors only: in TypeScript the terminal path
+is not offered (`skip("main.list.item")` on a `main.list.item` query is a compile error), there is no form without a
+sub-path, and on a one-segment query there is nothing to skip. From JavaScript:
+
+```text
+skip() cannot skip "main.list.item": it is the path this query resolves; skip one of its ancestors.
+```
+
+To give the terminal path a new definition, use `update()` or `replace()`; to take its steps or description away,
+`clearSteps()` and `describe("")`.
 
 ---
 
@@ -952,6 +1022,18 @@ const override = registry
     .getLocator();
 ```
 
+### Removing a description
+
+`describe("")` removes the description, as Playwright's own `describe("")` does: the locator then prints as its
+chain. It works on `add`, on a seed and on a query. The argument is a string; from JavaScript, `describe(null)` or
+`describe(undefined)` throws `describe requires a string for "<path>"; pass "" to remove the description.` A query
+starts from the registered description, so a new `getLocatorSchema(path)` call is the way back to it.
+
+```ts
+registry.getLocatorSchema("main.submit").describe("").getLocator().toString();
+// getByRole('button', { name: 'Submit' })
+```
+
 ---
 
 ## Error reference and troubleshooting
@@ -959,9 +1041,18 @@ const override = registry
 Common errors and what they usually mean:
 
 - `No locator schema registered for path "...".`
-  - Path was never registered, was removed on builder, or is terminal tombstone.
+  - Path was never registered.
 - `"..." is not a valid sub-path of "...".`
-  - Query method targeted a path outside the builder’s chain context.
+  - Query method targeted a path outside the builder’s chain context; followed by `It is a segment of that path, but
+    no locator schema is registered for it.` when it targeted an unregistered segment of the chain.
+- `<method>() cannot apply to "...": it is skipped in this query; call unskip("...") first.`
+  - `update`, `replace`, `filter`, `nth` or `clearSteps` on a segment left out with `skip`.
+- `skip() cannot skip "...": it is the path this query resolves; skip one of its ancestors.`,
+  `skip() cannot skip "...": it is already skipped in this query.`,
+  `unskip() cannot unskip "...": it is not skipped in this query.`
+  - `skip`/`unskip` on the terminal path (from JavaScript), twice, or without a matching `skip`.
+- `describe requires a string for "..."; pass "" to remove the description.`
+  - `describe(null)` or `describe(undefined)` from JavaScript.
 - `A locator schema with the path "..." already exists.`
   - Duplicate registration for same path.
 - `<method> requires a <field> value for "...".` and `<method> requires a non-empty <field> for "...".`
@@ -991,7 +1082,7 @@ Troubleshooting checklist:
 1. Confirm path literal is valid and registered.
 2. Confirm query sub-path is in the same chain root.
 3. Confirm reuse override strategy matches seed type.
-4. Confirm terminal path still exists if `remove()` was called.
+4. Unskip a segment before changing it.
 5. For a strategy change on a query builder, use `replace`, not `update`.
 6. For an any-frame segment, keep it first in its chain and resolve a path inside it.
 
@@ -1009,7 +1100,8 @@ The integration suite (`test`) verifies Locator Registry behavior in depth, incl
 - default, registered, reused, and query-level `describe` behavior
 - the required first argument per strategy, and which empty strings are rejected
 - `update` as a same-strategy Merge Patch, `replace` as a strategy change, steps kept by both
-- `remove` and `clearSteps`
+- `skip`/`unskip` and `clearSteps`
+- a registered locator does not change when the objects passed to a builder change afterwards
 - reusable locators and reuse constraints, including that a failed override changes nothing
 - frames: steps on the iframe element against real frames, nested frames, the any-frame segment
 - `verify()` through the registry, the accessors and a page object
@@ -1045,6 +1137,18 @@ For implementation-level examples, see the Locator Registry tests under `test/te
 - **The builder and seed types are exported** (see [Types you can import](#types-you-can-import)); a `ReturnType<…>`
   workaround can give way to `LocatorQueryBuilder` or `ReusableLocator`.
 - **A path literal with U+FEFF is a compile error,** as it always was a runtime error.
+- **`remove` is replaced by `skip` and `unskip`.** `remove(subPath)` deleted the segment's definition, steps and
+  description from the query; `skip(subPath)` only leaves it out of the chain, and `unskip(subPath)` brings it back.
+  Replace `remove("ancestor")` with `skip("ancestor")`. The terminal path cannot be skipped: replace `remove()`
+  followed by `update()`/`replace()` with `update()`/`replace()`, plus `clearSteps()` and `describe("")` where the
+  old deletion of steps and description was wanted. `update`, `replace`, `filter`, `nth` and `clearSteps` on a
+  skipped segment throw.
+- **`nth` hands its index to Playwright.** From JavaScript, `nth(null)` and `nth(undefined)` were dropped, so the
+  locator matched every element; they now reach Playwright's `nth`, which matches nothing. Call `nth` only when there
+  is an index (`if (i !== undefined) query.nth(i)`).
+- **`describe` takes a string.** `describe("")` removes a description; `describe(null)` from JavaScript throws.
+- **A registered locator no longer changes** when an options or filter object passed to a builder is changed
+  afterwards.
 
 ## Migration notes from v1
 
@@ -1054,7 +1158,7 @@ Key v1 -> v2 Locator Registry differences:
 - `getLocator` / `getNestedLocator` are synchronous in v2.
 - v1 index maps for nested lookup are replaced by query-builder `.nth(...)`.
 - v1 `addFilter` style maps to v2 `.filter(...)`.
-- v2 query builder adds `replace`, `remove`, `clearSteps`, and `describe`.
+- v2 query builder adds `replace`, `remove`, `clearSteps`, and `describe` (`remove` became `skip`/`unskip` in 3.0.0).
 - frame terminal behavior is explicit (a terminal frame resolves to the `<iframe>` element).
 
 See migration docs in `docs/v1-to-v2-migration` for side-by-side mappings and staged migration guidance.

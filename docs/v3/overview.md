@@ -242,17 +242,19 @@ test("schema builder", async ({ loginPage }) => {
 > `getLocator(path)`, `getNestedLocator(path)`, or `getLocatorSchema(path)...getLocator/getNestedLocator`, in addition to
 > `page.locator(...)` and `page.getBy...(...)`.
 
-### 2.6 `update` vs `replace` vs `remove` on the schema builder
+### 2.6 `update`, `replace` and `skip` on the schema builder
 
 - `update(subPath?)` patches an existing definition (PATCH semantics).
 - `replace(subPath?)` overwrites a definition (POST semantics).
-- `remove(subPath?)` soft-deletes a segment for the builder resolution only.
-All of the above mutate the retrieved clone only, leaving the registry original as defined by its add call.
+- `skip(subPath)` leaves an ancestor out of the chain, and `unskip(subPath)` brings it back exactly as it was; the
+  terminal path cannot be skipped, and a skipped segment rejects changes until it is unskipped.
+All of the above change the retrieved clone only, leaving the registry original as defined by its add call; none of
+them touches steps or descriptions (`clearSteps()` and `describe("")` take those away).
 
 ```ts
 import { test } from "./fixtures";
 
-test("update/replace/remove", async ({ loginPage }) => {
+test("update/replace/skip", async ({ loginPage }) => {
   const patched = loginPage
     .getLocatorSchema("main.button@login")
     .update()
@@ -267,11 +269,11 @@ test("update/replace/remove", async ({ loginPage }) => {
     .getNestedLocator();
   // replaced => locator('main').locator('button.primary').filter({ hasText: 'Sign in' })
 
-  const removedAncestor = loginPage
+  const skippedAncestor = loginPage
     .getLocatorSchema("main.form@login.input@username")
-    .remove("main")
+    .skip("main")
     .getNestedLocator();
-  // removedAncestor => getByRole('form', { name: 'Login' }).getByLabel('Username')
+  // skippedAncestor => getByRole('form', { name: 'Login' }).getByLabel('Username')
 });
 ```
 
@@ -390,7 +392,12 @@ test("session storage via custom fixture", async ({ page, storage }) => {
 
 ### 2.10 `step` decorator
 
-The `step` decorator wraps a method in `test.step` (only works within a Class), defaulting the title to `ClassName.methodName`. Here it is applied to the `LoginPage` helper method from 2.1.
+The `step` decorator wraps a method in `test.step` (only works within a Class), defaulting the title to `ClassName.methodName`, for a static method too. Here it is applied to the `LoginPage` helper method from 2.1.
+
+The method must return a Promise, as an `async` method does: `test.step` always returns one and runs the body after
+the caller's current line, so a decorated method that returned a plain value would hand its caller a Promise typed as
+that value. TypeScript therefore rejects `@step` on such a method, with
+`"@step decorates methods that return a Promise: make the method async"` in the error.
 
 ```ts
 import { step } from "pomwright";
@@ -451,7 +458,7 @@ This section separates public API from internal implementation details and expla
 - **Steps**: `filter(...)`, `nth(...)`, `describe(...)`, available once a strategy is chosen, on frames too.
 - **Retrieval**: `getLocator(path)`, `getNestedLocator(path)`, `getLocatorSchema(path)`.
 - **Schema builder**: `update` (same strategy, JSON Merge Patch with `null` to delete), `replace` (any strategy),
-  `remove`, `clearSteps`.
+  `skip`/`unskip` (leave an ancestor out of the chain and bring it back), `clearSteps`.
 
 #### Helpers
 
@@ -491,7 +498,7 @@ This is not intended for direct usage but explains the building blocks used by t
 
 #### `LocatorQueryBuilderInternal` (public type `LocatorQueryBuilder`)
 
-- **Purpose**: Implements `getLocatorSchema(path)` mutable clones for filters, indices, update/replace/remove, and resolution.
+- **Purpose**: Implements `getLocatorSchema(path)` mutable clones for filters, indices, update/replace, skip/unskip, and resolution.
 - **Used by**: `LocatorRegistryInternal.getLocatorSchema` (public `getLocatorSchema`).
 
 #### `LocatorUpdateBuilderInternal` (public type `LocatorUpdateBuilder`)
