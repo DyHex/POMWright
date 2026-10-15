@@ -438,9 +438,12 @@ an empty or missing id throws at registration in all three builders. The other s
 
 > Notes:
 
-- [ ] `isLocatorInstance` accepts arrays ([utils.ts:307-309](../src/locators/utils.ts#L307-L309)); `filter({ has: [] })`
+- [x] Fixed 2026-10-15 by plan 1.10-2 ([plan](PLAN-1.10-2-SMALL-FIXES.md)): `isLocatorInstance` requires `filter`, `nth` and `locator`, so an array or a
+  `filter`-only object is an unsupported reference in `verify()`. `isLocatorInstance` accepts arrays ([utils.ts:307-309](../src/locators/utils.ts#L307-L309)); `filter({ has: [] })`
   passes straight through to Playwright. Also check `nth`/`locator` are functions.
-- [ ] The duplicate-registration error serialises the whole record, including any `Locator` in a `has:` step
+- [x] Fixed 2026-10-15 by plan 1.10-2: a `Locator` is rendered with `String()`; with Playwright 1.64 the size claim
+  did not reproduce (a real `Frame` has `toJSON`: 671 characters), only internals in the message did. The
+  duplicate-registration error serialises the whole record, including any `Locator` in a `has:` step
   ([locatorRegistry.ts:220-224](../src/locators/locatorRegistry.ts#L220-L224),
   [utils.ts:92-110](../src/locators/utils.ts#L92-L110)). A tiny fake produced 5.7k characters. Fix: render locators as
   `String(locator)` in the replacer.
@@ -455,26 +458,33 @@ an empty or missing id throws at registration in all three builders. The other s
   `LocatorRegistryInternal.unregister` is gone. Asymmetric seeded recovery: a wrong-type override rolls back and throws, a second same-type override throws and
   leaves the first override registered
   ([locatorRegistrationBuilder.ts:428-451](../src/locators/locatorRegistrationBuilder.ts#L428-L451)).
-- [ ] `remove()` then `update()` rehydrates the definition only. Steps become `[]` and the description is dropped
+- [x] Fixed 2026-10-15 by plan 1.10-2: `remove` is replaced by `skip`/`unskip`, a flag that deletes nothing;
+  `update`/`replace` never rehydrate. `remove()` then `update()` rehydrates the definition only. Steps become `[]` and the description is dropped
   ([locatorQueryBuilder.ts:230-236](../src/locators/locatorQueryBuilder.ts#L230-L236)). Proof:
   `locator("li").nth(0).describe("first item")` → `locator("li", { hasText })` described by its path. Undocumented.
-- [ ] **NEW:** `filter`/`nth` on a removed sub-path are accepted, since `ensureSubPath` at
+- [x] Fixed 2026-10-15 by plan 1.10-2: `update`, `replace`, `filter`, `nth` and `clearSteps` on a skipped segment
+  throw and name `unskip`. **NEW:** `filter`/`nth` on a removed sub-path are accepted, since `ensureSubPath` at
   [L399-403](../src/locators/locatorQueryBuilder.ts#L399-L403) admits tombstones, then silently discarded at resolution.
   `applyUpdate` at [L234](../src/locators/locatorQueryBuilder.ts#L234) also wipes them.
-- [ ] `ensureSubPath` conflates "not a sub-path" with "sub-path not registered"
+- [x] Fixed 2026-10-15 by plan 1.10-2: the sentence is kept and the reason appended for an unregistered segment of
+  the chain; the removed-terminal case is gone with `remove` (the terminal cannot be skipped). `ensureSubPath` conflates "not a sub-path" with "sub-path not registered"
   ([L401](../src/locators/locatorQueryBuilder.ts#L401)); `getLocator()` after `remove()` says "No locator schema
   registered" ([L351](../src/locators/locatorQueryBuilder.ts#L351)).
 - [x] `goto` is disabled by the `urlPath` type ([navigation.ts:65](../src/helpers/navigation.ts#L65),
   [L26](../src/helpers/navigation.ts#L26)) although it only needs a string `baseUrl`. A string-base plus RegExp-path page
   cannot call `goto("/settings")`; probe confirmed the type error. Fixed 2026-10-08 by plan 1.3-1.4: `goto(target)` is
   always available, typed by the `baseUrl` type.
-- [ ] `@step`: sync methods become async while the type says `Return`
+- [x] Fixed 2026-10-15 by plan 1.10-2: `@step` accepts only methods returning a Promise (a compile error with a
+  message otherwise), static methods are titled by their class, the stage-3 branch checks `context.kind`, legacy calls
+  are recognised by shape. `@step`: sync methods become async while the type says `Return`
   ([stepDecorator.ts:52](../src/helpers/stepDecorator.ts#L52)); no `context.kind === "method"` check
   ([L62-65](../src/helpers/stepDecorator.ts#L62-L65)); legacy static methods fall through to the factory branch because
   `typeof target === "function"` ([L29-30](../src/helpers/stepDecorator.ts#L29-L30)).
-- [ ] Logger defect: `${message}\n\n${args.join("\n\n")}` renders objects as `[object Object]`
+- [x] Fixed 2026-10-15 by plan 1.10-2: messages and string arguments kept as given, other arguments as `console.log`
+  prints them, no trailing separator, JSON bodies no longer re-formatted. Logger defect: `${message}\n\n${args.join("\n\n")}` renders objects as `[object Object]`
   ([playwrightReportLogger.ts:75](../src/helpers/playwrightReportLogger.ts#L75)).
-- [ ] Logger enhancements, not defects: `nb-NO` is hard-coded
+- [x] Done 2026-10-15 by plan 1.10-2: attachment names in Playwright's `locale` and `timezoneId`; one attachment
+  per entry kept, in call order without the sort. Logger enhancements, not defects: `nb-NO` is hard-coded
   ([L166-175](../src/helpers/playwrightReportLogger.ts#L166-L175)); one attachment per entry
   ([L190-193](../src/helpers/playwrightReportLogger.ts#L190-L193)).
 
@@ -484,7 +494,9 @@ an empty or missing id throws at registration in all three builders. The other s
 
 > Notes:
 
-- [ ] [locatorRegistry.ts:461-470](../src/locators/locatorRegistry.ts#L461-L470) is unreachable. `definitions` and
+- [x] Fixed 2026-10-15 by plan 1.10-2: removed with the tombstones (`skip` is a flag); `buildLocatorChain` takes
+  the terminal and resolves the registered, unskipped ancestors, and returns a `Locator`, which also removed four
+  null-locator checks. [locatorRegistry.ts:461-470](../src/locators/locatorRegistry.ts#L461-L470) is unreachable. `definitions` and
   `tombstones` are disjoint by construction (`remove` deletes then tombstones; `applyUpdate`/`applyReplacement`
   un-tombstone then set), and `registeredChain` is already filtered by `definitions.has`. The tombstone half of
   [L442](../src/locators/locatorRegistry.ts#L442) is redundant for the same reason.
@@ -495,13 +507,19 @@ an empty or missing id throws at registration in all three builders. The other s
   [L524](../src/locators/locatorRegistry.ts#L524). All three callers destructure only `locator`
   ([L322](../src/locators/locatorRegistry.ts#L322), [locatorQueryBuilder.ts:367](../src/locators/locatorQueryBuilder.ts#L367),
   [L392](../src/locators/locatorQueryBuilder.ts#L392)). Delete, or promote to `registry.explain(path)` (3.3).
-- [ ] [locatorRegistry.ts:216-219](../src/locators/locatorRegistry.ts#L216-L219) unreachable `if (!existing)`;
+- [x] Fixed 2026-10-15 by plan 1.10-2: both gone. [locatorRegistry.ts:216-219](../src/locators/locatorRegistry.ts#L216-L219) unreachable `if (!existing)`;
   [L264](../src/locators/locatorRegistry.ts#L264) `undefined as never`.
-- [ ] [locatorRegistry.ts:410](../src/locators/locatorRegistry.ts#L410): `getLocator` constructs a full
+- [x] Fixed 2026-10-15 by plan 1.10-2: `getLocator` resolves a copy of the record terminal-only through one
+  `resolveRecord` shared with `verify()` and the `has` paths (about 1.8 µs instead of 3.2).
+  [locatorRegistry.ts:410](../src/locators/locatorRegistry.ts#L410): `getLocator` constructs a full
   `LocatorQueryBuilder`, cloning every ancestor, to use one node.
-- [ ] [locatorRegistry.ts:498](../src/locators/locatorRegistry.ts#L498) array-generic helper for a single element;
+- [x] Fixed 2026-10-15 by plan 1.10-2 for L498 (`resolveFilter` takes one filter); *Skip* for L180-183: the
+  branch is reachable by design, `add.reuseExisting.spec.ts` forces the tuple and pins its message.
+  [locatorRegistry.ts:498](../src/locators/locatorRegistry.ts#L498) array-generic helper for a single element;
   [L180-183](../src/locators/locatorRegistry.ts#L180-L183) only reachable via `any`.
-- [ ] Triple cloning per segment: [locatorQueryBuilder.ts:47-57](../src/locators/locatorQueryBuilder.ts#L47-L57),
+- [x] Fixed 2026-10-15 by plan 1.10-2: a query keeps the clones `getIfExists` returns (one per segment, 6 instead
+  of 11 on a five-segment chain with a `has` path); every read is a clone, and builders copy what callers pass, after
+  a probe showed that a caller's options and filter objects stayed live in the registry. Triple cloning per segment: [locatorQueryBuilder.ts:47-57](../src/locators/locatorQueryBuilder.ts#L47-L57),
   [locatorRegistry.ts:267-272](../src/locators/locatorRegistry.ts#L267-L272),
   [locatorQueryBuilder.ts:420](../src/locators/locatorQueryBuilder.ts#L420).
 - [x] Fixed 2026-10-14 by plan 1.9: the four unused aliases deleted (all left over from the v2 registry's development

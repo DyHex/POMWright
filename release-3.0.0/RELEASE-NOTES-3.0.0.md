@@ -16,7 +16,8 @@
 > same branch on 2026-10-13 (commits 66e9481 to 2301bee); 4 (packaging, tooling and CI), executed and committed on
 > the same branch on 2026-10-14 (commits fc33244 to 837f1c8, with the CI follow-ups 8c2eb1b, 9d95a78 and 95975cf);
 > 1.9 (types and exports), executed and committed on the same branch on 2026-10-14 (commits 46a04e9 to 4220bfa);
-> 1.10-2 (small fixes and dead code), decisions taken 2026-10-15, planned.
+> 1.10-2 (small fixes and dead code), executed and committed on the same branch on 2026-10-15 (commits 07e7398 to
+> 3c0dcf6).
 
 ## Overview
 
@@ -271,7 +272,7 @@ A path literal containing U+FEFF (the byte-order mark) is a compile error, as it
 
 **Migration.** Rename `UrlTypeOptions` to `PageObjectTypeOptions` in imports and constraints.
 
-### `remove()` is replaced by `skip()` and `unskip()` **[planned, plan 1.10-2]**
+### `remove()` is replaced by `skip()` and `unskip()` **[done, plan 1.10-2]**
 
 `getLocatorSchema(path).skip(subPath)` leaves an ancestor out of the chain when the query resolves, and
 `unskip(subPath)` brings it back exactly as it was: skipping is a flag and deletes nothing. `remove(subPath?)` is gone;
@@ -288,7 +289,7 @@ registry.getLocatorSchema("main.list.item").skip("main.list").getNestedLocator()
 terminal becomes `update()`/`replace()`, plus `clearSteps()` and `describe("")` where the old deletion of steps and
 description was wanted.
 
-### `@step` decorates only methods that return a Promise **[planned, plan 1.10-2]**
+### `@step` decorates only methods that return a Promise **[done, plan 1.10-2]**
 
 `test.step` always returns a Promise and runs the body later, so a decorated sync method returned a Promise typed as
 its value, ran after the caller's next line, and its exceptions escaped the caller's `try/catch`. It is now a compile
@@ -299,7 +300,7 @@ error that says `@step decorates methods that return a Promise: make the method 
 **Migration.** Make decorated methods `async` (they always returned a Promise at runtime). Update anything that filters
 report steps by a static method's `Function.` title.
 
-### The logger keeps what it is given and uses the run's locale **[planned, plan 1.10-2]**
+### The logger keeps what it is given and uses the run's locale **[done, plan 1.10-2]**
 
 `PlaywrightReportLogger` attaches the message and every string argument exactly as written: no JSON re-formatting, no
 trailing blank lines. Other arguments are printed as `console.log` prints them, instead of `[object Object]`. A
@@ -311,7 +312,7 @@ optional second argument) instead of a fixed `nb-NO`, so with no config they rea
 **Migration.** Set `use: { locale: "nb-NO" }` for the old names, or pass a locale to `attachLogsToTest` in a custom
 fixture; pass `JSON.stringify(data, null, 2)` for a pretty JSON body or data nested deeper than two levels.
 
-### `describe` requires a string; `nth` behaves as Playwright's **[planned, plan 1.10-2]**
+### `describe` requires a string; `nth` behaves as Playwright's **[done, plan 1.10-2]**
 
 From JavaScript, `describe(null)` and `describe(undefined)` throw (they silently fell back to the path);
 `describe("")` removes a description, as in Playwright. `nth(null)` and `nth(undefined)` reach Playwright's `nth`, which
@@ -367,21 +368,21 @@ matches nothing, instead of being dropped, which matched every element. TypeScri
 
 - A caller's options or filter object changed after `add()`, `filter()` or `createReusable`, or a seed's step after
   `add(path, { reuse })`, no longer changes the registered locator: builders store copies (analysis 1.10, found in
-  the plan 1.10-2 review). **[planned, plan 1.10-2]**
+  the plan 1.10-2 review). **[done, plan 1.10-2]**
 - `filter` and `nth` on a hidden segment are no longer accepted and silently dropped, and a throwing `update()` after
-  hiding a segment no longer brings it back (analysis 1.10). **[planned, plan 1.10-2]**
+  hiding a segment no longer brings it back (analysis 1.10). **[done, plan 1.10-2]**
 - The sub-path error says when the sub-path is a segment of the path without a registration (analysis 1.10).
-  **[planned, plan 1.10-2]**
+  **[done, plan 1.10-2]**
 - An array or a `filter`-only object in `has`/`hasNot` is reported as an unsupported filter reference instead of
-  Playwright's frame message (analysis 1.10). **[planned, plan 1.10-2]**
+  Playwright's frame message (analysis 1.10). **[done, plan 1.10-2]**
 - The duplicate-registration message shows a `Locator` as `locator('b')` instead of Playwright's internals (analysis
-  1.10). **[planned, plan 1.10-2]**
+  1.10). **[done, plan 1.10-2]**
 - Logged objects, arrays, errors, `undefined` and `null` are no longer printed as `[object Object]`, `1,2`, a first
-  line or nothing (analysis 1.10). **[planned, plan 1.10-2]**
+  line or nothing (analysis 1.10). **[done, plan 1.10-2]**
 - A bare `@step` on a static method compiled with `experimentalDecorators` is no longer silently unwrapped (analysis
-  1.10). **[planned, plan 1.10-2]**
+  1.10). **[done, plan 1.10-2]**
 - A page object's registry error and a never-applied `seed` point at the consumer's line even when the consumer's file
-  is named `pageObject.ts` or `sessionStorage.ts`. **[planned, plan 1.10-2]**
+  is named `pageObject.ts` or `sessionStorage.ts`. **[done, plan 1.10-2]**
 
 ## Removed and internal cleanup
 
@@ -409,7 +410,7 @@ matches nothing, instead of being dropped, which matched every element. TypeScri
 
 - Unreachable branches in the registry and the query builder are removed, `getLocator` no longer builds a query
   builder (about twice as fast), a nested resolution clones each segment once instead of twice, and `seed` and
-  `PageObject` share one call-site helper (analysis sections 1.10 and 2). **[planned, plan 1.10-2]**
+  `PageObject` share one call-site helper (analysis sections 1.10 and 2). **[done, plan 1.10-2]**
 
 ## Tooling, CI, and tests
 
@@ -473,7 +474,7 @@ matches nothing, instead of being dropped, which matched every element. TypeScri
 - Unit tests for the skip rules, the copies, the `describe` check, the `nth` pass-through, the call-site helper, the
   logger's output and `@step` (a type-only `*.test-d.ts` file for decorator syntax); harness specs for `skip`/`unskip`
   against DOM, the logger's attachments, call sites in consumer files named like POMWright's, and the public types.
-  **[planned, plan 1.10-2]**
+  **[done, plan 1.10-2]**
 
 ## Documentation
 
@@ -509,7 +510,7 @@ matches nothing, instead of being dropped, which matched every element. TypeScri
 - `docs/v3/locator-registry.md`: *Skipping a segment: `skip` and `unskip`* replaces the `remove` section, the clone
   guarantee, `describe("")`, the sub-path and skip messages; `overview.md`: `skip`/`unskip`, `@step` on methods that
   return a Promise; `logging.md`: what messages and arguments become, the attachment format, locale and time zone.
-  **[planned, plan 1.10-2]**
+  **[done, plan 1.10-2]**
 
 ## Upgrade checklist (2.x to 3.0.0)
 
@@ -559,8 +560,8 @@ Grows as plans land.
 23. Pass the first argument to every `replace()` strategy method and drop `null` options from them. **[done, plan 1.9]**
 24. Rename `UrlTypeOptions` to `PageObjectTypeOptions`. **[done, plan 1.9]**
 25. Replace `remove("ancestor")` with `skip("ancestor")`; replace `remove()` followed by `update()`/`replace()` with
-    `update()`/`replace()` plus `clearSteps()` and `describe("")` where needed. **[planned, plan 1.10-2]**
-26. Make every `@step`-decorated method `async`. **[planned, plan 1.10-2]**
+    `update()`/`replace()` plus `clearSteps()` and `describe("")` where needed. **[done, plan 1.10-2]**
+26. Make every `@step`-decorated method `async`. **[done, plan 1.10-2]**
 27. Set `use: { locale: "nb-NO" }` (or pass a locale to `attachLogsToTest`) to keep the 2.x log attachment names, and
-    pass `JSON.stringify(data, null, 2)` for nested log data. **[planned, plan 1.10-2]**
-28. Call `nth` only when there is an index. **[planned, plan 1.10-2]**
+    pass `JSON.stringify(data, null, 2)` for nested log data. **[done, plan 1.10-2]**
+28. Call `nth` only when there is an index. **[done, plan 1.10-2]**

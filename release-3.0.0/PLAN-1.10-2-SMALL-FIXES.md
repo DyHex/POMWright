@@ -15,7 +15,20 @@ without a clone, so that every resolution works on a clone (3.12); added the `de
 for a skipped segment (3.4, 3.5); answered plan 1.9's `nth(null)` question by passing `nth` through to Playwright (3.5); gave the `@step` compile
 error a message that says what to do (3.11); and turned the logger into "messages as given, arguments as `console.log`
 prints them, timestamps in the run's locale and time zone, in call order", with no pretty-print option (3.8, 3.9).
-Every decision in section 7 was taken with the user on 2026-10-15.
+Every decision in section 7 was taken with the user on 2026-10-15. Executed 2026-10-15, see below.
+
+**Executed 2026-10-15** on `chore/bugfixes-quality-improvements-and-docs`, one commit per execution step: 07e7398 (1,
+the locators with their unit tests, red then green, and a fake page that records chains), 87952e7 (2, the helpers:
+the call-site helper, `@step`, the logger and the `log` fixture, with their unit tests and a type-only
+`stepDecorator.test-d.ts`), 2fb669a (3, the harness: the four `remove(` call sites converted, the skip spec against
+DOM, the copy, `nth`, `describe` and sub-path specs, the call-site and logging specs, the public-type probes; 32 of
+the new and changed tests fail against the code before this plan), 495bb3a (4, `docs/v3`, the snippets compiled
+against the packed package), 5d2371c (5, the changeset), 3c0dcf6 (6, the full run found one red test, on WebKit only:
+the seed call-site spec ended before the seed had applied; fixed by waiting for it), and the ledger commit for step 7
+that carries this note. Final run: `pnpm lint` clean, 369 unit tests with no type errors, `pnpm build`,
+`pnpm pack-test` 1221 passed (407 per browser) with both type checks, and the probes of 5.3 against the final build as
+planned. The execution-time decisions (the fake page, how `@step` and the log fixture are tested, the stack handoff
+between two serial tests, the WebKit wait, the doc comments) are in [DECISIONS.md](DECISIONS.md).
 
 Every claim below was verified on 2026-10-15 against HEAD b0ff3d0, never in the working tree: three fresh clones in
 the session scratchpad (`head` for the current behaviour, `reach` with a marker planted in each suspect branch,
