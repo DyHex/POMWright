@@ -755,16 +755,20 @@ property (that `add` clones the seed). Either return a new builder per call or d
 > Notes: plan 11 (2026-10-16, [PLAN-5-DOCS.md](PLAN-5-DOCS.md) Part A) closed the `docs/v2`/`docs/v3` bullets
 > below by writing the documentation anew in `website/src/content/docs/`, and with them plan 10's D1 (no page names a
 > version in its title) and D3 (a type or parameter keyed on `fullUrl` being a `RegExp` takes `UrlMatcher`, on
-> *Upgrading from 2.x* and *TypeScript*). The README bullets close with plan 13's README.
+> *Upgrading from 2.x* and *TypeScript*). Plan 13 (2026-10-17) closed the README bullets with the 3.0.0 README.
 
 ### README.md
 
-- [ ] [L12](../README.md#L12) "approachs", "the provided the", "POMS".
-- [ ] [L163](../README.md#L163) "Simmilarily".
-- [ ] [L168](../README.md#L168) vs [L190](../README.md#L190): import with and without the `.ts` extension.
-- [ ] [L257](../README.md#L257) "Hellow".
-- [ ] [L286](../README.md#L286) "POCs" (v1 term).
-- [ ] Missing: which decorator flavour `@step` needs; minimum Node version.
+- [x] [L12](../README.md#L12) "approachs", "the provided the", "POMS". Closed 2026-10-17 (plan 13): the 3.0.0 README
+  replaces the text.
+- [x] [L163](../README.md#L163) "Simmilarily". Closed 2026-10-17 (plan 13): replaced.
+- [x] [L168](../README.md#L168) vs [L190](../README.md#L190): import with and without the `.ts` extension. Closed
+  2026-10-17 (plan 13): the README's one example imports without an extension and compiles.
+- [x] [L257](../README.md#L257) "Hellow". Closed 2026-10-17 (plan 13): replaced.
+- [x] [L286](../README.md#L286) "POCs" (v1 term). Closed 2026-10-17 (plan 13): the README says page object.
+- [x] Missing: which decorator flavour `@step` needs; minimum Node version. Closed 2026-10-17 (plan 13): the README
+  states Node 20 and Playwright 1.64; *Installation* states both, and that `@step` works with standard decorators and
+  with `experimentalDecorators`.
 
 ### docs/v2/overview.md
 

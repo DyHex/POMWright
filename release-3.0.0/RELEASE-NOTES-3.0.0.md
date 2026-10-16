@@ -24,7 +24,9 @@
 > written and decided on 2026-10-16, see [PLAN-5-DOCS.md](PLAN-5-DOCS.md); of these, 11 (the helpers' step locations,
 > the snippet check, the Docs section and *Upgrading from 2.x*) executed and committed on the same branch on 2026-10-16
 > (commits 801e4ac to 449ea50 and the ledger commit bc4d850), and 12 (the doc comments, the API and Internal sections,
-> the API coverage check, `docs/v3` removed) on 2026-10-17 (commits f17d184 to 3118c0d and the ledger commit).
+> the API coverage check, `docs/v3` removed) on 2026-10-17 (commits f17d184 to 3118c0d and the ledger commit 67ec030),
+> and 13 (the site, its CI job and deployment, the README) on 2026-10-17 (commits c84ddd4 to 84a550f and the ledger
+> commit); its pre-merge step C8 is pending.
 
 ## Overview
 
@@ -561,12 +563,13 @@ abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
   for contributors and the curious). Every example is compiled against the package in CI, the API reference is checked
   against the published declarations, and every link is checked; the site is deployed after every green `CI` on
   `main`. It replaces `docs/v2` for 3.0.0; the 2.x documentation stays in the repository at the `v2.1.0` tag.
-  **[Docs, API and Internal sections done, plans 11 and 12; the site planned, plan 13]**
+  **[done, plans 11 to 13; deployed from the 3.0.0 branch, with a pre-release banner and `noindex`, until the merge]**
 - *Upgrading from 2.x*, one page with every migration step: what changed and why, how it shows up, how to find the
   affected code, and 2.x and 3.0.0 code side by side. These notes link to it instead of carrying their own migration
   paragraphs and checklist. **[done, plan 11]**
 - Doc comments for every export and public member (summary, parameters, return value, errors thrown, example, and a
   link to the API page), so the API reads from the editor's hovers. **[done, plan 12]**
-- The README is rewritten for 3.0.0: what POMWright is and what it solves, with links to the site. **[planned, plan 13]**
+- The README is rewritten for 3.0.0: what POMWright is and what it adds to Playwright, one example, and links to the
+  site. **[done, plan 13]**
 - `AGENTS.md` rewritten as the persistent contributor guide, including the 3.0.0 workflow and the documentation's
   rules; the incorrect "thenable query builders" wording removed (analysis section 5). **[done]**

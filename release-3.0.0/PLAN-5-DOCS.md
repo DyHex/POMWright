@@ -54,6 +54,22 @@ through the TypeScript language service from a consumer file. Plan 13 checks `in
 describes the site as plan 13 delivers it. The execution-time decisions are in [DECISIONS.md](DECISIONS.md) (plans 11 to
 13).
 
+**Part C (plan 13) executed 2026-10-17**, C1 to C7; C8 waits for your word. One commit per execution step: c84ddd4 (C1,
+the Starlight project in `website/`, the home page, the banner and `noindex`, biome and `.gitignore`), 62d1e5b (C2,
+`ci-changes.sh`'s `code` and `site`, the `site` job, Dependabot for `/website`), 4733d92 (C3, `pages.yaml`), 17b55dc (C4,
+changeset `documentation-site-and-upgrade-guide`, `major`, first in the 3.0.0 entry), 852337e (C5, the README), 84a550f
+(C6, the verification's one fix: `internal/tests-and-checks.md` and `internal/documentation.md` brought up to the site
+job and the deployment), and the ledger commit for C7 that carries this note. Final run: `pnpm format` and `pnpm lint`
+clean, 670 unit tests with no type errors, `pnpm build`, `pnpm pack-test` 1317 passed (439 per browser) with both type
+checks, the snippet check (191 compiled, 12 `nocheck`) and the coverage check (34 exports, 94 members, 0 problems);
+`pnpm -C website build`, 52 pages, every link valid, the eleven diagrams rendered, search answering; the site job's
+steps rehearsed in a fresh clone from a packed tarball; actionlint 1.7.12 clean on every workflow and on the C8 variant
+of `pages.yaml`. The branch was pushed on your go-ahead: `Pages` deployed 84a550f and PR #46's checks passed, the `site`
+job included; the live site serves its 51 pages with the banner and `noindex`, and its base, links, search, diagrams and
+404 page work. `internal/documentation.md` was checked against the delivered site in C6; it describes the deployment as
+it runs after C8. C8's checklist is in AGENTS.md section 9. The execution-time decisions are in
+[DECISIONS.md](DECISIONS.md) (plans 11 to 13).
+
 The sample pages (section 3) are in [PLAN-5-DOCS-samples/](PLAN-5-DOCS-samples/README.md), written in full as they would
 ship, beside the TypeDoc output they are compared with.
 
