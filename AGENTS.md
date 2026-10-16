@@ -1,8 +1,8 @@
 # AGENTS.md
 
 Persistent context and working rules for AI agents and humans contributing to POMWright. Read it fully before
-changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-16, after the
-structure plan (analysis 3.1, 3.3, 3.4, 3.5, 3.8 and the section 2 `debugSteps` bullet) was executed.
+changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-16, after plan 10, the
+quality review of the 3.0.0 code (findings R1 to R22), was executed.
 
 ## 1. What POMWright is
 
@@ -18,8 +18,8 @@ structure plan (analysis 3.1, 3.3, 3.4, 3.5, 3.8 and the section 2 `debugSteps` 
   and POMWright composes the full Playwright locator chain from the path. The registry, `PageObject`,
   `SessionStorage`, the `log` fixture and the `step` decorator are each usable on their own.
 - The public API is exactly what the root [index.ts](index.ts) re-exports: `test` (fixture providing `log`),
-  `PageObject` with `PageObjectTypeOptions` and the `*TypeFromOptions` helpers, `createRegistryWithAccessors`, the
-  accessor types, the `LocatorRegistry` type (`add`, `createReusable`, `getLocator`, `getLocatorSchema`,
+  `PageObject` with `PageObjectTypeOptions`, `PageObjectOptions` (its constructor options) and the `*TypeFromOptions`
+  helpers, `createRegistryWithAccessors` with `LocatorRegistryOptions`, the accessor types, the `LocatorRegistry` type (`add`, `createReusable`, `getLocator`, `getLocatorSchema`,
   `getNestedLocator`, `verify`), what the registry hands out (`LocatorQueryBuilder`, `LocatorUpdateBuilder`,
   `ReusableLocator`, `FilterDefinition`, `IndexSelector`) and the path types (`LocatorSchemaPathFormat`,
   `LocatorSchemaPathArgument`), `SessionStorage` with the `json` codec and the `Codec` and `SessionStorageSchema`
@@ -33,7 +33,7 @@ structure plan (analysis 3.1, 3.3, 3.4, 3.5, 3.8 and the section 2 `debugSteps` 
 | Path | What it is | Edit? |
 | --- | --- | --- |
 | `index.ts` | Package entry. tsup bundles the CommonJS build from here; `scripts/write-esm-entry.mjs` then writes the ESM entry. | yes |
-| `src/` | Runtime: 17 files, about 4,600 lines, plus colocated vitest unit tests (`**/*.test.ts`: `pageObject.test.ts`, `locators/utils.test.ts`, `locators/locatorRegistry.test.ts`, `locators/locatorRegistrationBuilder.test.ts`, `locators/locatorUpdateBuilder.test.ts`, `locators/locatorQueryBuilder.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`, `helpers/sessionStorage.test.ts`, `helpers/sessionStorageSeed.test.ts`, `helpers/callSite.test.ts`, `helpers/playwrightReportLogger.test.ts`, `helpers/stepDecorator.test.ts`), the type-only `helpers/stepDecorator.test-d.ts` (decorator syntax, which vitest's runtime cannot load), and `locators/fakePage.ts`, test support only: a page whose locators record the chain they were built from, never imported by the runtime and so never bundled. | yes |
+| `src/` | Runtime: 17 files, about 4,600 lines, plus colocated vitest unit tests (`**/*.test.ts`: `pageObject.test.ts`, `locators/utils.test.ts`, `locators/locatorRegistry.test.ts`, `locators/locatorRegistrationBuilder.test.ts`, `locators/locatorUpdateBuilder.test.ts`, `locators/locatorQueryBuilder.test.ts`, `locators/reusableLocatorBuilder.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`, `helpers/sessionStorage.test.ts`, `helpers/sessionStorageSeed.test.ts`, `helpers/callSite.test.ts`, `helpers/playwrightReportLogger.test.ts`, `helpers/stepDecorator.test.ts`), the type-only `helpers/stepDecorator.test-d.ts` (decorator syntax, which vitest's runtime cannot load), and `locators/fakePage.ts`, test support only: a page whose locators record the chain they were built from, never imported by the runtime and so never bundled. | yes |
 | `src/locators/` | `locatorRegistry.ts` (registry, resolution with frames as `locator` plus `contentFrame()` and the any-frame segment, cycle detection, `verify()` with the opt-in `strictChains`, reuse by path and by seed through one seeded builder), `locatorRegistrationBuilder.ts` (`add(path).getByRole(...)` DSL, seeded registrations with `update`'s argument shapes, the boundary checks, no steps on an any-frame definition), `locatorUpdateBuilder.ts` (`update` as a same-strategy JSON Merge Patch, `replace` with Playwright's argument lists through a `Mode` type parameter; the class `LocatorUpdateBuilderInternal`, the public alias `LocatorUpdateBuilder`), `locatorQueryBuilder.ts` (`getLocatorSchema(path)` chain: `filter`, `nth`, `clearSteps`, `skip`/`unskip`, `describe`, `update`, `replace`, `getLocator`, `getNestedLocator`; the class `LocatorQueryBuilderInternal`, the public alias `LocatorQueryBuilder`), `reusableLocatorBuilder.ts` (`createReusable`; a seed is a value whose methods return new seeds), `types.ts` (definitions, `ReusableLocator`, `FilterDefinition`, `IndexSelector`, `OptionsPatch`, compile-time path validation), `utils.ts` (the `STRATEGIES` table, one row per strategy, that creation, cloning, the seeded patch, `update` and `replace` read; path validation with `LOCATOR_SCHEMA_PATH_WHITESPACE`, `assertStrategyPrimary` over `assertPrimaryValue` and `assertIdValue`, `assertDescription`, the id selector helpers, `createLocator`, `applyIndexSelector`, `isAnyFrameDefinition`, `isLocatorInstance`, `isReusableLocator`, `methodForStrategy`, `mergeOptions`, cloning and copying (`copyFilter`, `normalizeSteps`), patching). | yes |
 | `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts` (`SessionStorage`: `page.sessionStorage` with batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `seed`), `sessionStorageSeed.ts` (the seed registry, one per page: the writer and redirect documents, the proxy while a seed is pending, the bypass and never-applied failures), `callSite.ts` (`captureCallSite(boundary)` and `atCallSite`: a later error pointed at the consumer's call, for `seed` and the page-object check), `playwrightReportLogger.ts` (messages kept as given, other arguments as `console.log` prints them, one attachment per entry in call order, names in Playwright's `locale` and `timezoneId`), `stepDecorator.ts` (`@step`, for methods that return a Promise). | yes |
 | `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject` (constructor options `label`, `navOptions`, `sessionStorage`, `locators: { strictChains }`): `defineLocators()` and `verify()` run once, right after construction (a check scheduled with `queueMicrotask`) or at the first locator call, through a facade on `locatorRegistry`; labelled, sticky errors with the construction site; the optional actions hook, evaluated per run. The `test` fixture that provides `log`. | yes |
@@ -43,7 +43,7 @@ structure plan (analysis 3.1, 3.3, 3.4, 3.5, 3.8 and the section 2 `debugSteps` 
 | `docs/v1/`, `docs/v1-to-v2-migration/` | Archived. | no |
 | `release-3.0.0/` | Working folder for the 3.0.0 release: analysis, numbered plans, release notes, decisions log. Section 6. | yes |
 | `.changeset/` | Changesets config. `CHANGELOG.md` is generated from changesets at release time. | config only |
-| `.github/workflows/` | `checks.yaml` (reusable): `changes`, `lint` (always), `package` (unit tests, build and pack once, the tarball as a run artifact) and `harness` (the browsers the caller passes, each at the Playwright pin and at the latest 1.x, each testing that tarball); `package` and `harness` are skipped when only `*.md` files changed since the last green commit of the branch (the newest commit whose run of the same workflow succeeded) or, on a pull request, since its base; never since the previous push alone, which would let a docs-only push turn a red run green. `pr.yaml` (`PR`) runs it for every pull request, draft or not, with the harness on chromium only; `main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit; both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs the changesets action after `CI` succeeds on a push to `main`, guarded by its job condition. | yes |
+| `.github/workflows/` | `checks.yaml` (reusable): `changes`, `lint` (always), `package` (unit tests, build and pack once, the tarball as a run artifact) and `harness` (the browsers the caller passes, each at the Playwright pin and at the latest 1.x, each testing that tarball), and with the `node-floor` input, which `main.yaml` sets, `harness-node-floor` (chromium at the pin on Node 20, the `engines` floor); every third-party action is pinned to a commit with its version in a comment, kept current by `.github/dependabot.yml` (monthly, grouped); `package` and `harness` are skipped when only `*.md` files changed since the last green commit of the branch (the newest commit whose run of the same workflow succeeded) or, on a pull request, since its base; never since the previous push alone, which would let a docs-only push turn a red run green. `pr.yaml` (`PR`) runs it for every pull request, draft or not, with the harness on chromium only; `main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit; both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs the changesets action after `CI` succeeds on a push to `main`, guarded by its job condition, and publishes with npm provenance (`id-token: write`, `NPM_CONFIG_PROVENANCE`). | yes |
 | `pack-build.sh`, `pack-extract.sh`, `pack-test.sh`, `playwright.base.ts` | Build and pack the tarball and extract it into `.pack/pomwright`; the extraction; run the harness (section 3); shared Playwright config. | yes |
 | `scripts/` | `write-esm-entry.mjs` (part of `pnpm build`), `ci-last-green.sh`, `ci-changes.sh` and `ci-playwright-version.sh` (the decisions of `checks.yaml`; `ci-last-green.sh` reads the runs API through `gh`, the other two run locally as they are). | yes |
 | `vitest.config.ts` | Unit-test discovery limited to `src/**/*.test.ts`, node environment, so Playwright specs are never picked up; typecheck mode on, so `expectTypeOf` and `// @ts-expect-error` assertions are enforced, in `src/**/*.test.ts` and in the type-only `src/**/*.test-d.ts`. | yes |
@@ -57,7 +57,7 @@ structure plan (analysis 3.1, 3.3, 3.4, 3.5, 3.8 and the section 2 `debugSteps` 
   later). Use pnpm only. `@playwright/test` is an exact root dev dependency at the peer floor (1.64.0): the peer
   floor, the root dev pin and the harness pin in `test/package.json` move together, by decision.
 - `pnpm install --frozen-lockfile`
-- `pnpm lint` runs `biome check .` (lint, import order and format check over the whole repository; biome does not
+- `pnpm lint` runs `biome check --error-on-warnings .`, so a warning fails it and CI (lint, import order and format check over the whole repository; biome does not
   process `.md`; `test/test-data` and `.pack` are excluded). `pnpm format` (`biome format --write .`) rewrites
   formatting only; import order and lint fixes come from `biome check --write`.
 - `pnpm build` runs `tsup index.ts --format cjs --dts` into `dist/`, then `scripts/write-esm-entry.mjs`.
@@ -105,7 +105,7 @@ structure plan (analysis 3.1, 3.3, 3.4, 3.5, 3.8 and the section 2 `debugSteps` 
   hidden iframe section), `/testids` (ids that are valid HTML but awkward as CSS selectors, and one empty
   `data-testid`), `/testnav` (with `/testnav/item/:id` and `/testnav/bounce`,
   the navigation fixture: query, hash, trailing slash, delayed and bouncing navigations), and `/teststorage` (GET and
-  POST, with `/teststorage/frame`, `/redirect`, `/chain`, `/login`, `/login307`, `/api`, `/sw.js` and
+  POST, with `/teststorage/frame`, `/redirect`, `/chain`, `/login`, `/login307`, `/login308`, `/api`, `/sw.js` and
   `/sw-passthrough.js`: the session storage fixture, whose first script snapshots `sessionStorage`; hops to the
   second origin `http://127.0.0.1:9000`, the same server, by every kind of navigation; iframes, COOP and COEP flags,
   and two service workers). New fixture pages go in as new routes, not into the static page.
@@ -193,7 +193,9 @@ structure plan (analysis 3.1, 3.3, 3.4, 3.5, 3.8 and the section 2 `debugSteps` 
 - A seed never changes: `filter`, `nth` and `describe` return a new seed, `definition` and `steps` are copies. Reuse
   by path copies the record (strategy, steps, an explicit description) and returns `filter`, `nth` and `describe`;
   no strategy override and no `clearSteps` after a path. An any-frame `frameLocator()` definition takes no steps or
-  description from any source (checked at the call); its position is `verify()`'s first-segment check.
+  description from any source (checked at the call); its position is `verify()`'s first-segment check. A hand-made
+  seed object gets the primary check every builder applies (method `reuse`). `replace(sub).frameLocator()` throws at
+  the call on the query's own path and on a segment with steps in the query (`clearSteps` first).
 - An unregistered path segment is a name that groups paths and is left out of the chain; `strictChains: true` (an
   option of the registry and of `PageObject`) makes `verify()` require every ancestor to be registered. It is never
   the default. The default description of a resolved locator is its path.
@@ -209,11 +211,15 @@ structure plan (analysis 3.1, 3.3, 3.4, 3.5, 3.8 and the section 2 `debugSteps` 
   key (`json<T>()`, `Codec<T>`), `get` returns `null` for a missing key, a literal `[]` does not compile, and a helper
   with an origin touches only that origin. `seed` never navigates itself: it registers one route and two listeners on
   the page only while a seed is pending and removes them once the writer document has committed and issued its
-  replace; a bypassed, unsupported or never-applied seed fails the test with the `seed` call site in the stack. Never
-  reintroduce `addInitScript`, JSON-encoding every value, or a write from a `framenavigated` listener.
-- URLs mirror Playwright's `baseURL` handling with one base per page object: a string `baseUrl` is a non-empty
-  origin and a string `urlPath` is `""` or a single-slash path, both validated at construction; two strings resolve
-  with `new URL`; a RegExp in either part makes `fullUrl` a `UrlMatcher` (base against the origin, path against the
+  replace; a bypassed, unsupported or never-applied seed fails the test with the `seed` call site in the stack. The
+  continuation keeps the navigation's URL fragment (a target's own fragment wins), and the writer document moves to
+  `/.pomwright-seed-continue` with `history.replaceState` before its replace: from its own URL a replace with a fragment
+  only scrolls, and WebKit's `goto` would not wait for one without. Never reintroduce `addInitScript`, JSON-encoding
+  every value, or a write from a `framenavigated` listener.
+- URLs mirror Playwright's `baseURL` handling with one base per page object: each part is a string or a RegExp, a
+  string `baseUrl` is a non-empty origin and a string `urlPath` is `""` or a single-slash path, all validated at
+  construction; two strings resolve with `new URL`, and a string path is compared in the form `new URL` gives it (as
+  the browser reports it); a RegExp in either part makes `fullUrl` a `UrlMatcher` (base against the origin, path against the
   rest, each regex as written). `goto()` without a target is the this-page navigation; `expectThisPage` and
   `expectAnotherPage` are one `page.waitForURL` each. POMWright sets no timeout or `waitUntil` default of its own.
 - Descriptive path names in docs and tests. No anonymous segments.
@@ -230,12 +236,7 @@ become the basis for the changelog entry and announcement, and `docs/v3` becomes
 | File | Role |
 | --- | --- |
 | `POMWRIGHT-2.1.0-ANALYSIS.md` | Source-verified findings numbered 1.1 to 1.10, 2, 3.1 to 3.8, 4, 5. Each has `Fix / Skip / Discuss` boxes and a `Notes:` block. Section 6 is the working order. |
-| `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` (executed 2026-10-06), `PLAN-1.3-1.4-URL-NAVIGATION.md` (executed 2026-10-08) and
-  `PLAN-1.5-SESSION-STORAGE.md` (executed 2026-10-10), `PLAN-1.6-1.8-REGISTRATION-AND-FRAMES.md` (executed
-  2026-10-13), `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md` (executed 2026-10-13), `PLAN-4-PACKAGING-TOOLING-CI.md` (executed
-  2026-10-14) and `PLAN-1.9-TYPES-AND-EXPORTS.md` (executed 2026-10-14) and `PLAN-1.10-2-SMALL-FIXES.md` (executed 2026-10-15) and `PLAN-3-STRUCTURE.md` (executed
-  2026-10-16) are done, one commit per execution step each. The remaining plans, their scope, and their order are in
-  `PLANS.md`; the next one is `PLAN-5-DOCS.md`. |
+| `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` (executed 2026-10-06), `PLAN-1.3-1.4-URL-NAVIGATION.md` (executed 2026-10-08), `PLAN-1.5-SESSION-STORAGE.md` (executed 2026-10-10), `PLAN-1.6-1.8-REGISTRATION-AND-FRAMES.md` (executed 2026-10-13), `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md` (executed 2026-10-13), `PLAN-4-PACKAGING-TOOLING-CI.md` (executed 2026-10-14), `PLAN-1.9-TYPES-AND-EXPORTS.md` (executed 2026-10-14), `PLAN-1.10-2-SMALL-FIXES.md` (executed 2026-10-15), `PLAN-3-STRUCTURE.md` (executed 2026-10-16) and `PLAN-10-QUALITY-REVIEW.md` (plan 10, the quality review, executed 2026-10-16) are done, one commit per execution step each. The remaining plans, their scope, and their order are in `PLANS.md`; the next one is `PLAN-5-DOCS.md` (plan 11, the documentation sweep). |
 | `PLANS.md` | The ordered list of remaining plans with the analysis items each covers and its status. Updated when a plan is written, split, or executed. |
 | `RELEASE-NOTES-3.0.0.md` | Consumer-facing notes. Only what is done or committed to by a plan in this folder, each item with a status marker. Never a copy of the analysis. |
 | `DECISIONS.md` | Current decisions across all plans, big and small, with date and reason. A reversed decision is replaced, not kept; git history has the rest. Open questions at the bottom. |
@@ -277,8 +278,9 @@ Rules:
   `.changeset/url-composition-and-navigation.md`, `.changeset/session-storage-on-webstorage.md`,
   `.changeset/registration-guards-and-frames.md`, `.changeset/pageobject-lifecycle.md`,
   `.changeset/package-exports-and-engines.md`, `.changeset/types-and-exports.md`,
-  `.changeset/small-fixes-and-cleanup.md`, `.changeset/seeds-and-path-reuse.md` (all `major`) and
-  `.changeset/strict-chains.md` (`minor`).
+  `.changeset/small-fixes-and-cleanup.md`, `.changeset/seeds-and-path-reuse.md` (all `major`),
+  `.changeset/strict-chains.md` and `.changeset/page-object-options.md` (`minor`) and
+  `.changeset/quality-review-fixes.md` (`patch`).
 
 ## 8. Do not
 
@@ -293,8 +295,9 @@ Rules:
   `PageObject` constructor, `update()`'s optional patch arguments on `replace()`, the `UrlTypeOptions` name, a query
   `remove()` that deletes a segment's definition, steps or description, `@step` on methods that do not return a
   Promise, a hard-coded log locale or sorted log entries, JSON re-formatting of log messages, a seed method that
-  changes the seed, a `void` path reuse, a `null` stored as a primary or as a seeded option key, or steps on an
-  any-frame definition.
+  changes the seed, a `void` path reuse, a `null` stored as a primary or as a seeded option key, steps on an
+  any-frame definition, a seed continuation without the navigation's fragment, or a `location.replace` from the
+  writer document's own URL.
 - Add a per-strategy `switch` outside the `STRATEGIES` table, or make `strictChains` the default (section 5).
 - Keep a reference to an object a caller passed to a builder, or filter stack frames by file name (section 5).
 - Re-export a class as a public type, return `this` from a public builder step, or hide internals with `@internal`

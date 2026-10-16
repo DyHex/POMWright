@@ -18,7 +18,8 @@
 > 1.9 (types and exports), executed and committed on the same branch on 2026-10-14 (commits 46a04e9 to 4220bfa);
 > 1.10-2 (small fixes and dead code), executed and committed on the same branch on 2026-10-15 (commits 07e7398 to
 > 3c0dcf6); 9 (structure: the strategy table, seeds, reuse by path, descriptions, sparse chains and `strictChains`),
-> executed and committed on the same branch on 2026-10-16 (commits 555290c to 0850bf1).
+> executed and committed on the same branch on 2026-10-16 (commits 555290c to 0850bf1); 10 (quality review of the 3.0.0
+> code: findings R1 to R22), executed and committed on the same branch on 2026-10-16 (commits 4c6ec60 to 4d9c124).
 
 ## Overview
 
@@ -372,6 +373,22 @@ standalone registry when it calls `verify()`. The option is a boolean and defaul
 nothing changes: an unregistered segment is a name that groups paths and is left out of the chain. `skip` and `unskip`
 work in both modes; under the option an any-frame `frameLocator()` is a root path.
 
+### `PageObjectOptions` and `LocatorRegistryOptions` are exported; a seeded override may take no argument **[done, plan 10]**
+
+`PageObjectOptions<Options>` is the type of the `PageObject` constructor's options (`label`, `navOptions`,
+`sessionStorage`, `locators`), so a domain base class can forward them without restating their shape;
+`LocatorRegistryOptions` is the type of `createRegistryWithAccessors`'s second parameter. A seeded override of any
+strategy may be called with no argument and keeps the seed's definition, as `update()` does (only `frameLocator()`
+compiled before).
+
+```ts
+abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
+	protected constructor(page: Page, urlPath: string, options?: PageObjectOptions) {
+		super(page, "https://shop.example", urlPath, { ...options, locators: { strictChains: true } });
+	}
+}
+```
+
 ## Bug fixes
 
 - `getById(string)` no longer breaks on ids with punctuation, whitespace, quotes, or a leading digit (analysis 1.1).
@@ -450,6 +467,27 @@ work in both modes; under the option an any-frame `frameLocator()` is a root pat
 - A hand-made seed object with an any-frame `frameLocator()` definition (no selector) can no longer bring steps or a
   description into the registry: it throws at `add` instead of failing at the first resolution below the path; one
   without steps or a description registers as `add(path).frameLocator()` does. **[done, plan 9]**
+
+- A string `urlPath` that the browser reports percent-encoded or normalised (`/søk`, `/a b`, `/x?q=a b`, `/a/./b`) is
+  matched in that form, as `fullUrl` is: `expectThisPage` no longer times out on such a page, and `expectAnotherPage` no
+  longer passes while the browser is on it. **[done, plan 10]**
+- A `baseUrl` or `urlPath` that is neither a string nor a RegExp, such as an unset environment variable, throws at
+  construction (`LoginPage: baseUrl must be a string or a RegExp; received undefined.`) instead of building a page
+  object that never matches, passes `expectAnotherPage` and gives its storage no origin. **[done, plan 10]**
+- A seeded navigation keeps the URL fragment (`#/orders/7`, `#access_token=…`), directly and through a server
+  redirect; it was dropped, so a hash-routed app opened on the wrong route and a login callback that receives its token
+  in the fragment lost it. **[done, plan 10]**
+- On WebKit, `page.goto()` to an origin with a pending `seed` no longer returns before the app's document has loaded, so
+  `page.url()`, `page.title()` or `page.evaluate()` right after it read the app, as on chromium and firefox.
+  **[done, plan 10]**
+- A hand-made seed object is checked as every builder is: a missing or empty first argument throws at `add` (`reuse
+  requires a selector value for "<path>".`). **[done, plan 10]**
+- `replace(sub).frameLocator()` throws at the call on a segment that has steps in the query (naming `clearSteps`) and on
+  the query's own path, instead of failing at resolution. A query's `filter` and `nth` on an any-frame segment give the
+  same message as `add` does. **[done, plan 10]**
+- A path that is not a string, from JavaScript, throws `LocatorSchemaPath must be a string; received 42.` instead of a
+  `TypeError`; the duplicate-registration message no longer prints a RegExp used twice as `"[Circular]"`, and is headed
+  `Existing and attempted schemas:`. **[done, plan 10]**
 
 ## Removed and internal cleanup
 
@@ -551,6 +589,16 @@ work in both modes; under the option an any-frame `frameLocator()` is a root pat
   primary and `strictChains`; harness specs for seeds and reuse by path against DOM, `strictChains` on a standalone
   registry and a page object, and the public types. **[done, plan 9]**
 
+- CI runs the chromium harness at the Playwright pin on Node 20, the declared floor, for every push to `main`; `pnpm
+  lint` fails on warnings; the actions of the publish and check workflows are pinned to commit SHAs and kept current by
+  a monthly Dependabot update; packages are published with npm provenance, which ties each tarball to the workflow run
+  and commit that built it; the harness `tsconfig.json` no longer uses `baseUrl`, which TypeScript 6 rejects.
+  **[done, plan 10]**
+- Unit tests for the logger's level methods and its initial level on a retry, the any-frame resolution guards, the
+  hand-made seed checks and the URL matcher's normalised paths; harness specs for `navOptions` defaults, non-ASCII
+  paths, fragments through `seed`, and every fixture page object's verification; the seed builder's tests in a file of
+  their own. **[done, plan 10]**
+
 ## Documentation
 
 - `docs/v3` created as the working documentation set for 3.0.0. `docs/v2` is frozen as the 2.x reference.
@@ -594,6 +642,12 @@ work in both modes; under the option an any-frame `frameLocator()` is a root pat
   a locator between modules, a seed export still valid; `overview.md` follows (analysis 3.3, 3.4, 3.5, 3.8).
   **[done, plan 9]**
 
+- `docs/v3/locator-registry.md`: a seeded builder held in a variable (one override, before or after steps), the
+  no-argument override, and the error reference for hand-made seeds, any-frame replacements and non-string paths;
+  `PageObject.md`: `PageObjectOptions` in a domain base class, string URLs compared as the browser reports them, the
+  type check of `baseUrl` and `urlPath`; `session-storage.md`: a seeded hop keeps the fragment; `overview.md`: the type
+  exports. **[done, plan 10]**
+
 ## Upgrade checklist (2.x to 3.0.0)
 
 Grows as plans land.
@@ -609,7 +663,9 @@ Grows as plans land.
    `/`-rooted. Environment-derived values are passed as they are; the constructor validates them.
 6. On pages with a RegExp `baseUrl` or `urlPath`, `fullUrl` is a `UrlMatcher`: keep passing it to Playwright APIs,
    replace `toMatch(fullUrl)` with `toHaveURL(fullUrl)` or `fullUrl.test(url)`, and move any path prefix out of a
-   base regex into `urlPath`. Flags on RegExp parts now apply.
+   base regex into `urlPath`. Flags on RegExp parts now apply. A type of your own that tests `fullUrl` (or
+   `FullUrlTypeFromOptions`) against `RegExp`, or a helper parameter typed `string | RegExp` that receives it, tests or
+   takes `UrlMatcher` instead. **[done, plan 10]**
 7. Navigation waits follow `use.navigationTimeout`; override it with `navOptions: { timeout }` on the page object
    or a per-call `timeout`.
 8. Rename `waitForLoadState` to `waitUntil` in `navOptions` and per-call navigation options.
