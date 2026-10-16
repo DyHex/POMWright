@@ -69,6 +69,9 @@ test("a registered customer can log in", async ({ loginPage, log, page }) => {
 });
 ```
 
+The `log` fixture records `warn` and `error` entries on a test's first run, and every level on a retry, so this `info`
+entry shows up when the test is retried; see [Logging](/POMWright/docs/logging/#levels).
+
 ## Fixtures from several files
 
 When page objects live in their own fixture modules, Playwright's
