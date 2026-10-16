@@ -5,7 +5,7 @@ name: Checks
 # the last green commit of the branch (the newest commit whose run of the caller's workflow succeeded) or, on a pull
 # request, since its base. Never since the previous push alone: that would let a docs-only push turn a red run green.
 # The package job builds and packs once; every harness job tests that tarball, on the browsers the caller asks for, and
-# with node-floor also on chromium at the pin on Node 20, the floor of package.json's engines (the unit tests stay on
+# with node-floor (set by pr.yaml and main.yaml) also on chromium at the pin on Node 20, the floor of package.json's engines (the unit tests stay on
 # Node 24: vitest needs 22.12). Third-party actions are pinned to commits, the version in a comment; Dependabot
 # (.github/dependabot.yml) proposes updates.
 

@@ -589,7 +589,8 @@ abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
   primary and `strictChains`; harness specs for seeds and reuse by path against DOM, `strictChains` on a standalone
   registry and a page object, and the public types. **[done, plan 9]**
 
-- CI runs the chromium harness at the Playwright pin on Node 20, the declared floor, for every push to `main`; `pnpm
+- CI runs the chromium harness at the Playwright pin on Node 20, the declared floor, for every pull request and every
+  push to `main`; `pnpm
   lint` fails on warnings; the actions of the publish and check workflows are pinned to commit SHAs and kept current by
   a monthly Dependabot update; packages are published with npm provenance, which ties each tarball to the workflow run
   and commit that built it; the harness `tsconfig.json` no longer uses `baseUrl`, which TypeScript 6 rejects.
