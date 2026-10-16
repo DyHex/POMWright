@@ -8,8 +8,6 @@
  * fetched by Playwright with redirects disabled so that a server redirect towards the pending origin can
  * be turned into a client-side navigation the route sees; nothing is registered on a page that never
  * seeds, and everything is removed once the last pending seed has been applied.
- *
- * See release-3.0.0/PLAN-1.5-SESSION-STORAGE.md, section 3.2.
  */
 import type { APIResponse, Frame, Route } from "@playwright/test";
 import { atCallSite } from "./callSite";
@@ -128,12 +126,25 @@ export const escapeForScript = (value: unknown): string =>
 /** UTF-8 so a re-submitted form encodes its fields as the original page did; no referrer, as `page.goto` sends none. */
 const HEAD = '<meta charset="utf-8"><meta name="referrer" content="no-referrer">';
 
+/** Where the writer document moves itself, without a request, before it continues the navigation. */
+const CONTINUE_PATH = "/.pomwright-seed-continue";
+
+/**
+ * Continues the navigation. A target without a fragment of its own takes the document's, which the request never
+ * carries, as the browser carries it over a redirect. The writer document sits at the target's own URL: a replace
+ * from there with a fragment would only scroll, and without one WebKit does not tie it to the `goto` that waits, so
+ * it first moves to `CONTINUE_PATH` with `history.replaceState`, a same-document change that makes no request.
+ */
 const continueScript = (url: string, method: string, postData: string | null): string => {
+	const target = `var url = ${escapeForScript(url)}; if (url.indexOf("#") === -1) { url += location.hash; } `;
 	if (method === "GET") {
-		return `location.replace(${escapeForScript(url)});`;
+		return (
+			`${target}if (url.split("#")[0] === location.href.split("#")[0]) { history.replaceState(null, "", ${escapeForScript(CONTINUE_PATH)}); } ` +
+			"location.replace(url);"
+		);
 	}
 	return (
-		`var form = document.createElement("form"); form.method = "post"; form.acceptCharset = "utf-8"; form.action = ${escapeForScript(url)}; ` +
+		`${target}var form = document.createElement("form"); form.method = "post"; form.acceptCharset = "utf-8"; form.action = url; ` +
 		`new URLSearchParams(${escapeForScript(postData ?? "")}).forEach(function (value, name) { ` +
 		'var input = document.createElement("input"); input.type = "hidden"; input.name = name; input.value = value; ' +
 		"form.appendChild(input); }); document.body.appendChild(form); form.submit();"
@@ -340,6 +351,9 @@ export class SeedRegistry {
 		const pending = origin === undefined ? undefined : this.pending.get(origin);
 		if (pending === undefined || origin === undefined) {
 			return;
+		}
+		if (pending.committed && new URL(url).pathname === CONTINUE_PATH) {
+			return; // the writer document moving off its URL before it continues (continueScript)
 		}
 		if (!pending.fired || url !== pending.target) {
 			const failure = this.failure ?? bypassError(pending, origin, frame.url());

@@ -6,9 +6,7 @@
  * Playwright's contract: strings in, strings out, `null` for a missing key. A helper constructed with an
  * `origin` (every page object with a string `baseUrl`) refuses to touch another origin's storage, which is
  * unreachable without leaving the current document anyway. `seed` writes at once when the page is on the
- * origin and otherwise defers to the page's seed registry, see ./sessionStorageSeed.ts.
- *
- * See release-3.0.0/PLAN-1.5-SESSION-STORAGE.md.
+ * origin and otherwise defers to the page's seed registry, which keeps the navigation's fragment.
  */
 import { type Page, test } from "@playwright/test";
 import { captureCallSite } from "./callSite";

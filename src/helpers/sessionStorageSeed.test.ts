@@ -110,7 +110,8 @@ describe("buildSeedDocument", () => {
 		);
 		expect(html).toContain('document.title = "POMWright seed failed"');
 		expect(html).toContain("return; }");
-		expect(html).toContain(`location.replace(${JSON.stringify(`${B}/app?x=1`)});`);
+		expect(html).toContain(`var url = ${JSON.stringify(`${B}/app?x=1`)};`);
+		expect(html).toContain("location.replace(url);");
 		expect(html).not.toContain("</script><b>");
 		expect(html.match(/<\/script>/g)).toHaveLength(1);
 	});
@@ -124,11 +125,70 @@ describe("buildSeedDocument", () => {
 		);
 		expect(html).toContain('form.method = "post"');
 		expect(html).toContain('form.acceptCharset = "utf-8"');
-		expect(html).toContain(`form.action = ${JSON.stringify(`${B}/app`)}`);
+		expect(html).toContain(`var url = ${JSON.stringify(`${B}/app`)};`);
+		expect(html).toContain("form.action = url;");
 		expect(html).toContain('new URLSearchParams("SAMLResponse=xyz&RelayState=r+s%26t&empty=&dup=1&dup=2").forEach');
 		expect(html).toContain('input.type = "hidden"');
 		expect(html).toContain("form.submit();");
 		expect(html).not.toContain("location.replace");
+	});
+});
+
+/** Runs a document's script against a fake location and history; returns what it did. */
+const runScript = (html: string, href: string) => {
+	const script = html.slice(html.indexOf("<script>") + "<script>".length, html.indexOf("</script>"));
+	const done: string[] = [];
+	const url = new URL(href);
+	const location = {
+		get href() {
+			return url.href;
+		},
+		get hash() {
+			return url.hash;
+		},
+		origin: url.origin,
+		replace: (target: string) => done.push(`replace ${target}`),
+	};
+	const history = {
+		replaceState: (_state: unknown, _title: string, target: string) => done.push(`replaceState ${target}`),
+	};
+	const form = { appendChild: () => {}, submit: () => done.push(`submit ${(form as { action?: string }).action}`) };
+	const document = {
+		createElement: (tag: string) => (tag === "form" ? form : {}),
+		body: { appendChild: () => {} },
+		title: "",
+	};
+	const sessionStorage = { setItem: () => {} };
+	new Function("location", "history", "document", "sessionStorage", "URLSearchParams", script)(
+		location,
+		history,
+		document,
+		sessionStorage,
+		URLSearchParams,
+	);
+	return done;
+};
+
+describe("continuing the navigation, fragment and timing", () => {
+	it("the writer moves off its own URL before every replace, and keeps the fragment of the navigation", () => {
+		const get = buildSeedDocument({ token: "1" }, `${B}/app?x=1`, "GET", null);
+		expect(runScript(get, `${B}/app?x=1#/orders/7`)).toEqual([
+			"replaceState /.pomwright-seed-continue",
+			`replace ${B}/app?x=1#/orders/7`,
+		]);
+		expect(runScript(get, `${B}/app?x=1`)).toEqual(["replaceState /.pomwright-seed-continue", `replace ${B}/app?x=1`]);
+	});
+
+	it("a form POST keeps the fragment in its action", () => {
+		const post = buildSeedDocument({ token: "1" }, `${B}/sso`, "POST", "a=1");
+		expect(runScript(post, `${B}/sso#/after`)).toEqual([`submit ${B}/sso#/after`]);
+	});
+
+	it("the redirect document never moves, takes the original fragment, and a Location fragment wins", () => {
+		const plain = buildRedirectDocument(`${B}/app`, "GET", null);
+		expect(runScript(plain, `${A}/start#/orders/7`)).toEqual([`replace ${B}/app#/orders/7`]);
+		const own = buildRedirectDocument(`${B}/callback#access_token=abc`, "GET", null);
+		expect(runScript(own, `${A}/authorize#/orders/7`)).toEqual([`replace ${B}/callback#access_token=abc`]);
 	});
 });
 
@@ -137,7 +197,8 @@ describe("buildRedirectDocument", () => {
 		const get = buildRedirectDocument(`${B}/app`, "GET", null);
 		expect(get).toContain('<meta charset="utf-8"><meta name="referrer" content="no-referrer">');
 		expect(get).toContain("<title>POMWright redirect</title>");
-		expect(get).toContain(`location.replace(${JSON.stringify(`${B}/app`)});`);
+		expect(get).toContain(`var url = ${JSON.stringify(`${B}/app`)};`);
+		expect(get).toContain("location.replace(url);");
 		expect(get).not.toContain("sessionStorage");
 		const post = buildRedirectDocument(`${B}/app`, "POST", "a=1");
 		expect(post).toContain('form.method = "post"');
@@ -328,6 +389,22 @@ describe("SeedRegistry", () => {
 		expect(page.listeners).toHaveLength(0);
 		// the real document's commit finds nothing pending
 		expect(() => page.navigate(`${B}/app?x=1`)).not.toThrow();
+	});
+
+	it("ignores the writer moving off its URL once it has committed, and nothing else", async () => {
+		const { page, registry } = setup();
+		await registry.add(B, { token: "1" }, title, site);
+		await page.dispatch(fakeRoute(fakeRequest({ url: `${B}/app`, frame: page.main })).route);
+		page.navigate(`${B}/app#/orders/7`);
+		expect(() => page.navigate(`${B}/.pomwright-seed-continue`)).not.toThrow();
+		await page.dispatch(fakeRoute(fakeRequest({ url: `${B}/app`, frame: page.main })).route);
+		expect(registry.pendingOrigins).toEqual([]);
+
+		const other = setup();
+		await other.registry.add(B, { token: "1" }, title, site);
+		await other.page.dispatch(fakeRoute(fakeRequest({ url: `${B}/app`, frame: other.page.main })).route);
+		// served but not committed: the marker path is just another URL of the origin
+		expect(() => other.page.navigate(`${B}/.pomwright-seed-continue`)).toThrow("was not applied");
 	});
 
 	it("keeps the route while another origin is still pending", async () => {
