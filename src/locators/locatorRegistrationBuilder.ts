@@ -14,10 +14,11 @@ import type {
 import {
 	applyDefinitionPatch,
 	assertDescription,
-	assertIdValue,
-	assertPrimaryValue,
+	assertStrategyPrimary,
 	copyFilter,
 	normalizeSteps,
+	STRATEGIES,
+	type StrategyMethod,
 } from "./utils";
 
 export type LocatorRegistrationPostDefinitionBuilder<
@@ -31,11 +32,15 @@ export type LocatorRegistrationPostDefinitionBuilder<
 	describe: (description: LocatorDescription) => LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 };
 
-type TextLikeType = "text" | "label" | "placeholder" | "altText" | "title";
+type StrategyType = LocatorStrategyDefinition["type"];
+/** The strategies whose first argument is a text: `getByText`, `getByLabel`, `getByPlaceholder`, `getByAltText`, `getByTitle`. */
+type TextLikeType = {
+	[Type in StrategyType]: (typeof STRATEGIES)[Type]["primary"] extends "text" ? Type : never;
+}[StrategyType];
 type TextLikeOptions = Parameters<Page["getByText"]>[1];
 
-const STRATEGY_METHODS =
-	"getByRole, getByText, getByLabel, getByPlaceholder, getByAltText, getByTitle, locator, frameLocator, getByTestId or getById";
+const strategyMethods = Object.values(STRATEGIES).map((spec) => spec.method);
+const STRATEGY_METHODS = `${strategyMethods.slice(0, -1).join(", ")} or ${strategyMethods.at(-1)}`;
 
 export class LocatorRegistrationBuilder<
 	LocatorSchemaPathType extends string,
@@ -145,7 +150,7 @@ export class LocatorRegistrationBuilder<
 		if (role === undefined && this.seededDefinition) {
 			return this.commit(resolvedOptions !== undefined ? { type: "role", options: resolvedOptions } : { type: "role" });
 		}
-		assertPrimaryValue(role, { method: "getByRole", field: "role", path: this.path, allowEmpty: false });
+		assertStrategyPrimary("role", role, { method: "getByRole", path: this.path });
 		return this.commit(
 			resolvedOptions !== undefined ? { type: "role", role, options: resolvedOptions } : { type: "role", role },
 		);
@@ -313,7 +318,7 @@ export class LocatorRegistrationBuilder<
 				resolvedOptions !== undefined ? { type: "locator", options: resolvedOptions } : { type: "locator" },
 			);
 		}
-		assertPrimaryValue(selector, { method: "locator", field: "selector", path: this.path, allowEmpty: false });
+		assertStrategyPrimary("locator", selector, { method: "locator", path: this.path });
 		return this.commit(
 			resolvedOptions !== undefined
 				? { type: "locator", selector, options: resolvedOptions }
@@ -358,7 +363,7 @@ export class LocatorRegistrationBuilder<
 			this.persist();
 			return undefined;
 		}
-		assertPrimaryValue(selector, { method: "frameLocator", field: "selector", path: this.path, allowEmpty: false });
+		assertStrategyPrimary("frameLocator", selector, { method: "frameLocator", path: this.path });
 		return this.commit({ type: "frameLocator", selector });
 	}
 
@@ -378,7 +383,7 @@ export class LocatorRegistrationBuilder<
 		if (testId === undefined && this.seededDefinition) {
 			return this.commit({ type: "testId" });
 		}
-		assertPrimaryValue(testId, { method: "getByTestId", field: "testId", path: this.path, allowEmpty: true });
+		assertStrategyPrimary("testId", testId, { method: "getByTestId", path: this.path });
 		return this.commit({ type: "testId", testId });
 	}
 
@@ -403,7 +408,7 @@ export class LocatorRegistrationBuilder<
 		if (id === undefined && this.seededDefinition) {
 			return this.commit({ type: "id" });
 		}
-		assertIdValue(id, { method: "getById", path: this.path });
+		assertStrategyPrimary("id", id, { method: "getById", path: this.path });
 		return this.commit({ type: "id", id });
 	}
 
@@ -422,7 +427,7 @@ export class LocatorRegistrationBuilder<
 					: { type }) as LocatorStrategyDefinitionPatch,
 			);
 		}
-		assertPrimaryValue(text, { method, field: "text", path: this.path, allowEmpty: true });
+		assertStrategyPrimary(type, text, { method, path: this.path });
 		return this.commit(
 			(resolvedOptions !== undefined
 				? { type, text, options: resolvedOptions }
@@ -553,41 +558,9 @@ export class LocatorRegistrationBuilder<
 export type LocatorRegistrationPreDefinitionBuilder<
 	LocatorSchemaPathType extends string,
 	Path extends RegistryPath<LocatorSchemaPathType>,
-> = Pick<
-	LocatorRegistrationBuilder<LocatorSchemaPathType, Path, false>,
-	| "getByRole"
-	| "getByText"
-	| "getByLabel"
-	| "getByPlaceholder"
-	| "getByAltText"
-	| "getByTitle"
-	| "locator"
-	| "frameLocator"
-	| "getByTestId"
-	| "getById"
->;
+> = Pick<LocatorRegistrationBuilder<LocatorSchemaPathType, Path, false>, StrategyMethod>;
 
-type LocatorMethodForType<Type extends LocatorStrategyDefinition["type"]> = Type extends "role"
-	? "getByRole"
-	: Type extends "text"
-		? "getByText"
-		: Type extends "label"
-			? "getByLabel"
-			: Type extends "placeholder"
-				? "getByPlaceholder"
-				: Type extends "altText"
-					? "getByAltText"
-					: Type extends "title"
-						? "getByTitle"
-						: Type extends "locator"
-							? "locator"
-							: Type extends "frameLocator"
-								? "frameLocator"
-								: Type extends "testId"
-									? "getByTestId"
-									: Type extends "id"
-										? "getById"
-										: never;
+type LocatorMethodForType<Type extends StrategyType> = (typeof STRATEGIES)[Type]["method"];
 
 export type LocatorRegistrationSeededBuilderForType<
 	LocatorSchemaPathType extends string,

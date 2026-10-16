@@ -15,6 +15,7 @@ import {
 	assertDescription,
 	assertIdValue,
 	assertPrimaryValue,
+	assertStrategyPrimary,
 	buildIdSelector,
 	cloneLocatorStrategyDefinition,
 	createLocator,
@@ -26,6 +27,9 @@ import {
 	LOCATOR_SCHEMA_PATH_WHITESPACE,
 	methodForStrategy,
 	normalizeSteps,
+	STRATEGIES,
+	type StrategyMethod,
+	type StrategyType,
 	stringifyForLog,
 	validateLocatorSchemaPath,
 } from "./utils";
@@ -459,5 +463,97 @@ describe("applyIndexSelector", () => {
 		expect(nthOf("2")).toBe("li.nth('2')");
 		expect(nthOf(null)).toBe("li.nth(null)");
 		expect(nthOf(undefined)).toBe("li.nth(undefined)");
+	});
+});
+
+describe("STRATEGIES", () => {
+	it("holds one row per strategy: the DSL method, the primary field, options, the empty-string rule", () => {
+		const rows = Object.fromEntries(
+			Object.entries(STRATEGIES).map(([type, spec]) => [
+				type,
+				[spec.method, spec.primary, spec.options, spec.allowEmpty, "optionalPrimary" in spec],
+			]),
+		);
+		expect(rows).toEqual({
+			role: ["getByRole", "role", true, false, false],
+			text: ["getByText", "text", true, true, false],
+			label: ["getByLabel", "text", true, true, false],
+			placeholder: ["getByPlaceholder", "text", true, true, false],
+			altText: ["getByAltText", "text", true, true, false],
+			title: ["getByTitle", "text", true, true, false],
+			locator: ["locator", "selector", true, false, false],
+			frameLocator: ["frameLocator", "selector", false, false, true],
+			testId: ["getByTestId", "testId", false, true, false],
+			id: ["getById", "id", false, false, false],
+		});
+	});
+
+	it("names the ten DSL methods in its type", () => {
+		expectTypeOf<StrategyMethod>().toEqualTypeOf<
+			| "getByRole"
+			| "getByText"
+			| "getByLabel"
+			| "getByPlaceholder"
+			| "getByAltText"
+			| "getByTitle"
+			| "locator"
+			| "frameLocator"
+			| "getByTestId"
+			| "getById"
+		>();
+	});
+
+	it("rejects a definition of no known strategy instead of passing it on", () => {
+		const unknown = { type: "css", css: "b" } as never;
+		expect(() => createLocator(new FakeLocator("") as unknown as LocatorBuilderTarget, unknown)).toThrowError(
+			'Unknown locator strategy "css".',
+		);
+		expect(() => cloneLocatorStrategyDefinition(unknown)).toThrowError('Unknown locator strategy "css".');
+		expect(() => applyDefinitionPatch(unknown, unknown)).toThrowError('Unknown locator strategy "css".');
+	});
+});
+
+describe("assertStrategyPrimary", () => {
+	const missing: Record<StrategyType, string> = {
+		role: 'getByRole requires a role value for "x".',
+		text: 'getByText requires a text value for "x".',
+		label: 'getByLabel requires a text value for "x".',
+		placeholder: 'getByPlaceholder requires a text value for "x".',
+		altText: 'getByAltText requires a text value for "x".',
+		title: 'getByTitle requires a text value for "x".',
+		locator: 'locator requires a selector value for "x".',
+		frameLocator: 'frameLocator requires a selector value for "x".',
+		testId: 'getByTestId requires a testId value for "x".',
+		id: 'getById requires a non-empty id for "x".',
+	};
+	const types = Object.keys(missing) as StrategyType[];
+
+	it("gives each strategy's missing-value message, as the builders did", () => {
+		for (const type of types) {
+			expect(() => assertStrategyPrimary(type, undefined, { method: STRATEGIES[type].method, path: "x" })).toThrowError(
+				missing[type],
+			);
+		}
+	});
+
+	it("rejects an empty string where Playwright cannot use it and keeps it where Playwright matches it", () => {
+		for (const type of types) {
+			const call = () => assertStrategyPrimary(type, "", { method: STRATEGIES[type].method, path: "x" });
+			if (STRATEGIES[type].allowEmpty) {
+				expect(call).not.toThrow();
+			} else if (type === "id") {
+				expect(call).toThrowError('getById requires a non-empty id for "x".');
+			} else {
+				expect(call).toThrowError(
+					`${STRATEGIES[type].method} requires a non-empty ${STRATEGIES[type].primary} for "x".`,
+				);
+			}
+		}
+	});
+
+	it("accepts a value", () => {
+		for (const type of types) {
+			expect(() => assertStrategyPrimary(type, "v", { method: STRATEGIES[type].method, path: "x" })).not.toThrow();
+		}
 	});
 });

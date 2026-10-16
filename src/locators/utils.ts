@@ -1,20 +1,13 @@
 import type { Locator } from "@playwright/test";
 import type {
-	AltTextDefinition,
 	FrameLocatorDefinition,
 	IdDefinition,
 	IndexSelector,
-	LabelDefinition,
 	LocatorBuilderTarget,
-	LocatorDefinition,
+	LocatorDefinitionByType,
 	LocatorStep,
 	LocatorStrategyDefinition,
 	LocatorStrategyDefinitionPatch,
-	PlaceholderDefinition,
-	RoleDefinition,
-	TestIdDefinition,
-	TextDefinition,
-	TitleDefinition,
 } from "./types";
 
 /**
@@ -234,190 +227,195 @@ export const applyIndexSelector = (locator: Locator, selector: IndexSelector) =>
 	return locator.nth(selector);
 };
 
-export const createLocator = (target: LocatorBuilderTarget, definition: LocatorStrategyDefinition): Locator => {
-	switch (definition.type) {
-		case "role":
-			return target.getByRole(definition.role, definition.options);
-		case "text":
-			return target.getByText(definition.text, definition.options);
-		case "label":
-			return target.getByLabel(definition.text, definition.options);
-		case "placeholder":
-			return target.getByPlaceholder(definition.text, definition.options);
-		case "altText":
-			return target.getByAltText(definition.text, definition.options);
-		case "title":
-			return target.getByTitle(definition.text, definition.options);
-		case "locator":
-			return target.locator(definition.selector, definition.options);
-		case "frameLocator": {
+export type StrategyType = LocatorStrategyDefinition["type"];
+
+/** The definition field that holds a strategy's first argument: `role`, `text`, `selector`, `testId` or `id`. */
+type PrimaryField<Type extends StrategyType> = Exclude<keyof LocatorDefinitionByType[Type], "type" | "options">;
+
+/** What POMWright needs to know about one strategy. Every per-strategy rule reads it from `STRATEGIES`. */
+type StrategySpec<Type extends StrategyType> = {
+	/** The DSL method, as `add(path)`, `createReusable`, `update` and `replace` name it. */
+	readonly method: string;
+	/** The definition field that holds the first argument. */
+	readonly primary: PrimaryField<Type>;
+	/** Whether the strategy takes Playwright's options object. */
+	readonly options: "options" extends keyof LocatorDefinitionByType[Type] ? true : false;
+	/** Whether `""` is a value Playwright matches, so it is stored rather than rejected. */
+	readonly allowEmpty: boolean;
+	/** Whether the first argument may be absent: only `frameLocator()`, Playwright's any-frame locator. */
+	readonly optionalPrimary?: true;
+	/** Builds the element locator on a page, a locator or a frame. */
+	readonly create: (target: LocatorBuilderTarget, definition: LocatorDefinitionByType[Type]) => Locator;
+};
+
+/** The ten strategies, one row each, in the order the DSL lists them. */
+export const STRATEGIES = {
+	role: {
+		method: "getByRole",
+		primary: "role",
+		options: true,
+		allowEmpty: false,
+		create: (target, definition) => target.getByRole(definition.role, definition.options),
+	},
+	text: {
+		method: "getByText",
+		primary: "text",
+		options: true,
+		allowEmpty: true,
+		create: (target, definition) => target.getByText(definition.text, definition.options),
+	},
+	label: {
+		method: "getByLabel",
+		primary: "text",
+		options: true,
+		allowEmpty: true,
+		create: (target, definition) => target.getByLabel(definition.text, definition.options),
+	},
+	placeholder: {
+		method: "getByPlaceholder",
+		primary: "text",
+		options: true,
+		allowEmpty: true,
+		create: (target, definition) => target.getByPlaceholder(definition.text, definition.options),
+	},
+	altText: {
+		method: "getByAltText",
+		primary: "text",
+		options: true,
+		allowEmpty: true,
+		create: (target, definition) => target.getByAltText(definition.text, definition.options),
+	},
+	title: {
+		method: "getByTitle",
+		primary: "text",
+		options: true,
+		allowEmpty: true,
+		create: (target, definition) => target.getByTitle(definition.text, definition.options),
+	},
+	locator: {
+		method: "locator",
+		primary: "selector",
+		options: true,
+		allowEmpty: false,
+		create: (target, definition) => target.locator(definition.selector, definition.options),
+	},
+	frameLocator: {
+		method: "frameLocator",
+		primary: "selector",
+		options: false,
+		allowEmpty: false,
+		optionalPrimary: true,
+		create: (target, definition) => {
 			if (definition.selector === undefined) {
 				throw new Error(
 					'Locator definition of type "frameLocator" has no selector; the any-frame form is resolved by the chain.',
 				);
 			}
 			return target.locator(definition.selector);
-		}
-		case "testId":
-			return target.getByTestId(definition.testId);
-		case "id": {
+		},
+	},
+	testId: {
+		method: "getByTestId",
+		primary: "testId",
+		options: false,
+		allowEmpty: true,
+		create: (target, definition) => target.getByTestId(definition.testId),
+	},
+	id: {
+		method: "getById",
+		primary: "id",
+		options: false,
+		allowEmpty: false,
+		create: (target, definition) => {
 			const { id } = definition as { id?: IdDefinition["id"] };
 			if (id === undefined) {
 				throw new Error('Locator definition of type "id" has no id value.');
 			}
 			return target.locator(buildIdSelector(id));
-		}
-		default: {
-			const exhaustive: never = definition;
-			return exhaustive;
-		}
-	}
+		},
+	},
+} as const satisfies { [Type in StrategyType]: StrategySpec<Type> };
+
+/** The DSL method names, in table order. */
+export type StrategyMethod = (typeof STRATEGIES)[StrategyType]["method"];
+
+/** A definition or a patch read field by field; the table says which fields a strategy has. */
+type DefinitionFields = { type: StrategyType; options?: object | null } & Record<string, unknown>;
+
+/** A row as the generic helpers read it: the field names as strings, the definition as the row's own. */
+type StrategyRow = {
+	readonly method: string;
+	readonly primary: string;
+	readonly options: boolean;
+	readonly allowEmpty: boolean;
+	readonly optionalPrimary?: true;
+	readonly create: (target: LocatorBuilderTarget, definition: never) => Locator;
 };
+
+export const strategyOf = (type: StrategyType): StrategyRow => {
+	const spec = (STRATEGIES as unknown as Record<string, StrategyRow | undefined>)[type];
+	if (spec === undefined) {
+		throw new Error(`Unknown locator strategy "${String(type)}".`);
+	}
+	return spec;
+};
+
+/** Assembles a definition: the primary unless an any-frame selector is absent, then options when given. */
+export const assembleDefinition = (type: StrategyType, primary: unknown, options: object | undefined) => {
+	const spec = strategyOf(type);
+	return {
+		type,
+		...(primary !== undefined || !spec.optionalPrimary ? { [spec.primary]: primary } : {}),
+		...(options !== undefined ? { options } : {}),
+	} as LocatorStrategyDefinition;
+};
+
+/** The table's check of a strategy's first argument at the DSL boundary; `getById` keeps its own message. */
+export function assertStrategyPrimary(
+	type: StrategyType,
+	value: unknown,
+	source: { method: string; path?: string },
+): asserts value is string | RegExp {
+	if (type === "id") {
+		assertIdValue(value as string | RegExp | undefined, source);
+		return;
+	}
+	const spec = strategyOf(type);
+	assertPrimaryValue(value as string | RegExp | undefined, {
+		...source,
+		field: spec.primary,
+		allowEmpty: spec.allowEmpty,
+	});
+}
+
+export const createLocator = (target: LocatorBuilderTarget, definition: LocatorStrategyDefinition): Locator =>
+	strategyOf(definition.type).create(target, definition as never);
 
 export const cloneLocatorStrategyDefinition = (definition: LocatorStrategyDefinition): LocatorStrategyDefinition => {
-	switch (definition.type) {
-		case "role":
-			return {
-				type: "role",
-				role: definition.role,
-				...(definition.options ? { options: { ...definition.options } } : {}),
-			};
-		case "text":
-			return {
-				type: "text",
-				text: definition.text,
-				...(definition.options ? { options: { ...definition.options } } : {}),
-			};
-		case "label":
-			return {
-				type: "label",
-				text: definition.text,
-				...(definition.options ? { options: { ...definition.options } } : {}),
-			};
-		case "placeholder":
-			return {
-				type: "placeholder",
-				text: definition.text,
-				...(definition.options ? { options: { ...definition.options } } : {}),
-			};
-		case "altText":
-			return {
-				type: "altText",
-				text: definition.text,
-				...(definition.options ? { options: { ...definition.options } } : {}),
-			};
-		case "title":
-			return {
-				type: "title",
-				text: definition.text,
-				...(definition.options ? { options: { ...definition.options } } : {}),
-			};
-		case "locator":
-			return {
-				type: "locator",
-				selector: definition.selector,
-				...(definition.options ? { options: { ...definition.options } } : {}),
-			};
-		case "frameLocator":
-			return {
-				type: "frameLocator",
-				...(definition.selector !== undefined ? { selector: definition.selector } : {}),
-			};
-		case "testId":
-			return { type: "testId", testId: definition.testId };
-		case "id":
-			return { type: "id", id: definition.id };
-		default: {
-			const exhaustive: never = definition;
-			return exhaustive;
-		}
-	}
+	const spec = strategyOf(definition.type);
+	const fields = definition as unknown as DefinitionFields;
+	return assembleDefinition(
+		definition.type,
+		fields[spec.primary],
+		spec.options && fields.options ? { ...fields.options } : undefined,
+	);
 };
 
+/** A seeded override: a provided primary replaces the seed's, the options are merged over the seed's. */
 export const applyDefinitionPatch = (
 	seed: LocatorStrategyDefinition,
 	patch: LocatorStrategyDefinition | LocatorStrategyDefinitionPatch,
 ): LocatorStrategyDefinition => {
-	const base = cloneLocatorStrategyDefinition(seed);
-
-	switch (patch.type) {
-		case "locator": {
-			const selector = patch.selector !== undefined ? patch.selector : (base as LocatorDefinition).selector;
-			const options =
-				patch.options || (base as LocatorDefinition).options
-					? { ...(base as LocatorDefinition).options, ...patch.options }
-					: undefined;
-			return { type: "locator", selector, ...(options ? { options } : {}) } satisfies LocatorDefinition;
-		}
-		case "role": {
-			const role = patch.role ?? (base as RoleDefinition).role;
-			const options =
-				patch.options || (base as RoleDefinition).options
-					? { ...(base as RoleDefinition).options, ...patch.options }
-					: undefined;
-			return { type: "role", role, ...(options ? { options } : {}) } satisfies RoleDefinition;
-		}
-		case "text": {
-			const text = patch.text ?? (base as TextDefinition).text;
-			const options =
-				patch.options || (base as TextDefinition).options
-					? { ...(base as TextDefinition).options, ...patch.options }
-					: undefined;
-			return { type: "text", text, ...(options ? { options } : {}) } satisfies TextDefinition;
-		}
-		case "label": {
-			const text = patch.text ?? (base as LabelDefinition).text;
-			const options =
-				patch.options || (base as LabelDefinition).options
-					? { ...(base as LabelDefinition).options, ...patch.options }
-					: undefined;
-			return { type: "label", text, ...(options ? { options } : {}) } satisfies LabelDefinition;
-		}
-		case "placeholder": {
-			const text = patch.text ?? (base as PlaceholderDefinition).text;
-			const options =
-				patch.options || (base as PlaceholderDefinition).options
-					? { ...(base as PlaceholderDefinition).options, ...patch.options }
-					: undefined;
-			return { type: "placeholder", text, ...(options ? { options } : {}) } satisfies PlaceholderDefinition;
-		}
-		case "altText": {
-			const text = patch.text ?? (base as AltTextDefinition).text;
-			const options =
-				patch.options || (base as AltTextDefinition).options
-					? { ...(base as AltTextDefinition).options, ...patch.options }
-					: undefined;
-			return { type: "altText", text, ...(options ? { options } : {}) } satisfies AltTextDefinition;
-		}
-		case "title": {
-			const text = patch.text ?? (base as TitleDefinition).text;
-			const options =
-				patch.options || (base as TitleDefinition).options
-					? { ...(base as TitleDefinition).options, ...patch.options }
-					: undefined;
-			return { type: "title", text, ...(options ? { options } : {}) } satisfies TitleDefinition;
-		}
-		case "frameLocator": {
-			const selector = patch.selector !== undefined ? patch.selector : (base as FrameLocatorDefinition).selector;
-			return {
-				type: "frameLocator",
-				...(selector !== undefined ? { selector } : {}),
-			} satisfies FrameLocatorDefinition;
-		}
-		case "testId": {
-			const testId = patch.testId !== undefined ? patch.testId : (base as TestIdDefinition).testId;
-			return { type: "testId", testId } satisfies TestIdDefinition;
-		}
-		case "id": {
-			const id = patch.id !== undefined ? patch.id : (base as IdDefinition).id;
-			return { type: "id", id } satisfies IdDefinition;
-		}
-		default: {
-			const exhaustive: never = patch;
-			return exhaustive;
-		}
-	}
+	const spec = strategyOf(patch.type);
+	const base = cloneLocatorStrategyDefinition(seed) as unknown as DefinitionFields;
+	const given = patch as unknown as DefinitionFields;
+	const primary = given[spec.primary] !== undefined ? given[spec.primary] : base[spec.primary];
+	const options = spec.options && (given.options || base.options) ? { ...base.options, ...given.options } : undefined;
+	return assembleDefinition(patch.type, primary, options);
 };
+
+/** Reads a definition or a patch field by field, for the generic merge and replacement in `locatorUpdateBuilder.ts`. */
+export const definitionFields = (definition: object) => definition as DefinitionFields;
 
 export const isFrameLocatorDefinition = (definition: LocatorStrategyDefinition): definition is FrameLocatorDefinition =>
 	definition.type === "frameLocator";
@@ -435,18 +433,9 @@ export const isAnyFrameDefinition = (definition: LocatorStrategyDefinition): def
 	definition.type === "frameLocator" && definition.selector === undefined;
 
 /** The ten DSL method names by strategy type, for error messages. */
-export const methodForStrategy: Record<LocatorStrategyDefinition["type"], string> = {
-	role: "getByRole",
-	text: "getByText",
-	label: "getByLabel",
-	placeholder: "getByPlaceholder",
-	altText: "getByAltText",
-	title: "getByTitle",
-	locator: "locator",
-	frameLocator: "frameLocator",
-	testId: "getByTestId",
-	id: "getById",
-};
+export const methodForStrategy = Object.fromEntries(
+	Object.entries(STRATEGIES).map(([type, spec]) => [type, spec.method]),
+) as { [Type in StrategyType]: (typeof STRATEGIES)[Type]["method"] };
 
 /**
  * Whether a value is a Playwright `Locator`: an object with `filter`, `nth` and `locator` methods. An

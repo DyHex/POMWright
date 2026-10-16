@@ -1,18 +1,14 @@
 import type { Page } from "@playwright/test";
 import type { LocatorQueryBuilder } from "./locatorQueryBuilder";
 import type {
-	FrameLocatorDefinition,
-	IdDefinition,
 	LocatorChainPaths,
-	LocatorDefinition,
 	LocatorStrategyDefinition,
 	LocatorUpdate,
 	OptionsPatch,
 	RegistryPath,
 	RoleDefinition,
-	TestIdDefinition,
 } from "./types";
-import { assertIdValue, assertPrimaryValue, methodForStrategy } from "./utils";
+import { assembleDefinition, assertStrategyPrimary, definitionFields, methodForStrategy, strategyOf } from "./utils";
 
 /**
  * Separates the primary argument of an `update`/`replace` call from its options. `undefined` means
@@ -82,15 +78,12 @@ type ArgsFor<
 	UpdateArgs extends unknown[],
 > = Mode extends "replace" ? ReplaceArgs : UpdateArgs;
 
-type TextLikeDefinition = Extract<LocatorStrategyDefinition, { text: string | RegExp }>;
-type TextLikeUpdate = Extract<LocatorUpdate, { type: TextLikeDefinition["type"] }>;
+type OptionsDefinition = Extract<LocatorStrategyDefinition, { options?: unknown }>;
 
-const mergeTextLike = (current: TextLikeDefinition, updates: TextLikeUpdate): LocatorStrategyDefinition => {
-	const text = updates.text ?? current.text;
-	const options = mergeOptions(current.options, updates.options);
-	return (
-		options !== undefined ? { type: current.type, text, options } : { type: current.type, text }
-	) as LocatorStrategyDefinition;
+const requireType = (updates: LocatorUpdate, verb: "update" | "replace", path: string) => {
+	if (!updates || typeof updates !== "object" || !("type" in updates)) {
+		throw new Error(`Locator ${verb} for "${path}" requires a "type" property.`);
+	}
 };
 
 /**
@@ -102,52 +95,19 @@ const mergeLocatorDefinition = (
 	updates: LocatorUpdate,
 	path: string,
 ): LocatorStrategyDefinition => {
-	if (!updates || typeof updates !== "object" || !("type" in updates)) {
-		throw new Error(`Locator update for "${path}" requires a "type" property.`);
-	}
+	requireType(updates, "update", path);
 	if (updates.type !== current.type) {
 		throw new Error(
 			`update("${path}") cannot change the strategy from "${current.type}" to "${updates.type}"; use replace("${path}").${methodForStrategy[updates.type]}(…) instead.`,
 		);
 	}
-
-	switch (updates.type) {
-		case "role": {
-			const base = current as RoleDefinition;
-			const role = updates.role ?? base.role;
-			const options = mergeOptions(base.options, updates.options);
-			return options !== undefined ? { type: "role", role, options } : { type: "role", role };
-		}
-		case "text":
-		case "label":
-		case "placeholder":
-		case "altText":
-		case "title":
-			return mergeTextLike(current as TextLikeDefinition, updates);
-		case "locator": {
-			const base = current as LocatorDefinition;
-			const selector = updates.selector ?? base.selector;
-			const options = mergeOptions(base.options, updates.options);
-			return options !== undefined ? { type: "locator", selector, options } : { type: "locator", selector };
-		}
-		case "frameLocator": {
-			const base = current as FrameLocatorDefinition;
-			const selector = updates.selector ?? base.selector;
-			return selector !== undefined ? { type: "frameLocator", selector } : { type: "frameLocator" };
-		}
-		case "testId": {
-			const base = current as TestIdDefinition;
-			return { type: "testId", testId: updates.testId ?? base.testId };
-		}
-		case "id": {
-			const base = current as IdDefinition;
-			return { type: "id", id: updates.id ?? base.id };
-		}
-		default: {
-			const exhaustive: never = updates;
-			return exhaustive;
-		}
-	}
+	const spec = strategyOf(updates.type);
+	const base = definitionFields(current);
+	const given = definitionFields(updates);
+	const options = spec.options
+		? mergeOptions(base.options ?? undefined, given.options as OptionsPatch<object> | null | undefined)
+		: undefined;
+	return assembleDefinition(updates.type, given[spec.primary] ?? base[spec.primary], options);
 };
 
 /**
@@ -156,62 +116,20 @@ const mergeLocatorDefinition = (
  * given, so a `null` has no delete meaning here and equals omission.
  */
 const buildReplacementDefinition = (updates: LocatorUpdate, path: string): LocatorStrategyDefinition => {
-	if (!updates || typeof updates !== "object" || !("type" in updates)) {
-		throw new Error(`Locator replace for "${path}" requires a "type" property.`);
+	requireType(updates, "replace", path);
+	const spec = strategyOf(updates.type);
+	const given = definitionFields(updates);
+	const primary = given[spec.primary];
+	if (primary === undefined && !spec.optionalPrimary) {
+		const article = /^[aeiou]/i.test(spec.primary) ? "an" : "a";
+		throw new Error(
+			`Locator replace for "${path}" of type "${updates.type}" requires ${article} "${spec.primary}" value.`,
+		);
 	}
-
-	switch (updates.type) {
-		case "role": {
-			const { role } = updates;
-			if (role === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "role" requires a "role" value.`);
-			}
-			const options = mergeOptions(undefined, updates.options);
-			return options !== undefined ? { type: "role", role, options } : { type: "role", role };
-		}
-		case "text":
-		case "label":
-		case "placeholder":
-		case "altText":
-		case "title": {
-			const { text, type } = updates;
-			if (text === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "${type}" requires a "text" value.`);
-			}
-			const options = mergeOptions(undefined, updates.options);
-			return (options !== undefined ? { type, text, options } : { type, text }) as LocatorStrategyDefinition;
-		}
-		case "locator": {
-			const { selector } = updates;
-			if (selector === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "locator" requires a "selector" value.`);
-			}
-			const options = mergeOptions(undefined, updates.options);
-			return options !== undefined ? { type: "locator", selector, options } : { type: "locator", selector };
-		}
-		case "frameLocator": {
-			const { selector } = updates;
-			return selector !== undefined ? { type: "frameLocator", selector } : { type: "frameLocator" };
-		}
-		case "testId": {
-			const { testId } = updates;
-			if (testId === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "testId" requires a "testId" value.`);
-			}
-			return { type: "testId", testId };
-		}
-		case "id": {
-			const { id } = updates;
-			if (id === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "id" requires an "id" value.`);
-			}
-			return { type: "id", id };
-		}
-		default: {
-			const exhaustive: never = updates;
-			return exhaustive;
-		}
-	}
+	const options = spec.options
+		? mergeOptions(undefined, given.options as OptionsPatch<object> | null | undefined)
+		: undefined;
+	return assembleDefinition(updates.type, primary, options);
 };
 
 /**
@@ -257,19 +175,7 @@ export class LocatorUpdateBuilderInternal<
 			UpdateArgsWithOptions<RoleDefinition["role"], RoleDefinition["options"]>
 		>
 	) {
-		const [roleOrOptions, options] = args;
-		const parsed = parseUpdateArguments<RoleDefinition["role"], OptionsPatch<RoleDefinition["options"]>>(
-			roleOrOptions,
-			options,
-		);
-		if (parsed.primary !== undefined || this.mode === "replace") {
-			assertPrimaryValue(parsed.primary, { method: "getByRole", field: "role", path: this.subPath, allowEmpty: false });
-		}
-		return this.commit({
-			type: "role",
-			...(parsed.primary !== undefined ? { role: parsed.primary } : {}),
-			...(parsed.hasOptions ? { options: parsed.options } : {}),
-		});
+		return this.commitWithOptions("role", args);
 	}
 
 	/**
@@ -288,7 +194,7 @@ export class LocatorUpdateBuilderInternal<
 			UpdateArgsWithOptions<Parameters<Page["getByText"]>[0], Parameters<Page["getByText"]>[1]>
 		>
 	) {
-		return this.commitTextLike("text", "getByText", args);
+		return this.commitWithOptions("text", args);
 	}
 
 	/**
@@ -307,7 +213,7 @@ export class LocatorUpdateBuilderInternal<
 			UpdateArgsWithOptions<Parameters<Page["getByLabel"]>[0], Parameters<Page["getByLabel"]>[1]>
 		>
 	) {
-		return this.commitTextLike("label", "getByLabel", args);
+		return this.commitWithOptions("label", args);
 	}
 
 	/**
@@ -326,7 +232,7 @@ export class LocatorUpdateBuilderInternal<
 			UpdateArgsWithOptions<Parameters<Page["getByPlaceholder"]>[0], Parameters<Page["getByPlaceholder"]>[1]>
 		>
 	) {
-		return this.commitTextLike("placeholder", "getByPlaceholder", args);
+		return this.commitWithOptions("placeholder", args);
 	}
 
 	/**
@@ -345,7 +251,7 @@ export class LocatorUpdateBuilderInternal<
 			UpdateArgsWithOptions<Parameters<Page["getByAltText"]>[0], Parameters<Page["getByAltText"]>[1]>
 		>
 	) {
-		return this.commitTextLike("altText", "getByAltText", args);
+		return this.commitWithOptions("altText", args);
 	}
 
 	/**
@@ -364,7 +270,7 @@ export class LocatorUpdateBuilderInternal<
 			UpdateArgsWithOptions<Parameters<Page["getByTitle"]>[0], Parameters<Page["getByTitle"]>[1]>
 		>
 	) {
-		return this.commitTextLike("title", "getByTitle", args);
+		return this.commitWithOptions("title", args);
 	}
 
 	/**
@@ -384,24 +290,7 @@ export class LocatorUpdateBuilderInternal<
 			UpdateArgsWithOptions<Parameters<Page["locator"]>[0], Parameters<Page["locator"]>[1]>
 		>
 	) {
-		const [selectorOrOptions, options] = args;
-		const parsed = parseUpdateArguments<Parameters<Page["locator"]>[0], OptionsPatch<Parameters<Page["locator"]>[1]>>(
-			selectorOrOptions,
-			options,
-		);
-		if (parsed.primary !== undefined || this.mode === "replace") {
-			assertPrimaryValue(parsed.primary, {
-				method: "locator",
-				field: "selector",
-				path: this.subPath,
-				allowEmpty: false,
-			});
-		}
-		return this.commit({
-			type: "locator",
-			...(parsed.primary !== undefined ? { selector: parsed.primary } : {}),
-			...(parsed.hasOptions ? { options: parsed.options } : {}),
-		});
+		return this.commitWithOptions("locator", args);
 	}
 
 	/**
@@ -416,19 +305,7 @@ export class LocatorUpdateBuilderInternal<
 	 * ```
 	 */
 	frameLocator(...args: UpdateArgsWithoutOptions<Parameters<Page["locator"]>[0]>) {
-		const [selector] = args;
-		if (selector !== undefined) {
-			assertPrimaryValue(selector, {
-				method: "frameLocator",
-				field: "selector",
-				path: this.subPath,
-				allowEmpty: false,
-			});
-		}
-		return this.commit({
-			type: "frameLocator",
-			...(selector !== undefined ? { selector } : {}),
-		});
+		return this.commitPrimary("frameLocator", args[0]);
 	}
 
 	/**
@@ -447,14 +324,7 @@ export class LocatorUpdateBuilderInternal<
 			UpdateArgsWithoutOptions<Parameters<Page["getByTestId"]>[0]>
 		>
 	) {
-		const [testId] = args;
-		if (testId !== undefined || this.mode === "replace") {
-			assertPrimaryValue(testId, { method: "getByTestId", field: "testId", path: this.subPath, allowEmpty: true });
-		}
-		return this.commit({
-			type: "testId",
-			...(testId !== undefined ? { testId } : {}),
-		});
+		return this.commitPrimary("testId", args[0]);
 	}
 
 	/**
@@ -468,35 +338,29 @@ export class LocatorUpdateBuilderInternal<
 	 * ```
 	 */
 	getById(...args: ArgsFor<Mode, [id: string | RegExp], UpdateArgsWithoutOptions<string | RegExp>>) {
-		const [id] = args;
-		if (id !== undefined || this.mode === "replace") {
-			assertIdValue(id, { method: "getById", path: this.subPath });
-		}
-		return this.commit({
-			type: "id",
-			...(id !== undefined ? { id } : {}),
-		});
+		return this.commitPrimary("id", args[0]);
 	}
 
-	private commitTextLike(
-		type: TextLikeDefinition["type"],
-		method: string,
-		args:
-			| UpdateArgsWithOptions<string | RegExp, TextLikeDefinition["options"]>
-			| [text: string | RegExp, options?: TextLikeDefinition["options"]],
-	) {
-		const [textOrOptions, options] = args;
-		const parsed = parseUpdateArguments<string | RegExp, OptionsPatch<TextLikeDefinition["options"]>>(
-			textOrOptions,
-			options,
+	/** The strategies with options: the first argument is the primary unless it is an object or `null`. */
+	private commitWithOptions(type: OptionsDefinition["type"], args: unknown[]) {
+		const [primaryOrOptions, options] = args;
+		const parsed = parseUpdateArguments<string | RegExp, OptionsPatch<object>>(
+			primaryOrOptions as string | RegExp | OptionsPatch<object> | null | undefined,
+			options as OptionsPatch<object> | null | undefined,
 		);
-		if (parsed.primary !== undefined || this.mode === "replace") {
-			assertPrimaryValue(parsed.primary, { method, field: "text", path: this.subPath, allowEmpty: true });
+		return this.commitPrimary(type, parsed.primary, parsed.hasOptions ? { options: parsed.options } : {});
+	}
+
+	/** Checks a provided primary, and in `replace` mode a missing one unless the strategy may omit it. */
+	private commitPrimary(type: LocatorStrategyDefinition["type"], primary: unknown, rest: object = {}) {
+		const spec = strategyOf(type);
+		if (primary !== undefined || (this.mode === "replace" && !spec.optionalPrimary)) {
+			assertStrategyPrimary(type, primary, { method: spec.method, path: this.subPath });
 		}
 		return this.commit({
 			type,
-			...(parsed.primary !== undefined ? { text: parsed.primary } : {}),
-			...(parsed.hasOptions ? { options: parsed.options } : {}),
+			...(primary !== undefined ? { [spec.primary]: primary } : {}),
+			...rest,
 		} as LocatorUpdate);
 	}
 

@@ -3,12 +3,13 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { LocatorRegistryInternal } from "./locatorRegistry";
 import {
 	buildReplacementDefinition,
+	type LocatorUpdateBuilderInternal,
 	mergeLocatorDefinition,
 	mergeOptions,
 	parseUpdateArguments,
 } from "./locatorUpdateBuilder";
 import type { LocatorStrategyDefinition, LocatorUpdate, OptionsPatch } from "./types";
-import { methodForStrategy } from "./utils";
+import { methodForStrategy, type StrategyMethod } from "./utils";
 
 describe("parseUpdateArguments", () => {
 	it("tells the primary from the options and treats undefined as not provided", () => {
@@ -219,6 +220,12 @@ describe("types", () => {
 			name?: string | null;
 			exact?: boolean | null;
 		}>();
+	});
+
+	it("the update builder has a method for every strategy of the table", () => {
+		// a strategy added to STRATEGIES without its method here fails to compile: Pick needs every key
+		type Strategies = Pick<LocatorUpdateBuilderInternal<"a", "a", "a">, StrategyMethod>;
+		expectTypeOf<keyof Strategies>().toEqualTypeOf<StrategyMethod>();
 	});
 });
 
