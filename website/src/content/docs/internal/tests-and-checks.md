@@ -35,13 +35,18 @@ specs that use page objects or import `pomwright` test the packed package.
 `.github/workflows/checks.yaml` holds the jobs; `pr.yaml` runs them for every pull request and `main.yaml` for every
 push to `main`:
 
-- **changes**: decides whether code changed since the last green run. A change to Markdown files only, outside the
-  documentation's pages, runs lint alone.
+- **changes**: compares the commit with the last green commit of the branch and, on a pull request, with its base.
+  `code` is a change outside `website/` that is not a Markdown file; `site` is `code` or a change under `website/`. A
+  change to Markdown files elsewhere runs lint alone; a change to the documentation's pages runs lint, the package and
+  the site job.
 - **lint**: biome over the whole repository, warnings failing.
-- **package**: the unit tests, then one build and one tarball, kept as an artifact.
-- **harness**: that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs
+- **package** (`code` or `site`): the unit tests, then one build and one tarball, kept as an artifact.
+- **harness** (`code`): that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs
   chromium, `main` all three, and one more job runs chromium on Node 20, the `engines` floor.
+- **site** (`site`): that tarball installed into `test/`, the documentation's examples compiled, the API reference and
+  the doc comments checked, and the site built, which fails on a link or an anchor that does not exist.
 - **build**: the gate job, the check `main` requires.
 
-Publishing waits for `CI` on `main`, so nothing is published past a red run. Third-party actions are pinned to commits
-and kept current by Dependabot.
+Publishing waits for `CI` on `main`, so nothing is published past a red run, and `pages.yaml` deploys the site (see
+[documentation](/POMWright/internal/documentation/)). Third-party actions are pinned to commits and kept current by
+Dependabot, as are the site's npm versions.

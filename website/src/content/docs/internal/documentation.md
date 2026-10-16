@@ -26,6 +26,21 @@ the same facts as the API pages.
 - **Links resolve.** Links within the site are root-absolute with the base, `/POMWright/docs/<page>/`, and the site
   build fails on a link or an anchor that does not exist.
 
+CI's site job runs all three checks and builds the site on every change that touches code or the pages, and the
+harness's type check runs the first two as well.
+
+## Building and publishing
+
+`website/` is a pnpm project of its own, so Astro and Starlight stay out of the library's dependencies:
+`pnpm -C website install`, then `pnpm -C website dev` to work on pages at `http://localhost:4391/POMWright/`, or
+`pnpm -C website build`, which writes `website/dist` and checks every link. The site's configuration is
+`website/astro.config.mjs`; the three sections and their sidebars are `website/sidebar.mjs`, shown as tabs beside the
+title by a component of its own; an Expressive Code plugin hides an example's compile-only prelude; Mermaid diagrams
+render in the browser, so the build does not catch a syntax error in one: open the page.
+
+`.github/workflows/pages.yaml` builds the site the same way and deploys it to GitHub Pages, after `CI` succeeds on a
+push to `main`, so the site follows `main`.
+
 ## How pages are written
 
 The rules are in [AGENTS.md](https://github.com/DyHex/POMWright/blob/main/AGENTS.md), section 9. In short: pages
