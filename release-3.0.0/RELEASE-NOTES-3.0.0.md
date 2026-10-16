@@ -35,6 +35,9 @@ fix that makes every RegExp flag deterministic is in 1.64.0, so the floor is 1.6
 
 ## Breaking changes
 
+Each change is described briefly below. [Upgrading from 2.x](https://dyhex.github.io/POMWright/docs/upgrading-from-2x/)
+has the steps for every one of them: what changed and why, how to find the affected code, and what to write instead.
+
 ### `getById(string)` matches ids verbatim **[done, plan 1.1-1.2]**
 
 In 2.x, `getById("#login")` and `getById("id=login")` were normalised to `login`, and the resolved selector was
@@ -47,14 +50,6 @@ In 2.x, `getById("#login")` and `getById("id=login")` were normalised to `login`
 - `toString()` and error output render `locator('[id="x"]')` instead of `locator('#x')`.
 - `getById("")` throws at registration instead of failing at resolution. The message names the registry path, or
   `createReusable.getById` for reusable seeds.
-
-**Migration.** Find stale prefixed call sites with
-
-```sh
-grep -rnE 'getById\(\s*["'"'"'`](#|id=)' --include=*.ts .
-```
-
-and drop the prefix. Tests that compare rendered locator strings need `#x` changed to `[id="x"]`.
 
 ### `getById(RegExp)` is a real pattern match **[done, plan 1.1-1.2]**
 
@@ -78,8 +73,6 @@ Playwright resolves `page.goto` against `use.baseURL`. On a RegExp `baseUrl` onl
 compile time and at runtime. A new `runPostNavigationActions` option (default `true`) on `goto()` and
 `expectThisPage()` skips the actions. `NavigationOptions` gains `timeout`.
 
-**Migration.** `grep -rn 'gotoThisPage(' --include=*.ts .` and drop `ThisPage`.
-
 ### String `baseUrl` and `urlPath` are validated at construction **[done, plan 1.3-1.4]**
 
 A string `baseUrl` must be a non-empty origin: `scheme://host[:port]`, optional trailing slash, no path, query, or
@@ -98,11 +91,6 @@ own flags. A substring base such as `/identity-provider/` works without any tail
 the origin; on the path, to the whole rest. The matcher is a predicate accepted by `page.waitForURL`,
 `expect(page).toHaveURL`, and `page.route`, and exposes `.base`, `.path`, `.test(url)`, and a readable `toString()`.
 
-**Migration.** Code that treated `fullUrl` as a `RegExp` on such pages: `expect(url).toMatch(poc.fullUrl)` becomes
-`expect(page).toHaveURL(poc.fullUrl)` or `poc.fullUrl.test(url)`; `.source` and `.flags` become `.base` and `.path`.
-A base regex that contains a path prefix never matches, because the base sees only the origin; move the prefix into
-`urlPath`. `$` on a base regex includes the port.
-
 ### `expectThisPage` and `expectAnotherPage` are one `waitForURL` each; `waitForLoadState` option removed **[done, plan 1.3-1.4]**
 
 Each method is now a single `page.waitForURL` call under the project's `use.navigationTimeout`, overridable with
@@ -110,8 +98,7 @@ Each method is now a single `page.waitForURL` call under the project's `use.navi
 names the page object, the expected URL or matcher, and the URL found at failure time. `expectAnotherPage` waits
 for the URL to change and then fails at once if it bounced back. POMWright no longer defaults `waitUntil` to
 `"load"` itself; an unset value means Playwright's own default. `NavigationOptions.waitForLoadState` is removed,
-since `waitUntil` now covers every method. Migration: rename `waitForLoadState` to `waitUntil` in `navOptions` and
-in per-call options.
+since `waitUntil` now covers every method.
 
 ### `SessionStorage` rebuilt on Playwright's WebStorage API **[done, plan 1.5]**
 
@@ -144,12 +131,6 @@ titles, origin checks, typed values, and seeding before the app loads.
   Playwright's routes cannot see it. The test then fails at once with a message naming the fixes: `serviceWorkers:
   "block"`, seeding before the app's first load in the context, or unregistering the worker in the test.
 
-**Migration.** `grep -rn 'setOnNextNavigation\|waitForContext' --include=*.ts .`; replace `setOnNextNavigation(x)`
-with `seed(x)`, drop `waitForContext`, replace `set(x, { reload: true })` with `set(x)` plus `page.reload()`. Where
-2.x stored objects, declare a codec for the key and drop the `set<T>` / `get<T>` generics; where it stored strings
-that the app parsed as JSON (an `ngx-webstorage` style layer), declare `json<string>()` for those keys to keep the
-quotes. Replace `get(keys)` checks for `undefined` with `null`.
-
 ### Steps on frame segments apply, and `frameLocator()` is Playwright's any-frame locator **[done, plan 1.6-1.8]**
 
 In 2.x a `filter`, `nth`, `first` or `last` chained on a `frameLocator(selector)` registration was recorded and
@@ -167,9 +148,6 @@ in whichever single frame holds them, the main frame included, and Playwright th
 must be the first segment of its chain, takes no steps and has no terminal form; `replace().frameLocator()` makes a
 sub-path any-frame. `frameLocator("")` throws on every builder.
 
-**Migration.** `grep -rn 'frameLocator(' --include=*.ts .` and review every chain that follows with `.nth(`,
-`.filter(`, `.first(` or `.last(`: the step now takes effect.
-
 ### `update` keeps the strategy and follows JSON Merge Patch; `replace` changes the strategy **[done, plan 1.6-1.8]**
 
 `getLocatorSchema(path).update(subPath?)` patches the definition registered for the sub-path and keeps its
@@ -179,10 +157,6 @@ value leaves the field alone. Calling another strategy's method on `update()` th
 `replace(subPath?)` installs a new definition of any strategy with the primary argument required. Neither verb
 touches steps or the description. The builder-local cache that let 2.x switch strategies in `update` and switch
 back for free is gone.
-
-**Migration.** Rename cross-strategy `update(...).<method>(...)` calls to `replace` and state the primary argument.
-`update(x, undefined)` no longer wipes options and `{ key: undefined }` no longer removes a key: use `null`.
-`grep -rn 'update(' --include=*.ts . | grep undefined` finds both.
 
 ### Every builder requires the strategy's primary argument **[done, plan 1.6-1.8]**
 
@@ -232,11 +206,6 @@ change.
   actions run (after `goto()` and `expectThisPage()`) instead of once at construction, so it reads the page object's
   current state. `null` and `[]` both mean no actions, as they always did.
 
-**Migration.** Delete `pageActionsToPerformAfterNavigation()` implementations that return `[]` or `null`; with the
-`noImplicitOverride` compiler flag, add `override` to the ones that stay. A test that expects `new X(page)` to throw
-for a registry mistake asserts on a first use instead: `expect(() => new X(page).getNestedLocator(path)).toThrow(…)`.
-Pass values that `defineLocators()` depends on to the constructor.
-
 ### The package has an `exports` map and declares Node 20 **[done, plan 4]**
 
 The package root is the public API: `import { … } from "pomwright"` works as before, in CommonJS and ESM projects
@@ -245,8 +214,6 @@ alike, and deep imports such as `pomwright/dist/index.js` fail with `ERR_PACKAGE
 re-exports it by name, so a process that reaches pomwright through both `import` and `require` holds one copy, and
 TypeScript reads ESM declarations for `import`. The `module` field and the separate ESM build are gone. `engines.node`
 is `>=20`, Playwright 1.64's own requirement: npm warns on older Node, where Playwright already refuses to start.
-
-**Migration.** Replace deep imports with imports from `"pomwright"`.
 
 ### `replace()` takes Playwright's arguments **[done, plan 1.9]**
 
@@ -259,8 +226,6 @@ is unchanged. From JavaScript a missing first argument now throws the message ev
 `getByRole requires a role value for "form.button".`, instead of `Locator replace for "form.button" of type "role"
 requires a "role" value.`; `null` options still mean omission there.
 
-**Migration.** Pass the first argument to `replace()` methods and drop `null` options from them.
-
 ### `UrlTypeOptions` is renamed `PageObjectTypeOptions`; builder, seed and path types are exported **[done, plan 1.9]**
 
 `PageObject`'s second type argument, which also carries the `storage` schema since 3.0.0, is `PageObjectTypeOptions`;
@@ -271,8 +236,6 @@ what the registry hands out, and a project compiled with `declaration: true` can
 `FilterDefinition`, `IndexSelector`, `LocatorSchemaPathFormat` (the path rules as a type) and
 `LocatorSchemaPathArgument` (the accessors' path parameter, for helpers that forward a path in a generic base class).
 A path literal containing U+FEFF (the byte-order mark) is a compile error, as it always was a runtime error.
-
-**Migration.** Rename `UrlTypeOptions` to `PageObjectTypeOptions` in imports and constraints.
 
 ### `remove()` is replaced by `skip()` and `unskip()` **[done, plan 1.10-2]**
 
@@ -287,10 +250,6 @@ skipped segment throw `<method>() cannot apply to "<sub>": it is skipped in this
 registry.getLocatorSchema("main.list.item").skip("main.list").getNestedLocator(); // locator('main').locator('li')…
 ```
 
-**Migration.** `remove("ancestor")` becomes `skip("ancestor")`. `remove()` followed by `update()`/`replace()` on the
-terminal becomes `update()`/`replace()`, plus `clearSteps()` and `describe("")` where the old deletion of steps and
-description was wanted.
-
 ### `@step` decorates only methods that return a Promise **[done, plan 1.10-2]**
 
 `test.step` always returns a Promise and runs the body later, so a decorated sync method returned a Promise typed as
@@ -298,9 +257,6 @@ its value, ran after the caller's next line, and its exceptions escaped the call
 error that says `@step decorates methods that return a Promise: make the method async`, under stage-3 decorators and
 `experimentalDecorators`. A decorated static method is titled by its class (`AccountPage.create`) instead of
 `Function.create`.
-
-**Migration.** Make decorated methods `async` (they always returned a Promise at runtime). Update anything that filters
-report steps by a static method's `Function.` title.
 
 ### The logger keeps what it is given and uses the run's locale **[done, plan 1.10-2]**
 
@@ -311,16 +267,11 @@ names use Playwright's `locale` and `timezoneId` (the `log` fixture passes them;
 optional second argument) instead of a fixed `nb-NO`, so with no config they read `08:19:55 AM 10/15/2026 - INFO :
 [TestCase]`. Entries are attached in call order, one per entry, on the test that logged them, as before.
 
-**Migration.** Set `use: { locale: "nb-NO" }` for the old names, or pass a locale to `attachLogsToTest` in a custom
-fixture; pass `JSON.stringify(data, null, 2)` for a pretty JSON body or data nested deeper than two levels.
-
 ### `describe` requires a string; `nth` behaves as Playwright's **[done, plan 1.10-2]**
 
 From JavaScript, `describe(null)` and `describe(undefined)` throw (they silently fell back to the path);
 `describe("")` removes a description, as in Playwright. `nth(null)` and `nth(undefined)` reach Playwright's `nth`, which
 matches nothing, instead of being dropped, which matched every element. TypeScript rejected all four already.
-
-**Migration.** Call `nth` only when there is an index: `if (i !== undefined) query.nth(i)`.
 
 ### Seeds from `createReusable` no longer change **[done, plan 9]**
 
@@ -341,9 +292,6 @@ A seeded `add` keeps its shape: an optional override of the seed's strategy as t
 key (2.x stored `null`), `getByRole(null)` clears the seed's options (2.x ignored it), and `getByRole("link", null)`
 sets the role and clears them; all three now compile.
 
-**Migration.** Use the result of a seed method: `add(path, { reuse: seed.filter(f) })` instead of `seed.filter(f);`
-followed by `add(path, { reuse: seed })`, which now registers the seed without the filter.
-
 ### Reuse by path returns `filter`, `nth` and `describe` **[done, plan 9]**
 
 `add(path, { reuse: "other" })` copies `other` as before (the strategy, its steps and an explicit description) and now
@@ -357,9 +305,6 @@ preferred way to share a locator across locator modules; exporting a `createReus
 registry.add("common.listItem").getByRole("listitem");
 registry.add("main.list.lastItem", { reuse: "common.listItem" }).nth("last").describe("Last item");
 ```
-
-**Migration.** Drop a `void` annotation on the result. A module compiled with `declaration: true` that returns the
-result from an expression-bodied arrow uses a block body or `: void`, as for a seed reuse.
 
 ## Additions
 
@@ -648,63 +593,3 @@ abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
   `PageObject.md`: `PageObjectOptions` in a domain base class, string URLs compared as the browser reports them, the
   type check of `baseUrl` and `urlPath`; `session-storage.md`: a seeded hop keeps the fragment; `overview.md`: the type
   exports. **[done, plan 10]**
-
-## Upgrade checklist (2.x to 3.0.0)
-
-Grows as plans land.
-
-1. Run the grep above and remove `#` and `id=` prefixes from `getById` calls.
-2. Update any assertions on rendered locator strings for id-based locators.
-3. Plain unanchored `getById(/pattern/)` calls keep working unchanged, because an unanchored regex is a substring
-   match. Review patterns that contain regex metacharacters (`.`, `[`, `]`, `(`, `)`, `+`, `*`, `?`, `^`, `$`,
-   `|`) or flags: 2.x matched them as literal text, 3.0.0 interprets them. Escape characters meant literally
-   (`/a\.b/`) and expect flags such as `i` to take effect.
-4. Replace `gotoThisPage()` with `goto()`.
-5. Make every string `baseUrl` an origin with a scheme and no path, and every string `urlPath` empty or
-   `/`-rooted. Environment-derived values are passed as they are; the constructor validates them.
-6. On pages with a RegExp `baseUrl` or `urlPath`, `fullUrl` is a `UrlMatcher`: keep passing it to Playwright APIs,
-   replace `toMatch(fullUrl)` with `toHaveURL(fullUrl)` or `fullUrl.test(url)`, and move any path prefix out of a
-   base regex into `urlPath`. Flags on RegExp parts now apply. A type of your own that tests `fullUrl` (or
-   `FullUrlTypeFromOptions`) against `RegExp`, or a helper parameter typed `string | RegExp` that receives it, tests or
-   takes `UrlMatcher` instead. **[done, plan 10]**
-7. Navigation waits follow `use.navigationTimeout`; override it with `navOptions: { timeout }` on the page object
-   or a per-call `timeout`.
-8. Rename `waitForLoadState` to `waitUntil` in `navOptions` and per-call navigation options.
-9. Upgrade `@playwright/test` to 1.64 or later.
-10. Replace `setOnNextNavigation` with `seed`, drop `waitForContext`, and replace `reload: true` with a
-    `page.reload()` call.
-11. Declare a codec for every session storage key that holds a structured value, and `json<string>()` for string
-    keys the app parses as JSON; drop the `set<T>` / `get<T>` generics.
-12. A check for `undefined` from `get(keys)` becomes a check for `null`; a literal `get([])` or `clear([])` must go.
-13. If the app registers a service worker and a test seeds after the app has loaded, add `serviceWorkers: "block"`
-    to the Playwright config or seed before the first load.
-14. Remove `seed` calls that are not followed by a navigation to that origin, including defensive seeding in
-    fixtures; seed in the test, right before the hop. Register whole-page navigation mocks after `seed`.
-15. Review every `frameLocator(...)` registration followed by `.nth(`, `.filter(`, `.first(` or `.last(`: the step
-    now applies. Prefer disambiguating frames through their ancestor segments.
-16. Rename `update(...)` calls that change the locator strategy to `replace(...)` and state the primary argument.
-17. Replace `undefined` used to clear options in `update` (`update(x, undefined)`, `{ key: undefined }`) with
-    `null`.
-18. Fix registrations, seeds, updates or replacements that pass an empty string to `locator`, `frameLocator` or
-    `getByRole`, or no primary argument at all; they now throw at the call.
-19. Expect a page object whose registry has a mistyped `has`/`hasNot` path reference or a cycle to fail right after
-    construction, in the fixture; fix the reference. Standalone registries can call `registry.verify()` for the same
-    check.
-20. Delete `pageActionsToPerformAfterNavigation()` implementations that return `[]` or `null`; with
-    `noImplicitOverride`, add `override` to the ones that stay.
-21. A test that expects `new X(page)` to throw for a registry mistake asserts on a first use instead; pass values
-    that `defineLocators()` depends on to the constructor rather than assigning them after an `await`.
-22. Replace deep imports such as `pomwright/dist/index.js` with imports from `"pomwright"`, and run on Node 20 or
-    later. **[done, plan 4]**
-23. Pass the first argument to every `replace()` strategy method and drop `null` options from them. **[done, plan 1.9]**
-24. Rename `UrlTypeOptions` to `PageObjectTypeOptions`. **[done, plan 1.9]**
-25. Replace `remove("ancestor")` with `skip("ancestor")`; replace `remove()` followed by `update()`/`replace()` with
-    `update()`/`replace()` plus `clearSteps()` and `describe("")` where needed. **[done, plan 1.10-2]**
-26. Make every `@step`-decorated method `async`. **[done, plan 1.10-2]**
-27. Set `use: { locale: "nb-NO" }` (or pass a locale to `attachLogsToTest`) to keep the 2.x log attachment names, and
-    pass `JSON.stringify(data, null, 2)` for nested log data. **[done, plan 1.10-2]**
-28. Call `nth` only when there is an index. **[done, plan 1.10-2]**
-29. Use the result of `filter`, `nth` and `describe` on a `createReusable` seed; a seed method called as a statement no
-    longer changes the seed. **[done, plan 9]**
-30. Drop `void` annotations on `add(path, { reuse: "other" })`; give an expression-bodied arrow that returns it a block
-    body or `: void` where `declaration: true` is set. **[done, plan 9]**
