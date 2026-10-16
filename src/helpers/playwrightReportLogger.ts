@@ -1,14 +1,27 @@
 import { inspect } from "node:util";
 import type { TestInfo } from "@playwright/test";
 
-// Defines valid log levels as a union of string literal types.
+/**
+ * A log level, lowest first: `"debug"`, `"info"`, `"warn"`, `"error"`. A logger records an entry at its current level
+ * or above.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#loglevel
+ */
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
-// Defines the structure of a log entry.
+/**
+ * One recorded entry, attached to the test as one attachment.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#logentry
+ */
 export type LogEntry = {
+	/** When the entry was logged, in the test process. */
 	timestamp: Date;
+	/** The level it was logged at. */
 	logLevel: LogLevel;
+	/** The name of the logger that logged it: `TestCase`, or `TestCase -> CheckoutPage` for a child logger. */
 	prefix: string;
+	/** The message and the further arguments, as attached: separated by a blank line. */
 	message: string;
 };
 
@@ -16,34 +29,37 @@ export type LogEntry = {
 export const initialLogLevel = (retry: number): LogLevel => (retry === 0 ? "warn" : "debug");
 
 /**
- * PlaywrightReportLogger is a logger implementation designed for Playwright tests.
- * It records log messages and attaches them to the Playwright HTML report.
- *
- * The logger enables all fixtures implementing a child logger to share the same log level
- * within the scope of a single test, independent of other tests run in parallel.
- * In the same way each fixture will share a single logEntry for recording all log
- * statements produced throughout the tests execution, when the test is done, all log
- * entries are attached to the playwright HTML report in the order they were logged.
- *
- * Log messages can be recorded with various log levels (debug, info, warn, error).
- *
- * The getNewChildLogger method allows you to create a new 'child' logger instance
- * with a new contextual name (e.g. the class it's used in), while sharing the logLevel
- * and LogEntry with the 'parent' fixture.
+ * A logger whose entries are attached to the test's report, one attachment per entry, in the order they were logged.
+ * The `log` fixture of POMWright's `test` gives every test one, named `TestCase`, starting at `warn` on the first run
+ * and at `debug` on a retry. A child logger has a name of its own and shares its parent's entries and level.
  *
  * @example
- * attachment names in the nb-NO locale:
- * 20:49:50 05.05.2023 - DEBUG : [TestCase]
- * 20:49:50 05.05.2023 - DEBUG : [TestCase -> MobilEier]
- * 20:49:51 05.05.2023 - ERROR : [TestCase -> MobilEier -> Axe]
- * 20:49:52 05.05.2023 - INFO : [TestCase -> MobilEier]
- * 20:49:52 05.05.2023 - DEBUG : [TestCase -> MobilEier -> GetBy]
+ * ```ts
+ * test("checkout", async ({ log }) => {
+ *   log.warn("the basket was empty; added the test product");
+ * });
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/
  */
 export class PlaywrightReportLogger {
 	private readonly contextName: string;
 	private readonly logLevels: LogLevel[] = ["debug", "info", "warn", "error"];
 
-	// Initializes the logger with shared log level, log entries, and a context name.
+	/**
+	 * Creates a root logger, for a fixture of your own; the `log` fixture creates one per test. The level and the entries
+	 * are objects the logger and its children share and change.
+	 *
+	 * @param sharedLogLevel `{ current, initial }`: the level entries are recorded at, and the one `resetLogLevel()`
+	 * goes back to.
+	 * @param sharedLogEntry The array the entries are recorded in, in call order.
+	 * @param contextName The logger's name in attachment names, such as `TestCase`.
+	 *
+	 * @example
+	 * ```ts
+	 * const log = new PlaywrightReportLogger({ current: "warn", initial: "warn" }, [], "TestCase");
+	 * ```
+	 */
 	constructor(
 		private sharedLogLevel: { current: LogLevel; initial: LogLevel },
 		private sharedLogEntry: LogEntry[],
@@ -53,10 +69,16 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Creates a child logger with a new contextual name, sharing the same log level and log entries with the parent logger.
+	 * Creates a child logger named after this one and `prefix` (`TestCase -> CheckoutPage`). It shares this logger's
+	 * entries and level: changing the level on any logger of the tree changes it for all of them.
 	 *
-	 * The root loggers log "level" is referenced by all child loggers and their child loggers and so on...
-	 * Changing the log "level" of one, will change it for all.
+	 * @param prefix The child's own name, such as the class that logs with it.
+	 * @returns The child logger.
+	 *
+	 * @example
+	 * ```ts
+	 * this.log = log.getNewChildLogger("CheckoutPage");
+	 * ```
 	 */
 	getNewChildLogger(prefix: string): PlaywrightReportLogger {
 		return new PlaywrightReportLogger(this.sharedLogLevel, this.sharedLogEntry, `${this.contextName} -> ${prefix}`);
@@ -85,7 +107,17 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Logs a debug-level message with the specified message and arguments.
+	 * Records a `debug` entry when the current level is `debug` or lower. The message and every further string
+	 * are attached exactly as written; any other value as `console.log` prints it (Node's `util.inspect`), each part
+	 * separated by a blank line. For data nested deeper than two levels, pass `JSON.stringify(data, null, 2)`.
+	 *
+	 * @param message The message.
+	 * @param args Further values to attach after the message.
+	 *
+	 * @example
+	 * ```ts
+	 * log.debug("order", { id: 7, total: 42 });
+	 * ```
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: logger accepts arbitrary payloads for debug output.
 	debug(message: string, ...args: any[]) {
@@ -93,7 +125,17 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Logs a info-level message with the specified message and arguments.
+	 * Records an `info` entry when the current level is `info` or lower. The message and every further string
+	 * are attached exactly as written; any other value as `console.log` prints it (Node's `util.inspect`), each part
+	 * separated by a blank line. For data nested deeper than two levels, pass `JSON.stringify(data, null, 2)`.
+	 *
+	 * @param message The message.
+	 * @param args Further values to attach after the message.
+	 *
+	 * @example
+	 * ```ts
+	 * log.info("order", { id: 7, total: 42 });
+	 * ```
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: logger accepts arbitrary payloads for debug output.
 	info(message: string, ...args: any[]) {
@@ -101,7 +143,17 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Logs a warn-level message with the specified message and arguments.
+	 * Records a `warn` entry when the current level is `warn` or lower. The message and every further string
+	 * are attached exactly as written; any other value as `console.log` prints it (Node's `util.inspect`), each part
+	 * separated by a blank line. For data nested deeper than two levels, pass `JSON.stringify(data, null, 2)`.
+	 *
+	 * @param message The message.
+	 * @param args Further values to attach after the message.
+	 *
+	 * @example
+	 * ```ts
+	 * log.warn("order", { id: 7, total: 42 });
+	 * ```
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: logger accepts arbitrary payloads for debug output.
 	warn(message: string, ...args: any[]) {
@@ -109,7 +161,17 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Logs a error-level message with the specified message and arguments.
+	 * Records an `error` entry when the current level is `error` or lower. The message and every further string
+	 * are attached exactly as written; any other value as `console.log` prints it (Node's `util.inspect`), each part
+	 * separated by a blank line. For data nested deeper than two levels, pass `JSON.stringify(data, null, 2)`.
+	 *
+	 * @param message The message.
+	 * @param args Further values to attach after the message.
+	 *
+	 * @example
+	 * ```ts
+	 * log.error("order", { id: 7, total: 42 });
+	 * ```
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: logger accepts arbitrary payloads for debug output.
 	error(message: string, ...args: any[]) {
@@ -117,42 +179,67 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Sets the current log level to the specified level during runTime.
+	 * Sets the level entries are recorded at, for this logger and every logger of its tree, until it is set or reset
+	 * again.
+	 *
+	 * @param level The new level.
+	 *
+	 * @example
+	 * ```ts
+	 * log.setLogLevel("debug"); // from here on, everything for this test
+	 * ```
 	 */
 	setLogLevel(level: LogLevel) {
 		this.sharedLogLevel.current = level;
 	}
 
 	/**
-	 * Retrieves the current log level during runtime.
+	 * Returns the level entries are recorded at.
+	 *
+	 * @returns The current level.
 	 */
 	getCurrentLogLevel(): LogLevel {
 		return this.sharedLogLevel.current;
 	}
 
 	/**
-	 * Retrieves the index of the current log level in the logLevels array during runtime.
+	 * Returns the current level's position in `["debug", "info", "warn", "error"]`, `0` for `debug`.
+	 *
+	 * @returns The index.
 	 */
 	getCurrentLogLevelIndex(): number {
 		return this.logLevels.indexOf(this.sharedLogLevel.current);
 	}
 
 	/**
-	 * Resets the current log level to the initial level during runtime.
+	 * Sets the level back to the one the test started with: `warn` on a first run of the `log` fixture, `debug` on a
+	 * retry.
 	 */
 	resetLogLevel() {
 		this.sharedLogLevel.current = this.sharedLogLevel.initial;
 	}
 
 	/**
-	 * Checks if the input log level is equal to the current log level of the PlaywrightReportLogger instance.
+	 * Returns whether the current level is `level`.
+	 *
+	 * @param level The level to compare with.
+	 * @returns `true` when it is the current level.
 	 */
 	isCurrentLogLevel(level: LogLevel): boolean {
 		return this.sharedLogLevel.current === level;
 	}
 
 	/**
-	 * Returns 'true' if the "level" parameter provided has an equal or greater index than the current logLevel.
+	 * Returns whether an entry at `level` would be recorded: whether `level` is the current level or above. For code
+	 * that should only do work when its entry is recorded.
+	 *
+	 * @param level The level to check.
+	 * @returns `true` when an entry at `level` is recorded.
+	 *
+	 * @example
+	 * ```ts
+	 * if (log.isLogLevelEnabled("debug")) log.debug("cart", await cart.textContent());
+	 * ```
 	 */
 	public isLogLevelEnabled(level: LogLevel): boolean {
 		const logLevelIndex = this.logLevels.indexOf(level);
@@ -165,10 +252,19 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Attaches the recorded entries to the test, one attachment per entry in call order, each body exactly as
-	 * logged (`application/json` when the message is a JSON object or array, otherwise `text/plain`). The names
-	 * carry the time in `format.locale` and `format.timeZone`; the `log` fixture passes Playwright's `locale` and
-	 * `timezoneId`, and without them the machine's are used.
+	 * Attaches the recorded entries to the test, one attachment per entry in call order, each body exactly as logged:
+	 * `application/json` when the message is a JSON object or array, `text/plain` otherwise. Each name is the time, the
+	 * date, the level and the logger's name (`11:39:57 PM 10/16/2026 - WARN : [TestCase]`). The `log` fixture calls it
+	 * when the test ends; call it in a fixture of your own.
+	 *
+	 * @param testInfo The test's `TestInfo`.
+	 * @param format `{ locale, timeZone }` for the time and date in the names; the `log` fixture passes Playwright's
+	 * `locale` and `timezoneId`. Without it, the machine's are used.
+	 *
+	 * @example
+	 * ```ts
+	 * log.attachLogsToTest(testInfo, { locale, timeZone: timezoneId });
+	 * ```
 	 */
 	attachLogsToTest(testInfo: TestInfo, format?: { locale?: string; timeZone?: string }) {
 		// the entries are in call order already

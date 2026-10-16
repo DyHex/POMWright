@@ -10,8 +10,18 @@
  */
 
 /**
- * Identity of a page object whose `baseUrl` or `urlPath` is a RegExp. Callable as the predicate
- * form accepted by `page.waitForURL`, `expect(page).toHaveURL`, and `page.route`.
+ * The `fullUrl` of a page object whose `baseUrl` or `urlPath` is a RegExp: a URL predicate that tests the origin
+ * against the base and the rest, path, query and hash, against the path, each as written, with its own flags; a string
+ * part must match exactly. Playwright's `page.waitForURL`, `expect(page).toHaveURL` and `page.route` take it as a URL
+ * predicate.
+ *
+ * @example
+ * ```ts
+ * await expect(page).toHaveURL(accountPage.fullUrl);
+ * const onAccountPage = accountPage.fullUrl.test(page.url());
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-navigation/#urlmatcher
  */
 export interface UrlMatcher {
 	(url: URL): boolean;
@@ -19,9 +29,14 @@ export interface UrlMatcher {
 	readonly base: string | RegExp;
 	/** The `urlPath` the page object was constructed with. */
 	readonly path: string | RegExp;
-	/** The same test for a URL string or a `URL` instance. */
+	/**
+	 * Tests a URL, as the predicate does.
+	 *
+	 * @param url A URL string or a `URL`.
+	 * @returns Whether the URL is this page's.
+	 */
 	test(url: string | URL): boolean;
-	/** Readable form, used in step titles and error messages. */
+	/** A readable form, used in step titles and error messages: `origin "https://shop.example" + path /^\/account\/\d+$/`. */
 	toString(): string;
 }
 

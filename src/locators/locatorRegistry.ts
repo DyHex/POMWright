@@ -39,9 +39,9 @@ import {
 } from "./utils";
 
 /**
- * The type of every accessor's path parameter: the path itself when it is well-formed, otherwise the
- * tuple of `LocatorSchemaPathFormat` naming the rule it breaks. A helper that forwards a path from a
- * class generic in its path union declares its parameter with it.
+ * The type of the path parameter of `add` and the resolving methods: the path itself when it is well-formed,
+ * otherwise the tuple of `LocatorSchemaPathFormat` naming the rule it breaks. A helper in a base class that is generic
+ * in its paths takes its path parameter with it, so a misspelt path is a compile error where the helper is called.
  *
  * @example
  * ```ts
@@ -51,6 +51,8 @@ import {
  *   }
  * }
  * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/types/#locatorschemapathargument
  */
 export type LocatorSchemaPathArgument<Path extends string> =
 	LocatorSchemaPathFormat<Path> extends Path ? Path : LocatorSchemaPathFormat<Path>;

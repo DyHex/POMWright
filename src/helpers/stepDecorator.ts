@@ -98,16 +98,22 @@ const createStepDecorator =
 		return descriptor;
 	};
 
+// no @example block: TypeScript reads a decorator at the start of a comment line as a JSDoc tag
 /**
- * Wraps a method in Playwright `test.step`, defaulting the title to `ClassName.methodName` (for a static
- * method too). The method must return a Promise, as an `async` method does: `test.step` always returns one
- * and runs the body after the caller's current line, so a decorated sync method is a compile error.
+ * A decorator that runs a method as Playwright's `test.step`, titled `ClassName.methodName` (for a static method too,
+ * by its class) unless given a title. Works with TypeScript's standard decorators and with `experimentalDecorators`.
+ * The method must return a Promise, as an `async` method does: `test.step` always returns one, so a decorated method
+ * that returns a plain value is a compile error, `@step decorates methods that return a Promise: make the method
+ * async`. Write it above an `async` method as `@step()`, `@step("Pay with the test card")`, `@step({ box: true })` or
+ * `@step("Pay", { timeout: 10_000 })`.
  *
- * Examples:
- * - `@step`
- * - `@step("title")`
- * - `@step({ box: true })`
- * - `@step("title", { timeout: 5000 })`
+ * @param title The step's title. Defaults to `ClassName.methodName`.
+ * @param options `test.step`'s options, such as `box` and `timeout`.
+ * @param value The method, when `@step` is written without parentheses.
+ * @param context The decorator context, when `@step` is written without parentheses.
+ * @returns The decorator.
+ *
+ * @see https://dyhex.github.io/POMWright/api/step/
  */
 export function step(): StepDecoratorFactory;
 export function step(title: StepTitle): StepDecoratorFactory;

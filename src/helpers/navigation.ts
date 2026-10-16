@@ -10,33 +10,118 @@ const BOXED = { box: true };
 export type AbsoluteUrl = `${string}:${string}`;
 
 /**
- * Options for every navigation method. Each resolves per call, then from the page object's
- * `navOptions`, then to Playwright's own default: `waitUntil` to `"load"`, `timeout` to the
- * project's `use.navigationTimeout`. POMWright adds no default of its own.
+ * The options of every navigation method, and of a page object's `navOptions`. Each option comes from the call, then
+ * from the page object's `navOptions`, then from Playwright; POMWright adds no default of its own.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-navigation/#navigationoptions
  */
 export type NavigationOptions = {
+	/**
+	 * The load state to wait for, as Playwright's `page.goto()` and `page.waitForURL()` take it: `"load"`,
+	 * `"domcontentloaded"`, `"networkidle"` or `"commit"`. Playwright's default is `"load"`.
+	 */
 	waitUntil?: WaitUntil;
+	/** The limit of the navigation's one waiting call, in milliseconds. Defaults to the project's `navigationTimeout`. */
 	timeout?: number;
 };
 
-/** Options for the two this-page forms, `goto()` without a target and `expectThisPage()`. */
+/**
+ * The options of the two this-page forms, `goto()` without a target and `expectThisPage()`: `NavigationOptions` and
+ * `runPostNavigationActions`.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-navigation/#thispageoptions
+ */
 export type ThisPageOptions = NavigationOptions & {
-	/** Call `pageActionsToPerformAfterNavigation()` and run its actions afterwards. Defaults to `true`. */
+	/**
+	 * `false` skips the page object's `pageActionsToPerformAfterNavigation()` for this call. Defaults to `true`.
+	 */
 	runPostNavigationActions?: boolean;
 };
 
 type GotoTarget<BaseUrl> = BaseUrl extends string ? string : AbsoluteUrl;
 
 /**
- * The navigation API of a page object, narrowed by its URL types: `goto()` without a target exists
- * only when `fullUrl` is a string, and `goto(target)` takes any string on a string `baseUrl` but only
- * an absolute URL on a RegExp `baseUrl`. `expectThisPage` and `expectAnotherPage` always exist.
+ * A page object's navigation helper, `navigation`, narrowed by its URL types: `goto()` without a target exists only
+ * when `fullUrl` is a string, and `goto(target)` takes any string on a string `baseUrl` but only an absolute URL on a
+ * RegExp `baseUrl`. Each method is one Playwright call, shown as a step of the report at the line that called it.
+ *
+ * @example
+ * ```ts
+ * await loginPage.navigation.goto();
+ * await loginPage.logIn("ada@shop.example", "correct horse");
+ * await loginPage.navigation.expectAnotherPage();
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-navigation/
  */
 export type NavigationFor<BaseUrl, FullUrl> = {
+	/**
+	 * Waits until the browser is on this page, the URL matching `fullUrl` and the load state reached, with one
+	 * `page.waitForURL`; then runs the actions of `pageActionsToPerformAfterNavigation()`. Returns at once, after the
+	 * load state, when the page is already there.
+	 *
+	 * @param options `waitUntil`, `timeout` and `runPostNavigationActions`; each defaults to the page object's
+	 * `navOptions`.
+	 * @throws When the URL does not match in time:
+	 * `OrdersPage: expected URL "https://shop.example/orders"; found "https://shop.example/orders?tab=1" (…)`
+	 *
+	 * @example
+	 * ```ts
+	 * await ordersPage.navigation.expectThisPage();
+	 * ```
+	 */
 	expectThisPage(options?: ThisPageOptions): Promise<void>;
+	/**
+	 * Waits until the browser has left this page, with one `page.waitForURL` for any URL that does not match `fullUrl`,
+	 * and the load state of the page it moved to; then fails at once if the URL is back on this page, which catches a
+	 * redirect that bounced back.
+	 *
+	 * @param options `waitUntil` and `timeout`; each defaults to the page object's `navOptions`.
+	 * @throws When the browser stays, or comes straight back:
+	 * `OrdersPage: expected to have left "https://shop.example/orders"; found "https://shop.example/orders" (…)`,
+	 * `OrdersPage: left "https://shop.example/orders" but returned to it; found "https://shop.example/orders"`
+	 *
+	 * @example
+	 * ```ts
+	 * await loginPage.navigation.expectAnotherPage();
+	 * ```
+	 */
 	expectAnotherPage(options?: NavigationOptions): Promise<void>;
+	/**
+	 * Navigates to a target with `page.goto`, resolved against the page object's `baseUrl` exactly as Playwright
+	 * resolves a target against `baseURL` (`"/account"`, `"?tab=2"`, or an absolute URL). Never runs the page object's
+	 * actions after navigation. Without a target, navigates to this page.
+	 *
+	 * @param target The URL or path. On a RegExp `baseUrl`, an absolute URL.
+	 * @param options `waitUntil`, `timeout` (or, without a target, also `runPostNavigationActions`); each defaults to
+	 * the page object's `navOptions`.
+	 * @throws What `page.goto` throws; on a RegExp `baseUrl`, for a relative target (from JavaScript):
+	 * `AccountPage: goto("/account") needs an absolute URL because baseUrl is a RegExp.`
+	 *
+	 * @example
+	 * ```ts
+	 * await loginPage.navigation.goto("/account");
+	 * ```
+	 */
 	goto(target: GotoTarget<BaseUrl>, options?: NavigationOptions): Promise<void>;
-} & (FullUrl extends string ? { goto(options?: ThisPageOptions): Promise<void> } : object);
+} & (FullUrl extends string
+	? {
+			/**
+			 * Navigates to this page, `fullUrl`, with `page.goto`, then runs the actions of
+			 * `pageActionsToPerformAfterNavigation()`. Exists when `fullUrl` is a string.
+			 *
+			 * @param options `waitUntil`, `timeout` and `runPostNavigationActions`; each defaults to the page object's
+			 * `navOptions`.
+			 * @throws What `page.goto` throws.
+			 *
+			 * @example
+			 * ```ts
+			 * await loginPage.navigation.goto();
+			 * ```
+			 */
+			goto(options?: ThisPageOptions): Promise<void>;
+		}
+	: object);
 
 type GotoArguments = [options?: ThisPageOptions] | [target: string, options?: NavigationOptions];
 

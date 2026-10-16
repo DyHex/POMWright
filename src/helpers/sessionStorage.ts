@@ -12,19 +12,58 @@ import { type Page, test } from "@playwright/test";
 import { captureCallSite } from "./callSite";
 import { existingRegistryFor, originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSeed";
 
-/** How a key's value is stored as a string and read back. `json<T>()` ships; anything else is yours. */
+/**
+ * How a session storage key's value is stored as a string and read back: `stringify` on the way in, `parse` on the way
+ * out. Declare one per key in a schema; `json<T>()` is the one POMWright ships.
+ *
+ * @example
+ * ```ts
+ * const number = (): Codec<number> => ({ parse: (raw) => Number(raw), stringify: (value) => String(value) });
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#codec
+ */
 export type Codec<T> = {
+	/**
+	 * Turns the stored string into the value. An error it throws makes `get` fail, naming the key and the value.
+	 *
+	 * @param raw The string as stored.
+	 * @returns The value.
+	 */
 	parse(raw: string): T;
+	/**
+	 * Turns the value into the string to store. It must return a string.
+	 *
+	 * @param value The value given to `set` or `seed`.
+	 * @returns The string to store.
+	 */
 	stringify(value: T): string;
 };
 
-/** The JSON codec. `T` is a phantom type: the parsed value is not validated against it. */
+/**
+ * The JSON codec: `JSON.stringify` in, `JSON.parse` out. `T` types the key; the parsed value is not checked against
+ * it, exactly as `JSON.parse(…) as T`. For a string key that an app reads as JSON, `json<string>()` stores the quotes.
+ *
+ * @returns A codec.
+ *
+ * @example
+ * ```ts
+ * const storage = new SessionStorage(page, { schema: { user: json<{ name: string }>() } });
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#json
+ */
 export const json = <T>(): Codec<T> => ({
 	parse: (raw) => JSON.parse(raw) as T,
 	stringify: (value) => JSON.stringify(value),
 });
 
-/** Codecs by key. A key that is not declared is a string. */
+/**
+ * Codecs by key: the `schema` option of `SessionStorage` and of a page object's `sessionStorage` option. A key that is
+ * not declared holds a string.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#sessionstorageschema
+ */
 export type SessionStorageSchema = Record<string, Codec<unknown>>;
 
 export type SessionStorageOptions<S extends SessionStorageSchema> = {
@@ -147,11 +186,39 @@ const readTestOutcome: ReadTestOutcome = () => {
 const isNoOriginError = (error: unknown): error is Error =>
 	error instanceof Error && /SecurityError|Access is denied|The operation is insecure/.test(error.message);
 
+/**
+ * Playwright's `page.sessionStorage` with what a test suite adds: one call for several keys, a step in the report for
+ * every call, at the line that made it, an origin check, per-key codecs, and `seed`, which stores entries before the
+ * app's next load on an origin. Values are strings, stored and read exactly as given, unless the schema declares a
+ * codec for the key. Every page object has one, `sessionStorage`.
+ *
+ * @example
+ * ```ts
+ * const storage = new SessionStorage(page, { label: "Shop", origin: "https://shop.example" });
+ * await storage.seed({ token: "abc" });
+ * await page.goto("https://shop.example/");
+ * const token = await storage.get("token"); // "abc"
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/
+ */
 export class SessionStorage<S extends SessionStorageSchema = Record<never, never>> {
 	private readonly label: string | undefined;
 	private readonly origin: string | undefined;
 	private readonly schema: SessionStorageSchema;
 
+	/**
+	 * Creates a helper for a page. A page object creates its own, with its label, the origin of its string `baseUrl`
+	 * and its schema.
+	 *
+	 * @param page The page whose session storage the helper reads and writes.
+	 * @param options Optional settings.
+	 * @param options.label The prefix of step titles and error messages: `Shop` gives `Shop.SessionStorage.set:`.
+	 * @param options.origin The origin the helper belongs to: the default origin of `seed`, and the only one `set`,
+	 * `get` and `clear` touch. Without it the helper works on whatever origin the page is on.
+	 * @param options.schema Codecs by key, for keys that hold structured values.
+	 * @throws When `origin` is not an origin: `Shop.SessionStorage.constructor: origin must be an origin such as …`
+	 */
 	constructor(
 		private readonly page: Page,
 		options: SessionStorageOptions<S> = {},
@@ -217,7 +284,24 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		}
 	}
 
-	/** Writes one entry, or a record of entries, through `page.sessionStorage.setItem`. */
+	/**
+	 * Writes one entry, or several, to the session storage of the origin the page is on: each value through its key's
+	 * codec, or as the string it must be. Every value is encoded before any is written, so a bad value writes nothing.
+	 *
+	 * @param key The key.
+	 * @param value The value: a string, or the type of the key's codec.
+	 * @param entries Several keys and values, written in one call.
+	 * @throws When a value for a key without a codec is not a string
+	 * (`Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it`), when the page is on
+	 * another origin than the helper's, and when the page has no origin yet
+	 * (`Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()`).
+	 *
+	 * @example
+	 * ```ts
+	 * await storage.set("token", "abc");
+	 * await storage.set({ token: "abc", locale: "nb" });
+	 * ```
+	 */
 	set<K extends string>(key: K, value: Decoded<S, K>): Promise<void>;
 	set<E extends Record<string, unknown>>(entries: EntriesFor<S, E>): Promise<void>;
 	async set(keyOrEntries: string | Record<string, unknown>, value?: unknown): Promise<void> {
@@ -228,7 +312,24 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		});
 	}
 
-	/** Reads every present entry, one key (`null` when absent), or a list of keys (`null` for each absent one). */
+	/**
+	 * Reads the session storage of the origin the page is on: every entry, one key, or several, each value through its
+	 * key's codec. A missing key reads as `null`. A literal `[]` does not compile; a list that is empty at run time
+	 * reads nothing.
+	 *
+	 * @param key One key: returns its value, or `null`.
+	 * @param keys Several keys: returns a record with every key, `null` for each that is missing.
+	 * @returns Without an argument, every entry; otherwise the value or the record.
+	 * @throws When a stored value cannot be decoded by its codec
+	 * (`Shop.SessionStorage.get: value for "user" could not be decoded: {not json`), when the page is on another origin
+	 * than the helper's, and when the page has no origin yet.
+	 *
+	 * @example
+	 * ```ts
+	 * const token = await storage.get("token"); // "abc", or null
+	 * const entries = await storage.get(["token", "locale"]); // { token: "abc", locale: null }
+	 * ```
+	 */
 	get(): Promise<AllEntries<S>>;
 	get<K extends string>(key: K): Promise<Decoded<S, K> | null>;
 	get<K extends string>(keys: NonEmpty<K>): Promise<{ [P in K]: Decoded<S, P> | null }>;
@@ -269,7 +370,19 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		});
 	}
 
-	/** Removes everything, one key, or a list of keys. */
+	/**
+	 * Removes entries from the session storage of the origin the page is on: every entry, one key, or several.
+	 *
+	 * @param key One key.
+	 * @param keys Several keys. A literal `[]` does not compile; a list that is empty at run time removes nothing.
+	 * @throws When the page is on another origin than the helper's, and when the page has no origin yet.
+	 *
+	 * @example
+	 * ```ts
+	 * await storage.clear("token");
+	 * await storage.clear(); // everything
+	 * ```
+	 */
 	clear(): Promise<void>;
 	clear(key: string): Promise<void>;
 	clear<K extends string>(keys: NonEmpty<K>): Promise<void>;
@@ -287,9 +400,25 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	}
 
 	/**
-	 * Makes sure the origin's `sessionStorage` holds the entries before the app's next load there, without
-	 * leaving the current page. On the origin already: writes at once. Elsewhere: the entries become pending
-	 * and the next main-frame navigation that reaches the origin applies them before the app's first script.
+	 * Stores entries for an origin before the app's next load there, so the app's first script sees them, without
+	 * leaving the page the test is on. On the origin already, it writes at once. Elsewhere, the next navigation of the
+	 * main frame that reaches the origin (`goto`, a link, a script, a form POST, a server redirect) stores them and
+	 * continues, keeping its URL fragment. A seed that is still waiting when the page closes fails the test.
+	 *
+	 * @param key The key.
+	 * @param value The value: a string, or the type of the key's codec.
+	 * @param entries Several keys and values.
+	 * @param options `{ origin }`: the origin to seed. Defaults to the helper's origin, which a page object's helper has.
+	 * @throws When there is no origin (`Shop.SessionStorage.seed: an origin is required; pass { origin } or construct
+	 * the helper with one`); later, at the navigation or when the page closes, failing the test with the line of this
+	 * call in the stack, when a service worker or a later route answered the navigation, when a form POST cannot be
+	 * re-issued, or when the seed was never applied.
+	 *
+	 * @example
+	 * ```ts
+	 * await loginPage.sessionStorage.seed({ token: "eyJ…" });
+	 * await loginPage.navigation.goto(); // the app's first script already sees the token
+	 * ```
 	 */
 	seed<K extends string>(key: K, value: Decoded<S, K>, options?: SeedOptions): Promise<void>;
 	seed<E extends Record<string, unknown>>(entries: EntriesFor<S, E>, options?: SeedOptions): Promise<void>;

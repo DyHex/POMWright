@@ -11,9 +11,17 @@ export type LocatorSchemaPathError<S extends string, Reason extends string> = [
 ];
 
 /**
- * The path rules as a type: `S` itself when it is a well-formed path (not empty, no leading,
- * trailing or consecutive `.`, no whitespace), otherwise a tuple naming the rule it breaks. A wide
+ * The path rules as a type: `S` itself when it is a well-formed path (not empty, no leading, trailing or consecutive
+ * `.`, no whitespace), otherwise a tuple naming the rule it breaks, which TypeScript shows in the error. A wide
  * `string` is not checked here; the runtime check applies to every path.
+ *
+ * @example
+ * ```ts
+ * type Checked = LocatorSchemaPathFormat<"main..list">;
+ * // ["Invalid locator schema path", "String can't contain consecutive '.'", "main..list"]
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/types/#locatorschemapathformat
  */
 export type LocatorSchemaPathFormat<S extends string> = string extends S
 	? // If S is a wide string (not a literal union), don't try to deeply validate
@@ -249,14 +257,26 @@ export type FilterLocatorReference<
 > = Locator | AllowedPaths;
 
 /**
- * The argument of `filter`: Playwright's filter options, where `has` and `hasNot` take a Playwright
- * `Locator` or a registered path (resolved terminal-only when the chain is resolved).
+ * The argument of `filter`: Playwright's `locator.filter()` options (`hasText`, `hasNotText`, `has`, `hasNot`,
+ * `visible`), where `has` and `hasNot` also take a registered path.
+ *
+ * @example
+ * ```ts
+ * export const withBadge: FilterDefinition<Paths> = { has: "list.item.badge" };
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/types/#filterdefinition
  */
 export type FilterDefinition<
 	LocatorSchemaPathType extends string,
 	AllowedPaths extends string = RegistryPath<LocatorSchemaPathType>,
 > = Omit<PlaywrightFilterDefinition, "has" | "hasNot"> & {
+	/**
+	 * Keeps the elements that contain this one: a Playwright `Locator`, or a registered path, resolved to that path's
+	 * own locator without its ancestors, since Playwright looks for it inside each element being filtered.
+	 */
 	has?: FilterLocatorReference<LocatorSchemaPathType, AllowedPaths>;
+	/** Keeps the elements that do not contain this one: a Playwright `Locator`, or a registered path, as for `has`. */
 	hasNot?: FilterLocatorReference<LocatorSchemaPathType, AllowedPaths>;
 };
 
@@ -297,5 +317,10 @@ export type LocatorUpdate =
 	| LocatorUpdateFor<TestIdDefinition>
 	| LocatorUpdateFor<IdDefinition>;
 
-/** The argument of `nth`: an index as Playwright's `locator.nth()` takes it, `"first"` or `"last"`. */
+/**
+ * The argument of `nth`: a number, as Playwright's `locator.nth()` takes it (`-1` is the last element), `"first"` or
+ * `"last"`.
+ *
+ * @see https://dyhex.github.io/POMWright/api/types/#indexselector
+ */
 export type IndexSelector = number | "first" | "last";

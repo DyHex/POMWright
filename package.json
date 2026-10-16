@@ -41,7 +41,7 @@
 		"lint": "biome check --error-on-warnings .",
 		"format": "biome format --write .",
 		"harness:install": "bash pack-build.sh && pnpm -C test install --frozen-lockfile",
-		"typecheck": "tsc --noEmit -p test && tsc -p test/tsconfig.declarations.json && node scripts/check-doc-snippets.mjs",
+		"typecheck": "tsc --noEmit -p test && tsc -p test/tsconfig.declarations.json && node scripts/check-doc-snippets.mjs && node scripts/check-api-coverage.mjs",
 		"pack-test": "bash pack-test.sh",
 		"test:unit": "vitest run",
 		"test": "pnpm test:unit && pnpm pack-test"

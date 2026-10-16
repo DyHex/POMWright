@@ -14,35 +14,63 @@ import {
 } from "./locators";
 
 /**
- * PageObjectTypeOptions, the second type argument of PageObject. `baseUrlType` and `urlPathType`
- * declare which of baseUrl and urlPath are RegExps; both default to string.
- * With two strings, fullUrl is the resolved URL string and every navigation method is available.
- * When either is a RegExp, fullUrl is a UrlMatcher (the base is matched against the URL's origin,
- * the path against the rest), `goto()` without a target is unavailable, and on a RegExp baseUrl
- * `goto(target)` accepts only absolute URLs.
+ * The second type argument of `PageObject`, types only: whether `baseUrl` and `urlPath` are RegExps, and the session
+ * storage schema. With two string parts, `fullUrl` is a string and every navigation method exists. With a RegExp in
+ * either part, `fullUrl` is a `UrlMatcher`, `goto()` without a target does not exist, and on a RegExp `baseUrl`
+ * `goto(target)` takes an absolute URL only.
  *
- * `storage` names the session storage schema (codecs by key) the page object passes to its
- * `sessionStorage` helper, so `set`, `get` and `seed` are typed per key. It travels in this options
- * bag rather than in a generic of its own because generics cannot be skipped: a subclass with a
- * schema would otherwise have to spell out the URL defaults.
+ * @example
+ * ```ts
+ * const orderStorage = { cart: json<{ items: string[] }>() };
+ * class OrderPage extends PageObject<Paths, { urlPathType: RegExp; storage: typeof orderStorage }> {}
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/types/#pageobjecttypeoptions
  */
 export type PageObjectTypeOptions = {
+	/** `RegExp` when the page object's `baseUrl` is a RegExp tested against the origin. Defaults to `string`. */
 	baseUrlType?: string | RegExp;
+	/** `RegExp` when the page object's `urlPath` is a RegExp tested against the rest of the URL. Defaults to `string`. */
 	urlPathType?: string | RegExp;
+	/**
+	 * The type of the session storage schema, `typeof schema`, so `sessionStorage.set`, `get` and `seed` are typed per
+	 * key; the schema itself goes in the constructor's `sessionStorage` option.
+	 */
 	storage?: SessionStorageSchema;
 };
 
+/**
+ * The type of `baseUrl` for a `PageObjectTypeOptions`: `RegExp` when `baseUrlType` is `RegExp`, otherwise `string`.
+ *
+ * @see https://dyhex.github.io/POMWright/api/types/#baseurltypefromoptions
+ */
 export type BaseUrlTypeFromOptions<T extends PageObjectTypeOptions> = T extends { baseUrlType: RegExp }
 	? RegExp
 	: string;
+/**
+ * The type of `urlPath` for a `PageObjectTypeOptions`: `RegExp` when `urlPathType` is `RegExp`, otherwise `string`.
+ *
+ * @see https://dyhex.github.io/POMWright/api/types/#urlpathtypefromoptions
+ */
 export type UrlPathTypeFromOptions<T extends PageObjectTypeOptions> = T extends { urlPathType: RegExp }
 	? RegExp
 	: string;
+/**
+ * The type of `fullUrl` for a `PageObjectTypeOptions`: `UrlMatcher` when either part is a RegExp, otherwise `string`.
+ * A type of your own that looks at `fullUrl` tests it against `UrlMatcher`, not `RegExp`.
+ *
+ * @see https://dyhex.github.io/POMWright/api/types/#fullurltypefromoptions
+ */
 export type FullUrlTypeFromOptions<T extends PageObjectTypeOptions> = T extends
 	| { baseUrlType: RegExp }
 	| { urlPathType: RegExp }
 	? UrlMatcher
 	: string;
+/**
+ * The session storage schema type for a `PageObjectTypeOptions`: its `storage`, or no declared keys.
+ *
+ * @see https://dyhex.github.io/POMWright/api/types/#storagetypefromoptions
+ */
 export type StorageTypeFromOptions<T extends PageObjectTypeOptions> = T extends {
 	storage: infer S extends SessionStorageSchema;
 }
@@ -50,16 +78,30 @@ export type StorageTypeFromOptions<T extends PageObjectTypeOptions> = T extends 
 	: Record<never, never>;
 
 /**
- * The options of the `PageObject` constructor, for a domain base class that forwards them. `Options` is the
- * page object's `PageObjectTypeOptions`, which types the session storage schema.
+ * The options of the `PageObject` constructor, for a base class of your own that forwards them. `Options` is the page
+ * object's `PageObjectTypeOptions`, which types the session storage schema.
+ *
+ * @example
+ * ```ts
+ * abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
+ *   protected constructor(page: Page, urlPath: string, options?: PageObjectOptions) {
+ *     super(page, "https://shop.example", urlPath, { ...options, locators: { strictChains: true } });
+ *   }
+ * }
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/types/#pageobjectoptions
  */
 export type PageObjectOptions<Options extends PageObjectTypeOptions = { baseUrlType: string; urlPathType: string }> = {
+	/** The name in the page object's step titles and error messages. Defaults to the class name. */
 	label?: string;
+	/** Defaults for every navigation method of `navigation` (`waitUntil`, `timeout`); a call's own options win. */
 	navOptions?: NavigationOptions;
+	/** `{ schema }`: the codecs of the session storage keys that hold structured values, typed by `Options["storage"]`. */
 	sessionStorage?: { schema?: StorageTypeFromOptions<Options> };
 	/**
-	 * Registry options. `strictChains: true` makes the automatic `verify()` require every ancestor of
-	 * every registered path to be registered as well; set it once in a domain base class.
+	 * The registry's options: `strictChains: true` makes the check after `defineLocators()` require every ancestor of
+	 * every registered path to be registered as well; set it once in a base class of your own.
 	 */
 	locators?: LocatorRegistryOptions;
 };
