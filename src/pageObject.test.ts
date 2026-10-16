@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, type MockInstance, vi } from "vitest";
 import { type GetNestedLocatorAccessor, type LocatorRegistry, LocatorRegistryInternal } from "./locators";
-import { PageObject } from "./pageObject";
+import { PageObject, type PageObjectOptions } from "./pageObject";
 
 // Construction touches no Page method, so a chainable stub that records the strategy calls is enough;
 // what the locators match is covered by the integration specs against the real page.
@@ -491,3 +491,47 @@ const typeContract = (po: Counting) => {
 	po.types();
 };
 void [EmptyHook, NullHook, AnnotatedHook, NoDefine, typeContract];
+
+describe("the URL parts at construction", () => {
+	class FromVariables extends PageObject<Paths> {
+		constructor(page: Page, baseUrl: unknown, urlPath: unknown) {
+			super(page, baseUrl as string, urlPath as string, { label: "FromVariables" });
+		}
+		protected defineLocators() {}
+	}
+
+	it("a part that is neither a string nor a RegExp throws with the label and schedules nothing", () => {
+		const { page } = createStubPage();
+		for (const [baseUrl, urlPath, message] of [
+			[undefined, "/login", "FromVariables: baseUrl must be a string or a RegExp; received undefined."],
+			[null, "/login", "FromVariables: baseUrl must be a string or a RegExp; received null."],
+			[BASE, undefined, "FromVariables: urlPath must be a string or a RegExp; received undefined."],
+		] as const) {
+			const { error, scheduled } = construct(() => new FromVariables(page, baseUrl, urlPath));
+			expect((error as Error).message).toBe(message);
+			expect(scheduled).toHaveLength(0);
+		}
+	});
+});
+
+describe("PageObjectOptions", () => {
+	it("is the constructor's options, so a domain base class forwards them by name", () => {
+		abstract class Domain<P extends string> extends PageObject<P> {
+			protected constructor(page: Page, urlPath: string, options?: PageObjectOptions) {
+				super(page, BASE, urlPath, { ...options, locators: { strictChains: true, ...options?.locators } });
+			}
+		}
+		class Login extends Domain<Paths> {
+			constructor(page: Page) {
+				super(page, "/login", { label: "Login", navOptions: { timeout: 1 } });
+			}
+			protected defineLocators() {
+				this.add("main").locator("main");
+			}
+		}
+		const { instance, runCheck } = construct(() => new Login(createStubPage().page));
+		expect(runCheck).not.toThrow();
+		expect(instance.label).toBe("Login");
+		expectTypeOf<PageObjectOptions["locators"]>().toEqualTypeOf<{ strictChains?: boolean } | undefined>();
+	});
+});

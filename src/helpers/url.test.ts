@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
 	assertBaseUrl,
+	assertUrlPart,
 	assertUrlPath,
 	composeFullUrl,
 	createUrlMatcher,
@@ -184,5 +185,54 @@ describe("composeFullUrl", () => {
 		expectTypeOf(composeFullUrl("https://app.example", /\/login/)).toEqualTypeOf<UrlMatcher>();
 		expectTypeOf(composeFullUrl(/app/, "/login")).toEqualTypeOf<UrlMatcher>();
 		expectTypeOf(composeFullUrl(/app/, /login/)).toEqualTypeOf<UrlMatcher>();
+	});
+});
+
+describe("string paths as the browser reports them", () => {
+	const paths = ["/søk", "/a b", "/a/./b", "/a/../b", "/x?q=a b", "/x#frag ment", "/café?q=ø"];
+
+	it("a page object's matcher accepts its own fullUrl, whatever new URL encodes or resolves", () => {
+		for (const path of paths) {
+			const fullUrl = composeFullUrl("https://shop.example", path);
+			expect(createUrlMatcher("https://shop.example", path).test(fullUrl), path).toBe(true);
+			expect(createUrlMatcher(/shop\.example/, path).test(fullUrl), `RegExp base, ${path}`).toBe(true);
+		}
+		expect(composeFullUrl("https://shop.example", "/søk")).toBe("https://shop.example/s%C3%B8k");
+	});
+
+	it("still tells pages apart: another path, a query or a hash is another page", () => {
+		const search = createUrlMatcher("https://shop.example", "/søk");
+		expect(search.test("https://shop.example/s%C3%B8k")).toBe(true);
+		expect(search.test("https://shop.example/s%C3%B8k?q=1")).toBe(false);
+		expect(search.test("https://shop.example/sok")).toBe(false);
+	});
+
+	it("describes a string path in the form it is compared in", () => {
+		expect(String(createUrlMatcher("https://shop.example", "/søk"))).toBe(
+			'origin "https://shop.example" + path "/s%C3%B8k"',
+		);
+		expect(createUrlMatcher("https://shop.example", "/søk").path).toBe("/søk");
+	});
+});
+
+describe("assertUrlPart", () => {
+	it("accepts a string or a RegExp and names anything else", () => {
+		expect(() => assertUrlPart("baseUrl", "https://a.example", "Poc")).not.toThrow();
+		expect(() => assertUrlPart("urlPath", /x/, "Poc")).not.toThrow();
+		const cases: [unknown, string][] = [
+			[undefined, "undefined"],
+			[null, "null"],
+			[9000, "9000"],
+			[{}, "an object"],
+			[["/x"], "an object"],
+		];
+		for (const [value, received] of cases) {
+			expect(() => assertUrlPart("baseUrl", value, "Poc")).toThrowError(
+				`Poc: baseUrl must be a string or a RegExp; received ${received}.`,
+			);
+		}
+		expect(() => assertUrlPart("urlPath", undefined, "Poc")).toThrowError(
+			"Poc: urlPath must be a string or a RegExp; received undefined.",
+		);
 	});
 });

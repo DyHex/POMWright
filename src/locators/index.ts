@@ -6,6 +6,7 @@ export type {
 	GetLocatorSchemaAccessor,
 	GetNestedLocatorAccessor,
 	LocatorRegistry,
+	LocatorRegistryOptions,
 	LocatorSchemaPathArgument,
 } from "./locatorRegistry";
 export { createRegistryWithAccessors, LocatorRegistryInternal } from "./locatorRegistry";

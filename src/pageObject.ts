@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { atCallSite, captureCallSite } from "./helpers/callSite";
 import { createNavigation, type NavigationFor, type NavigationOptions } from "./helpers/navigation";
 import { SessionStorage, type SessionStorageSchema } from "./helpers/sessionStorage";
-import { assertBaseUrl, assertUrlPath, composeFullUrl, type UrlMatcher } from "./helpers/url";
+import { assertBaseUrl, assertUrlPart, assertUrlPath, composeFullUrl, type UrlMatcher } from "./helpers/url";
 import {
 	type AddAccessor,
 	createRegistryWithAccessors,
@@ -10,6 +10,7 @@ import {
 	type GetLocatorSchemaAccessor,
 	type GetNestedLocatorAccessor,
 	type LocatorRegistry,
+	type LocatorRegistryOptions,
 } from "./locators";
 
 /**
@@ -49,6 +50,21 @@ export type StorageTypeFromOptions<T extends PageObjectTypeOptions> = T extends 
 	: Record<never, never>;
 
 /**
+ * The options of the `PageObject` constructor, for a domain base class that forwards them. `Options` is the
+ * page object's `PageObjectTypeOptions`, which types the session storage schema.
+ */
+export type PageObjectOptions<Options extends PageObjectTypeOptions = { baseUrlType: string; urlPathType: string }> = {
+	label?: string;
+	navOptions?: NavigationOptions;
+	sessionStorage?: { schema?: StorageTypeFromOptions<Options> };
+	/**
+	 * Registry options. `strictChains: true` makes the automatic `verify()` require every ancestor of
+	 * every registered path to be registered as well; set it once in a domain base class.
+	 */
+	locators?: LocatorRegistryOptions;
+};
+
+/**
  * Base class for page objects. `defineLocators()` does not run inside this constructor, where the
  * subclass has not stored anything yet: it runs, followed by `verify()`, right after the code that
  * called `new` has finished (a check scheduled as the constructor's last statement), or at the first
@@ -79,20 +95,14 @@ export abstract class PageObject<
 		page: Page,
 		baseUrl: BaseUrlTypeFromOptions<Options>,
 		urlPath: UrlPathTypeFromOptions<Options>,
-		options?: {
-			label?: string;
-			navOptions?: NavigationOptions;
-			sessionStorage?: { schema?: StorageTypeFromOptions<Options> };
-			/**
-			 * Registry options. `strictChains: true` makes the automatic `verify()` require every ancestor of
-			 * every registered path to be registered as well; set it once in a domain base class.
-			 */
-			locators?: { strictChains?: boolean };
-		},
+		options?: PageObjectOptions<Options>,
 	) {
 		this.page = page;
 		const label = options?.label ?? this.constructor.name;
 		this.label = label;
+		// a value from an unset variable is neither: it would build a page object that never matches
+		assertUrlPart("baseUrl", baseUrl, label);
+		assertUrlPart("urlPath", urlPath, label);
 		if (typeof baseUrl === "string") {
 			assertBaseUrl(baseUrl, label);
 		}
