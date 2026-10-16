@@ -272,3 +272,68 @@ test("baseUrl and urlPath can come from variables", async ({ page }) => {
 	await nav.navigation.goto();
 	await nav.navigation.expectThisPage();
 });
+
+class SearchNav extends PageObject<"body"> {
+	constructor(page: Page) {
+		super(page, BASE, "/testnav/item/søk", { label: "SearchNav" });
+	}
+	protected defineLocators() {
+		this.add("body").locator("body");
+	}
+}
+
+test("a non-ASCII path is compared as the browser reports it: goto, expectThisPage and expectAnotherPage", async ({
+	page,
+	testNav,
+}) => {
+	const search = new SearchNav(page);
+	expect(search.fullUrl).toBe(`${BASE}/testnav/item/s%C3%B8k`);
+	await search.navigation.goto();
+	expect(page.url()).toBe(search.fullUrl);
+	await search.navigation.expectThisPage({ timeout: 2_000 });
+	await expect(search.navigation.expectAnotherPage({ timeout: 500 })).rejects.toThrow(
+		`SearchNav: expected to have left "${search.fullUrl}"`,
+	);
+	await testNav.navigation.goto();
+	await search.navigation.expectAnotherPage();
+});
+
+class DelayedItemNav extends PageObject<"body"> {
+	constructor(page: Page, navOptions: NavigationOptions) {
+		super(page, BASE, "/testnav/item/7", { label: "DelayedItemNav", navOptions });
+	}
+	protected defineLocators() {
+		this.add("body").locator("body");
+	}
+}
+
+test.describe("the page object's navOptions are the defaults of every navigation method", () => {
+	test("navOptions.timeout bounds expectThisPage", async ({ page, testNav }) => {
+		await testNav.navigation.goto();
+		const item = new DelayedItemNav(page, { timeout: 300 });
+		await page.locator("#delayed-item").click(); // navigates after 1.5 s
+		const started = Date.now();
+		await expect(item.navigation.expectThisPage()).rejects.toThrow("Timeout 300ms exceeded");
+		expect(Date.now() - started).toBeLessThan(1_400);
+		await item.navigation.expectThisPage({ timeout: 5_000 }); // a per-call option wins
+	});
+
+	test("navOptions.waitUntil decides what goto waits for", async ({ page }) => {
+		let release: () => void = () => {};
+		const held = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		await page.route(`${BASE}/testnav/item/7`, (route) =>
+			route.fulfill({ contentType: "text/html", body: '<p>item</p><img src="/testnav/held.png">' }),
+		);
+		await page.route(`${BASE}/testnav/held.png`, async (route) => {
+			await held;
+			await route.fulfill({ status: 404 });
+		});
+		const committed = new DelayedItemNav(page, { waitUntil: "commit" });
+		await committed.navigation.goto();
+		expect(await page.evaluate(() => document.readyState)).not.toBe("complete");
+		await expect(committed.navigation.goto({ waitUntil: "load", timeout: 500 })).rejects.toThrow("Timeout 500ms");
+		release();
+	});
+});

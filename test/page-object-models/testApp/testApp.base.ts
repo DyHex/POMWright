@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import {
-	type NavigationOptions,
 	PageObject,
+	type PageObjectOptions,
 	type PageObjectTypeOptions,
 	type StorageTypeFromOptions,
 	type UrlPathTypeFromOptions,
@@ -20,11 +20,7 @@ export default abstract class TestApp<
 	protected constructor(
 		page: Page,
 		urlPath: UrlPathTypeFromOptions<BaseOptions<Options>>,
-		options?: {
-			label?: string;
-			navOptions?: NavigationOptions;
-			sessionStorage?: { schema?: StorageTypeFromOptions<Options> };
-		},
+		options?: PageObjectOptions<BaseOptions<Options>>,
 	) {
 		super(page, "http://localhost:9000", urlPath, options);
 	}

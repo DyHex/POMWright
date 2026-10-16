@@ -527,6 +527,97 @@ test.describe("seed", () => {
 	});
 });
 
+test.describe("seed and the URL fragment", () => {
+	// the fixture page's app is the startup snapshot; location.hash is what a hash-routed app would route by
+	const hash = (page: Page) => page.evaluate(() => location.hash);
+	const seedSecond = async (testStorage: TestStorage, second: { sessionStorage: TestStorage["sessionStorage"] }) => {
+		await testStorage.navigation.goto();
+		await second.sessionStorage.seed({ token: "from-A" });
+	};
+
+	test("a seeded goto keeps the fragment", async ({ page, testStorage, testStorageSecond }) => {
+		await seedSecond(testStorage, testStorageSecond);
+		await page.goto(`${B}/teststorage#/orders/7`);
+		await expect(page).toHaveURL(`${B}/teststorage#/orders/7`);
+		expect(await startup(page)).toEqual({ token: "from-A" });
+		expect(await hash(page)).toBe("#/orders/7");
+	});
+
+	test("a server redirect from a URL with a fragment keeps it, as the browser does without a seed", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		const redirect = `${A}/teststorage/redirect?status=302&to=${encodeURIComponent(`${B}/teststorage?hop=302`)}`;
+		await seedSecond(testStorage, testStorageSecond);
+		await page.goto(`${redirect}#/orders/7`);
+		await page.waitForURL(onSecondOrigin);
+		expect(page.url()).toBe(`${B}/teststorage?hop=302#/orders/7`);
+		expect(await startup(page)).toEqual({ token: "from-A" });
+	});
+
+	test("a Location with its own fragment keeps that one: a callback with a token", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		const callback = `${B}/teststorage?hop=callback#access_token=abc&state=xyz`;
+		await seedSecond(testStorage, testStorageSecond);
+		await page.goto(`${A}/teststorage/redirect?status=302&to=${encodeURIComponent(callback)}#/ignored`);
+		await page.waitForURL(onSecondOrigin);
+		expect(page.url()).toBe(callback);
+		expect(await startup(page)).toEqual({ token: "from-A" });
+		expect(await hash(page)).toBe("#access_token=abc&state=xyz");
+	});
+
+	test("a form POST to an action with a fragment keeps it", async ({ page, testStorage, testStorageSecond }) => {
+		await seedSecond(testStorage, testStorageSecond);
+		await page.evaluate((action) => {
+			(document.getElementById("post-to-second-origin") as HTMLFormElement).action = action;
+		}, `${B}/teststorage#/after`);
+		await testStorage.getLocator("body.button@submitToSecondOrigin").click();
+		await page.waitForURL(onSecondOrigin);
+		expect(page.url()).toBe(`${B}/teststorage#/after`);
+		await expect(page.locator("#method")).toHaveText("POST");
+		expect(await startup(page)).toEqual({ token: "from-A" });
+	});
+
+	for (const status of [307, 308]) {
+		test(`a form POST answered by a ${status} from a URL with a fragment keeps the method, the body and the fragment`, async ({
+			page,
+			testStorage,
+			testStorageSecond,
+		}) => {
+			await seedSecond(testStorage, testStorageSecond);
+			await page.evaluate((action) => {
+				(document.getElementById("post-307") as HTMLFormElement).action = action;
+			}, `/teststorage/login${status}#/after`);
+			await testStorage.getLocator("body.button@submit307").click();
+			await page.waitForURL(onSecondOrigin);
+			expect(page.url()).toBe(`${B}/teststorage?hop=${status}#/after`);
+			await expect(page.locator("#method")).toHaveText("POST");
+			expect(await readJson(page, "posted")).toEqual({ u: "x y" });
+			expect(await startup(page)).toEqual({ token: "from-A" });
+		});
+	}
+
+	for (const target of [`${B}/teststorage`, `${B}/teststorage#section`]) {
+		test(`goto returns on the app's document, not before it, for ${target}`, async ({
+			page,
+			testStorage,
+			testStorageSecond,
+		}) => {
+			for (let round = 0; round < 3; round++) {
+				await seedSecond(testStorage, testStorageSecond);
+				await page.goto(target);
+				// no auto-waiting here: these read whatever document goto returned on
+				expect(await page.title()).toBe("Session storage playground");
+				expect(page.url()).toBe(target);
+			}
+		});
+	}
+});
+
 test.describe("iframes", () => {
 	test("a same-origin iframe shares the main frame's storage, and a hop started inside a cross-origin iframe is seeded", async ({
 		page,

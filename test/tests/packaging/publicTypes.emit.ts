@@ -2,7 +2,7 @@
 // functions return pomwright's builders and seeds without annotations. It emits only if each type can be named
 // from "pomwright". Playwright does not match the file name.
 import type { Page } from "@playwright/test";
-import { createRegistryWithAccessors, type LocatorRegistry, step } from "pomwright";
+import { createRegistryWithAccessors, type LocatorRegistry, PageObject, type PageObjectOptions, step } from "pomwright";
 
 export type Paths = "main" | "main.heading" | "list" | "list.item";
 
@@ -44,3 +44,12 @@ export class Steps {
 		return 1;
 	}
 }
+
+// a domain base class that forwards the constructor options by name (plan 10, R1)
+export abstract class DomainPage<P extends string> extends PageObject<P> {
+	protected constructor(page: Page, urlPath: string, options?: PageObjectOptions) {
+		super(page, "https://app.example", urlPath, options);
+	}
+}
+
+export const strictOptions = (options?: PageObjectOptions) => ({ ...options, locators: { strictChains: true } });

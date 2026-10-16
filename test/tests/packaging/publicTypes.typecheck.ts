@@ -17,6 +17,7 @@ import {
 	json,
 	type LocatorQueryBuilder,
 	type LocatorRegistry,
+	type LocatorRegistryOptions,
 	type LocatorSchemaPathArgument,
 	type LocatorSchemaPathFormat,
 	type LocatorUpdateBuilder,
@@ -25,6 +26,7 @@ import {
 	type NavigationFor,
 	type NavigationOptions,
 	PageObject,
+	type PageObjectOptions,
 	type PageObjectTypeOptions,
 	PlaywrightReportLogger,
 	type ReusableLocator,
@@ -181,8 +183,10 @@ class Steps {
 const copy = add("main.heading", { reuse: "list" }).filter({ hasText: "x" }).nth(0).describe("Copy");
 // @ts-expect-error no strategy override after a path: TypeScript does not know the path's strategy
 add("main.heading", { reuse: "list" }).getByRole("heading");
+// biome-ignore lint/suspicious/noConfusingVoidType: the probe asserts that path reuse is no longer void
+type VoidResult = void;
 // @ts-expect-error path reuse is no longer void
-const voidCopy: void = add("main.heading", { reuse: "list" });
+const voidCopy: VoidResult = add("main.heading", { reuse: "list" });
 
 // seed methods return a seed of the same strategy
 const narrowed: ReusableLocator<Paths, "role"> = roleSeed.filter({ hasText: "x" }).nth(0).describe("d");
@@ -244,7 +248,42 @@ add("list").locator(null);
 // @ts-expect-error a seed's own factory keeps Playwright's option types
 registry.createReusable.getByRole("button", null);
 
+// PageObjectOptions and LocatorRegistryOptions name what a domain base class forwards (plan 10, R1)
+const registryOptions: LocatorRegistryOptions = { strictChains: true };
+abstract class DomainPage<P extends string> extends PageObject<P> {
+	protected constructor(page: Page, urlPath: string, options?: PageObjectOptions) {
+		super(page, "https://app.example", urlPath, { ...options, locators: { strictChains: true, ...options?.locators } });
+	}
+}
+class DomainLogin extends DomainPage<Paths> {
+	constructor(page: Page) {
+		super(page, "/login", { label: "Login", navOptions: { timeout: 1 }, locators: registryOptions });
+	}
+	protected defineLocators(): void {
+		this.add("main").locator("main");
+	}
+}
+// @ts-expect-error locators takes the registry options
+const wrongOptions: PageObjectOptions = { locators: { strictChains: "yes" } };
+
+// every seeded override accepts no argument and keeps the seed's definition, as update() does (plan 10, R12)
+add("main", { reuse: roleSeed }).getByRole().nth(0);
+add("main", { reuse: textSeed }).getByText();
+add("main", { reuse: locatorSeed }).locator();
+add("main", { reuse: testIdSeed }).getByTestId();
+add("main", { reuse: idSeed }).getById();
+// @ts-expect-error unseeded add still requires the first argument
+add("list").getByRole();
+// @ts-expect-error unseeded add still requires the first argument
+add("list").getByTestId();
+
+// a seeded builder held in a variable takes its one override before or after steps (plan 10, R8)
+const held = add("main", { reuse: roleSeed });
+held.nth(0);
+held.getByRole({ name: "Cancel" });
+
 export type Probe = [Urls, Storage, Navigation, Logging, UrlTypeOptions];
+void [DomainLogin, wrongOptions];
 void [accessors, typedRegistry, options, values, afterUpdate, afterReplace, notAValue, wrongSeed, misspelt];
 void [wellFormed, malformed, ListPage, arrayHas, Steps];
 void [copy, voidCopy, narrowed, strictRegistry, StrictPage];

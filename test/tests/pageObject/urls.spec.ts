@@ -66,3 +66,13 @@ test("accepts origins with a port or a trailing slash, an empty path, and values
 	expect(new Probe(page, baseUrl, urlPath).fullUrl).toBe("http://localhost:9000/testnav");
 	expect(typeof new RegExpPathProbe(page, baseUrl, /^\/x$/).fullUrl).toBe("function");
 });
+
+test("a URL part from an unset variable throws at construction, naming the page object", async ({ page }) => {
+	const unset = (process.env as Record<string, string | undefined>).POMWRIGHT_UNSET_BASE_URL;
+	expect(() => new Probe(page, unset as string, "/login")).toThrowError(
+		"Probe: baseUrl must be a string or a RegExp; received undefined.",
+	);
+	expect(() => new Probe(page, "http://localhost:9000", unset as string)).toThrowError(
+		"Probe: urlPath must be a string or a RegExp; received undefined.",
+	);
+});

@@ -233,7 +233,9 @@ test("the duplicate-registration message shows a Locator in a step as Playwright
 	} catch (error) {
 		message = (error as Error).message;
 	}
-	expect(message).toMatch(/^A locator schema with the path "item" already exists\.\nExisting Schema: \{/);
+	expect(message).toMatch(
+		/^A locator schema with the path "item" already exists\.\nExisting and attempted schemas: \{/,
+	);
 	expect(message).toContain(`"has": "locator('b')"`);
 	expect(message).not.toContain("_guid");
 	expect(message).not.toContain("_frame");

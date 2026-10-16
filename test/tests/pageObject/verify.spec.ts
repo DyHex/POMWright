@@ -76,13 +76,32 @@ test("a page object with a mistyped has reference throws at its first use, namin
 
 test("the fixture page objects all verify", async ({
 	iframePage,
+	testPage,
+	testPath,
+	color,
 	testFilters,
 	testIds,
 	testNav,
+	testNavItem,
 	testStorage,
-	testPage,
+	testStorageTwin,
+	testStorageSecond,
 }) => {
-	for (const poc of [iframePage, testFilters, testIds, testNav, testStorage, testPage]) {
-		expect(poc.label).toBeTruthy();
+	// a first use rethrows a failed verification, so each of these fails by its own assertion
+	const firstUses = [
+		() => iframePage.getLocator("sectionA"),
+		() => testPage.getLocator("topMenu"),
+		() => testPath.getLocator("body"),
+		() => color.getLocator("body"),
+		() => testFilters.getLocator("one"),
+		() => testIds.getLocator("body"),
+		() => testNav.getLocator("body"),
+		() => testNavItem.getLocator("body"),
+		() => testStorage.getLocator("body"),
+		() => testStorageTwin.getLocator("body"),
+		() => testStorageSecond.getLocator("body"),
+	];
+	for (const firstUse of firstUses) {
+		expect(firstUse).not.toThrow();
 	}
 });

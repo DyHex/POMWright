@@ -470,6 +470,10 @@ app.post("/teststorage/login307", (_req, res) => {
 	res.redirect(307, `${SECOND_ORIGIN}/teststorage?hop=307`);
 });
 
+app.post("/teststorage/login308", (_req, res) => {
+	res.redirect(308, `${SECOND_ORIGIN}/teststorage?hop=308`);
+});
+
 app.get("/teststorage/api", (_req, res) => {
 	res.set("Access-Control-Allow-Origin", "*");
 	res.json({ ok: true });

@@ -6,6 +6,8 @@ const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegi
 
 const errMsg = "No locator schema registered for path";
 const render = (locator: { describe: (description: string) => unknown }) => `${locator.describe("")}`;
+const anyFrameSteps = (method: string, part: string) =>
+	`${method} cannot apply to "${part}": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.`;
 const noElement = (part: string) =>
 	`frameLocator() without a selector does not point to a particular iframe; "${part}" cannot be resolved on its own, filtered or indexed; resolve a path inside it.`;
 
@@ -185,9 +187,16 @@ test("the any-frame segment has no element: no terminal form, no reference, no s
 
 	expect(() => registry.getLocator("anyFrame")).toThrowError(noElement("anyFrame"));
 	expect(() => registry.getNestedLocator("anyFrame")).toThrowError(noElement("anyFrame"));
-	expect(() => registry.getLocatorSchema("anyFrame.button").nth("anyFrame", 1)).toThrowError(noElement("anyFrame"));
+	// a step in a query gets the message add gives (plan 10, R11)
+	expect(() => registry.getLocatorSchema("anyFrame.button").nth("anyFrame", 1)).toThrowError(
+		anyFrameSteps("nth()", "anyFrame"),
+	);
 	expect(() => registry.getLocatorSchema("anyFrame.button").filter("anyFrame", { visible: true })).toThrowError(
-		noElement("anyFrame"),
+		anyFrameSteps("filter()", "anyFrame"),
+	);
+	// replacing with the any-frame form is refused at the call where it can never resolve (plan 10, R7)
+	expect(() => registry.getLocatorSchema("anyFrame.button").replace().frameLocator()).toThrowError(
+		'replace() cannot apply to "anyFrame.button": it is the path this query resolves, and frameLocator() without a selector has no element to resolve to; replace an ancestor instead.',
 	);
 
 	registry.add("section").locator("section").filter({ has: "anyFrame" });
