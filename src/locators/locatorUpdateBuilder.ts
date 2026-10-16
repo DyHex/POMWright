@@ -113,8 +113,23 @@ const buildReplacementDefinition = (updates: LocatorUpdate, path: string): Locat
 };
 
 /**
- * What `getLocatorSchema(path).update(subPath?)` (`Mode` `"update"`) and `replace(subPath?)` (`Mode`
- * `"replace"`) return: the ten strategy methods, each returning the query builder.
+ * What a query's `update(subPath?)` and `replace(subPath?)` return: the ten locator methods, each of which changes the
+ * segment's locator in the query and returns the query.
+ *
+ * - `update` (`Mode` `"update"`) keeps the registered strategy: call the method of that strategy with a patch in JSON
+ *   Merge Patch form. A given first argument replaces the registered one; the options merge key by key, a `null` key
+ *   deletes one, a lone `null` deletes them all, and an omitted value keeps what is registered. Another strategy's
+ *   method throws and names `replace`.
+ * - `replace` (`Mode` `"replace"`) installs a locator of any strategy, with the arguments of Playwright's own method:
+ *   the first argument required, Playwright's options.
+ *
+ * @example
+ * ```ts
+ * registry.getLocatorSchema("main.button@save").update().getByRole({ name: "Cancel" }).getNestedLocator();
+ * registry.getLocatorSchema("main.button@save").replace().getByText("Save").getNestedLocator();
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/
  */
 export type LocatorUpdateBuilder<
 	LocatorSchemaPathType extends string,
@@ -136,16 +151,21 @@ export class LocatorUpdateBuilderInternal<
 	) {}
 
 	/**
-	 * Patches (`update`) or replaces (`replace`) a `getByRole` definition for the target sub-path. In
-	 * `update` mode the registered strategy must be `role`, the role is optional and the options
-	 * follow JSON Merge Patch: `{ name: null }` deletes one option, a `null` options argument deletes
-	 * them all, and `undefined` leaves them alone. In `replace` mode the arguments are those of
-	 * `page.getByRole`: the role is required and the options are Playwright's own, without `null`.
+	 * Changes the segment's locator to Playwright's `page.getByRole()`. In `update` mode the segment must be registered
+	 * with `getByRole`: the role is optional and the options follow JSON Merge Patch. In `replace` mode the arguments are
+	 * those of `page.getByRole()`, the role required.
+	 *
+	 * @param role The ARIA role.
+	 * @param options Playwright's options, such as `name` and `exact`; in `update` mode a patch, where `{ name: null }`
+	 * deletes one option and a lone `null` all of them.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "role"; use replace("main.button@save").getByRole(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("form.button").update().getByRole({ name: "Save" }).getNestedLocator();
-	 * getLocatorSchema("form.button").update().getByRole("button", null).getNestedLocator();
+	 * query.update().getByRole({ name: "Cancel" });
+	 * query.update().getByRole("button", null); // clears every option
 	 * ```
 	 */
 	getByRole(
@@ -159,12 +179,19 @@ export class LocatorUpdateBuilderInternal<
 	}
 
 	/**
-	 * Patches or replaces a `getByText` definition. In `update` mode the text is optional and the
-	 * options follow JSON Merge Patch; in `replace` mode the text is required.
+	 * Changes the segment's locator to Playwright's `page.getByText()`. In `update` mode the segment must be registered
+	 * with `getByText`: the text is optional and the options follow JSON Merge Patch. In `replace` mode the arguments are
+	 * those of `page.getByText()`, the text required.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's options (`exact`); in `update` mode a patch, where `null` deletes.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "text"; use replace("main.button@save").getByText(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("banner.message").replace().getByText(/Updated/, { exact: false }).getNestedLocator();
+	 * query.replace().getByText(/Updated/, { exact: false });
 	 * ```
 	 */
 	getByText(
@@ -178,12 +205,19 @@ export class LocatorUpdateBuilderInternal<
 	}
 
 	/**
-	 * Patches or replaces a `getByLabel` definition. In `update` mode the text is optional and the
-	 * options follow JSON Merge Patch; in `replace` mode the text is required.
+	 * Changes the segment's locator to Playwright's `page.getByLabel()`. In `update` mode the segment must be registered
+	 * with `getByLabel`: the text is optional and the options follow JSON Merge Patch. In `replace` mode the arguments
+	 * are those of `page.getByLabel()`, the text required.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's options (`exact`); in `update` mode a patch, where `null` deletes.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "label"; use replace("main.button@save").getByLabel(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("form.email").update().getByLabel({ exact: true }).getNestedLocator();
+	 * query.update().getByLabel({ exact: true });
 	 * ```
 	 */
 	getByLabel(
@@ -197,12 +231,19 @@ export class LocatorUpdateBuilderInternal<
 	}
 
 	/**
-	 * Patches or replaces a `getByPlaceholder` definition. In `update` mode the text is optional and
-	 * the options follow JSON Merge Patch; in `replace` mode the text is required.
+	 * Changes the segment's locator to Playwright's `page.getByPlaceholder()`. In `update` mode the segment must be
+	 * registered with `getByPlaceholder`: the text is optional and the options follow JSON Merge Patch. In `replace` mode
+	 * the arguments are those of `page.getByPlaceholder()`, the text required.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's options (`exact`); in `update` mode a patch, where `null` deletes.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "placeholder"; use replace("main.button@save").getByPlaceholder(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("form.search").update().getByPlaceholder({ exact: true }).getNestedLocator();
+	 * query.update().getByPlaceholder("Search orders");
 	 * ```
 	 */
 	getByPlaceholder(
@@ -216,12 +257,19 @@ export class LocatorUpdateBuilderInternal<
 	}
 
 	/**
-	 * Patches or replaces a `getByAltText` definition. In `update` mode the text is optional and the
-	 * options follow JSON Merge Patch; in `replace` mode the text is required.
+	 * Changes the segment's locator to Playwright's `page.getByAltText()`. In `update` mode the segment must be
+	 * registered with `getByAltText`: the text is optional and the options follow JSON Merge Patch. In `replace` mode the
+	 * arguments are those of `page.getByAltText()`, the text required.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's options (`exact`); in `update` mode a patch, where `null` deletes.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "altText"; use replace("main.button@save").getByAltText(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("image.logo").replace().getByAltText("Logo").getNestedLocator();
+	 * query.replace().getByAltText("Shop logo");
 	 * ```
 	 */
 	getByAltText(
@@ -235,12 +283,19 @@ export class LocatorUpdateBuilderInternal<
 	}
 
 	/**
-	 * Patches or replaces a `getByTitle` definition. In `update` mode the text is optional and the
-	 * options follow JSON Merge Patch; in `replace` mode the text is required.
+	 * Changes the segment's locator to Playwright's `page.getByTitle()`. In `update` mode the segment must be registered
+	 * with `getByTitle`: the text is optional and the options follow JSON Merge Patch. In `replace` mode the arguments
+	 * are those of `page.getByTitle()`, the text required.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's options (`exact`); in `update` mode a patch, where `null` deletes.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "title"; use replace("main.button@save").getByTitle(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("icon.info").update().getByTitle({ exact: true }).getNestedLocator();
+	 * query.update().getByTitle({ exact: true });
 	 * ```
 	 */
 	getByTitle(
@@ -254,13 +309,19 @@ export class LocatorUpdateBuilderInternal<
 	}
 
 	/**
-	 * Patches or replaces a `locator` definition. In `update` mode the selector is optional and the
-	 * options follow JSON Merge Patch; in `replace` mode the selector is required. An empty selector
-	 * is rejected in both modes.
+	 * Changes the segment's locator to Playwright's `page.locator()`. In `update` mode the segment must be registered
+	 * with `locator`: the selector is optional and the options follow JSON Merge Patch. In `replace` mode the arguments
+	 * are those of `page.locator()`, the selector required.
+	 *
+	 * @param selector A selector; an empty one is rejected in both modes.
+	 * @param options Playwright's options, such as `hasText`; in `update` mode a patch, where `null` deletes.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "locator"; use replace("main.button@save").locator(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("list.items").replace().locator("ul > li", { hasText: /Row/ }).getNestedLocator();
+	 * query.replace().locator("ul > li", { hasText: /Order/ });
 	 * ```
 	 */
 	locator(
@@ -274,14 +335,20 @@ export class LocatorUpdateBuilderInternal<
 	}
 
 	/**
-	 * Patches or replaces a `frameLocator` definition. In `update` mode an omitted selector keeps the
-	 * registered one; in `replace` mode an omitted selector installs Playwright's any-frame
-	 * `page.frameLocator()`, which must be the first segment of its chain. An empty selector is
-	 * rejected in both modes.
+	 * Changes the segment's locator to a frame segment: with a selector, the `<iframe>` element whose descendants resolve
+	 * inside the frame. In `update` mode an omitted selector keeps the registered one. In `replace` mode an omitted
+	 * selector installs Playwright's any-frame `frameLocator()`, which must be the first segment of its chain and takes
+	 * no steps; it cannot replace the query's own path.
+	 *
+	 * @param selector The `<iframe>` element's selector; an empty one is rejected in both modes.
+	 * @returns The query.
+	 * @throws In `replace` mode without a selector, on the query's own path or on a segment with steps in the query:
+	 * `replace() cannot apply to "shell.frame": it has filter or nth steps, and frameLocator() without a selector takes
+	 * none; call clearSteps("shell.frame") first.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("frame.login").replace().frameLocator("iframe.auth").getNestedLocator();
+	 * query.replace("shell.frame@payment").frameLocator("iframe#payment");
 	 * ```
 	 */
 	frameLocator(...args: UpdateArgsWithoutOptions<Parameters<Page["locator"]>[0]>) {
@@ -289,12 +356,18 @@ export class LocatorUpdateBuilderInternal<
 	}
 
 	/**
-	 * Patches or replaces a `getByTestId` definition. In `update` mode the id is optional; in
-	 * `replace` mode it is required. An empty string is a value Playwright matches and is kept.
+	 * Changes the segment's locator to Playwright's `page.getByTestId()`. In `update` mode the segment must be registered
+	 * with `getByTestId` and the test id is optional; in `replace` mode it is required. An empty string is a value
+	 * Playwright matches and is kept.
+	 *
+	 * @param testId The test id: a string or a RegExp.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "testId"; use replace("main.button@save").getByTestId(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("card.title").update().getByTestId().getNestedLocator();
+	 * query.replace().getByTestId("order-row");
 	 * ```
 	 */
 	getByTestId(
@@ -308,13 +381,18 @@ export class LocatorUpdateBuilderInternal<
 	}
 
 	/**
-	 * Patches or replaces an `id` definition. The value is stored verbatim: strings match the `id`
-	 * attribute exactly, RegExps are evaluated as patterns with their flags. An empty string throws.
-	 * In `update` mode the id is optional; in `replace` mode it is required.
+	 * Changes the segment's locator to an `id` locator: a string matches the `id` attribute exactly, a RegExp is tested
+	 * against each element's id with its flags. In `update` mode the segment must be registered with `getById` and the
+	 * id is optional; in `replace` mode it is required. An empty string is rejected.
+	 *
+	 * @param id A string or a RegExp.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "id"; use replace("main.button@save").getById(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("modal.close").update().getById().getNestedLocator();
+	 * query.replace().getById("order-1042");
 	 * ```
 	 */
 	getById(...args: ArgsFor<Mode, [id: string | RegExp], UpdateArgsWithoutOptions<string | RegExp>>) {

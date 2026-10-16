@@ -65,32 +65,126 @@ export type PageObjectOptions<Options extends PageObjectTypeOptions = { baseUrlT
 };
 
 /**
- * Base class for page objects. `defineLocators()` does not run inside this constructor, where the
- * subclass has not stored anything yet: it runs, followed by `verify()`, right after the code that
- * called `new` has finished (a check scheduled as the constructor's last statement), or at the first
- * locator call if that comes earlier, once per instance. A registry mistake is reported with the
- * page object's label and the original error as `cause`; reported by the scheduled check, its stack
- * points at the construction site.
+ * The base class of a page object: binds a Playwright `Page` to a locator registry, a navigation helper built from the
+ * page object's URL, and a session storage helper for its origin. A subclass names its paths in `Paths`, calls the
+ * constructor with its URL, and registers its locators in `defineLocators()`.
+ *
+ * `defineLocators()` runs once, followed by a check of every registered path, right after the code that called `new`
+ * has finished, or at the first locator call if that comes earlier. A mistake fails there, labelled with the page
+ * object's name.
+ *
+ * @typeParam LocatorSchemaPathType - `Paths`: the union of the page object's locator paths.
+ * @typeParam Options - `PageObjectTypeOptions`: whether `baseUrl` and `urlPath` are RegExps, and the session storage
+ * schema. Types only.
+ *
+ * @example
+ * ```ts
+ * type Paths = "main" | "main.button@login";
+ *
+ * export class LoginPage extends PageObject<Paths> {
+ *   constructor(page: Page) {
+ *     super(page, "https://shop.example", "/login");
+ *   }
+ *
+ *   protected defineLocators(): void {
+ *     this.add("main").locator("main");
+ *     this.add("main.button@login").getByRole("button", { name: "Log in" });
+ *   }
+ * }
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-pageobject/
  */
 export abstract class PageObject<
 	LocatorSchemaPathType extends string,
 	Options extends PageObjectTypeOptions = { baseUrlType: string; urlPathType: string },
 > {
+	/** The Playwright page the page object was constructed with. */
 	readonly page: Page;
+	/** The `baseUrl` the page object was constructed with: an origin string, or a RegExp tested against the origin. */
 	readonly baseUrl: BaseUrlTypeFromOptions<Options>;
+	/** The `urlPath` the page object was constructed with: `""`, a path string, or a RegExp tested against the rest. */
 	readonly urlPath: UrlPathTypeFromOptions<Options>;
+	/**
+	 * The page object's URL. For a string `baseUrl` and `urlPath` it is `new URL(urlPath, baseUrl).href`, the form the
+	 * browser reports (`https://shop.example/` for an empty path). When either part is a RegExp it is a `UrlMatcher`,
+	 * which Playwright's `waitForURL`, `toHaveURL` and `route` take as a URL predicate.
+	 *
+	 * @example
+	 * ```ts
+	 * await expect(page).toHaveURL(loginPage.fullUrl);
+	 * ```
+	 */
 	readonly fullUrl: FullUrlTypeFromOptions<Options>;
+	/** The name in the page object's step titles and error messages: the `label` option, or the class name. */
 	readonly label: string;
+	/**
+	 * The session storage helper, labelled with `label` and typed by the `sessionStorage.schema` option. With a string
+	 * `baseUrl` it touches only that origin's storage, and `seed()` needs no origin.
+	 */
 	readonly sessionStorage: SessionStorage<StorageTypeFromOptions<Options>>;
+	/**
+	 * The navigation helper: `goto()` to this page, `goto(target)` to a URL resolved against `baseUrl`,
+	 * `expectThisPage()` and `expectAnotherPage()`. `goto()` without a target exists only when `fullUrl` is a string.
+	 */
 	public readonly navigation: NavigationFor<BaseUrlTypeFromOptions<Options>, FullUrlTypeFromOptions<Options>>;
+	/**
+	 * The page object's registry, for code that takes one, such as a locator module:
+	 * `defineLocators(this.locatorRegistry)`. Every method except `createReusable` runs `defineLocators()` first if it
+	 * has not run yet.
+	 */
 	protected readonly locatorRegistry: LocatorRegistry<LocatorSchemaPathType>;
+	/**
+	 * Registers a locator for a path: `this.add(path)` followed by one of the ten locator methods, inside
+	 * `defineLocators()`.
+	 *
+	 * @example
+	 * ```ts
+	 * this.add("main.button@login").getByRole("button", { name: "Log in" });
+	 * ```
+	 */
 	public readonly add: AddAccessor<LocatorSchemaPathType>;
+	/**
+	 * Resolves the locator registered for a path alone, with its own steps and without its ancestors: for chains you
+	 * build yourself and for filters. Act on elements with `getNestedLocator`.
+	 */
 	public readonly getLocator: GetLocatorAccessor<LocatorSchemaPathType>;
+	/**
+	 * Starts a query of a path: a private copy of its chain to change for one use (`filter`, `nth`, `update`, `replace`,
+	 * `skip`, …) and then resolve. The registry never changes.
+	 */
 	public readonly getLocatorSchema: GetLocatorSchemaAccessor<LocatorSchemaPathType>;
+	/**
+	 * Resolves a path to the chain of its registered segments, each with its steps, described by the path: the locator
+	 * to act on and assert against.
+	 *
+	 * @example
+	 * ```ts
+	 * await this.getNestedLocator("main.button@login").click();
+	 * ```
+	 */
 	public readonly getNestedLocator: GetNestedLocatorAccessor<LocatorSchemaPathType>;
 	// ECMAScript-private, so that no name is reserved in subclasses
 	#locators: "pending" | "defining" | "defined" | { failure: Error } = "pending";
 
+	/**
+	 * Called from the subclass constructor as `super(...)`. Checks the URL parts, creates the registry and the helpers,
+	 * and schedules `defineLocators()`; it does not call `defineLocators()` itself.
+	 *
+	 * @param page The page the page object works on.
+	 * @param baseUrl The origin: a string `scheme://host[:port]` with nothing after it (a trailing slash is allowed), or
+	 * a RegExp tested against the URL's origin (declare `baseUrlType: RegExp` in `Options`).
+	 * @param urlPath The page's path: `""` for the origin itself, a string that starts with exactly one `/`, or a RegExp
+	 * tested against the rest of the URL, path, query and hash (declare `urlPathType: RegExp` in `Options`).
+	 * @param options Optional settings.
+	 * @param options.label The name in step titles and error messages. Defaults to the class name.
+	 * @param options.navOptions Defaults for every navigation method (`waitUntil`, `timeout`); a call's own options win.
+	 * @param options.sessionStorage `{ schema }`: the codecs of the session storage keys that hold structured values.
+	 * @param options.locators `{ strictChains }`: `true` makes the registry check require every ancestor of every path
+	 * to be registered.
+	 * @throws When a URL part is not what it must be, for example
+	 * `LoginPage: urlPath must be "" or start with exactly one "/"; received "login".`
+	 */
 	protected constructor(
 		page: Page,
 		baseUrl: BaseUrlTypeFromOptions<Options>,
@@ -195,14 +289,42 @@ export abstract class PageObject<
 	}
 
 	/**
-	 * Registers the page object's locators. Runs once, after the page object is constructed, so it
-	 * may read constructor arguments, fields and constructor-body assignments.
+	 * Registers the page object's locators with `this.add(path)`. Every page object implements it.
+	 *
+	 * Runs once: right after the code that called `new` has finished, or at the first locator call if that comes
+	 * earlier, so it can use the subclass's constructor arguments, fields and constructor assignments. Every registered
+	 * path is checked right after it. An error in either is thrown again by every later locator call, labelled
+	 * (`LoginPage: defineLocators() failed: …`, `LoginPage: Locator registry verification failed for 1 of 2 paths: …`)
+	 * with the original as `cause` and the line that constructed the page object in its stack.
+	 *
+	 * @example
+	 * ```ts
+	 * protected defineLocators(): void {
+	 *   this.add("main").locator("main");
+	 *   this.add("main.button@login").getByRole("button", { name: "Log in" });
+	 * }
+	 * ```
 	 */
 	protected abstract defineLocators(): void;
 
 	/**
-	 * Actions run after `goto()` without a target and after `expectThisPage()`. Called each time they
-	 * run, so it may read the page object's current state; none by default. `null` means none, as `[]`.
+	 * Returns the actions to run, in order, after `navigation.goto()` without a target and after
+	 * `navigation.expectThisPage()`, such as waiting for a spinner to go away. Called each time they run, so it can read
+	 * the page object's current state. Optional: the default returns `[]`, and `null` also means no actions.
+	 * `{ runPostNavigationActions: false }` skips them for one call.
+	 *
+	 * @returns The actions, each a function that returns a Promise; `[]` or `null` for none.
+	 *
+	 * @example
+	 * ```ts
+	 * protected pageActionsToPerformAfterNavigation() {
+	 *   return [
+	 *     async () => {
+	 *       await expect(this.getNestedLocator("main.spinner")).toBeHidden();
+	 *     },
+	 *   ];
+	 * }
+	 * ```
 	 */
 	protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {
 		return [];

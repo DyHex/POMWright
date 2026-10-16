@@ -82,6 +82,21 @@ export class ReusableLocatorBuilder<
 }
 
 export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
+	/**
+	 * Makes a seed whose locator is Playwright's `page.getByRole()`. Returns a seed: register it with `add(path, { reuse:
+	 * seed })`, and derive others with its `filter`, `nth` and `describe`.
+	 *
+	 * @param role The ARIA role.
+	 * @param options Playwright's `getByRole` options, such as `name` and `level`.
+	 * @returns A seed.
+	 * @throws When the role is missing (`createReusable.getByRole requires a role value.`) or empty
+	 * (`createReusable.getByRole requires a non-empty role.`).
+	 *
+	 * @example
+	 * ```ts
+	 * registry.createReusable.getByRole("heading", { level: 2 });
+	 * ```
+	 */
 	getByRole(
 		role: RoleDefinition["role"],
 		options: RoleDefinition["options"],
@@ -91,6 +106,20 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 		return this.create("role", role, options);
 	}
 
+	/**
+	 * Makes a seed whose locator is Playwright's `page.getByText()`. Returns a seed: register it with `add(path, { reuse:
+	 * seed })`, and derive others with its `filter`, `nth` and `describe`.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's `getByText` options (`exact`).
+	 * @returns A seed.
+	 * @throws When the text is missing: `createReusable.getByText requires a text value.`
+	 *
+	 * @example
+	 * ```ts
+	 * registry.createReusable.getByText(/Total/);
+	 * ```
+	 */
 	getByText(
 		text: Parameters<Page["getByText"]>[0],
 		options: Parameters<Page["getByText"]>[1],
@@ -100,6 +129,20 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 		return this.create("text", text, options);
 	}
 
+	/**
+	 * Makes a seed whose locator is Playwright's `page.getByLabel()`. Returns a seed: register it with `add(path, {
+	 * reuse: seed })`, and derive others with its `filter`, `nth` and `describe`.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's `getByLabel` options (`exact`).
+	 * @returns A seed.
+	 * @throws When the text is missing: `createReusable.getByLabel requires a text value.`
+	 *
+	 * @example
+	 * ```ts
+	 * registry.createReusable.getByLabel("Quantity");
+	 * ```
+	 */
 	getByLabel(
 		text: Parameters<Page["getByLabel"]>[0],
 		options: Parameters<Page["getByLabel"]>[1],
@@ -109,6 +152,20 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 		return this.create("label", text, options);
 	}
 
+	/**
+	 * Makes a seed whose locator is Playwright's `page.getByPlaceholder()`. Returns a seed: register it with `add(path, {
+	 * reuse: seed })`, and derive others with its `filter`, `nth` and `describe`.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's `getByPlaceholder` options (`exact`).
+	 * @returns A seed.
+	 * @throws When the text is missing: `createReusable.getByPlaceholder requires a text value.`
+	 *
+	 * @example
+	 * ```ts
+	 * registry.createReusable.getByPlaceholder("Search");
+	 * ```
+	 */
 	getByPlaceholder(
 		text: Parameters<Page["getByPlaceholder"]>[0],
 		options: Parameters<Page["getByPlaceholder"]>[1],
@@ -120,6 +177,20 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 		return this.create("placeholder", text, options);
 	}
 
+	/**
+	 * Makes a seed whose locator is Playwright's `page.getByAltText()`. Returns a seed: register it with `add(path, {
+	 * reuse: seed })`, and derive others with its `filter`, `nth` and `describe`.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's `getByAltText` options (`exact`).
+	 * @returns A seed.
+	 * @throws When the text is missing: `createReusable.getByAltText requires a text value.`
+	 *
+	 * @example
+	 * ```ts
+	 * registry.createReusable.getByAltText("Product photo");
+	 * ```
+	 */
 	getByAltText(
 		text: Parameters<Page["getByAltText"]>[0],
 		options: Parameters<Page["getByAltText"]>[1],
@@ -129,6 +200,20 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 		return this.create("altText", text, options);
 	}
 
+	/**
+	 * Makes a seed whose locator is Playwright's `page.getByTitle()`. Returns a seed: register it with `add(path, {
+	 * reuse: seed })`, and derive others with its `filter`, `nth` and `describe`.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's `getByTitle` options (`exact`).
+	 * @returns A seed.
+	 * @throws When the text is missing: `createReusable.getByTitle requires a text value.`
+	 *
+	 * @example
+	 * ```ts
+	 * registry.createReusable.getByTitle("Remove");
+	 * ```
+	 */
 	getByTitle(
 		text: Parameters<Page["getByTitle"]>[0],
 		options: Parameters<Page["getByTitle"]>[1],
@@ -138,6 +223,21 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 		return this.create("title", text, options);
 	}
 
+	/**
+	 * Makes a seed whose locator is Playwright's `page.locator()`. Returns a seed: register it with `add(path, { reuse:
+	 * seed })`, and derive others with its `filter`, `nth` and `describe`.
+	 *
+	 * @param selector A selector; an empty one is rejected.
+	 * @param options Playwright's `locator` options, such as `hasText`.
+	 * @returns A seed.
+	 * @throws When the selector is missing (`createReusable.locator requires a selector value.`) or empty
+	 * (`createReusable.locator requires a non-empty selector.`).
+	 *
+	 * @example
+	 * ```ts
+	 * registry.createReusable.locator("tr");
+	 * ```
+	 */
 	locator(
 		selector: Parameters<Page["locator"]>[0],
 		options: Parameters<Page["locator"]>[1],
@@ -148,20 +248,54 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	}
 
 	/**
-	 * Seeds a frame segment. The selector is required: the any-frame form of `add(path).frameLocator()`
-	 * has no element and no steps, so there is nothing a seed could carry.
+	 * Makes a seed of a frame segment: the `<iframe>` element whose descendants resolve inside the frame. The selector is
+	 * required: the any-frame `add(path).frameLocator()` takes no steps, so a seed could carry nothing for it.
+	 *
+	 * @param selector The `<iframe>` element's selector; an empty one is rejected.
+	 * @returns A seed.
+	 * @throws When the selector is missing (`createReusable.frameLocator requires a selector value.`) or empty
+	 * (`createReusable.frameLocator requires a non-empty selector.`).
+	 *
+	 * @example
+	 * ```ts
+	 * registry.createReusable.frameLocator("iframe.checkout");
+	 * ```
 	 */
 	frameLocator(selector: Parameters<Page["locator"]>[0]): ReusableLocator<LocatorSchemaPathType, "frameLocator"> {
 		return this.create("frameLocator", selector);
 	}
 
+	/**
+	 * Makes a seed whose locator is Playwright's `page.getByTestId()`. Returns a seed: register it with `add(path, {
+	 * reuse: seed })`, and derive others with its `filter`, `nth` and `describe`. An empty string is a value Playwright
+	 * matches and is kept.
+	 *
+	 * @param testId The test id: a string or a RegExp.
+	 * @returns A seed.
+	 * @throws When the test id is missing: `createReusable.getByTestId requires a testId value.`
+	 *
+	 * @example
+	 * ```ts
+	 * registry.createReusable.getByTestId("order-row");
+	 * ```
+	 */
 	getByTestId(testId: Parameters<Page["getByTestId"]>[0]): ReusableLocator<LocatorSchemaPathType, "testId"> {
 		return this.create("testId", testId);
 	}
 
 	/**
-	 * Seeds an `id` locator. The value is stored verbatim: strings match the `id` attribute exactly,
-	 * RegExps are evaluated as patterns with their flags. An empty string throws.
+	 * Makes a seed of an `id` locator: a string matches the `id` attribute exactly, a RegExp is tested against each
+	 * element's id with its flags. Returns a seed: register it with `add(path, { reuse: seed })`, and derive others with
+	 * its `filter`, `nth` and `describe`.
+	 *
+	 * @param id A string or a RegExp; an empty string is rejected.
+	 * @returns A seed.
+	 * @throws When the id is missing or empty: `createReusable.getById requires a non-empty id.`
+	 *
+	 * @example
+	 * ```ts
+	 * registry.createReusable.getById(/^order-\d+$/);
+	 * ```
 	 */
 	getById(id: string | RegExp): ReusableLocator<LocatorSchemaPathType, "id"> {
 		return this.create("id", id);

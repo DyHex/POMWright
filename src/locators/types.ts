@@ -179,32 +179,67 @@ export type LocatorDefinitionByType = {
 };
 
 /**
- * A seed from `registry.createReusable`: a strategy with its `filter`/`nth` steps and description,
- * registered under a path with `add(path, { reuse: seed })`. `Strategy` narrows the seed to one
- * strategy (`"role"`, `"text"`, `"label"`, `"placeholder"`, `"altText"`, `"title"`, `"locator"`,
- * `"frameLocator"`, `"testId"`, `"id"`); the default accepts a seed of any.
+ * A seed, from `registry.createReusable`: a locator strategy with its arguments, its `filter` and `nth` steps and a
+ * description, registered under no path. `add(path, { reuse: seed })` registers it at a path. A seed is a value, as a
+ * Playwright `Locator` is: `filter`, `nth` and `describe` return a new seed and leave this one as it was. `Strategy`
+ * narrows the seed to one strategy (`"role"`, `"text"`, `"label"`, `"placeholder"`, `"altText"`, `"title"`,
+ * `"locator"`, `"frameLocator"`, `"testId"`, `"id"`); the default accepts a seed of any.
  *
  * @example
  * ```ts
  * export const headingSeed = (registry: LocatorRegistry<Paths>): ReusableLocator<Paths, "role"> =>
  *   registry.createReusable.getByRole("heading", { level: 2 });
  * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/
  */
 export type ReusableLocator<
 	LocatorSchemaPathType extends string,
 	Type extends LocatorStrategyDefinition["type"] = LocatorStrategyDefinition["type"],
 > = {
+	/** The seed's strategy: `"role"`, `"text"`, `"label"`, `"placeholder"`, `"altText"`, `"title"`, `"locator"`, …. */
 	readonly type: Type;
+	/** A copy of the seed's locator: its strategy and arguments, such as `{ type: "role", role: "button" }`. */
 	readonly definition: LocatorDefinitionByType[Type];
+	/** A copy of the seed's `filter` and `nth` steps, in the order they were added. */
 	readonly steps: LocatorStep<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>[];
+	/** The seed's description, or `undefined` when it has none; a path registered from it then shows its own path. */
 	readonly description: LocatorDescription | undefined;
-	/** A new seed with the filter added; this seed is unchanged, as a Playwright `Locator` is by `filter`. */
+	/**
+	 * Returns a new seed with a `locator.filter()` step added; this seed is unchanged, as a Playwright `Locator` is.
+	 *
+	 * @param filter Playwright's filter options; `has` and `hasNot` also take a registered path.
+	 * @returns A new seed.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("main.list.item@open", { reuse: row.filter({ hasText: "Open" }) });
+	 * ```
+	 */
 	filter(
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	): ReusableLocator<LocatorSchemaPathType, Type>;
-	/** A new seed with the index added; this seed is unchanged. */
+	/**
+	 * Returns a new seed with an index step added; this seed is unchanged.
+	 *
+	 * @param index A number, `"first"` or `"last"`.
+	 * @returns A new seed.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("main.list.item@last", { reuse: row.nth("last") });
+	 * ```
+	 */
 	nth(index: IndexSelector): ReusableLocator<LocatorSchemaPathType, Type>;
-	/** A new seed with the description; this seed is unchanged. */
+	/**
+	 * Returns a new seed with a description; this seed is unchanged. A path registered from it shows the description
+	 * instead of the path.
+	 *
+	 * @param description A string; `""` removes the description.
+	 * @returns A new seed.
+	 * @throws When the description is not a string (from JavaScript):
+	 * `createReusable.describe requires a string; pass "" to remove the description.`
+	 */
 	describe(description: LocatorDescription): ReusableLocator<LocatorSchemaPathType, Type>;
 };
 

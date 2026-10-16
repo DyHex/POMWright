@@ -63,11 +63,19 @@ type ReusePathArgument<Paths extends string, Path extends Paths, ReusePath exten
 	Exclude<ReusePath, Path> extends never ? InvalidReusePath<Path> : LocatorSchemaPathArgument<ReusePath>;
 
 /**
- * Options of a registry. `strictChains: true` makes `verify()` require every proper ancestor of every
- * registered path to be registered as well; by default an unregistered segment is a name that groups
- * paths and is left out of the chain.
+ * The options of a registry: the second argument of `createRegistryWithAccessors`, and the `locators` option of a
+ * `PageObject`.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#locatorregistryoptions
  */
-export type LocatorRegistryOptions = { strictChains?: boolean };
+export type LocatorRegistryOptions = {
+	/**
+	 * `true` makes `verify()` require every ancestor of every registered path to be registered too, naming each one
+	 * that is not. Defaults to `false`: an unregistered segment is a name that groups paths and is left out of the
+	 * chain.
+	 */
+	strictChains?: boolean;
+};
 
 const strictChainsMessage = (missing: readonly string[]) => {
 	const names = missing.map((part) => `"${part}"`);
@@ -82,17 +90,15 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	>();
 
 	/**
-	 * Factory for reusable locator seeds that capture a locator strategy plus any chained
-	 * `filter`/`nth` steps without registering them. A seed is a value, like a Playwright
-	 * `Locator`: `filter`, `nth` and `describe` return a new seed. Pass a seed to
-	 * {@link LocatorRegistryInternal.add} via `{ reuse }` to register a path that inherits the
-	 * stored definition and steps; to share a locator between locator modules, reusing a
-	 * registered path is usually simpler.
+	 * Makes seeds: a locator strategy with its arguments, then `filter`, `nth` and `describe` steps, registered under
+	 * no path. `add(path, { reuse: seed })` registers a seed at a path. A seed is a value, as a Playwright `Locator` is:
+	 * its `filter`, `nth` and `describe` return a new seed and leave it as it was. To share a locator between locator
+	 * modules, reusing a registered path (`{ reuse: "common.button" }`) is usually simpler.
 	 *
 	 * @example
 	 * ```ts
-	 * const seed = registry.createReusable.getByRole("heading", { level: 2 }).filter({ hasText: /Summary/ });
-	 * registry.add("hero.title", { reuse: seed }).getByRole({ name: "Summary" });
+	 * const heading = registry.createReusable.getByRole("heading", { level: 2 });
+	 * registry.add("main.heading@orders", { reuse: heading.filter({ hasText: "Orders" }) });
 	 * ```
 	 */
 	readonly createReusable: ReusableLocatorFactory<LocatorSchemaPathType>;
@@ -130,27 +136,30 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	}
 
 	/**
-	 * Registers a locator schema at the provided dot-delimited path.
-	 * Accepts exactly one locator strategy (`getByRole`, `locator`, etc.) and any number of
-	 * `filter`/`nth` steps chained in call order; calling a second strategy throws.
+	 * Registers a locator at a path. `add(path)` is followed by one of the ten locator methods, which take Playwright's
+	 * arguments (`getByRole`, `getByText`, `getByLabel`, `getByPlaceholder`, `getByAltText`, `getByTitle`, `locator`,
+	 * `frameLocator`, `getByTestId`, and `getById`, which Playwright lacks), and then any `filter`, `nth` and
+	 * `describe` steps, applied in the order chained. The path is registered by the locator method; one path has one
+	 * locator.
 	 *
-	 * With `{ reuse: "other.path" }` the path is registered at once as a copy of that registered
-	 * path (its strategy, its steps and an explicit description), and `filter`, `nth` and
-	 * `describe` narrow the copy after the copied steps; there is no strategy override, the source
-	 * never changes, and a copy of an any-frame `frameLocator()` takes no steps.
+	 * With `{ reuse: "other.path" }` the path is registered at once as a copy of that registered path (its locator, its
+	 * steps and an explicit description), and `filter`, `nth` and `describe` narrow the copy. With `{ reuse: seed }`, a
+	 * seed from `createReusable` is registered at once; one call of the seed's own locator method may patch it first,
+	 * as `update()` patches, then `filter`, `nth` and `describe`.
 	 *
-	 * With `{ reuse: seed }` (from `createReusable`) the seed is registered at once, and one
-	 * override of the seed's strategy may come first as a PATCH, as `update()` patches, followed
-	 * by `filter`, `nth` and `describe`. Any other reuse value throws.
+	 * @param path The dot-delimited path: no empty segment and no whitespace, checked at compile time and at run time.
+	 * @param options `{ reuse }`: a registered path (not this one) or a seed from `createReusable`.
+	 * @returns The registration: the ten locator methods, or after a reuse `filter`, `nth` and `describe`.
+	 * @throws At the locator method, when the path is registered already
+	 * (`A locator schema with the path "main" already exists. …`), when its first argument is missing or an empty
+	 * string where Playwright cannot use one (`locator requires a non-empty selector for "main.list".`), or when the
+	 * path breaks the path rules (`LocatorSchemaPath string cannot contain consecutive dots: main..list`); at `add`, when
+	 * a reused path is not registered (`No locator schema registered for path "common.button".`).
 	 *
 	 * @example
 	 * ```ts
-	 * registry
-	 *   .add("list.item")
-	 *   .getByRole("listitem", { name: /Row/ })
-	 *   .filter({ hasText: "Row" })
-	 *   .nth("last");
-	 * registry.add("list.lastItem", { reuse: "list.item" }).describe("Last row");
+	 * registry.add("main.list.item").getByRole("listitem").filter({ hasText: "Open" }).nth(0);
+	 * registry.add("main.list.item@last", { reuse: "main.list.item" }).describe("Last open item");
 	 * ```
 	 */
 	add<
@@ -394,17 +403,22 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	}
 
 	/**
-	 * Returns a mutable query builder clone for the provided path. Use the builder to add or clear
-	 * `filter`/`nth` steps, or to `update`/`replace` locator definitions before resolving locators.
-	 * Changes affect only the builder clone; the registry’s stored schema remains untouched.
+	 * Starts a query of a path: a private copy of its chain (every registered segment with its locator, steps and
+	 * description) to change for one use with `filter`, `nth`, `clearSteps`, `describe`, `update`, `replace`, `skip`
+	 * and `unskip`, then resolve with `getNestedLocator()` or `getLocator()`. The registry never changes, and every call
+	 * starts a new copy.
+	 *
+	 * @param path A registered path.
+	 * @returns The query, a `LocatorQueryBuilder`.
+	 * @throws When the path is not registered: `No locator schema registered for path "main.list.item".`
 	 *
 	 * @example
 	 * ```ts
-	 * const builder = registry
-	 *   .getLocatorSchema("section.button")
-	 *   .filter("section.button", { hasText: /Save/ })
-	 *   .nth("section", 0);
-	 * const locator = builder.getNestedLocator();
+	 * const lastOpenOrder = registry
+	 *   .getLocatorSchema("main.list.item")
+	 *   .filter({ hasText: "Open" })
+	 *   .nth("last")
+	 *   .getNestedLocator();
 	 * ```
 	 */
 	getLocatorSchema<Path extends LocatorSchemaPathType>(
@@ -417,20 +431,21 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	}
 
 	/**
-	 * Checks every registered path once and reports every failure together. A path with a selector is
-	 * resolved terminal-only, as `getLocator` does, which evaluates its `has`/`hasNot` path references
-	 * through the normal resolution (unregistered targets, cycles, unsupported reference values); an
-	 * any-frame path is checked against its first-segment rule instead, since it has no terminal form.
-	 * Nothing touches the DOM. With `strictChains`, every proper ancestor of every path must be registered
-	 * too. `PageObject` calls this right after `defineLocators()`; a standalone registry calls it after
-	 * registration, and `strictChains` is enforced only there.
+	 * Checks every registered path once, without touching the page, and reports every failure in one error: a `has` or
+	 * `hasNot` path that is not registered, a cycle of such references, an unsupported reference value, and a
+	 * `frameLocator()` without a selector that is not the first segment of its chain. With `strictChains`, every
+	 * ancestor of every path must be registered too. A page object calls it right after `defineLocators()`; a
+	 * standalone registry calls it after registering its locators.
+	 *
+	 * @throws When a path fails, every failing path with its reason:
+	 * `Locator registry verification failed for 1 of 2 paths:` followed by
+	 * `"list.item": No locator schema registered for path "list.titel".`
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("list.item").getByRole("listitem").filter({ has: "list.titel" });
-	 * registry.verify();
-	 * // Locator registry verification failed for 1 of 1 paths:
-	 * //   "list.item": No locator schema registered for path "list.titel".
+	 * registry.add("list").locator("ul");
+	 * registry.add("list.item").getByRole("listitem").filter({ has: "list.item.title" });
+	 * registry.verify(); // "list.item": No locator schema registered for path "list.item.title".
 	 * ```
 	 */
 	verify(): void {
@@ -472,13 +487,18 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	}
 
 	/**
-	 * Resolves the Playwright {@link Locator} for the provided path, applying only the terminal
-	 * definition and its recorded steps (no ancestor chaining). Throws if the path is not registered.
+	 * Resolves the locator registered for a path alone: its locator and its own steps, without its ancestors, described
+	 * by the path. For chains you build yourself and for filters (`filter({ has: registry.getLocator(path) })`); act on
+	 * elements with `getNestedLocator`, whose chain keeps finding the right element when the page gains a similar one.
+	 *
+	 * @param path A registered path.
+	 * @returns A Playwright `Locator`.
+	 * @throws When the path is not registered: `No locator schema registered for path "main.list.item".`
 	 *
 	 * @example
 	 * ```ts
-	 * const button = registry.getLocator("form.submit");
-	 * await button.click();
+	 * const item = registry.getLocator("main.list.item"); // locator('li') with its steps, no ancestors
+	 * await expect(page.locator("section").filter({ has: item })).toHaveCount(1);
 	 * ```
 	 */
 	getLocator<Path extends LocatorSchemaPathType>(path: LocatorSchemaPathArgument<Path>): Locator {
@@ -488,14 +508,18 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	}
 
 	/**
-	 * Resolves a chained Playwright {@link Locator} for a nested path, traversing each registered
-	 * segment and applying their steps in order. Throws if the path is not registered; an unregistered
-	 * ancestor is left out of the chain.
+	 * Resolves a path to the chain of its registered segments, first to last, each with its steps, described by the
+	 * path: the locator to act on and assert against. An unregistered segment is left out of the chain, and a
+	 * `frameLocator(selector)` segment enters its frame for the segments after it.
+	 *
+	 * @param path A registered path.
+	 * @returns A Playwright `Locator`.
+	 * @throws When the path is not registered: `No locator schema registered for path "main.list.item".`
 	 *
 	 * @example
 	 * ```ts
-	 * const nested = registry.getNestedLocator("list.item");
-	 * await expect(nested).toBeVisible();
+	 * await registry.getNestedLocator("main.form@login.button@submit").click();
+	 * // locator('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
 	 * ```
 	 */
 	getNestedLocator<Path extends LocatorSchemaPathType>(path: LocatorSchemaPathArgument<Path>): Locator {
@@ -572,42 +596,83 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	}
 }
 
+/**
+ * The registry's `getLocator` as a function of its own, as `createRegistryWithAccessors` returns it and a page object
+ * has it: the locator registered for a path alone.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#getlocatoraccessor
+ */
 export type GetLocatorAccessor<LocatorSchemaPathType extends string> = <Path extends LocatorSchemaPathType>(
 	path: LocatorSchemaPathArgument<Path>,
 ) => Locator;
 
+/**
+ * The registry's `add` as a function of its own, as `createRegistryWithAccessors` returns it and a page object has it.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#addaccessor
+ */
 export type AddAccessor<LocatorSchemaPathType extends string> = LocatorRegistryInternal<LocatorSchemaPathType>["add"];
 
+/**
+ * The registry's `getLocatorSchema` as a function of its own, as `createRegistryWithAccessors` returns it and a page
+ * object has it: starts a query of a path.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#getlocatorschemaaccessor
+ */
 export type GetLocatorSchemaAccessor<LocatorSchemaPathType extends string> = <Path extends LocatorSchemaPathType>(
 	path: LocatorSchemaPathArgument<Path>,
 ) => LocatorQueryBuilder<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>>;
 
+/**
+ * The registry's `getNestedLocator` as a function of its own, as `createRegistryWithAccessors` returns it and a page
+ * object has it: the chain of a path's registered segments.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#getnestedlocatoraccessor
+ */
 export type GetNestedLocatorAccessor<LocatorSchemaPathType extends string> = <Path extends LocatorSchemaPathType>(
 	path: LocatorSchemaPathArgument<Path>,
 ) => Locator;
 
+/**
+ * A locator registry: one locator per dot-delimited path, and the chain of a path's registered segments built from
+ * them. `add` registers, `getNestedLocator` and `getLocator` resolve, `getLocatorSchema` starts a query, `verify`
+ * checks every path, and `createReusable` makes seeds. Every page object has one; `createRegistryWithAccessors` makes
+ * one on its own.
+ *
+ * @example
+ * ```ts
+ * export function defineLocators(registry: LocatorRegistry<"main" | "main.button@save">) {
+ *   registry.add("main").locator("main");
+ *   registry.add("main.button@save").getByRole("button", { name: "Save" });
+ * }
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/
+ */
 export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
 	LocatorRegistryInternal<LocatorSchemaPathType>,
 	"add" | "createReusable" | "getLocator" | "getLocatorSchema" | "getNestedLocator" | "verify"
 >;
 
 /**
- * Creates a locator registry bound to a Playwright {@link Page} and returns the registry plus
- * pre-bound helpers for ergonomic use in page objects and tests. Path unions are validated at
- * compile time and runtime. The returned `add`/`getLocator`/`getNestedLocator`/`getLocatorSchema`
- * accessors are pre-bound to the registry instance for dependency injection.
+ * Creates a locator registry on a page, without a page object, and returns it with its `add`, `getLocator`,
+ * `getNestedLocator` and `getLocatorSchema` as functions of their own. Pass the path union as the type argument.
+ * Call `registry.verify()` once the locators are registered; a page object does that itself.
+ *
+ * @param page The Playwright page the locators resolve on.
+ * @param options `{ strictChains }`: `true` makes `verify()` require every ancestor of every path to be registered.
+ * @returns `{ registry, add, getLocator, getNestedLocator, getLocatorSchema }`.
  *
  * @example
  * ```ts
- * const { registry, add, getNestedLocator, getLocatorSchema } =
- *   createRegistryWithAccessors<"root" | "root.child">(page);
- *
- * registry.add("root").locator("section");
- * registry.add("root.child").getByRole("heading", { level: 2 });
- *
- * const nested = getNestedLocator("root.child");
- * const patched = getLocatorSchema("root.child").filter("root.child", { hasText: /Docs/ }).getNestedLocator();
+ * const { registry, getNestedLocator } = createRegistryWithAccessors<"main" | "main.button@save">(page);
+ * registry.add("main").locator("main");
+ * registry.add("main.button@save").getByRole("button", { name: "Save" });
+ * registry.verify();
+ * await getNestedLocator("main.button@save").click();
  * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#createregistrywithaccessors
  */
 export const createRegistryWithAccessors = <Paths extends string>(page: Page, options?: LocatorRegistryOptions) => {
 	const registryInstance = new LocatorRegistryInternal<Paths>(page, options);

@@ -29,10 +29,54 @@ export type LocatorRegistrationPostDefinitionBuilder<
 	LocatorSchemaPathType extends string,
 	Path extends RegistryPath<LocatorSchemaPathType>,
 > = {
+	/**
+	 * Adds a `locator.filter()` step after the steps before it: Playwright's filter options, where `has` and `hasNot`
+	 * also take a registered path, resolved to that path's own locator without its ancestors.
+	 *
+	 * @param filter `hasText`, `hasNotText`, `has`, `hasNot` and `visible`, as Playwright's `locator.filter()` takes
+	 * them.
+	 * @returns The registration, for more steps.
+	 * @throws On a `frameLocator()` without a selector, which has no element:
+	 * `filter() cannot apply to "…": frameLocator() without a selector has no element to filter, index or describe; …`
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("main.list.item").getByRole("listitem").filter({ hasText: "Open" });
+	 * registry.add("main.section@orders").locator("section").filter({ has: "main.section.heading@orders" });
+	 * ```
+	 */
 	filter: (
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	) => LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	/**
+	 * Adds an index step after the steps before it: `"first"` and `"last"` become Playwright's `first()` and `last()`, a
+	 * number goes to `nth()` as given (`-1` is the last element).
+	 *
+	 * @param index A number, `"first"` or `"last"`.
+	 * @returns The registration, for more steps.
+	 * @throws On a `frameLocator()` without a selector, which has no element.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("main.list.item@first").getByRole("listitem").nth("first");
+	 * ```
+	 */
 	nth: (index: IndexSelector) => LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	/**
+	 * Sets the description Playwright shows for the resolved locator in the trace viewer and the HTML report, instead of
+	 * the path; `""` removes it, so the locator shows as its chain. It applies where this path is resolved, not where it
+	 * is an ancestor.
+	 *
+	 * @param description A string; `""` removes the description.
+	 * @returns The registration, for more steps.
+	 * @throws When the description is not a string (from JavaScript):
+	 * `describe requires a string for "…"; pass "" to remove the description.`
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("main.button@save").getByRole("button", { name: "Save" }).describe("Save button");
+	 * ```
+	 */
 	describe: (description: LocatorDescription) => LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 };
 
@@ -105,14 +149,19 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Records a Playwright-style filter on the locator being registered. Filters are applied in the
-	 * order they are chained and can include `has`/`hasNot` locator references. Requires that a
-	 * locator strategy has already been set for this registration; the type of `add(path)` exposes
-	 * this method only after one.
+	 * Adds a `locator.filter()` step after the steps before it: Playwright's filter options, where `has` and `hasNot`
+	 * also take a registered path, resolved to that path's own locator without its ancestors.
+	 *
+	 * @param filter `hasText`, `hasNotText`, `has`, `hasNot` and `visible`, as Playwright's `locator.filter()` takes
+	 * them.
+	 * @returns The registration, for more steps.
+	 * @throws On a `frameLocator()` without a selector, which has no element:
+	 * `filter() cannot apply to "…": frameLocator() without a selector has no element to filter, index or describe; …`
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("list.item").locator("li").filter({ hasText: /Row/ });
+	 * registry.add("main.list.item").getByRole("listitem").filter({ hasText: "Open" });
+	 * registry.add("main.section@orders").locator("section").filter({ has: "main.section.heading@orders" });
 	 * ```
 	 */
 	filter(
@@ -123,12 +172,16 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Adds an index selector for the locator being registered. Indices are applied in the order they
-	 * are chained and require a locator definition to have been set first.
+	 * Adds an index step after the steps before it: `"first"` and `"last"` become Playwright's `first()` and `last()`, a
+	 * number goes to `nth()` as given (`-1` is the last element).
+	 *
+	 * @param index A number, `"first"` or `"last"`.
+	 * @returns The registration, for more steps.
+	 * @throws On a `frameLocator()` without a selector, which has no element.
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("table.rows").locator("tr").nth(0);
+	 * registry.add("main.list.item@first").getByRole("listitem").nth("first");
 	 * ```
 	 */
 	nth(index: IndexSelector): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
@@ -136,20 +189,43 @@ export class LocatorRegistrationBuilder<
 		return this.getPostDefinitionView();
 	}
 
+	/**
+	 * Sets the description Playwright shows for the resolved locator in the trace viewer and the HTML report, instead of
+	 * the path; `""` removes it, so the locator shows as its chain. It applies where this path is resolved, not where it
+	 * is an ancestor.
+	 *
+	 * @param description A string; `""` removes the description.
+	 * @returns The registration, for more steps.
+	 * @throws When the description is not a string (from JavaScript):
+	 * `describe requires a string for "…"; pass "" to remove the description.`
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("main.button@save").getByRole("button", { name: "Save" }).describe("Save button");
+	 * ```
+	 */
 	describe(description: LocatorDescription): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
 		this.applyDescription(description);
 		return this.getPostDefinitionView();
 	}
 
 	/**
-	 * Uses Playwright `getByRole` semantics to define the locator strategy. Accepts a role and optional options; when
-	 * seeded via `{ reuse }`, the call patches the seed as `update()` does: the options merge key by key, a `null` key
-	 * deletes one, a lone `null` clears them, and an omitted role is the seed's. The role is required otherwise, and
-	 * which strings are roles is Playwright's own type.
+	 * Registers the path's locator as Playwright's `page.getByRole()` does: by ARIA role, accessible name and state.
+	 * An empty role is rejected; which strings are roles is Playwright's own type.
+	 *
+	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
+	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
+	 * `null` clears them, and no argument keeps the seed as it is.
+	 *
+	 * @param role The ARIA role, as Playwright's type lists them.
+	 * @param options Playwright's `getByRole` options, such as `name`, `exact` and `level`.
+	 * @returns The registration, for `filter`, `nth` and `describe` steps.
+	 * @throws When the role is missing (`getByRole requires a role value for "main.button@save".`) or empty
+	 * (`getByRole requires a non-empty role for "main.button@save".`).
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("nav.home").getByRole("link", { name: "Home" });
+	 * registry.add("main.button@save").getByRole("button", { name: "Save" });
 	 * ```
 	 */
 	getByRole(
@@ -162,7 +238,6 @@ export class LocatorRegistrationBuilder<
 	getByRole(
 		options: Seeded extends true ? OptionsPatch<RoleDefinition["options"]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getByRole(
 		...inherit: Seeded extends true ? [] : [never]
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
@@ -182,14 +257,21 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Uses Playwright `getByText` semantics to define the locator strategy. Accepts string/RegExp text and optional
-	 * options; when seeded, the call patches the seed as `update()` does: the options merge key by key, a `null` key
-	 * deletes one, a lone `null` clears them, and an omitted text is the seed's. An empty string is a value Playwright
-	 * matches and is stored as given.
+	 * Registers the path's locator as Playwright's `page.getByText()` does: by the text an element contains.
+	 * An empty string is a value Playwright matches and is stored as given.
+	 *
+	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
+	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
+	 * `null` clears them, and no argument keeps the seed as it is.
+	 *
+	 * @param text The text: a string, matched as a case-insensitive substring unless `exact: true`, or a RegExp.
+	 * @param options Playwright's `getByText` options: `exact`.
+	 * @returns The registration, for `filter`, `nth` and `describe` steps.
+	 * @throws When the text is missing: `getByText requires a text value for "main.alert@error".`
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("alert.error").getByText(/failed/i);
+	 * registry.add("main.alert@error").getByText(/failed/i);
 	 * ```
 	 */
 	getByText(
@@ -204,7 +286,6 @@ export class LocatorRegistrationBuilder<
 	getByText(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByText"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getByText(
 		...inherit: Seeded extends true ? [] : [never]
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
@@ -220,13 +301,21 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Uses Playwright `getByLabel` semantics to define the locator strategy. Accepts label text and optional options;
-	 * when seeded, the call patches the seed as `update()` does: the options merge key by key, a `null` key deletes
-	 * one, a lone `null` clears them, and an omitted text is the seed's.
+	 * Registers the path's locator as Playwright's `page.getByLabel()` does: an input by its `<label>`, `aria-labelledby`
+	 * or `aria-label`. An empty string is a value Playwright matches and is stored as given.
+	 *
+	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
+	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
+	 * `null` clears them, and no argument keeps the seed as it is.
+	 *
+	 * @param text The label text: a string or a RegExp.
+	 * @param options Playwright's `getByLabel` options: `exact`.
+	 * @returns The registration, for `filter`, `nth` and `describe` steps.
+	 * @throws When the text is missing: `getByLabel requires a text value for "main.form.input@email".`
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("form.email").getByLabel("Email", { exact: true });
+	 * registry.add("main.form.input@email").getByLabel("Email", { exact: true });
 	 * ```
 	 */
 	getByLabel(
@@ -241,7 +330,6 @@ export class LocatorRegistrationBuilder<
 	getByLabel(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByLabel"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getByLabel(
 		...inherit: Seeded extends true ? [] : [never]
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
@@ -257,13 +345,21 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Uses Playwright `getByPlaceholder` semantics to define the locator strategy. Accepts placeholder text and
-	 * optional options; when seeded, the call patches the seed as `update()` does: the options merge key by key, a
-	 * `null` key deletes one, a lone `null` clears them, and an omitted text is the seed's.
+	 * Registers the path's locator as Playwright's `page.getByPlaceholder()` does: an input by its placeholder.
+	 * An empty string is a value Playwright matches and is stored as given.
+	 *
+	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
+	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
+	 * `null` clears them, and no argument keeps the seed as it is.
+	 *
+	 * @param text The placeholder text: a string or a RegExp.
+	 * @param options Playwright's `getByPlaceholder` options: `exact`.
+	 * @returns The registration, for `filter`, `nth` and `describe` steps.
+	 * @throws When the text is missing: `getByPlaceholder requires a text value for "main.input@search".`
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("form.search").getByPlaceholder("Search", { exact: true });
+	 * registry.add("main.input@search").getByPlaceholder("Search");
 	 * ```
 	 */
 	getByPlaceholder(
@@ -278,7 +374,6 @@ export class LocatorRegistrationBuilder<
 	getByPlaceholder(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByPlaceholder"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getByPlaceholder(
 		...inherit: Seeded extends true ? [] : [never]
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
@@ -294,13 +389,21 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Uses Playwright `getByAltText` semantics to define the locator strategy. Accepts alt text and optional options;
-	 * when seeded, the call patches the seed as `update()` does: the options merge key by key, a `null` key deletes
-	 * one, a lone `null` clears them, and an omitted text is the seed's.
+	 * Registers the path's locator as Playwright's `page.getByAltText()` does: an element, usually an image, by its alt
+	 * text. An empty string is a value Playwright matches and is stored as given.
+	 *
+	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
+	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
+	 * `null` clears them, and no argument keeps the seed as it is.
+	 *
+	 * @param text The alt text: a string or a RegExp.
+	 * @param options Playwright's `getByAltText` options: `exact`.
+	 * @returns The registration, for `filter`, `nth` and `describe` steps.
+	 * @throws When the text is missing: `getByAltText requires a text value for "header.image@logo".`
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("image.logo").getByAltText(/brand/);
+	 * registry.add("header.image@logo").getByAltText("Shop logo");
 	 * ```
 	 */
 	getByAltText(
@@ -315,7 +418,6 @@ export class LocatorRegistrationBuilder<
 	getByAltText(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByAltText"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getByAltText(
 		...inherit: Seeded extends true ? [] : [never]
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
@@ -331,13 +433,21 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Uses Playwright `getByTitle` semantics to define the locator strategy. Accepts title text and optional options;
-	 * when seeded, the call patches the seed as `update()` does: the options merge key by key, a `null` key deletes
-	 * one, a lone `null` clears them, and an omitted text is the seed's.
+	 * Registers the path's locator as Playwright's `page.getByTitle()` does: an element by its `title` attribute.
+	 * An empty string is a value Playwright matches and is stored as given.
+	 *
+	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
+	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
+	 * `null` clears them, and no argument keeps the seed as it is.
+	 *
+	 * @param text The title text: a string or a RegExp.
+	 * @param options Playwright's `getByTitle` options: `exact`.
+	 * @returns The registration, for `filter`, `nth` and `describe` steps.
+	 * @throws When the text is missing: `getByTitle requires a text value for "main.icon@info".`
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("icon.info").getByTitle("Info");
+	 * registry.add("main.icon@info").getByTitle("More information");
 	 * ```
 	 */
 	getByTitle(
@@ -352,7 +462,6 @@ export class LocatorRegistrationBuilder<
 	getByTitle(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByTitle"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getByTitle(
 		...inherit: Seeded extends true ? [] : [never]
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
@@ -368,14 +477,22 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Uses Playwright `locator` semantics to define the locator strategy. Accepts a selector and optional options;
-	 * when seeded, the call patches the seed as `update()` does: the options merge key by key, a `null` key deletes
-	 * one, a lone `null` clears them, and an omitted selector is the seed's. An empty selector is rejected: Playwright
-	 * cannot parse it.
+	 * Registers the path's locator as Playwright's `page.locator()` does: by a CSS or other Playwright selector.
+	 * An empty selector is rejected: Playwright cannot parse it.
+	 *
+	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
+	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
+	 * `null` clears them, and no argument keeps the seed as it is.
+	 *
+	 * @param selector A CSS or other Playwright selector.
+	 * @param options Playwright's `locator` options, such as `hasText` and `has`.
+	 * @returns The registration, for `filter`, `nth` and `describe` steps.
+	 * @throws When the selector is missing (`locator requires a selector value for "main.list".`) or empty
+	 * (`locator requires a non-empty selector for "main.list".`).
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("list.items").locator("ul > li");
+	 * registry.add("main.list").locator("ul.orders");
 	 * ```
 	 */
 	locator(
@@ -390,7 +507,6 @@ export class LocatorRegistrationBuilder<
 	locator(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["locator"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	locator(
 		...inherit: Seeded extends true ? [] : [never]
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
@@ -418,21 +534,25 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Registers a frame segment. With a selector the segment is the `<iframe>` element
-	 * (`locator(selector)` plus any chained `filter`/`nth` steps), and the descendants registered
-	 * below it resolve inside the frame through `contentFrame()`; as the last segment of a path it
-	 * resolves to the element itself. Without a selector it is Playwright's any-frame
-	 * `page.frameLocator()`: the descendants resolve in whichever single frame holds them, the main
-	 * frame included. The any-frame form must be the first segment of its chain, has no element to
-	 * step on or to resolve to, and therefore returns nothing to chain. When seeded, omitting the
-	 * selector inherits the seeded one instead.
+	 * Registers a frame segment. With a selector, the segment is the `<iframe>` element, `locator(selector)` with any
+	 * steps, and the paths below it resolve inside the frame through `contentFrame()`; as the last segment of a path it
+	 * resolves to the element. Without a selector it is Playwright's any-frame `page.frameLocator()`: the paths below it
+	 * resolve in whichever single frame holds them, the main frame included. The any-frame form must be the first segment
+	 * of its chain, takes no steps, cannot be resolved on its own, and returns nothing to chain.
+	 *
+	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
+	 * patches: a given argument replaces the seed's, and no argument keeps the seed as it is.
+	 *
+	 * @param selector The `<iframe>` element's selector; without it, the any-frame form.
+	 * @returns The registration, for `filter`, `nth` and `describe` steps; nothing for the any-frame form.
+	 * @throws When the selector is empty: `frameLocator requires a non-empty selector for "shell.frame".`
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("frame.login").frameLocator("iframe.auth");
-	 * registry.add("frame.login.submit").getByRole("button", { name: "Log in" });
-	 * registry.add("anyFrame").frameLocator();
-	 * registry.add("anyFrame.consent").getByRole("button", { name: "Accept" });
+	 * registry.add("shell.frame@payment").frameLocator("iframe#payment");
+	 * registry.add("shell.frame@payment.button@pay").getByRole("button", { name: "Pay" });
+	 * registry.add("consent").frameLocator();
+	 * registry.add("consent.button@accept").getByRole("button", { name: "Accept" });
 	 * ```
 	 */
 	frameLocator(): Seeded extends true
@@ -459,19 +579,24 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Uses Playwright `getByTestId` semantics to define the locator strategy. When seeded, omitting
-	 * the argument inherits the seeded `testId`. An empty string is a value Playwright matches
-	 * (`data-testid=""`) and is stored as given.
+	 * Registers the path's locator as Playwright's `page.getByTestId()` does: by the attribute the project's
+	 * `testIdAttribute` names. An empty string is a value Playwright matches (`data-testid=""`) and is stored as given.
+	 *
+	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
+	 * patches: a given argument replaces the seed's, and no argument keeps the seed as it is.
+	 *
+	 * @param testId The test id: a string or a RegExp.
+	 * @returns The registration, for `filter`, `nth` and `describe` steps.
+	 * @throws When the test id is missing (from JavaScript): `getByTestId requires a testId value for "main.row@order".`
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("card.title").getByTestId("card-title");
+	 * registry.add("main.row@order").getByTestId("order-row");
 	 * ```
 	 */
 	getByTestId(
 		testId: Seeded extends true ? Parameters<Page["getByTestId"]>[0] | undefined : Parameters<Page["getByTestId"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getByTestId(
 		...inherit: Seeded extends true ? [] : [never]
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
@@ -486,24 +611,27 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Targets elements by `id`. A string is matched verbatim and case-sensitively against the `id`
-	 * attribute; there is no `#` or `id=` prefix handling, and the resolved selector is `[id="…"]`,
-	 * so ids containing `.`, `:`, `[`, spaces or quotes work as written. A RegExp is evaluated as a
-	 * pattern against each element's `id` with its flags passed through unchanged; an unanchored
-	 * pattern is a substring match, so anchor with `^` and `$` for a whole-id match. An empty string
-	 * throws at registration. When seeded, the argument can be omitted to inherit the seeded id.
+	 * Registers a locator by the `id` attribute, which Playwright has no method for. A string matches the id exactly and
+	 * case-sensitively, as `[id="…"]`, so ids with `.`, `:`, `[`, spaces or quotes work as written; there is no `#` or
+	 * `id=` prefix. A RegExp is tested against each element's id with its flags; an unanchored pattern matches part of
+	 * the id, so anchor it with `^` and `$` to match all of it.
+	 *
+	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
+	 * patches: a given argument replaces the seed's, and no argument keeps the seed as it is.
+	 *
+	 * @param id The id as written, or a pattern.
+	 * @returns The registration, for `filter`, `nth` and `describe` steps.
+	 * @throws When the id is empty or missing: `getById requires a non-empty id for "main.panel@settings".`
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("modal.close").getById("close-modal");
-	 * registry.add("settings.panel").getById("settings.panel");
-	 * registry.add("button.submit").getById(/^button\.submit\.[a-z0-9]{4}$/);
+	 * registry.add("main.panel@settings").getById("settings.panel");
+	 * registry.add("main.button@submit").getById(/^button\.submit\.[a-z0-9]{4}$/i);
 	 * ```
 	 */
 	getById(
 		id: Seeded extends true ? string | RegExp | undefined : string | RegExp,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getById(
 		...inherit: Seeded extends true ? [] : [never]
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;

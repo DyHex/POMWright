@@ -28,14 +28,19 @@ import {
 } from "./utils";
 
 /**
- * What `getLocatorSchema(path)` returns, and every step of its chain: a clone of the path's chain whose
- * `filter`, `nth`, `clearSteps`, `skip`, `unskip`, `describe`, `update` and `replace` calls change only the clone.
+ * A query, what `getLocatorSchema(path)` returns: a private copy of the path's chain, every registered segment with
+ * its locator, steps and description, to change for one use and then resolve. Its methods change this query and return
+ * it, so they chain; nothing reaches the registry, and every `getLocatorSchema` call starts a new copy. A method that
+ * takes a `subPath` works on that segment of the chain, the path itself or a registered ancestor; without one it works
+ * on the path itself.
  *
  * @example
  * ```ts
  * export const lastRow = (registry: LocatorRegistry<Paths>): LocatorQueryBuilder<Paths, "list.item"> =>
  *   registry.getLocatorSchema("list.item").nth("last");
  * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-locatorquerybuilder/
  */
 export type LocatorQueryBuilder<
 	LocatorSchemaPathType extends string,
@@ -84,21 +89,21 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Starts a PATCH-style update for the locator definition at the given `subPath` within this
-	 * builder. Returns a builder exposing the same locator-type methods as `registry.add`, with all
-	 * arguments optional to merge with the existing definition. The registry never changes; the update
-	 * applies to this query.
+	 * Patches a segment's locator for this query and keeps its strategy. Returns an update builder whose method for the
+	 * registered strategy takes a patch in JSON Merge Patch form: a given value replaces, `null` deletes (`{ name: null
+	 * }` one option, a lone `null` every option), and an omitted value keeps what is registered. The segment's steps and
+	 * description stay.
 	 *
-	 * If `subPath` is omitted, the terminal path for this builder (`path` passed to
-	 * `getLocatorSchema`) is used. The steps and the description are left as they are, and a segment
-	 * left out with `skip` must be brought back with `unskip` first.
+	 * @param subPath The segment: the query's path or one of its registered ancestors. Defaults to the query's path.
+	 * @returns An update builder whose methods return this query.
+	 * @throws When `subPath` is not a registered segment of the chain (`"main.button@save" is not a valid sub-path of
+	 * "main.list.item".`), or when it is skipped in this query (`update() cannot apply to "main.list": it is skipped in
+	 * this query; call unskip("main.list") first.`).
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("form.button")
-	 *   .update("form.button")
-	 *   .getByRole({ name: "Submit" })
-	 *   .getNestedLocator();
+	 * registry.getLocatorSchema("main.button@save").update().getByRole({ name: "Cancel" }).getNestedLocator();
+	 * registry.getLocatorSchema("main.button@save").update().getByRole("button", null).getNestedLocator();
 	 * ```
 	 */
 	update(): LocatorUpdateBuilder<
@@ -124,15 +129,21 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Records a Playwright-style filter for the specified `subPath` within this builder. Unlike
-	 * `registry.add`, `subPath` is optional here: when omitted, the terminal path for this builder is
-	 * used. Provide an explicit `subPath` when targeting an ancestor segment.
+	 * Adds a `locator.filter()` step to a segment, after its registered steps: Playwright's filter options, where `has`
+	 * and `hasNot` also take a registered path, resolved to that path's own locator.
+	 *
+	 * @param subPath The segment: the query's path or one of its registered ancestors. Defaults to the query's path.
+	 * @param filter `hasText`, `hasNotText`, `has`, `hasNot` and `visible`, as Playwright's `locator.filter()` takes
+	 * them.
+	 * @returns This query.
+	 * @throws When `subPath` is not a registered segment of the chain (`"main.button@save" is not a valid sub-path of
+	 * "main.list.item".`), or when it is skipped in this query (`filter() cannot apply to "main.list": it is skipped in
+	 * this query; call unskip("main.list") first.`).
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("list.item")
-	 *   .filter("list", { hasText: "List" })
-	 *   .filter("list.item", { hasText: "Row" });
+	 * registry.getLocatorSchema("main.list.item").filter({ hasText: "#1042" }).getNestedLocator();
+	 * registry.getLocatorSchema("main.list.item").filter("main.list", { hasText: "Open" }).getNestedLocator();
 	 * ```
 	 */
 	filter(
@@ -168,13 +179,18 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Clears all recorded `filter`/`nth` steps for the specified `subPath` in this builder, leaving
-	 * the locator definition intact. If `subPath` is omitted, the terminal path for this builder is
-	 * used; provide an explicit `subPath` to clear ancestor steps.
+	 * Removes the `filter` and `nth` steps of a segment in this query, registered and added; its locator and description
+	 * stay.
+	 *
+	 * @param subPath The segment: the query's path or one of its registered ancestors. Defaults to the query's path.
+	 * @returns This query.
+	 * @throws When `subPath` is not a registered segment of the chain (`"main.button@save" is not a valid sub-path of
+	 * "main.list.item".`), or when it is skipped in this query (`clearSteps() cannot apply to "main.list": it is skipped
+	 * in this query; call unskip("main.list") first.`).
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("list.item").clearSteps("list.item").getNestedLocator();
+	 * registry.getLocatorSchema("main.list.item").clearSteps().nth("last").getNestedLocator();
 	 * ```
 	 */
 	clearSteps(): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
@@ -195,14 +211,19 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Records an index selector for the specified `subPath` in this builder. Indices are applied in
-	 * the order they are chained and require that the subPath already exists on the builder. If
-	 * `subPath` is omitted, the terminal path for this builder is used; provide an explicit `subPath`
-	 * to target ancestor segments.
+	 * Adds an index step to a segment, after its registered steps: `"first"` and `"last"` become Playwright's `first()`
+	 * and `last()`, a number goes to `nth()` as given (`-1` is the last element).
+	 *
+	 * @param subPath The segment: the query's path or one of its registered ancestors. Defaults to the query's path.
+	 * @param index A number, `"first"` or `"last"`.
+	 * @returns This query.
+	 * @throws When `subPath` is not a registered segment of the chain (`"main.button@save" is not a valid sub-path of
+	 * "main.list.item".`), or when it is skipped in this query (`nth() cannot apply to "main.list": it is skipped in this
+	 * query; call unskip("main.list") first.`).
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("list.item").nth("list.item", 2).getNestedLocator();
+	 * registry.getLocatorSchema("main.list.item").nth(2).getNestedLocator();
 	 * ```
 	 */
 	nth(index: IndexSelector): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
@@ -231,14 +252,17 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Adds or overrides the description for the terminal path of this builder. The description is
-	 * applied only to the resolved terminal locator and does not mutate registry state.
+	 * Sets the description of the locator this query resolves, replacing the registered one or the path; `""` removes it,
+	 * so the locator shows as its chain in the trace viewer and the HTML report.
+	 *
+	 * @param description A string; `""` removes the description.
+	 * @returns This query.
+	 * @throws When the description is not a string (from JavaScript):
+	 * `describe requires a string for "main.list.item"; pass "" to remove the description.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("section.button")
-	 *   .describe("Save button")
-	 *   .getNestedLocator();
+	 * registry.getLocatorSchema("main.list.item").describe("First order").getNestedLocator();
 	 * ```
 	 */
 	describe(description: LocatorDescription): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring> {
@@ -257,19 +281,19 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Starts a PUT-style replacement for the locator definition at the given `subPath` within this
-	 * builder. Returns a builder exposing the same locator-type methods as `registry.add`, requiring
-	 * primary arguments where Playwright does. Registry state is unchanged; the replacement applies
-	 * to the builder clone when resolved. If `subPath` is omitted, the terminal path for this
-	 * builder is used. The steps and the description are left as they are, and a segment left out
-	 * with `skip` must be brought back with `unskip` first.
+	 * Replaces a segment's locator for this query with one of any strategy. Returns an update builder whose ten methods
+	 * take the arguments of Playwright's own methods, the first argument required. The segment's steps and description
+	 * stay.
+	 *
+	 * @param subPath The segment: the query's path or one of its registered ancestors. Defaults to the query's path.
+	 * @returns An update builder whose methods return this query.
+	 * @throws When `subPath` is not a registered segment of the chain (`"main.button@save" is not a valid sub-path of
+	 * "main.list.item".`), or when it is skipped in this query (`replace() cannot apply to "main.list": it is skipped in
+	 * this query; call unskip("main.list") first.`).
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("section.button")
-	 *   .replace("section.button")
-	 *   .getByRole("button", { name: "Save" })
-	 *   .getNestedLocator();
+	 * registry.getLocatorSchema("main.list.item").replace("main.list").getByRole("list", { name: "Orders" }).getNestedLocator();
 	 * ```
 	 */
 	replace(): LocatorUpdateBuilder<
@@ -314,13 +338,18 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Leaves an ancestor out of the chain when this query resolves, as if it were not registered. Nothing
-	 * is deleted: `unskip` brings it back exactly as it was. The terminal path cannot be skipped, and a
-	 * skipped segment rejects `update`, `replace`, `filter`, `nth` and `clearSteps` until `unskip`.
+	 * Leaves an ancestor out of the chain when this query resolves, as if it had no locator. Nothing is deleted: `unskip`
+	 * brings it back exactly as it was. Until then, `update`, `replace`, `filter`, `nth` and `clearSteps` on it throw.
+	 *
+	 * @param subPath A registered ancestor of the query's path; the path itself cannot be skipped.
+	 * @returns This query.
+	 * @throws When the segment is skipped already
+	 * (`skip() cannot skip "main.list": it is already skipped in this query.`), or when it is the query's path (from
+	 * JavaScript).
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("main.list.item").skip("main.list").getNestedLocator(); // locator('main').locator('li')
+	 * registry.getLocatorSchema("main.list.item").skip("main.list").getNestedLocator();
 	 * ```
 	 */
 	skip<SubPath extends SkippablePaths<LocatorSchemaPathType, LocatorSubstring>>(
@@ -340,7 +369,18 @@ export class LocatorQueryBuilderInternal<
 		return this;
 	}
 
-	/** Puts a segment left out with `skip` back into the chain, exactly as it was. */
+	/**
+	 * Puts a segment left out with `skip` back into the chain, with everything it had.
+	 *
+	 * @param subPath A segment skipped in this query.
+	 * @returns This query.
+	 * @throws When the segment is not skipped: `unskip() cannot unskip "main.list": it is not skipped in this query.`
+	 *
+	 * @example
+	 * ```ts
+	 * query.unskip("main.list").getNestedLocator();
+	 * ```
+	 */
 	unskip<SubPath extends SkippablePaths<LocatorSchemaPathType, LocatorSubstring>>(
 		subPath: SubPath,
 	): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring> {
@@ -353,12 +393,14 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Resolves and returns the Playwright {@link Locator} for the terminal path of this builder,
-	 * applying only the terminal definition and its steps; skipped ancestors make no difference.
+	 * Resolves the query's path alone, with its steps and description, as `getLocator(path)` on the registry does;
+	 * changes to its ancestors make no difference to it.
+	 *
+	 * @returns A Playwright `Locator`.
 	 *
 	 * @example
 	 * ```ts
-	 * const locator = getLocatorSchema("form.submit").getLocator();
+	 * const item = registry.getLocatorSchema("main.list.item").nth("last").getLocator();
 	 * ```
 	 */
 	getLocator(): Locator {
@@ -373,14 +415,15 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Resolves the chained Playwright {@link Locator} for this builder’s root path, traversing each
-	 * registered segment that is not skipped and applying recorded steps.
+	 * Resolves the query's chain: every registered segment that is not skipped, first to last, each with its steps, as
+	 * `getNestedLocator(path)` on the registry does.
+	 *
+	 * @returns A Playwright `Locator`.
+	 * @throws When a segment cannot be resolved, as `getNestedLocator(path)` throws.
 	 *
 	 * @example
 	 * ```ts
-	 * const nested = getLocatorSchema("list.item")
-	 *   .filter("list", { hasText: "List" })
-	 *   .getNestedLocator();
+	 * await registry.getLocatorSchema("main.list.item").filter({ hasText: "Open" }).getNestedLocator().click();
 	 * ```
 	 */
 	getNestedLocator(): Locator {
