@@ -1,13 +1,15 @@
 name: Checks
 
-# The jobs of every CI run, called by pr.yaml (pull requests) and main.yaml (pushes to main). Lint always runs; the
-# unit tests, the build and the harness are skipped, which GitHub reports as success, when only *.md files outside
-# website/ (whose pages' examples the harness's type check compiles) changed since the last green commit of the branch
-# (the newest commit whose run of the caller's workflow succeeded) or, on a pull request, since its base. Never since the
-# previous push alone: that would let a docs-only push turn a red run green.
-# The package job builds and packs once; every harness job tests that tarball, on the browsers the caller asks for, and
-# with node-floor (set by pr.yaml and main.yaml) also on chromium at the pin on Node 20, the floor of package.json's engines (the unit tests stay on
-# Node 24: vitest needs 22.12). Third-party actions are pinned to commits, the version in a comment; Dependabot
+# The jobs of every CI run, called by pr.yaml (pull requests) and main.yaml (pushes to main). Lint always runs. The
+# changes job compares the commit with the last green commit of the branch (the newest commit whose run of the
+# caller's workflow succeeded) and, on a pull request, with its base, never with the previous push alone (that would let
+# a docs-only push turn a red run green): code is a change outside website/ that is not *.md, site is code or a change
+# under website/. The package job runs on either; the harness on code; the site job on site. A skipped job is reported
+# as success. A change to the documentation's pages only runs lint, the package and the site job.
+# The package job builds and packs once; every harness job and the site job test that tarball. The harness runs on the
+# browsers the caller asks for, each at the Playwright pin and at the latest 1.x, and with node-floor (set by pr.yaml and
+# main.yaml) also on chromium at the pin on Node 20, the floor of package.json's engines (the unit tests stay on Node 24:
+# vitest needs 22.12). Third-party actions are pinned to commits, the version in a comment; Dependabot
 # (.github/dependabot.yml) proposes updates.
 
 on:
@@ -36,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.changes.outputs.code }}
+      site: ${{ steps.changes.outputs.site }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -51,7 +54,7 @@ jobs:
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: echo "sha=$(bash scripts/ci-last-green.sh "$GITHUB_REPOSITORY" "$WORKFLOW" "$EVENT" "$BRANCH" "$HEAD_REPO" "$HEAD_SHA")" >>"$GITHUB_OUTPUT"
       - id: changes
-        name: Anything other than *.md outside website/ changed?
+        name: Which jobs does the change need?
         env:
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           GREEN: ${{ steps.green.outputs.sha }}
@@ -76,7 +79,7 @@ jobs:
   package:
     name: Unit tests and package
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.site == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -186,3 +189,44 @@ jobs:
           name: playwright-report-chromium-node20-${{ github.run_id }}-${{ github.run_attempt }}
           path: test/playwright-report
           retention-days: 30
+
+  # The documentation: its TypeScript examples compiled and the API reference checked against the packed package, as
+  # the harness's type check does, then the site built, which fails on a link or an anchor that does not exist.
+  # pages.yaml deploys the same build.
+  site:
+    name: Documentation and site
+    needs: [changes, package]
+    if: needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.x
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            test/pnpm-lock.yaml
+            website/pnpm-lock.yaml
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: pomwright-package
+          path: ${{ runner.temp }}/package
+      - name: Install the packed package into test/
+        env:
+          TARBALL: ${{ runner.temp }}/package/pomwright-test-build.tgz
+        run: |
+          pnpm install --frozen-lockfile
+          bash pack-extract.sh "$TARBALL"
+          pnpm -C test install --frozen-lockfile
+      - name: Compile the documentation's examples
+        run: node scripts/check-doc-snippets.mjs
+      - name: Check the API reference and the doc comments
+        run: node scripts/check-api-coverage.mjs
+      - name: Build the site
+        run: |
+          pnpm -C website install --frozen-lockfile
+          pnpm -C website build
