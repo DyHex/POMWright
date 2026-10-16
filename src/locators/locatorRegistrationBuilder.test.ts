@@ -196,6 +196,51 @@ describe("createReusable", () => {
 	});
 });
 
+describe("a seed is a value", () => {
+	it("filter, nth and describe return a new seed and leave the one they were called on as it was", () => {
+		const base = createRegistry().createReusable.getByRole("row", { name: "Order" }).describe("Order row");
+		const filtered = base.filter({ hasText: "Paid" });
+		const indexed = base.nth(0);
+		const described = base.describe("Other");
+		for (const derived of [filtered, indexed, described]) {
+			expect(derived).not.toBe(base);
+		}
+		expect(base.steps).toEqual([]);
+		expect(base.description).toBe("Order row");
+		expect(filtered.steps).toEqual([{ kind: "filter", filter: { hasText: "Paid" } }]);
+		expect(indexed.steps).toEqual([{ kind: "index", index: 0 }]);
+		expect(described.description).toBe("Other");
+		expect(filtered.description).toBe("Order row");
+	});
+
+	it("a variant of a variant carries both steps; the first variant keeps its own", () => {
+		const base = createRegistry().createReusable.locator("tr");
+		const paid = base.filter({ hasText: "Paid" });
+		const firstPaid = paid.nth(0);
+		expect(paid.steps).toEqual([{ kind: "filter", filter: { hasText: "Paid" } }]);
+		expect(firstPaid.steps).toEqual([
+			{ kind: "filter", filter: { hasText: "Paid" } },
+			{ kind: "index", index: 0 },
+		]);
+	});
+
+	it("definition and steps are copies: changing them changes nothing", () => {
+		const registry = createRegistry();
+		const seed = registry.createReusable.getByRole("button", { name: "Save" }).filter({ hasText: "x" });
+		expect(seed.definition).not.toBe(seed.definition);
+		(seed.definition.options as { name: string }).name = "Changed";
+		(seed.steps as unknown[]).push({ kind: "index", index: 0 });
+		registry.add("seeded", { reuse: seed });
+		expect(registry.get("seeded").definition).toEqual({ type: "role", role: "button", options: { name: "Save" } });
+		expect(registry.get("seeded").steps).toEqual([{ kind: "filter", filter: { hasText: "x" } }]);
+	});
+
+	it("describe still requires a string", () => {
+		const seed = createRegistry().createReusable.locator("tr");
+		expect(() => seed.describe(undefined as never)).toThrowError("createReusable.describe");
+	});
+});
+
 describe("steps and describe before a strategy", () => {
 	it("throw at runtime naming the method, register nothing, and leave the path registrable", () => {
 		const registry = createRegistry();

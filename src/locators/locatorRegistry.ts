@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { type LocatorQueryBuilder, LocatorQueryBuilderInternal } from "./locatorQueryBuilder";
 import {
 	LocatorRegistrationBuilder,
+	type LocatorRegistrationPostDefinitionBuilder,
 	type LocatorRegistrationPreDefinitionBuilder,
 	type LocatorRegistrationSeededBuilderForType,
 } from "./locatorRegistrationBuilder";
@@ -9,7 +10,6 @@ import { ReusableLocatorFactory } from "./reusableLocatorBuilder";
 import type {
 	FilterDefinition,
 	FilterLocatorReference,
-	IndexSelector,
 	LocatorBuilderTarget,
 	LocatorDescription,
 	LocatorSchemaPathFormat,
@@ -30,6 +30,7 @@ import {
 	isAnyFrameDefinition,
 	isFrameLocatorDefinition,
 	isLocatorInstance,
+	isReusableLocator,
 	normalizeSteps,
 	stringifyForLog,
 	validateLocatorSchemaPath,
@@ -67,9 +68,11 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 
 	/**
 	 * Factory for reusable locator seeds that capture a locator strategy plus any chained
-	 * `filter`/`nth` steps without registering them. Pass the resulting seed to
+	 * `filter`/`nth` steps without registering them. A seed is a value, like a Playwright
+	 * `Locator`: `filter`, `nth` and `describe` return a new seed. Pass a seed to
 	 * {@link LocatorRegistryInternal.add} via `{ reuse }` to register a path that inherits the
-	 * stored definition and steps.
+	 * stored definition and steps; to share a locator between locator modules, reusing a
+	 * registered path is usually simpler.
 	 *
 	 * @example
 	 * ```ts
@@ -108,9 +111,16 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	/**
 	 * Registers a locator schema at the provided dot-delimited path.
 	 * Accepts exactly one locator strategy (`getByRole`, `locator`, etc.) and any number of
-	 * `filter`/`nth` steps chained in call order. When `{ reuse }` is supplied, the seeded
-	 * definition is applied first and one matching override is allowed as a PATCH of the seed;
-	 * otherwise, calling multiple locator strategies will throw.
+	 * `filter`/`nth` steps chained in call order; calling a second strategy throws.
+	 *
+	 * With `{ reuse: "other.path" }` the path is registered at once as a copy of that registered
+	 * path (its strategy, its steps and an explicit description), and `filter`, `nth` and
+	 * `describe` narrow the copy after the copied steps; there is no strategy override, the source
+	 * never changes, and a copy of an any-frame `frameLocator()` takes no steps.
+	 *
+	 * With `{ reuse: seed }` (from `createReusable`) the seed is registered at once, and one
+	 * override of the seed's strategy may come first as a PATCH, as `update()` patches, followed
+	 * by `filter`, `nth` and `describe`. Any other reuse value throws.
 	 *
 	 * @example
 	 * ```ts
@@ -119,6 +129,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 *   .getByRole("listitem", { name: /Row/ })
 	 *   .filter({ hasText: "Row" })
 	 *   .nth("last");
+	 * registry.add("list.lastItem", { reuse: "list.item" }).describe("Last row");
 	 * ```
 	 */
 	add<
@@ -138,7 +149,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	): Reuse extends undefined
 		? LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>
 		: Reuse extends LocatorSchemaPathType
-			? void
+			? LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>
 			: LocatorRegistrationSeededBuilderForType<
 					LocatorSchemaPathType,
 					RegistryPath<LocatorSchemaPathType>,
@@ -167,15 +178,20 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				throw new Error(`Locator reuse path cannot be the same as registration path: "${targetPath}".`);
 			}
 			const sourceRecord = this.get(reuse as RegistryPath<LocatorSchemaPathType>);
-			const cloned = this.cloneRecordForReuse(sourceRecord, targetPath);
-
-			this.register(targetPath, cloned);
-			return undefined as never;
+			// a registered record is a seed: its strategy, steps and description, then filter, nth and describe
+			return this.seededBuilder(
+				targetPath,
+				this.cloneRecordForReuse(sourceRecord, targetPath),
+			).viewAfterReuse() as never;
 		}
 
 		if (Array.isArray(reuse)) {
 			const [reason] = reuse;
 			throw new Error(`Invalid reuse path configuration for "${path}": ${reason}`);
+		}
+
+		if (!isReusableLocator(reuse)) {
+			throw new Error(`reuse requires a registered path or a seed from createReusable for "${path}".`);
 		}
 
 		const reusedRecord: LocatorSchemaRecord<
@@ -191,16 +207,23 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			path as RegistryPath<LocatorSchemaPathType>,
 		);
 
+		return this.seededBuilder(path as RegistryPath<LocatorSchemaPathType>, reusedRecord) as never;
+	}
+
+	private seededBuilder(
+		path: RegistryPath<LocatorSchemaPathType>,
+		record: LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>,
+	) {
 		return new LocatorRegistrationBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, true>(
 			this,
-			path as RegistryPath<LocatorSchemaPathType>,
+			path,
 			{
-				initialDefinition: reusedRecord.definition,
-				initialSteps: reusedRecord.steps,
-				reuseType: reusedRecord.definition.type,
-				initialDescription: reusedRecord.description,
+				initialDefinition: record.definition,
+				initialSteps: record.steps,
+				reuseType: record.definition.type,
+				initialDescription: record.description,
 			},
-		).persistSeededDefinition() as never;
+		).persistSeededDefinition();
 	}
 
 	register(
@@ -338,7 +361,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			undefined,
 			record.description,
 			context,
-		).locator;
+		);
 	}
 
 	/**
@@ -451,7 +474,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			rootPath: RegistryPath<LocatorSchemaPathType>;
 			resolvingPaths: Set<string>;
 		},
-	) {
+	): Locator {
 		const resolutionContext = context ?? this.createResolutionContext(path);
 		// the registered ancestors in chain order; an unregistered or skipped one is left out
 		const ancestors = expandSchemaPath(path)
@@ -463,32 +486,17 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 
 		let currentTarget: LocatorBuilderTarget = this.page;
 		let previousPart: string | undefined;
-		const debugSteps: {
-			path: string;
-			definition: LocatorStrategyDefinition;
-			appliedFilters: PlaywrightFilterDefinition[];
-			index?: IndexSelector | null | undefined;
-			recordedSteps: LocatorStep<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>[];
-		}[] = [];
 
 		// Every strategy, frames included, is an element locator followed by its steps in chain order.
 		const resolveSegment = (part: string, definition: LocatorStrategyDefinition): Locator => {
-			const recordedSteps = steps.get(part) ?? [];
 			let resolvedLocator = createLocator(currentTarget, definition);
-			const appliedFilters: PlaywrightFilterDefinition[] = [];
-			let appliedIndex: IndexSelector | null | undefined;
-			for (const step of recordedSteps) {
-				if (step.kind === "filter") {
-					const resolvedFilter = this.resolveFilter(step.filter, resolutionContext);
-					resolvedLocator = resolvedLocator.filter(resolvedFilter);
-					appliedFilters.push(resolvedFilter);
-				} else {
-					appliedIndex = step.index ?? null;
-					resolvedLocator = applyIndexSelector(resolvedLocator, step.index);
-				}
+			for (const step of steps.get(part) ?? []) {
+				resolvedLocator =
+					step.kind === "filter"
+						? resolvedLocator.filter(this.resolveFilter(step.filter, resolutionContext))
+						: applyIndexSelector(resolvedLocator, step.index);
 			}
 			previousPart = part;
-			debugSteps.push({ path: part, definition, appliedFilters, index: appliedIndex, recordedSteps });
 			return resolvedLocator;
 		};
 
@@ -504,7 +512,6 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				}
 				currentTarget = this.page.frameLocator();
 				previousPart = part;
-				debugSteps.push({ path: part, definition, appliedFilters: [], recordedSteps: [] });
 				continue;
 			}
 			const locator = resolveSegment(part, definition);
@@ -518,8 +525,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			}
 			throw new Error(anyFrameNoElementMessage(path));
 		}
-		const locator = resolveSegment(path, terminal).describe(terminalDescription ?? path);
-		return { locator, steps: debugSteps };
+		return resolveSegment(path, terminal).describe(terminalDescription ?? path);
 	}
 }
 

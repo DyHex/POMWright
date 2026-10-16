@@ -8,7 +8,16 @@ import type {
 	RegistryPath,
 	RoleDefinition,
 } from "./types";
-import { assembleDefinition, assertStrategyPrimary, definitionFields, methodForStrategy, strategyOf } from "./utils";
+import {
+	assembleDefinition,
+	assertStrategyPrimary,
+	definitionFields,
+	mergeOptions,
+	methodForStrategy,
+	strategyOf,
+} from "./utils";
+
+export { mergeOptions };
 
 /**
  * Separates the primary argument of an `update`/`replace` call from its options. `undefined` means
@@ -26,35 +35,6 @@ export const parseUpdateArguments = <Primary, Patch>(
 		return { primary: undefined, options: primaryOrOptions as Patch | null, hasOptions: true as const };
 	}
 	return { primary: primaryOrOptions as Primary | undefined, options: undefined, hasOptions: false as const };
-};
-
-/**
- * JSON Merge Patch over a Playwright options object: an absent patch leaves the options alone,
- * `null` deletes them all, and inside a patch a `null` key is deleted, an `undefined` key is skipped
- * and any other value replaces. An empty result is no options at all.
- */
-export const mergeOptions = <Options extends object>(
-	current: Options | undefined,
-	patch: OptionsPatch<Options> | null | undefined,
-): Options | undefined => {
-	if (patch === undefined) {
-		return current;
-	}
-	if (patch === null) {
-		return undefined;
-	}
-	const merged: Record<string, unknown> = { ...(current ?? {}) };
-	for (const [key, value] of Object.entries(patch)) {
-		if (value === undefined) {
-			continue;
-		}
-		if (value === null) {
-			delete merged[key];
-		} else {
-			merged[key] = value;
-		}
-	}
-	return Object.keys(merged).length > 0 ? (merged as Options) : undefined;
 };
 
 type UpdateArgsWithOptions<Primary, Options> =

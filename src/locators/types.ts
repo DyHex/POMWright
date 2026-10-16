@@ -198,10 +198,13 @@ export type ReusableLocator<
 	readonly definition: LocatorDefinitionByType[Type];
 	readonly steps: LocatorStep<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>[];
 	readonly description: LocatorDescription | undefined;
+	/** A new seed with the filter added; this seed is unchanged, as a Playwright `Locator` is by `filter`. */
 	filter(
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	): ReusableLocator<LocatorSchemaPathType, Type>;
+	/** A new seed with the index added; this seed is unchanged. */
 	nth(index: IndexSelector): ReusableLocator<LocatorSchemaPathType, Type>;
+	/** A new seed with the description; this seed is unchanged. */
 	describe(description: LocatorDescription): ReusableLocator<LocatorSchemaPathType, Type>;
 };
 

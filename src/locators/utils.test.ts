@@ -24,6 +24,7 @@ import {
 	formatLocatorSchemaPathForError,
 	isAnyFrameDefinition,
 	isLocatorInstance,
+	isReusableLocator,
 	LOCATOR_SCHEMA_PATH_WHITESPACE,
 	methodForStrategy,
 	normalizeSteps,
@@ -554,6 +555,57 @@ describe("assertStrategyPrimary", () => {
 	it("accepts a value", () => {
 		for (const type of types) {
 			expect(() => assertStrategyPrimary(type, "v", { method: STRATEGIES[type].method, path: "x" })).not.toThrow();
+		}
+	});
+});
+
+describe("assertStrategyPrimary, values Playwright cannot take", () => {
+	const types = Object.keys(STRATEGIES) as StrategyType[];
+	const check = (type: StrategyType, value: unknown) => () =>
+		assertStrategyPrimary(type, value, { method: STRATEGIES[type].method, path: "x" });
+	const missing = (type: StrategyType) =>
+		type === "id"
+			? 'getById requires a non-empty id for "x".'
+			: `${STRATEGIES[type].method} requires a ${STRATEGIES[type].primary} value for "x".`;
+
+	it("gives null, a number and an object the missing-value message, for every strategy", () => {
+		for (const type of types) {
+			for (const value of [null, 42, { exact: true }]) {
+				expect(check(type, value)).toThrowError(missing(type));
+			}
+		}
+	});
+
+	it("accepts a RegExp where Playwright does and rejects it where Playwright takes a string", () => {
+		const regExpStrategies = ["text", "label", "placeholder", "altText", "title", "testId", "id"];
+		for (const type of types) {
+			if (regExpStrategies.includes(type)) {
+				expect(check(type, /S/i)).not.toThrow();
+			} else {
+				expect(check(type, /S/i)).toThrowError(missing(type));
+			}
+		}
+	});
+});
+
+describe("isReusableLocator", () => {
+	it("is true for an object whose definition names a strategy of the table", () => {
+		expect(isReusableLocator({ definition: { type: "role", role: "button" } })).toBe(true);
+		expect(isReusableLocator({ definition: { type: "frameLocator" }, steps: [] })).toBe(true);
+	});
+
+	it("is false for everything else", () => {
+		for (const value of [
+			{},
+			42,
+			null,
+			undefined,
+			["reason"],
+			"path",
+			{ definition: null },
+			{ definition: { type: "css" } },
+		]) {
+			expect(isReusableLocator(value)).toBe(false);
 		}
 	});
 });

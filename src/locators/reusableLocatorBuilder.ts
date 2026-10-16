@@ -27,40 +27,42 @@ export class ReusableLocatorBuilder<
 {
 	private readonly stepsList: LocatorStep<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>[];
 	private readonly definitionValue: LocatorDefinitionByType[Type];
-	private descriptionValue?: LocatorDescription;
+	private readonly descriptionValue?: LocatorDescription;
 
 	readonly type: Type;
 
 	constructor(
 		definition: LocatorDefinitionByType[Type],
 		steps: LocatorStep<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>[] = [],
+		description?: LocatorDescription,
 	) {
 		// a copy: the seed keeps no options object the caller still holds
 		this.definitionValue = cloneLocatorStrategyDefinition(definition) as LocatorDefinitionByType[Type];
 		this.type = definition.type as Type;
 		this.stepsList = normalizeSteps<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>(steps);
+		this.descriptionValue = description;
 	}
 
+	/** A new seed with the filter added; this one is unchanged, as a Playwright `Locator` is by `filter`. */
 	filter(
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	): ReusableLocator<LocatorSchemaPathType, Type> {
-		this.stepsList.push({ kind: "filter", filter: copyFilter(filter) });
-		return this;
+		return this.with([...this.stepsList, { kind: "filter", filter: copyFilter(filter) }], this.descriptionValue);
 	}
 
+	/** A new seed with the index added; this one is unchanged. */
 	nth(index: IndexSelector): ReusableLocator<LocatorSchemaPathType, Type> {
-		this.stepsList.push({ kind: "index", index });
-		return this;
+		return this.with([...this.stepsList, { kind: "index", index }], this.descriptionValue);
 	}
 
+	/** A new seed with the description; this one is unchanged. */
 	describe(description: LocatorDescription): ReusableLocator<LocatorSchemaPathType, Type> {
 		assertDescription(description, { method: "createReusable.describe" });
-		this.descriptionValue = description;
-		return this;
+		return this.with(this.stepsList, description);
 	}
 
 	get definition() {
-		return this.definitionValue;
+		return cloneLocatorStrategyDefinition(this.definitionValue) as LocatorDefinitionByType[Type];
 	}
 
 	get steps() {
@@ -69,6 +71,13 @@ export class ReusableLocatorBuilder<
 
 	get description() {
 		return this.descriptionValue;
+	}
+
+	private with(
+		steps: LocatorStep<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>[],
+		description: LocatorDescription | undefined,
+	): ReusableLocator<LocatorSchemaPathType, Type> {
+		return new ReusableLocatorBuilder<LocatorSchemaPathType, Type>(this.definitionValue, steps, description);
 	}
 }
 

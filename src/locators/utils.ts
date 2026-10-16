@@ -8,6 +8,7 @@ import type {
 	LocatorStep,
 	LocatorStrategyDefinition,
 	LocatorStrategyDefinitionPatch,
+	OptionsPatch,
 } from "./types";
 
 /**
@@ -370,18 +371,33 @@ export const assembleDefinition = (type: StrategyType, primary: unknown, options
 	} as LocatorStrategyDefinition;
 };
 
+/** The strategies whose first argument may be a RegExp, as Playwright's own methods allow. */
+const REGEXP_PRIMARIES: ReadonlySet<StrategyType> = new Set([
+	"text",
+	"label",
+	"placeholder",
+	"altText",
+	"title",
+	"testId",
+	"id",
+]);
+
 /** The table's check of a strategy's first argument at the DSL boundary; `getById` keeps its own message. */
 export function assertStrategyPrimary(
 	type: StrategyType,
 	value: unknown,
 	source: { method: string; path?: string },
 ): asserts value is string | RegExp {
+	// A primary Playwright cannot take for this strategy (null, a number, a RegExp where only strings go) is
+	// no primary at all: it gets the missing-value message, as add() has always given a non-string role.
+	const accepted = typeof value === "string" || (value instanceof RegExp && REGEXP_PRIMARIES.has(type));
+	const given = value === undefined || accepted ? value : undefined;
 	if (type === "id") {
-		assertIdValue(value as string | RegExp | undefined, source);
+		assertIdValue(given as string | RegExp | undefined, source);
 		return;
 	}
 	const spec = strategyOf(type);
-	assertPrimaryValue(value as string | RegExp | undefined, {
+	assertPrimaryValue(given as string | RegExp | undefined, {
 		...source,
 		field: spec.primary,
 		allowEmpty: spec.allowEmpty,
@@ -401,7 +417,36 @@ export const cloneLocatorStrategyDefinition = (definition: LocatorStrategyDefini
 	);
 };
 
-/** A seeded override: a provided primary replaces the seed's, the options are merged over the seed's. */
+/**
+ * JSON Merge Patch over a Playwright options object: an absent patch leaves the options alone,
+ * `null` deletes them all, and inside a patch a `null` key is deleted, an `undefined` key is skipped
+ * and any other value replaces. An empty result is no options at all.
+ */
+export const mergeOptions = <Options extends object>(
+	current: Options | undefined,
+	patch: OptionsPatch<Options> | null | undefined,
+): Options | undefined => {
+	if (patch === undefined) {
+		return current;
+	}
+	if (patch === null) {
+		return undefined;
+	}
+	const merged: Record<string, unknown> = { ...(current ?? {}) };
+	for (const [key, value] of Object.entries(patch)) {
+		if (value === undefined) {
+			continue;
+		}
+		if (value === null) {
+			delete merged[key];
+		} else {
+			merged[key] = value;
+		}
+	}
+	return Object.keys(merged).length > 0 ? (merged as Options) : undefined;
+};
+
+/** A seeded override: a provided primary replaces the seed's; the options follow JSON Merge Patch, as `update`'s. */
 export const applyDefinitionPatch = (
 	seed: LocatorStrategyDefinition,
 	patch: LocatorStrategyDefinition | LocatorStrategyDefinitionPatch,
@@ -410,7 +455,9 @@ export const applyDefinitionPatch = (
 	const base = cloneLocatorStrategyDefinition(seed) as unknown as DefinitionFields;
 	const given = patch as unknown as DefinitionFields;
 	const primary = given[spec.primary] !== undefined ? given[spec.primary] : base[spec.primary];
-	const options = spec.options && (given.options || base.options) ? { ...base.options, ...given.options } : undefined;
+	const options = spec.options
+		? mergeOptions(base.options ?? undefined, given.options as OptionsPatch<object> | null | undefined)
+		: undefined;
 	return assembleDefinition(patch.type, primary, options);
 };
 
@@ -428,6 +475,10 @@ export const anyFrameNotFirstMessage = (part: string, ancestor: string) =>
 export const anyFrameNoElementMessage = (part: string) =>
 	`frameLocator() without a selector does not point to a particular iframe; "${part}" cannot be resolved on its own, filtered or indexed; resolve a path inside it.`;
 
+/** A step or description offered to an any-frame definition: by `filter()`, `nth()`, `describe()` or a reused seed. */
+export const anyFrameStepsMessage = (what: string, part: string) =>
+	`${what} cannot apply to "${part}": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.`;
+
 /** The any-frame form of a frame segment: `frameLocator()` registered without a selector. */
 export const isAnyFrameDefinition = (definition: LocatorStrategyDefinition): definition is FrameLocatorDefinition =>
 	definition.type === "frameLocator" && definition.selector === undefined;
@@ -436,6 +487,16 @@ export const isAnyFrameDefinition = (definition: LocatorStrategyDefinition): def
 export const methodForStrategy = Object.fromEntries(
 	Object.entries(STRATEGIES).map(([type, spec]) => [type, spec.method]),
 ) as { [Type in StrategyType]: (typeof STRATEGIES)[Type]["method"] };
+
+/** Whether a value has the shape of a seed: an object whose `definition` names one of the ten strategies. */
+export const isReusableLocator = (value: unknown): value is { definition: LocatorStrategyDefinition } => {
+	const definition = (value as { definition?: unknown } | null | undefined)?.definition;
+	return (
+		typeof definition === "object" &&
+		definition !== null &&
+		Object.hasOwn(STRATEGIES, (definition as { type?: unknown }).type as PropertyKey)
+	);
+};
 
 /**
  * Whether a value is a Playwright `Locator`: an object with `filter`, `nth` and `locator` methods. An

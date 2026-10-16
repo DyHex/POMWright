@@ -358,7 +358,7 @@ export class LocatorQueryBuilderInternal<
 			this.steps,
 			undefined,
 			this.descriptions.get(this.path),
-		).locator;
+		);
 	}
 
 	/**
@@ -380,7 +380,7 @@ export class LocatorQueryBuilderInternal<
 			this.steps,
 			this.skipped,
 			this.descriptions.get(this.path),
-		).locator;
+		);
 	}
 
 	/** A sub-path is a registered segment of this query's chain; returns its definition in this query. */

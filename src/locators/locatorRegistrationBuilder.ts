@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import type { LocatorRegistryInternal } from "./locatorRegistry";
+import { parseUpdateArguments } from "./locatorUpdateBuilder";
 import type {
 	FilterDefinition,
 	IndexSelector,
@@ -8,14 +9,17 @@ import type {
 	LocatorStep,
 	LocatorStrategyDefinition,
 	LocatorStrategyDefinitionPatch,
+	OptionsPatch,
 	RegistryPath,
 	RoleDefinition,
 } from "./types";
 import {
+	anyFrameStepsMessage,
 	applyDefinitionPatch,
 	assertDescription,
 	assertStrategyPrimary,
 	copyFilter,
+	isAnyFrameDefinition,
 	normalizeSteps,
 	STRATEGIES,
 	type StrategyMethod,
@@ -33,10 +37,11 @@ export type LocatorRegistrationPostDefinitionBuilder<
 };
 
 type StrategyType = LocatorStrategyDefinition["type"];
-/** The strategies whose first argument is a text: `getByText`, `getByLabel`, `getByPlaceholder`, `getByAltText`, `getByTitle`. */
+/** The strategies whose first argument is a text: getByText, getByLabel, getByPlaceholder, getByAltText, getByTitle. */
 type TextLikeType = {
 	[Type in StrategyType]: (typeof STRATEGIES)[Type]["primary"] extends "text" ? Type : never;
 }[StrategyType];
+type OptionsType = "role" | "locator" | TextLikeType;
 type TextLikeOptions = Parameters<Page["getByText"]>[1];
 
 const strategyMethods = Object.values(STRATEGIES).map((spec) => spec.method);
@@ -81,7 +86,18 @@ export class LocatorRegistrationBuilder<
 		this.description = seed?.initialDescription;
 	}
 
+	/** What a reuse by path returns: the seed is registered, then `filter`, `nth` and `describe` apply to it. */
+	viewAfterReuse(): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+		return this.getPostDefinitionView();
+	}
+
 	persistSeededDefinition() {
+		// the any-frame form takes no steps and no description, wherever its definition comes from
+		if (this.definition && isAnyFrameDefinition(this.definition)) {
+			if (this.steps.length > 0 || this.description !== undefined) {
+				throw new Error(anyFrameStepsMessage("reuse", this.path));
+			}
+		}
 		if (this.seededDefinition && !this.registered) {
 			this.persist();
 		}
@@ -121,15 +137,15 @@ export class LocatorRegistrationBuilder<
 	}
 
 	describe(description: LocatorDescription): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
-		this.ensureDefinition("describe");
 		this.applyDescription(description);
 		return this.getPostDefinitionView();
 	}
 
 	/**
-	 * Uses Playwright `getByRole` semantics to define the locator strategy. Accepts a role and
-	 * optional options; when seeded via `{ reuse }`, an options-only call patches the seeded role.
-	 * The role is required otherwise, and which strings are roles is Playwright's own type.
+	 * Uses Playwright `getByRole` semantics to define the locator strategy. Accepts a role and optional options; when
+	 * seeded via `{ reuse }`, the call patches the seed as `update()` does: the options merge key by key, a `null` key
+	 * deletes one, a lone `null` clears them, and an omitted role is the seed's. The role is required otherwise, and
+	 * which strings are roles is Playwright's own type.
 	 *
 	 * @example
 	 * ```ts
@@ -138,18 +154,23 @@ export class LocatorRegistrationBuilder<
 	 */
 	getByRole(
 		role: RoleDefinition["role"],
-		options: RoleDefinition["options"],
+		options: Seeded extends true
+			? OptionsPatch<RoleDefinition["options"]> | null | undefined
+			: RoleDefinition["options"],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByRole(role: RoleDefinition["role"]): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByRole(
-		options: Seeded extends true ? RoleDefinition["options"] : never,
+		options: Seeded extends true ? OptionsPatch<RoleDefinition["options"]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	getByRole(roleOrOptions: RoleDefinition["role"] | RoleDefinition["options"], options?: RoleDefinition["options"]) {
-		const role = typeof roleOrOptions === "string" ? roleOrOptions : undefined;
-		const resolvedOptions = typeof roleOrOptions === "string" ? options : roleOrOptions;
-		if (role === undefined && this.seededDefinition) {
-			return this.commit(resolvedOptions !== undefined ? { type: "role", options: resolvedOptions } : { type: "role" });
+	getByRole(
+		roleOrOptions: RoleDefinition["role"] | RoleDefinition["options"] | OptionsPatch<RoleDefinition["options"]> | null,
+		options?: RoleDefinition["options"] | OptionsPatch<RoleDefinition["options"]> | null,
+	) {
+		if (this.seededDefinition) {
+			return this.commitSeededOverride("role", "getByRole", roleOrOptions, options);
 		}
+		const role = typeof roleOrOptions === "string" ? roleOrOptions : undefined;
+		const resolvedOptions = (typeof roleOrOptions === "string" ? options : roleOrOptions) as RoleDefinition["options"];
 		assertStrategyPrimary("role", role, { method: "getByRole", path: this.path });
 		return this.commit(
 			resolvedOptions !== undefined ? { type: "role", role, options: resolvedOptions } : { type: "role", role },
@@ -157,9 +178,10 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Uses Playwright `getByText` semantics to define the locator strategy. Accepts string/RegExp
-	 * text and optional options; when seeded, an options-only call patches the seeded text. An empty
-	 * string is a value Playwright matches and is stored as given.
+	 * Uses Playwright `getByText` semantics to define the locator strategy. Accepts string/RegExp text and optional
+	 * options; when seeded, the call patches the seed as `update()` does: the options merge key by key, a `null` key
+	 * deletes one, a lone `null` clears them, and an omitted text is the seed's. An empty string is a value Playwright
+	 * matches and is stored as given.
 	 *
 	 * @example
 	 * ```ts
@@ -168,24 +190,31 @@ export class LocatorRegistrationBuilder<
 	 */
 	getByText(
 		text: Parameters<Page["getByText"]>[0],
-		options: Parameters<Page["getByText"]>[1],
+		options: Seeded extends true
+			? OptionsPatch<Parameters<Page["getByText"]>[1]> | null | undefined
+			: Parameters<Page["getByText"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByText(
 		text: Parameters<Page["getByText"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByText(
-		options: Seeded extends true ? Parameters<Page["getByText"]>[1] : never,
+		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByText"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByText(
-		textOrOptions: Parameters<Page["getByText"]>[0] | Parameters<Page["getByText"]>[1],
-		options?: Parameters<Page["getByText"]>[1],
+		textOrOptions:
+			| Parameters<Page["getByText"]>[0]
+			| Parameters<Page["getByText"]>[1]
+			| OptionsPatch<Parameters<Page["getByText"]>[1]>
+			| null,
+		options?: Parameters<Page["getByText"]>[1] | OptionsPatch<Parameters<Page["getByText"]>[1]> | null,
 	) {
 		return this.commitTextLike("text", "getByText", textOrOptions, options);
 	}
 
 	/**
-	 * Uses Playwright `getByLabel` semantics to define the locator strategy. Accepts label text and
-	 * optional options; when seeded, an options-only call patches the seeded text.
+	 * Uses Playwright `getByLabel` semantics to define the locator strategy. Accepts label text and optional options;
+	 * when seeded, the call patches the seed as `update()` does: the options merge key by key, a `null` key deletes
+	 * one, a lone `null` clears them, and an omitted text is the seed's.
 	 *
 	 * @example
 	 * ```ts
@@ -194,24 +223,31 @@ export class LocatorRegistrationBuilder<
 	 */
 	getByLabel(
 		text: Parameters<Page["getByLabel"]>[0],
-		options: Parameters<Page["getByLabel"]>[1],
+		options: Seeded extends true
+			? OptionsPatch<Parameters<Page["getByLabel"]>[1]> | null | undefined
+			: Parameters<Page["getByLabel"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByLabel(
 		text: Parameters<Page["getByLabel"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByLabel(
-		options: Seeded extends true ? Parameters<Page["getByLabel"]>[1] : never,
+		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByLabel"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByLabel(
-		textOrOptions: Parameters<Page["getByLabel"]>[0] | Parameters<Page["getByLabel"]>[1],
-		options?: Parameters<Page["getByLabel"]>[1],
+		textOrOptions:
+			| Parameters<Page["getByLabel"]>[0]
+			| Parameters<Page["getByLabel"]>[1]
+			| OptionsPatch<Parameters<Page["getByLabel"]>[1]>
+			| null,
+		options?: Parameters<Page["getByLabel"]>[1] | OptionsPatch<Parameters<Page["getByLabel"]>[1]> | null,
 	) {
 		return this.commitTextLike("label", "getByLabel", textOrOptions, options);
 	}
 
 	/**
-	 * Uses Playwright `getByPlaceholder` semantics to define the locator strategy. Accepts placeholder
-	 * text and optional options; when seeded, an options-only call patches the seeded text.
+	 * Uses Playwright `getByPlaceholder` semantics to define the locator strategy. Accepts placeholder text and
+	 * optional options; when seeded, the call patches the seed as `update()` does: the options merge key by key, a
+	 * `null` key deletes one, a lone `null` clears them, and an omitted text is the seed's.
 	 *
 	 * @example
 	 * ```ts
@@ -220,24 +256,31 @@ export class LocatorRegistrationBuilder<
 	 */
 	getByPlaceholder(
 		text: Parameters<Page["getByPlaceholder"]>[0],
-		options: Parameters<Page["getByPlaceholder"]>[1],
+		options: Seeded extends true
+			? OptionsPatch<Parameters<Page["getByPlaceholder"]>[1]> | null | undefined
+			: Parameters<Page["getByPlaceholder"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByPlaceholder(
 		text: Parameters<Page["getByPlaceholder"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByPlaceholder(
-		options: Seeded extends true ? Parameters<Page["getByPlaceholder"]>[1] : never,
+		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByPlaceholder"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByPlaceholder(
-		textOrOptions: Parameters<Page["getByPlaceholder"]>[0] | Parameters<Page["getByPlaceholder"]>[1],
-		options?: Parameters<Page["getByPlaceholder"]>[1],
+		textOrOptions:
+			| Parameters<Page["getByPlaceholder"]>[0]
+			| Parameters<Page["getByPlaceholder"]>[1]
+			| OptionsPatch<Parameters<Page["getByPlaceholder"]>[1]>
+			| null,
+		options?: Parameters<Page["getByPlaceholder"]>[1] | OptionsPatch<Parameters<Page["getByPlaceholder"]>[1]> | null,
 	) {
 		return this.commitTextLike("placeholder", "getByPlaceholder", textOrOptions, options);
 	}
 
 	/**
-	 * Uses Playwright `getByAltText` semantics to define the locator strategy. Accepts alt text and
-	 * optional options; when seeded, an options-only call patches the seeded text.
+	 * Uses Playwright `getByAltText` semantics to define the locator strategy. Accepts alt text and optional options;
+	 * when seeded, the call patches the seed as `update()` does: the options merge key by key, a `null` key deletes
+	 * one, a lone `null` clears them, and an omitted text is the seed's.
 	 *
 	 * @example
 	 * ```ts
@@ -246,24 +289,31 @@ export class LocatorRegistrationBuilder<
 	 */
 	getByAltText(
 		text: Parameters<Page["getByAltText"]>[0],
-		options: Parameters<Page["getByAltText"]>[1],
+		options: Seeded extends true
+			? OptionsPatch<Parameters<Page["getByAltText"]>[1]> | null | undefined
+			: Parameters<Page["getByAltText"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByAltText(
 		text: Parameters<Page["getByAltText"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByAltText(
-		options: Seeded extends true ? Parameters<Page["getByAltText"]>[1] : never,
+		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByAltText"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByAltText(
-		textOrOptions: Parameters<Page["getByAltText"]>[0] | Parameters<Page["getByAltText"]>[1],
-		options?: Parameters<Page["getByAltText"]>[1],
+		textOrOptions:
+			| Parameters<Page["getByAltText"]>[0]
+			| Parameters<Page["getByAltText"]>[1]
+			| OptionsPatch<Parameters<Page["getByAltText"]>[1]>
+			| null,
+		options?: Parameters<Page["getByAltText"]>[1] | OptionsPatch<Parameters<Page["getByAltText"]>[1]> | null,
 	) {
 		return this.commitTextLike("altText", "getByAltText", textOrOptions, options);
 	}
 
 	/**
-	 * Uses Playwright `getByTitle` semantics to define the locator strategy. Accepts title text and
-	 * optional options; when seeded, an options-only call patches the seeded text.
+	 * Uses Playwright `getByTitle` semantics to define the locator strategy. Accepts title text and optional options;
+	 * when seeded, the call patches the seed as `update()` does: the options merge key by key, a `null` key deletes
+	 * one, a lone `null` clears them, and an omitted text is the seed's.
 	 *
 	 * @example
 	 * ```ts
@@ -272,25 +322,32 @@ export class LocatorRegistrationBuilder<
 	 */
 	getByTitle(
 		text: Parameters<Page["getByTitle"]>[0],
-		options: Parameters<Page["getByTitle"]>[1],
+		options: Seeded extends true
+			? OptionsPatch<Parameters<Page["getByTitle"]>[1]> | null | undefined
+			: Parameters<Page["getByTitle"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByTitle(
 		text: Parameters<Page["getByTitle"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByTitle(
-		options: Seeded extends true ? Parameters<Page["getByTitle"]>[1] : never,
+		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByTitle"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByTitle(
-		textOrOptions: Parameters<Page["getByTitle"]>[0] | Parameters<Page["getByTitle"]>[1],
-		options?: Parameters<Page["getByTitle"]>[1],
+		textOrOptions:
+			| Parameters<Page["getByTitle"]>[0]
+			| Parameters<Page["getByTitle"]>[1]
+			| OptionsPatch<Parameters<Page["getByTitle"]>[1]>
+			| null,
+		options?: Parameters<Page["getByTitle"]>[1] | OptionsPatch<Parameters<Page["getByTitle"]>[1]> | null,
 	) {
 		return this.commitTextLike("title", "getByTitle", textOrOptions, options);
 	}
 
 	/**
-	 * Uses Playwright `locator` semantics to define the locator strategy. Accepts a selector and
-	 * optional options; when seeded, an options-only call patches the seeded selector by merging
-	 * options while inheriting the selector. An empty selector is rejected: Playwright cannot parse it.
+	 * Uses Playwright `locator` semantics to define the locator strategy. Accepts a selector and optional options;
+	 * when seeded, the call patches the seed as `update()` does: the options merge key by key, a `null` key deletes
+	 * one, a lone `null` clears them, and an omitted selector is the seed's. An empty selector is rejected: Playwright
+	 * cannot parse it.
 	 *
 	 * @example
 	 * ```ts
@@ -299,25 +356,31 @@ export class LocatorRegistrationBuilder<
 	 */
 	locator(
 		selector: Parameters<Page["locator"]>[0],
-		options: Parameters<Page["locator"]>[1],
+		options: Seeded extends true
+			? OptionsPatch<Parameters<Page["locator"]>[1]> | null | undefined
+			: Parameters<Page["locator"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	locator(
 		selector: Parameters<Page["locator"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	locator(
-		options: Seeded extends true ? Parameters<Page["locator"]>[1] : never,
+		options: Seeded extends true ? OptionsPatch<Parameters<Page["locator"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	locator(
-		selectorOrOptions: Parameters<Page["locator"]>[0] | Parameters<Page["locator"]>[1],
-		options?: Parameters<Page["locator"]>[1],
+		selectorOrOptions:
+			| Parameters<Page["locator"]>[0]
+			| Parameters<Page["locator"]>[1]
+			| OptionsPatch<Parameters<Page["locator"]>[1]>
+			| null,
+		options?: Parameters<Page["locator"]>[1] | OptionsPatch<Parameters<Page["locator"]>[1]> | null,
 	) {
-		const selector = typeof selectorOrOptions === "string" ? selectorOrOptions : undefined;
-		const resolvedOptions = typeof selectorOrOptions === "string" ? options : selectorOrOptions;
-		if (selector === undefined && this.seededDefinition) {
-			return this.commit(
-				resolvedOptions !== undefined ? { type: "locator", options: resolvedOptions } : { type: "locator" },
-			);
+		if (this.seededDefinition) {
+			return this.commitSeededOverride("locator", "locator", selectorOrOptions, options);
 		}
+		const selector = typeof selectorOrOptions === "string" ? selectorOrOptions : undefined;
+		const resolvedOptions = (typeof selectorOrOptions === "string" ? options : selectorOrOptions) as Parameters<
+			Page["locator"]
+		>[1];
 		assertStrategyPrimary("locator", selector, { method: "locator", path: this.path });
 		return this.commit(
 			resolvedOptions !== undefined
@@ -412,27 +475,38 @@ export class LocatorRegistrationBuilder<
 		return this.commit({ type: "id", id });
 	}
 
-	private commitTextLike(
-		type: TextLikeType,
-		method: string,
-		textOrOptions: string | RegExp | TextLikeOptions,
-		options: TextLikeOptions,
-	) {
-		const text = typeof textOrOptions === "string" || textOrOptions instanceof RegExp ? textOrOptions : undefined;
-		const resolvedOptions = text === undefined ? (textOrOptions as TextLikeOptions) : options;
-		if (text === undefined && this.seededDefinition) {
-			return this.commit(
-				(resolvedOptions !== undefined
-					? { type, options: resolvedOptions }
-					: { type }) as LocatorStrategyDefinitionPatch,
-			);
+	private commitTextLike(type: TextLikeType, method: string, textOrOptions: unknown, options: unknown) {
+		if (this.seededDefinition) {
+			return this.commitSeededOverride(type, method, textOrOptions, options);
 		}
+		const text = typeof textOrOptions === "string" || textOrOptions instanceof RegExp ? textOrOptions : undefined;
+		const resolvedOptions = (text === undefined ? textOrOptions : options) as TextLikeOptions;
 		assertStrategyPrimary(type, text, { method, path: this.path });
 		return this.commit(
 			(resolvedOptions !== undefined
 				? { type, text, options: resolvedOptions }
 				: { type, text }) as LocatorStrategyDefinitionPatch,
 		);
+	}
+
+	/**
+	 * A seeded override of a strategy with options takes `update`'s argument shapes: with two arguments the
+	 * first is the primary (`null` there throws), a lone object or `null` is the options patch, and the
+	 * options follow JSON Merge Patch over the seed's.
+	 */
+	private commitSeededOverride(type: OptionsType, method: string, primaryOrOptions: unknown, options: unknown) {
+		const parsed = parseUpdateArguments<string | RegExp, OptionsPatch<object>>(
+			primaryOrOptions as string | RegExp | OptionsPatch<object> | null | undefined,
+			options as OptionsPatch<object> | null | undefined,
+		);
+		if (parsed.primary !== undefined) {
+			assertStrategyPrimary(type, parsed.primary, { method, path: this.path });
+		}
+		return this.commit({
+			type,
+			...(parsed.primary !== undefined ? { [STRATEGIES[type].primary]: parsed.primary } : {}),
+			...(parsed.hasOptions ? { options: parsed.options } : {}),
+		} as LocatorStrategyDefinitionPatch);
 	}
 
 	private commit(
@@ -465,6 +539,7 @@ export class LocatorRegistrationBuilder<
 	}
 
 	private applyDescription(description: LocatorDescription) {
+		this.ensureDefinition("describe");
 		assertDescription(description, { method: "describe", path: this.path });
 		this.description = description;
 		this.persist();
@@ -503,6 +578,9 @@ export class LocatorRegistrationBuilder<
 			throw new Error(
 				`${method}() needs a locator strategy first for "${this.path}"; call ${STRATEGY_METHODS} before it.`,
 			);
+		}
+		if (isAnyFrameDefinition(this.definition)) {
+			throw new Error(anyFrameStepsMessage(`${method}()`, this.path));
 		}
 	}
 
