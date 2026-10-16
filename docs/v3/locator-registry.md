@@ -35,7 +35,8 @@
     2. [`getNestedLocator(path)`](#getnestedlocatorpath)
     3. [Frames: the iframe element, its steps, and entering the frame](#frames-the-iframe-element-its-steps-and-entering-the-frame)
     4. [Any frame: `frameLocator()` without a selector](#any-frame-framelocator-without-a-selector)
-    5. [Sparse chain behavior](#sparse-chain-behavior)
+    5. [Unregistered segments](#unregistered-segments)
+    6. [`strictChains`: every segment registered](#strictchains-every-segment-registered)
 9. [Verifying a registry: `verify()`](#verifying-a-registry-verify)
 10. [Query builder: `getLocatorSchema(path)`](#query-builder-getlocatorschemapath)
     1. [Clone semantics (registry is not mutated)](#clone-semantics-registry-is-not-mutated)
@@ -310,6 +311,11 @@ attributes (`getByTestId("")` finds `data-testid=""`). Which strings are ARIA ro
 checked at compile time with autocompletion; there is no runtime list. The only exceptions to "required" are the
 inheriting forms: on a seeded `add` or an `update`, an omitted argument keeps the seeded or registered value, and
 `frameLocator()` without a selector is Playwright's any-frame locator.
+
+A primary is always a value. From JavaScript, a first argument Playwright cannot take for the strategy (`null`, a
+number, an object, a RegExp for a role, `locator` or `frameLocator`) gets the same missing-value message, on every
+builder. With two arguments the first is the primary, so `getByRole(null, null)` is valid nowhere; a lone `null`
+where options may stand (on `update` and on a seeded `add`) is the options, and clears them.
 
 ### Post-definition chain methods
 
@@ -632,16 +638,59 @@ await registry.getNestedLocator("anyFrame.consent").click();   // frameLocator()
 Rules, each of them Playwright's: the any-frame segment must be the first segment of the chain that resolves (the
 engine allows the any-frame part only at the start of a selector, so an any-frame path below a registered ancestor
 throws naming the ancestor); it has no element, so it takes no steps, returns nothing to chain from `add`, cannot be
-resolved on its own (`getLocator("anyFrame")` throws), and cannot be a `has`/`hasNot` reference; a selector frame may
+resolved on its own (`getLocator("anyFrame")` throws), and cannot be a `has`/`hasNot` reference (a copy by path, `add(p, {
+reuse: "anyFrame" })`, refuses `filter`, `nth` and `describe` at the call for the same reason); a selector frame may
 follow it (`add("anyFrame.inner").frameLocator("#iframeC")`). "Any iframe under this element" is a different
 question, answered by `frameLocator("iframe")` registered under that element's segment. `replace().frameLocator()`
 makes a sub-path any-frame; on `update` and on a seeded `add`, an omitted selector keeps the existing one instead.
 
-### Sparse chain behavior
+### Unregistered segments
 
-During nested resolution, chain parts/sub-paths that are not registered are skipped, except for the terminal chain/path which throws if no locator definition is registered.
+A segment of a path that has no registration of its own is a name that groups paths, and nested resolution leaves it
+out of the chain. Only the terminal path must be registered: resolving an unregistered path throws `No locator schema
+registered for path "…".`
 
-This enables partial/sparse registration patterns, but for readability and maintainability you should generally prefer explicit ancestor registration.
+```ts
+registry.add("main.form").getByRole("form", { name: "Login" });
+registry.add("main.form.button.submit").getByRole("button", { name: "Log in" });
+// "main" and "main.form.button" are names, not locators
+
+registry.getNestedLocator("main.form.button.submit");
+// getByRole('form', { name: 'Login' }).getByRole('button', { name: 'Log in' })
+```
+
+The locator is as specific as its registered ancestors. If a looser chain matches more than one element, the action
+fails with Playwright's strict-mode violation, which names the chain it tried; if it still matches exactly one element,
+nothing fails. To see the chain a path resolves to, read the call log of any action, or render it without its
+description: `registry.getLocatorSchema(path).describe("").getNestedLocator().toString()`. To leave a *registered*
+ancestor out of one query, use `skip` (see *Skipping a segment*).
+
+Grouping paths by unregistered names (`main.form.button.submit`, `dialog.link.help`) is a common style. A project
+that registers every segment instead can ask the registry to check it with `strictChains`.
+
+### `strictChains`: every segment registered
+
+`strictChains: true` makes `verify()` require every proper ancestor of every registered path to be registered as
+well, and name every one that is not, one line per path:
+
+```ts
+const { registry } = createRegistryWithAccessors<Paths>(page, { strictChains: true });
+registry.add("main").locator("main");
+registry.add("main.form.button.save").getByRole("button", { name: "Save" });
+registry.verify();
+// Locator registry verification failed for 1 of 2 paths:
+//   "main.form.button.save": strictChains requires every ancestor to be registered; "main.form" and "main.form.button" are not.
+```
+
+A page object takes it as a constructor option, `locators: { strictChains: true }`, usually set once in a domain base
+class (see `PageObject.md`); its automatic `verify()` then checks it right after `defineLocators()`. A standalone
+registry enforces it only when it calls `registry.verify()`, which it should. The option is a boolean and defaults to
+`false`: without it nothing changes.
+
+Under the option, `skip` and `unskip` work as before, because the option checks what is registered and `skip` only
+leaves a registered segment out of one query. A path that fails another check as well (a bad `has` reference, an
+any-frame rule) gets both messages on its line. An any-frame `frameLocator()` must have no registered ancestor and,
+under the option, every ancestor must be registered, so an any-frame path is a root path.
 
 ---
 
@@ -662,13 +711,15 @@ its first locator call, if that comes earlier), so a typo fails in the fixture, 
 object's label and the path named and the construction site in the stack (see *Hooks and lifecycle* in
 `PageObject.md`); there is no opt-out, because verification fails only where a resolution would fail. A
 standalone registry from `createRegistryWithAccessors` calls `registry.verify()` itself once registration is done.
+With `strictChains: true` (an option of the factory and of a page object) it also requires every ancestor of every
+path to be registered; see *`strictChains`: every segment registered*.
 Verification is synchronous, never touches the DOM, and costs about a microsecond per path.
 
 What it checks: each path with a selector is resolved terminal-only, as `getLocator` does, which evaluates its
 `has`/`hasNot` path references through the normal resolution: an unregistered target, a cycle (reported under every
 path in it), a reference value that is neither a `Locator` nor a path, a reference to an any-frame segment, and a
 corrupted definition all fail, attributed to the path that owns them. An any-frame path is checked against its
-first-segment rule instead. What it does not check: whether a selector parses (Playwright parses at action time),
+first-segment rule instead. Under `strictChains`, every path's ancestors are looked up as well. What it does not check: whether a selector parses (Playwright parses at action time),
 whether an element exists, whether a locator is unique, or anything about query-builder clones. Registration-time
 errors (a duplicate path, a missing argument, a step before a strategy) throw inside `defineLocators()` before
 `verify()` runs.
@@ -777,7 +828,8 @@ update("main.button") cannot change the strategy from "role" to "locator"; use r
 
 All ten methods stay available on `update()` for autocompletion; the registry's path type carries no strategy, so the
 check is at runtime. The first argument, when given, follows the same rules as on `add` (an empty selector or role is
-rejected).
+rejected, and `null` is never a primary: `getByTestId(null)` or `getByRole(null, { … })` throws). A seeded `add`
+patches its seed with exactly these shapes (see *Reuse patch rules*).
 
 ### `replace`: a new definition of any strategy
 
@@ -895,9 +947,13 @@ const h2 = registry.createReusable.getByRole("heading", { level: 2 }).filter({ h
 const firstRow = registry.createReusable.locator("tr").nth(0).describe("First row");
 ```
 
+A seed is a value, like a Playwright `Locator`: `filter`, `nth` and `describe` return a new seed and leave the one
+they are called on as it was (see *Seed immutability*).
+
 ### Reuse by object seed
 
-Pass a reusable seed to `add` via `{ reuse: seed }`.
+Pass a reusable seed to `add` via `{ reuse: seed }`. The seed is registered at once; one override of the seed's
+strategy may follow (see *Reuse patch rules*), then `filter`, `nth` and `describe`.
 
 ```ts
 registry.add("card.title", { reuse: h2 });
@@ -906,36 +962,70 @@ registry.add("card.title@first", { reuse: h2 }).nth(0);
 
 ### Reuse by existing path string
 
-Pass a previously registered path to clone that path definition, steps, and explicit description.
+Pass a registered path to register a copy of it: its strategy, its `filter` and `nth` steps, and an explicit
+description. Without an explicit description, the copy is described by its own new path. `filter`, `nth` and
+`describe` after it narrow the copy, after the copied steps; the source never changes.
 
 ```ts
 registry.add("errors.invalidPassword").getByText("Invalid password");
 registry.add("main.form.error@invalidPassword", { reuse: "errors.invalidPassword" });
+// described "main.form.error@invalidPassword"
+
+registry.add("common.listItem").getByRole("listitem");
+registry.add("main.list").locator("ul");
+registry.add("main.list.lastItem", { reuse: "common.listItem" }).nth("last").describe("Last item");
+// locator('ul').getByRole('listitem').last(), described "Last item"
 ```
 
-If the source has no explicit description, the reused locator defaults to its new target path
-(`"main.form.error@invalidPassword"` in this example). An explicit source description is preserved.
+Reuse is reuse: the steps narrow the reused locator but never take part of it away, so there is no strategy override
+and no `clearSteps` after a path (TypeScript does not know a path's strategy, and the result would no longer be the
+locator at that path). A different base is registered as its own path, as `common.listItem` above, and narrowed where
+it is used; a variant with other options is a seed. Reuse by path is the preferred way to share a locator between
+locator modules: the paths are already composed, and nothing is exported or imported. `createReusable` is mainly a
+tool inside one module, though a seed can still be shared through export and import (see *Typing seeds in shared
+modules*).
 
-Note: path-based reuse registers immediately and does not return a chainable builder.
+A copy of an any-frame `frameLocator()` path takes no steps and no description, as the original takes none:
+`filter`, `nth` and `describe` on it throw at the call. Where the copy may sit is `verify()`'s first-segment check,
+as for every any-frame path.
+
+The source must be registered before the copy (`No locator schema registered for path "…".` otherwise), and a reuse
+value that is neither a registered path nor a seed throws `reuse requires a registered path or a seed from
+createReusable for "<path>".`
 
 ### Reuse patch rules and limitations
 
-With object-seed reuse:
+The three ways to register, side by side:
 
-- Seeded definition is persisted first.
-- You may provide **one matching-strategy override** (same discriminant/type). Omitting the first argument
-  (`getByTestId(undefined)`, `frameLocator()`) inherits the seeded value; an empty string is a value, stored or
-  rejected exactly as on `add`.
-- Mismatched strategy overrides throw, and the path keeps the seed; a second override throws, and the path keeps the
-  first. Nothing is unregistered.
-- `filter` / `nth` / `describe` may still be chained, before or after the override.
+| form | strategy | then |
+| --- | --- | --- |
+| `add(path)` | exactly one of the ten methods | `filter`, `nth` in any order and number, `describe` (the last wins) |
+| `add(path, { reuse: "other" })` | the copy of `other` | the same, after the copied steps (none on a copy of an any-frame path) |
+| `add(path, { reuse: seed })` | the seed's; optionally one override of the seed's strategy, as the first call | the same, with or without the override |
+
+The override of a seed is a PATCH of the seed, with `update()`'s argument shapes and JSON Merge Patch:
+
+- A provided primary replaces the seed's; an omitted one (`getByRole({ … })`, `getByTestId(undefined)`,
+  `frameLocator()`) keeps it.
+- Options merge key by key: on a seed `getByRole("button", { name: "Save", exact: true })`, `getByRole({ name:
+  "Cancel" })` gives `{ name: "Cancel", exact: true }`, `getByRole({ exact: null })` deletes `exact`, a lone
+  `getByRole(null)` clears the options, and `getByRole("link", null)` sets the role and clears them.
+- A primary is always a value, never `null`: with two arguments the first is the primary, so `getByRole(null, null)`
+  throws `getByRole requires a role value for "<path>".`, as does `null` for a strategy without options
+  (`getByTestId(null)`, `getById(null)`, `frameLocator(null)`).
+- An empty string is a value, stored or rejected exactly as on `add`.
+- The override is the first call, and there is at most one: after it, and after `filter`, `nth` or `describe`, the
+  builder offers only `filter`, `nth` and `describe` (a strategy method there is a compile error, and `….getByRole is
+  not a function` from JavaScript). A mismatched strategy throws, and the path keeps the seed. Nothing is
+  unregistered.
 - A frame seed needs a selector: `createReusable.frameLocator("iframe")`. The any-frame form has no element and no
-  steps, so there is nothing a seed could carry.
+  steps: a hand-made seed object with an any-frame definition registers as `add(path).frameLocator()` does, and
+  throws at `add` if it carries steps or a description.
 
 ```ts
 const seed = registry.createReusable.getByRole("heading", { level: 2 });
 
-registry.add("heading.summary", { reuse: seed }).getByRole({ name: "Summary" }); // ✅
+registry.add("heading.summary", { reuse: seed }).getByRole({ name: "Summary" }).nth(0); // ✅
 
 // ❌ mismatched strategy: a compile error (a role seed offers only getByRole), and a throw from JavaScript
 // registry.add("heading.bad", { reuse: seed }).locator("h2");
@@ -966,7 +1056,20 @@ all ten overrides and a wrong one throws at runtime, as for a seed whose strateg
 
 ### Seed immutability
 
-Using a seed in multiple `add(..., { reuse: seed })` chains does not mutate the seed object itself.
+A seed never changes. `filter`, `nth` and `describe` return a new seed, as a Playwright `Locator` does, so variants
+derived from one base are each the base plus their own step:
+
+```ts
+const row = registry.createReusable.locator("tr");
+registry.add("table.row", { reuse: row });
+registry.add("table.row@first", { reuse: row.nth(0) });
+registry.add("table.row@last", { reuse: row.nth("last") }); // the last row; row itself has no step
+```
+
+Use the result of a seed method: `seed.filter(f);` as a statement does nothing (TypeScript cannot flag a discarded
+result); write `add(path, { reuse: seed.filter(f) })` or keep the result in a variable. `seed.definition` and
+`seed.steps` are copies, and `add` copies the seed, so nothing done to a seed object after it is registered reaches
+the registry.
 
 ---
 
@@ -993,7 +1096,21 @@ nested.description();
 
 For nested chains, descriptions on ancestor paths are ignored; only the terminal locator's explicit description or
 path default is applied. A terminal `frameLocator` definition follows the same rule on the `<iframe>` element it resolves
-to.
+to. `getLocator` and `getNestedLocator` of one path therefore print the same description, for different chains.
+
+Where Playwright shows the description, and where the chain it actually waited for:
+
+| where | with the path description (default) | after `describe("")` |
+| --- | --- | --- |
+| `toString()`, `description()` | the path, `main.button@login` | the chain; `description()` is `null` |
+| the HTML report's step row of an action or assertion | `Click main.button@login` | `Click locator('main').getByRole('button', { name: 'Login' })` |
+| an assertion error's `Locator:` line | `Locator: main.button@login` | the chain |
+| the call log of every action and assertion | `waiting for locator('main').getByRole('button', { name: 'Login' })` | the same |
+| a strict-mode violation | `strict mode violation: locator('main').getByRole(…) resolved to 2 elements` | the same |
+
+So a report stays readable with paths, and a failure's call log always shows the chain that was tried. A locator
+chained further after a POMWright one (`getNestedLocator("main.list").locator("li")`) prints its chain: Playwright
+drops the description. A described locator used as a `has` inner is printed as its chain inside the outer locator.
 
 ### Registry-level descriptions
 
@@ -1056,24 +1173,34 @@ Common errors and what they usually mean:
 - `A locator schema with the path "..." already exists.`
   - Duplicate registration for same path.
 - `<method> requires a <field> value for "...".` and `<method> requires a non-empty <field> for "...".`
-  - A registration, seed, update or replacement without its first argument, or with an empty string where
-    Playwright cannot use one (`locator`, `frameLocator`, `getByRole`, `getById`). Seeds say `createReusable.<method>`.
+  - A registration, seed, update or replacement without its first argument, with an empty string where Playwright
+    cannot use one (`locator`, `frameLocator`, `getByRole`, `getById`), or, from JavaScript, with a first argument
+    Playwright cannot take: `null`, a number, an object, a RegExp for a role, `locator` or `frameLocator`. With two
+    arguments the first is the primary, so `getByRole(null, null)` throws on every builder; a lone `null` on
+    `update` or a seeded override is the options. Seeds say `createReusable.<method>`.
 - `filter() needs a locator strategy first for "..."; call getByRole, … or getById before it.`
   - `filter`/`nth`/`describe` called before a strategy during registration (a compile error in TypeScript).
 - `A locator definition for "..." has already been provided; only one locator type can be set for a registration.`
   - Multiple strategy calls on a non-reuse registration.
 - `The locator definition for "..." must use the "..." strategy when reusing a locator.`
   - Mismatched strategy override while using `{ reuse: seed }`.
-- `A locator definition for "..." was already provided from reuse; only one matching override is allowed.`
-  - More than one seeded strategy override attempted.
+- `reuse requires a registered path or a seed from createReusable for "...".`
+  - `{ reuse }` given something that is neither a registered path nor a seed (from JavaScript).
 - `update("...") cannot change the strategy from "..." to "..."; use replace("...").<method>(…) instead.`
   - `update` keeps the registered strategy; `replace` changes it.
 - `frameLocator() without a selector must be the first segment of the chain; "..." has the ancestor "...".`
   - An any-frame segment registered below a registered ancestor (Playwright's rule).
 - `frameLocator() without a selector does not point to a particular iframe; "..." cannot be resolved on its own, filtered or indexed; resolve a path inside it.`
-  - An any-frame segment used as a terminal, as a `has`/`hasNot` reference, or given a step.
+  - An any-frame segment used as a terminal or as a `has`/`hasNot` reference, or given a step in a query.
+- `<method>() cannot apply to "...": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.`
+  and `reuse cannot apply to "...": …`
+  - `filter`, `nth` or `describe` on an any-frame registration (a copy of an any-frame path), or a hand-made seed
+    that brings steps or a description to an any-frame definition.
 - `Locator registry verification failed for N of M paths:` followed by one line per path
-  - `verify()` found path references that cannot resolve; fix each listed path.
+  - `verify()` found path references that cannot resolve, or, under `strictChains`, unregistered ancestors; fix each
+    listed path.
+- `strictChains requires every ancestor to be registered; "..." is not.` (or `"…" and "…" are not.`)
+  - A `verify()` line under `strictChains`: register the named segments, or leave the option off.
 - `Detected cyclic filter reference while resolving "...": "...".`
   - A `has`/`hasNot` path reference re-entered an active filter resolution; break/fix the loop or pass a resolved locator.
 
@@ -1081,7 +1208,7 @@ Troubleshooting checklist:
 
 1. Confirm path literal is valid and registered.
 2. Confirm query sub-path is in the same chain root.
-3. Confirm reuse override strategy matches seed type.
+3. Confirm reuse override strategy matches seed type, and that the override comes first.
 4. Unskip a segment before changing it.
 5. For a strategy change on a query builder, use `replace`, not `update`.
 6. For an any-frame segment, keep it first in its chain and resolve a path inside it.
@@ -1103,6 +1230,12 @@ The integration suite (`test`) verifies Locator Registry behavior in depth, incl
 - `skip`/`unskip` and `clearSteps`
 - a registered locator does not change when the objects passed to a builder change afterwards
 - reusable locators and reuse constraints, including that a failed override changes nothing
+- seeds as values: variants derived from one base seed, against DOM
+- reuse by path with `filter`, `nth` and `describe`, the source unchanged, against DOM
+- a seeded override stores what `update` stores, for every strategy and argument form
+- a primary Playwright cannot take, rejected on every builder
+- steps or a description on an any-frame definition, from a path copy or a seed
+- unregistered segments, and `strictChains` on a registry and a page object
 - frames: steps on the iframe element against real frames, nested frames, the any-frame segment
 - `verify()` through the registry, the accessors and a page object
 - the exported types against the published declarations, including declaration emit of a shared module
@@ -1149,6 +1282,15 @@ For implementation-level examples, see the Locator Registry tests under `test/te
 - **`describe` takes a string.** `describe("")` removes a description; `describe(null)` from JavaScript throws.
 - **A registered locator no longer changes** when an options or filter object passed to a builder is changed
   afterwards.
+- **A seed no longer changes.** `filter`, `nth` and `describe` on a `createReusable` seed return a new seed; in 2.x
+  they changed the seed and returned it, so variants derived from one base carried each other's steps. Use the result:
+  `add(path, { reuse: seed.filter(f) })` instead of `seed.filter(f);` followed by `add(path, { reuse: seed })`.
+- **Reuse by path returns `filter`, `nth` and `describe`.** Drop a `void` annotation on the result; a module compiled
+  with `declaration: true` that returns it from an expression-bodied arrow uses a block body or `: void`.
+- **A seeded override follows `update`.** A `null` option key is deleted instead of stored, a lone `null` clears the
+  options, and `(primary, null)` sets the primary and clears them; all three now compile.
+- **A primary is never `null`.** From JavaScript, `null`, a number or an object as a first argument throws on every
+  builder instead of being stored.
 
 ## Migration notes from v1
 
@@ -1167,14 +1309,16 @@ See migration docs in `docs/v1-to-v2-migration` for side-by-side mappings and st
 
 ## Best practices
 
-1. **Prefer explicit ancestor registration**
-    - Sparse chains are supported, but explicit ancestors improve readability.
+1. **Pick a style for unregistered segments**
+    - Unregistered segments are names that group paths, and they are left out of the chain. A project that registers
+      every segment can let `verify()` check it with `strictChains: true`.
 2. **Use descriptive path names**
     - Favor semantic segments (`form@login.input@username`) over anonymous names.
 3. **Use `getLocatorSchema` for temporary overrides**
     - Keep registry definitions stable; mutate clones for scenario-specific behavior.
-4. **Use reusable seeds for repeated patterns**
-    - Centralize repeated strategy + steps, then reuse with a single matching override.
+4. **Share a locator by its path; use seeds inside a module**
+    - Reuse a registered path and narrow it with `filter`, `nth` and `describe`; reach for `createReusable` for a
+      variant with other options, usually within one locator module.
 5. **Keep filters intentional**
     - Be explicit with `has`/`hasNot` references; prefer path-based references for readability.
 6. **Patch with `update`, switch with `replace`**

@@ -27,6 +27,7 @@ export abstract class PageObject<
       label?: string;
       navOptions?: NavigationOptions;
       sessionStorage?: { schema?: StorageTypeFromOptions<Options> };
+      locators?: { strictChains?: boolean };
     },
   )
 }
@@ -138,6 +139,50 @@ the port, so use `(?::\d+)?$` when it varies. A `UrlMatcher` is accepted by `pag
 - `navOptions`: Default `NavigationOptions` (`waitUntil`, `timeout`) for the navigation helper; every method can
   override them per call.
 - `sessionStorage.schema`: The codecs by key, whose type is named by the `storage` member of `Options`.
+- `locators.strictChains`: `true` makes the automatic `verify()` require every ancestor of every registered path to
+  be registered as well (see *`strictChains`* in `locator-registry.md`). A boolean, `false` by default: without it an
+  unregistered segment is a name that groups paths and is left out of the chain.
+
+The second type argument, `PageObjectTypeOptions`, names types only; the constructor options are runtime values. One
+class that sets every type option and every constructor option:
+
+```ts
+import type { Page } from "@playwright/test";
+import { json, PageObject } from "pomwright";
+
+const checkoutStorage = { cart: json<{ items: string[] }>() };
+type CheckoutPaths = "main" | "main.cart" | "main.cart.checkout";
+
+export class CheckoutPage extends PageObject<
+  CheckoutPaths,
+  { baseUrlType: string; urlPathType: RegExp; storage: typeof checkoutStorage } // PageObjectTypeOptions: types only
+> {
+  constructor(page: Page) {
+    super(page, "https://shop.example", /\/checkout\/\d+/, {
+      label: "Checkout",
+      navOptions: { waitUntil: "domcontentloaded", timeout: 15_000 },
+      sessionStorage: { schema: checkoutStorage },
+      locators: { strictChains: true },
+    });
+  }
+
+  protected defineLocators(): void {
+    this.add("main").locator("main");
+    this.add("main.cart").getByRole("region", { name: "Cart" });
+    this.add("main.cart.checkout").getByRole("button", { name: "Checkout" });
+  }
+}
+```
+
+A project that registers every segment usually sets `strictChains` once, in its domain base class:
+
+```ts
+export abstract class Shop<Paths extends string> extends PageObject<Paths> {
+  protected constructor(page: Page, urlPath: string, options?: { label?: string }) {
+    super(page, "https://shop.example", urlPath, { ...options, locators: { strictChains: true } });
+  }
+}
+```
 
 ---
 
@@ -194,7 +239,12 @@ LoginPage: Locator registry verification failed for 1 of 14 paths:
   "list.item": No locator schema registered for path "list.titel".
 
 LoginPage: defineLocators() failed: A locator schema with the path "main" already exists. …
+
+LoginPage: Locator registry verification failed for 1 of 14 paths:
+  "main.form.button.save": strictChains requires every ancestor to be registered; "main.form.button" is not.
 ```
+
+The last form appears only with `locators: { strictChains: true }`.
 
 `new LoginPage(page)` itself does not throw for such a mistake. A test that asserts one does it through a first use,
 constructed and used with no `await` in between, so that the use comes first:

@@ -202,7 +202,12 @@ add("main.banner@error").getById("error-banner");
 
 - `getLocator(path)` resolves only the terminal locator (ignores ancestor steps).
 - `getNestedLocator(path)` chains each segment along the dot-delimited path.
-- Both use the terminal path as the locator description by default; a `.describe(...)` value overrides it.
+- Both use the terminal path as the locator description by default; a `.describe(...)` value overrides it. The
+  description is what the HTML report's step rows and an assertion's `Locator:` line show; the call log of every
+  action and assertion always shows the chain that was tried.
+- A path segment without a registration of its own is a name that groups paths and is left out of the chain; with
+  `strictChains: true` (an option of `createRegistryWithAccessors` and of a page object) `verify()` requires every
+  segment to be registered instead.
 
 ```ts
 import { test } from "./fixtures";
@@ -279,23 +284,29 @@ test("update/replace/skip", async ({ loginPage }) => {
 
 ### 2.7 Reusable locators: `registry.createReusable`
 
-Reusable locators let you seed a locator definition and steps without immediately registering it, then reuse it across paths with optional PATCH-style overrides. You can also reuse an existing path directly by referencing that path in `{ reuse }`.
+A registered path can be reused at another path: `add(path, { reuse: "other.path" })` registers a copy (strategy,
+steps, an explicit description) and returns `filter`, `nth` and `describe` to narrow it. A seed from `createReusable`
+holds a definition and steps without registering them; it is a value, like a Playwright `Locator` (`filter`, `nth` and
+`describe` return a new seed), and `add(path, { reuse: seed })` registers it with one optional override of its
+strategy, patched as `update()` patches.
 
 ```ts
-const h1 = registry.createReusable.getByRole("heading", { level: 1 });
-
-registry.add("heading", { reuse: h1 });
-
-registry.add("heading@summary", { reuse: h1 }).getByRole({ name: "Summary" });
-
-// Alternative reuse: clone from an existing registered path, as is.
+// reuse by path: the preferred way to share a locator, across locator modules too
+registry.add("errors.invalidPassword").getByText("Invalid password");
 registry.add("main.form@login.error@invalidPassword", { reuse: "errors.invalidPassword" });
+registry.add("main.region@profile.form@changePassword.error@invalidPassword", { reuse: "errors.invalidPassword" })
+  .describe("Password change error");
 
-registry.add("main.region@profile.form@changePassword.error@invalidPassword", 
-  { reuse: "errors.invalidPassword" });
+// seeds: variants with other options, usually inside one locator module
+const h1 = registry.createReusable.getByRole("heading", { level: 1 });
+registry.add("heading", { reuse: h1 });
+registry.add("heading@summary", { reuse: h1 }).getByRole({ name: "Summary" });
+registry.add("heading@first", { reuse: h1.nth(0) });
 ```
 
-Thus use createReusable if you need a reusable definition as base for creating multiple variations, and reuse by path to reuse an exact locator definition across different DOM-scopes/nesting levels.
+Use reuse by path to share a locator, narrowed where needed with `filter`, `nth` and `describe`, across DOM scopes,
+nesting levels and locator modules; use `createReusable` for a base with variants that change its options, mainly
+within one locator module (a seed can still be exported and imported).
 
 ### 2.8 Navigation helper: `navigation` (on `PageObject`)
 
@@ -449,7 +460,8 @@ This section separates public API from internal implementation details and expla
 - **Key outputs**: `registry` (with `verify()`), `add`, `getLocator`, `getNestedLocator`, `getLocatorSchema`.
 - **Contract**: Typed path unions are validated both at compile time and runtime; every strategy's first argument is
   required at the call; a standalone registry calls `registry.verify()` once registration is done, where a
-  `PageObject` does so itself after `defineLocators()`.
+  `PageObject` does so itself after `defineLocators()`. `createRegistryWithAccessors(page, { strictChains: true })`
+  makes `verify()` require every ancestor of every path to be registered.
 
 #### Locator builder methods (public usage)
 

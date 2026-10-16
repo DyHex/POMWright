@@ -245,10 +245,45 @@ requires it at every call. This works because `defineLocators()` runs right afte
 `this.locale` is set (see *Hooks and lifecycle* in `PageObject.md`); in 2.x it ran inside the constructor and passed
 `undefined`.
 
+## Sharing A Locator Between Modules
+
+The preferred way to share a locator between locator modules is to reuse its path. The shared module registers the
+locator once; any module that composes it reuses the path at its own path and narrows the copy with `filter`, `nth`
+and `describe`. Nothing is exported or imported but the path types the modules already compose, and the source never
+changes:
+
+```ts
+// common.locators.ts
+export type Paths = "common.listItem" | "common.error";
+
+export function defineLocators(registry: LocatorRegistry<Paths>) {
+ registry.add("common.listItem").getByRole("listitem");
+ registry.add("common.error").getByRole("alert");
+}
+
+// orders.locators.ts
+import { defineLocators as addCommon, type Paths as Common } from "./common.locators";
+
+export type Paths = Common | "main" | "main.orders" | "main.orders.item" | "main.orders.lastItem" | "main.error";
+
+export function defineLocators(registry: LocatorRegistry<Paths>) {
+ addCommon(registry);
+ registry.add("main").locator("main");
+ registry.add("main.orders").getByRole("list", { name: "Orders" });
+ registry.add("main.orders.item", { reuse: "common.listItem" });
+ registry.add("main.orders.lastItem", { reuse: "common.listItem" }).nth("last").describe("Last order");
+ registry.add("main.error", { reuse: "common.error" }).filter({ hasText: "Order" });
+}
+```
+
+A copy keeps the source's strategy, steps and explicit description; there is no strategy override after a path. A
+variant with other options is what `createReusable` is for, usually inside one module; a seed can still be shared
+through export and import, as the next section shows.
+
 ## What A Module May Return
 
 A locator module usually returns nothing: `defineLocators` registers and ends. When a module also hands out a seed or a
-query, name what it returns with the exported types:
+query (sharing by path, above, needs neither), name what it returns with the exported types:
 
 ```ts
 // list.locators.ts
@@ -271,8 +306,9 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 The annotations are optional in a test project; a project compiled with `declaration: true` (a shared page-object
 package, for example) needs every exported value's type to be nameable, and these are. Keep functions that register
 free of a return value: an arrow whose body is `registry.add(…).locator(…)` returns the registration builder by
-accident, and that builder is not exported, so `declaration: true` reports TS4023 for it. A block body, as in
-`defineLocators` above, or a `: void` annotation avoids it.
+accident, and that builder is not exported, so `declaration: true` reports TS4023 for it; the same holds for
+`registry.add(…, { reuse: … })`, which returns the builder's `filter`, `nth` and `describe` for a path as for a seed.
+A block body, as in `defineLocators` above, or a `: void` annotation avoids it.
 
 ## Shared Slot Paths
 
