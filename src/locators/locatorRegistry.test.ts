@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createFakePage, FakeLocator } from "./fakePage";
-import { LocatorRegistryInternal } from "./locatorRegistry";
+import { createRegistryWithAccessors, LocatorRegistryInternal } from "./locatorRegistry";
 import type { FilterDefinition, ReusableLocator } from "./types";
 
 type Paths = "list" | "list.item" | "btn" | "row" | "seeded" | "x";
@@ -501,5 +501,95 @@ describe("a seeded override stores what update stores", () => {
 			role: "link",
 			options: { name: "Cancel", exact: true },
 		});
+	});
+});
+
+describe("strictChains", () => {
+	type StrictPaths =
+		| "main"
+		| "main.form"
+		| "main.form.button"
+		| "main.form.button.save"
+		| "dialog.close"
+		| "app"
+		| "app.frames"
+		| "app.frames.any"
+		| "anyFrame";
+	const create = (options?: { strictChains?: boolean }) =>
+		new LocatorRegistryInternal<StrictPaths>(createFakePage(), options);
+	const strict = (missing: string) => `strictChains requires every ancestor to be registered; ${missing}`;
+
+	it("leaves a sparse chain alone without the option and with false", () => {
+		for (const registry of [create(), create({}), create({ strictChains: false })]) {
+			registry.add("main").locator("main");
+			registry.add("main.form.button.save").getByRole("button", { name: "Save" });
+			expect(() => registry.verify()).not.toThrow();
+			expect(chain(registry.getNestedLocator("main.form.button.save"))).toBe(
+				"locator('main').getByRole('button', { name: 'Save' })",
+			);
+		}
+	});
+
+	it("names every unregistered ancestor, one line per path", () => {
+		const registry = create({ strictChains: true });
+		registry.add("main.form.button.save").getByRole("button", { name: "Save" });
+		registry.add("dialog.close").getByRole("button", { name: "Close" });
+		registry.add("main.form").locator("form");
+		expect(() => registry.verify()).toThrowError(
+			`Locator registry verification failed for 3 of 3 paths:\n  "main.form.button.save": ${strict('"main" and "main.form.button" are not.')}\n  "dialog.close": ${strict('"dialog" is not.')}\n  "main.form": ${strict('"main" is not.')}`,
+		);
+	});
+
+	it("lists three or more ancestors with commas", () => {
+		const registry = create({ strictChains: true });
+		registry.add("main.form.button.save").getByRole("button");
+		expect(() => registry.verify()).toThrowError(strict('"main", "main.form" and "main.form.button" are not.'));
+	});
+
+	it("passes a chain whose every ancestor is registered, and skip still leaves one out", () => {
+		const registry = create({ strictChains: true });
+		registry.add("main").locator("main");
+		registry.add("main.form").locator("form");
+		registry.add("main.form.button").locator("div.buttons");
+		registry.add("main.form.button.save").getByRole("button", { name: "Save" });
+		expect(() => registry.verify()).not.toThrow();
+		expect(chain(registry.getLocatorSchema("main.form.button.save").skip("main.form.button").getNestedLocator())).toBe(
+			"locator('main').locator('form').getByRole('button', { name: 'Save' })",
+		);
+	});
+
+	it("puts every failing check of a path on its line: an any-frame path with a registered and an unregistered ancestor", () => {
+		const registry = create({ strictChains: true });
+		registry.add("app").locator("main");
+		registry.add("app.frames.any").frameLocator();
+		expect(() => registry.verify()).toThrowError(
+			`"app.frames.any": ${strict('"app.frames" is not.')} frameLocator() without a selector must be the first segment of the chain; "app.frames.any" has the ancestor "app".`,
+		);
+	});
+
+	it("leaves an any-frame path at the root alone, so under the option an any-frame path is a root path", () => {
+		const registry = create({ strictChains: true });
+		registry.add("anyFrame").frameLocator();
+		expect(() => registry.verify()).not.toThrow();
+	});
+
+	it("is turned on by true only; a non-boolean from JavaScript leaves it off", () => {
+		const registry = create({ strictChains: "yes" as never });
+		registry.add("main.form").locator("form");
+		expect(() => registry.verify()).not.toThrow();
+	});
+
+	it("does not change that the terminal path must be registered", () => {
+		for (const registry of [create(), create({ strictChains: true })]) {
+			expect(() => registry.getNestedLocator("main.form")).toThrowError(
+				'No locator schema registered for path "main.form".',
+			);
+		}
+	});
+
+	it("is an option of createRegistryWithAccessors", () => {
+		const { registry } = createRegistryWithAccessors<StrictPaths>(createFakePage(), { strictChains: true });
+		registry.add("main.form").locator("form");
+		expect(() => registry.verify()).toThrowError(strict('"main" is not.'));
 	});
 });

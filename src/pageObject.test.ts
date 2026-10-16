@@ -405,6 +405,33 @@ describe("failures", () => {
 	});
 });
 
+describe("the locators option", () => {
+	class Sparse extends PageObject<Paths> {
+		constructor(page: Page, strictChains?: boolean) {
+			super(page, BASE, "/login", { label: "Sparse", locators: { strictChains } });
+		}
+		protected defineLocators() {
+			this.add("main.button").getByRole("button");
+		}
+	}
+
+	it("strictChains reaches the registry: a sparse definition fails the scheduled check with the labelled message", () => {
+		const { page } = createStubPage();
+		const { runCheck } = construct(() => new Sparse(page, true));
+		expect(runCheck).toThrowError(
+			'Sparse: Locator registry verification failed for 1 of 1 paths:\n  "main.button": strictChains requires every ancestor to be registered; "main" is not.',
+		);
+	});
+
+	it("without it, or with false, a sparse definition passes", () => {
+		const { page } = createStubPage();
+		for (const strictChains of [undefined, false]) {
+			const { runCheck } = construct(() => new Sparse(page, strictChains));
+			expect(runCheck).not.toThrow();
+		}
+	});
+});
+
 describe("the post-navigation actions hook", () => {
 	class NoHook extends PageObject<Paths> {
 		constructor(page: Page) {

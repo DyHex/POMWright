@@ -83,6 +83,11 @@ export abstract class PageObject<
 			label?: string;
 			navOptions?: NavigationOptions;
 			sessionStorage?: { schema?: StorageTypeFromOptions<Options> };
+			/**
+			 * Registry options. `strictChains: true` makes the automatic `verify()` require every ancestor of
+			 * every registered path to be registered as well; set it once in a domain base class.
+			 */
+			locators?: { strictChains?: boolean };
 		},
 	) {
 		this.page = page;
@@ -98,7 +103,7 @@ export abstract class PageObject<
 		this.urlPath = urlPath;
 		this.fullUrl = composeFullUrl(baseUrl, urlPath) as FullUrlTypeFromOptions<Options>;
 		const { registry, add, getLocator, getNestedLocator, getLocatorSchema } =
-			createRegistryWithAccessors<LocatorSchemaPathType>(page);
+			createRegistryWithAccessors<LocatorSchemaPathType>(page, { strictChains: options?.locators?.strictChains });
 		const define = () => this.#defineLocatorsOnce(registry);
 		const first = <F extends (...args: never[]) => unknown>(fn: F): F =>
 			((...args: Parameters<F>) => {

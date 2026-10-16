@@ -60,6 +60,19 @@ type InvalidReusePath<Path extends string> = [
 type ReusePathArgument<Paths extends string, Path extends Paths, ReusePath extends Paths> =
 	Exclude<ReusePath, Path> extends never ? InvalidReusePath<Path> : LocatorSchemaPathArgument<ReusePath>;
 
+/**
+ * Options of a registry. `strictChains: true` makes `verify()` require every proper ancestor of every
+ * registered path to be registered as well; by default an unregistered segment is a name that groups
+ * paths and is left out of the chain.
+ */
+export type LocatorRegistryOptions = { strictChains?: boolean };
+
+const strictChainsMessage = (missing: readonly string[]) => {
+	const names = missing.map((part) => `"${part}"`);
+	const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+	return `strictChains requires every ancestor to be registered; ${list} ${names.length === 1 ? "is" : "are"} not.`;
+};
+
 export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	private readonly schemas = new Map<
 		RegistryPath<LocatorSchemaPathType>,
@@ -82,8 +95,14 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 */
 	readonly createReusable: ReusableLocatorFactory<LocatorSchemaPathType>;
 
-	constructor(private readonly page: Page) {
+	private readonly strictChains: boolean;
+
+	constructor(
+		private readonly page: Page,
+		options?: LocatorRegistryOptions,
+	) {
 		this.createReusable = new ReusableLocatorFactory<LocatorSchemaPathType>();
+		this.strictChains = options?.strictChains === true;
 	}
 
 	private normalizeRecord(record: LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>) {
@@ -392,8 +411,9 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * resolved terminal-only, as `getLocator` does, which evaluates its `has`/`hasNot` path references
 	 * through the normal resolution (unregistered targets, cycles, unsupported reference values); an
 	 * any-frame path is checked against its first-segment rule instead, since it has no terminal form.
-	 * Nothing touches the DOM. `PageObject` calls this right after `defineLocators()`; a standalone
-	 * registry calls it after registration.
+	 * Nothing touches the DOM. With `strictChains`, every proper ancestor of every path must be registered
+	 * too. `PageObject` calls this right after `defineLocators()`; a standalone registry calls it after
+	 * registration, and `strictChains` is enforced only there.
 	 *
 	 * @example
 	 * ```ts
@@ -406,6 +426,15 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	verify(): void {
 		const failures: string[] = [];
 		for (const [path, record] of this.schemas) {
+			const problems: string[] = [];
+			if (this.strictChains) {
+				const missing = expandSchemaPath(path)
+					.slice(0, -1)
+					.filter((part) => !this.schemas.has(part as RegistryPath<LocatorSchemaPathType>));
+				if (missing.length > 0) {
+					problems.push(strictChainsMessage(missing));
+				}
+			}
 			try {
 				if (isAnyFrameDefinition(record.definition)) {
 					const ancestor = expandSchemaPath(path)
@@ -419,7 +448,10 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 					this.resolveRecord(path, this.get(path));
 				}
 			} catch (error) {
-				failures.push(`"${path}": ${error instanceof Error ? error.message : String(error)}`);
+				problems.push(error instanceof Error ? error.message : String(error));
+			}
+			if (problems.length > 0) {
+				failures.push(`"${path}": ${problems.join(" ")}`);
 			}
 		}
 		if (failures.length > 0) {
@@ -566,8 +598,8 @@ export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
  * const patched = getLocatorSchema("root.child").filter("root.child", { hasText: /Docs/ }).getNestedLocator();
  * ```
  */
-export const createRegistryWithAccessors = <Paths extends string>(page: Page) => {
-	const registryInstance = new LocatorRegistryInternal<Paths>(page);
+export const createRegistryWithAccessors = <Paths extends string>(page: Page, options?: LocatorRegistryOptions) => {
+	const registryInstance = new LocatorRegistryInternal<Paths>(page, options);
 	const add: LocatorRegistryInternal<Paths>["add"] = registryInstance.add.bind(registryInstance);
 	const getLocator: GetLocatorAccessor<Paths> = registryInstance.getLocator.bind(registryInstance);
 	const getNestedLocator: GetNestedLocatorAccessor<Paths> = registryInstance.getNestedLocator.bind(registryInstance);
