@@ -33,6 +33,19 @@
 		"lineWidth": 120,
 		"includes": ["**"]
 	},
+	"overrides": [
+		{
+			"includes": ["**/*.astro"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnusedImports": "off",
+						"noUnusedVariables": "off"
+					}
+				}
+			}
+		}
+	],
 	"files": {
 		"includes": [
 			"**",
@@ -43,6 +56,7 @@
 			"!**/test/test-results",
 			"!**/test/test-data",
 			"!**/test/.doc-snippets",
+			"!**/website/.astro",
 			"!**/.pack"
 		]
 	}

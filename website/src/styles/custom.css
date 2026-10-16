@@ -1,0 +1,6 @@
+/* The header shows the three sections on wide screens; the sidebar's topic list stays for the phone menu. */
+@media (min-width: 50rem) {
+	.starlight-sidebar-topics {
+		display: none;
+	}
+}

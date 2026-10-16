@@ -53,6 +53,9 @@ test/playwright/.cache/
 # The documentation's TypeScript examples, extracted and compiled by scripts/check-doc-snippets.mjs
 test/.doc-snippets/
 
+# Astro's generated types of the documentation site (website/dist is ignored by the dist rule)
+website/.astro/
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 
