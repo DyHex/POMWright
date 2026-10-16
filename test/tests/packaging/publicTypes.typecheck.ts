@@ -177,6 +177,74 @@ class Steps {
 	}
 }
 
+// reuse by path returns filter, nth and describe, and no strategy method (3.0.0)
+const copy = add("main.heading", { reuse: "list" }).filter({ hasText: "x" }).nth(0).describe("Copy");
+// @ts-expect-error no strategy override after a path: TypeScript does not know the path's strategy
+add("main.heading", { reuse: "list" }).getByRole("heading");
+// @ts-expect-error path reuse is no longer void
+const voidCopy: void = add("main.heading", { reuse: "list" });
+
+// seed methods return a seed of the same strategy
+const narrowed: ReusableLocator<Paths, "role"> = roleSeed.filter({ hasText: "x" }).nth(0).describe("d");
+
+// strictChains: a boolean on the factory and on the page object
+const strictRegistry = createRegistryWithAccessors<Paths>(page, { strictChains: true }).registry;
+// @ts-expect-error strictChains is a boolean
+createRegistryWithAccessors<Paths>(page, { strictChains: "yes" });
+class StrictPage extends PageObject<Paths> {
+	constructor(page: Page) {
+		super(page, "https://app.example", "/", { label: "Strict", locators: { strictChains: true } });
+	}
+	protected defineLocators(): void {
+		this.add("main").locator("main");
+	}
+}
+
+// a seeded override takes update's argument shapes, for every strategy with options
+const textSeed = registry.createReusable.getByText("Save", { exact: true });
+const labelSeed = registry.createReusable.getByLabel("Save", { exact: true });
+const placeholderSeed = registry.createReusable.getByPlaceholder("Save", { exact: true });
+const altSeed = registry.createReusable.getByAltText("Save", { exact: true });
+const titleSeed = registry.createReusable.getByTitle("Save", { exact: true });
+const locatorSeed = registry.createReusable.locator("button", { hasText: "Save" });
+const testIdSeed = registry.createReusable.getByTestId("save");
+const idSeed = registry.createReusable.getById("save");
+const frameSeed = registry.createReusable.frameLocator("iframe");
+add("main", { reuse: roleSeed }).getByRole(null);
+add("main", { reuse: roleSeed }).getByRole({ name: null });
+add("main", { reuse: roleSeed }).getByRole("link", null);
+add("main", { reuse: roleSeed }).getByRole("link", { exact: null });
+add("main", { reuse: textSeed }).getByText(null);
+add("main", { reuse: textSeed }).getByText({ exact: null });
+add("main", { reuse: textSeed }).getByText(/Sa/i, null);
+add("main", { reuse: labelSeed }).getByLabel(null);
+add("main", { reuse: labelSeed }).getByLabel("x", { exact: null });
+add("main", { reuse: placeholderSeed }).getByPlaceholder({ exact: null });
+add("main", { reuse: altSeed }).getByAltText(null);
+add("main", { reuse: titleSeed }).getByTitle("x", null);
+add("main", { reuse: locatorSeed }).locator(null);
+add("main", { reuse: locatorSeed }).locator({ hasText: null });
+add("main", { reuse: locatorSeed }).locator("a", null);
+add("main", { reuse: testIdSeed }).getByTestId(undefined);
+add("main", { reuse: frameSeed }).frameLocator();
+// @ts-expect-error a primary is never null: with two arguments the first is the primary
+add("main", { reuse: roleSeed }).getByRole(null, null);
+// @ts-expect-error a primary is never null: getByTestId has no options
+add("main", { reuse: testIdSeed }).getByTestId(null);
+// @ts-expect-error a primary is never null: getById has no options
+add("main", { reuse: idSeed }).getById(null);
+// @ts-expect-error a primary is never null: frameLocator has no options
+add("main", { reuse: frameSeed }).frameLocator(null);
+// @ts-expect-error unseeded add keeps Playwright's option types: no null options
+add("list").getByRole("button", null);
+// @ts-expect-error unseeded add keeps Playwright's option types: no null keys
+add("list").getByText("x", { exact: null });
+// @ts-expect-error unseeded add has no options-only form
+add("list").locator(null);
+// @ts-expect-error a seed's own factory keeps Playwright's option types
+registry.createReusable.getByRole("button", null);
+
 export type Probe = [Urls, Storage, Navigation, Logging, UrlTypeOptions];
 void [accessors, typedRegistry, options, values, afterUpdate, afterReplace, notAValue, wrongSeed, misspelt];
 void [wellFormed, malformed, ListPage, arrayHas, Steps];
+void [copy, voidCopy, narrowed, strictRegistry, StrictPage];

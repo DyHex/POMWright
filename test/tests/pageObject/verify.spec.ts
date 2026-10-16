@@ -37,6 +37,26 @@ class Typo extends PageObject<Paths> {
 	}
 }
 
+class StrictSparse extends PageObject<Paths> {
+	constructor(page: Page, strictChains?: boolean) {
+		super(page, "http://localhost:9000", "/testfilters", { label: "StrictSparse", locators: { strictChains } });
+	}
+	protected defineLocators() {
+		this.add("list.item").getByRole("listitem");
+	}
+}
+
+test("locators: { strictChains: true } makes the page object's verify reject an unregistered ancestor", async ({
+	page,
+}) => {
+	// used synchronously after new, so the first use runs the definition and the scheduled check does nothing
+	expect(() => new StrictSparse(page, true).getNestedLocator("list.item")).toThrowError(
+		'StrictSparse: Locator registry verification failed for 1 of 1 paths:\n  "list.item": strictChains requires every ancestor to be registered; "list" is not.',
+	);
+	expect(() => new StrictSparse(page).getNestedLocator("list.item")).not.toThrow();
+	expect(() => new StrictSparse(page, false).getNestedLocator("list.item")).not.toThrow();
+});
+
 test("a page object with a correct registry constructs", async ({ page }) => {
 	expect(() => new Correct(page)).not.toThrow();
 	const poc = new Correct(page);

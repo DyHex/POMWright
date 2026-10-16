@@ -1,7 +1,8 @@
 // Compile-only, through tsconfig.declarations.json (declaration: true): a shared locator module whose exported
 // functions return pomwright's builders and seeds without annotations. It emits only if each type can be named
 // from "pomwright". Playwright does not match the file name.
-import { type LocatorRegistry, step } from "pomwright";
+import type { Page } from "@playwright/test";
+import { createRegistryWithAccessors, type LocatorRegistry, step } from "pomwright";
 
 export type Paths = "main" | "main.heading" | "list" | "list.item";
 
@@ -27,6 +28,15 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 }
 
 export const skippedList = (registry: LocatorRegistry<Paths>) => registry.getLocatorSchema("list.item").skip("list");
+
+// a registering function returns void: a block body emits after a path reuse with describe
+export function defineCopy(registry: LocatorRegistry<Paths>) {
+	registry.add("main.heading", { reuse: "list.item" }).describe("Copy of a row");
+}
+
+// the registry of a strict standalone factory; the factory's whole result also holds add, whose registration
+// views are unexported, so it does not emit (as in 2.x)
+export const strictRegistry = (page: Page) => createRegistryWithAccessors<Paths>(page, { strictChains: true }).registry;
 
 export class Steps {
 	@step()
