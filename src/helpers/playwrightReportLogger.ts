@@ -12,12 +12,15 @@ export type LogEntry = {
 	message: string;
 };
 
+/** The level a test's log starts at: `warn` on the first run, `debug` on a retry. Used by the `log` fixture. */
+export const initialLogLevel = (retry: number): LogLevel => (retry === 0 ? "warn" : "debug");
+
 /**
  * PlaywrightReportLogger is a logger implementation designed for Playwright tests.
  * It records log messages and attaches them to the Playwright HTML report.
  *
  * The logger enables all fixtures implementing a child logger to share the same log level
- * within the scope of a single test, independant of other tests run in parallell.
+ * within the scope of a single test, independent of other tests run in parallel.
  * In the same way each fixture will share a single logEntry for recording all log
  * statements produced throughout the tests execution, when the test is done, all log
  * entries are attached to the playwright HTML report in the order they were logged.

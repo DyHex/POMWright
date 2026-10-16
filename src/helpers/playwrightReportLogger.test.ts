@@ -1,6 +1,6 @@
 import type { TestInfo } from "@playwright/test";
 import { describe, expect, it } from "vitest";
-import { type LogEntry, type LogLevel, PlaywrightReportLogger } from "./playwrightReportLogger";
+import { initialLogLevel, type LogEntry, type LogLevel, PlaywrightReportLogger } from "./playwrightReportLogger";
 
 // A TestInfo that records attachments; what the HTML report shows is covered by the integration specs.
 const setup = (level: LogLevel = "debug") => {
@@ -109,5 +109,40 @@ describe("attachments", () => {
 		log.attachLogsToTest(testInfo, { locale: "en-US", timeZone: "UTC" });
 		expect(attachments).toHaveLength(1);
 		expect(attachments[0]?.name).toMatch(/ - WARN : \[TestCase -> LoginPage\]$/);
+	});
+});
+
+describe("the level", () => {
+	it("is shared by a logger and its children: set, read, compare, reset", () => {
+		const { log } = setup("warn");
+		const child = log.getNewChildLogger("LoginPage");
+		expect(child.getCurrentLogLevel()).toBe("warn");
+		expect(log.isCurrentLogLevel("warn")).toBe(true);
+		child.setLogLevel("debug");
+		expect(log.getCurrentLogLevel()).toBe("debug");
+		expect(log.getCurrentLogLevelIndex()).toBe(0);
+		expect(log.isCurrentLogLevel("warn")).toBe(false);
+		log.resetLogLevel();
+		expect(child.getCurrentLogLevel()).toBe("warn");
+	});
+
+	it("enables the current level and those above it", () => {
+		const { log, entries } = setup("info");
+		expect(["debug", "info", "warn", "error"].map((level) => log.isLogLevelEnabled(level as LogLevel))).toEqual([
+			false,
+			true,
+			true,
+			true,
+		]);
+		log.setLogLevel("error");
+		log.warn("hidden");
+		log.error("shown");
+		expect(entries.map((entry) => entry.message)).toEqual(["shown"]);
+	});
+
+	it("starts at warn on the first run and at debug on a retry, as the log fixture sets it", () => {
+		expect(initialLogLevel(0)).toBe("warn");
+		expect(initialLogLevel(1)).toBe("debug");
+		expect(initialLogLevel(2)).toBe("debug");
 	});
 });
