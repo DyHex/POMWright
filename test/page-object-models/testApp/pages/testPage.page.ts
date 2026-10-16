@@ -99,6 +99,12 @@ export default class TestPageV2 extends TestApp<Paths> {
 		};
 	}
 
+	// a static method's step is titled by its class: TestPageV2.stepStatic
+	@step()
+	static async stepStatic(name: string): Promise<string> {
+		return `static:${name}`;
+	}
+
 	@step
 	async stepWithArgs(subscriptionTitle: string, clickCount = 1): Promise<string> {
 		return `${subscriptionTitle}:${clickCount}`;

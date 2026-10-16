@@ -1,13 +1,13 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import { LocatorRegistryInternal } from "../../../../src/locators";
 
-test("update replaces intermediate definitions without mutating registry", async ({ testFilters }) => {
+test("replace changes intermediate definitions without mutating registry", async ({ testFilters }) => {
 	const original = testFilters.getNestedLocator("body.section.heading");
 	expect(`${original.describe("")}`).toEqual("locator('body').locator('section').getByRole('heading', { level: 2 })");
 
 	const replaced = testFilters
 		.getLocatorSchema("body.section.heading")
-		.update("body.section")
+		.replace("body.section")
 		.getByRole("heading", { level: 1 })
 		.getNestedLocator();
 
@@ -19,12 +19,12 @@ test("update replaces intermediate definitions without mutating registry", async
 	expect(`${after.describe("")}`).toEqual(`${original.describe("")}`);
 });
 
-test("update operations can be chained across sub-paths", async ({ testFilters }) => {
+test("update and replace operations can be chained across sub-paths", async ({ testFilters }) => {
 	const chained = testFilters
 		.getLocatorSchema("body.section")
 		.update("body")
 		.locator("SOMEBODY")
-		.update("body.section")
+		.replace("body.section")
 		.getByRole("button", { name: "Click me!" })
 		.getNestedLocator();
 
@@ -61,12 +61,12 @@ test("update handles full and partial definitions from fresh builders", async ({
 	expect(full).not.toBe(partial);
 });
 
-test("update preserves registered filters on untouched segments", async ({ testFilters }) => {
+test("update and replace preserve registered filters on untouched segments", async ({ testFilters }) => {
 	const locator = testFilters
 		.getLocatorSchema("fictional.filter@hasNotText.filter@hasText")
 		.update("fictional.filter@hasNotText")
 		.getByRole("button", { name: "roleOptions" })
-		.update("fictional.filter@hasNotText.filter@hasText")
+		.replace("fictional.filter@hasNotText.filter@hasText")
 		.locator("locator")
 		.getNestedLocator();
 
@@ -104,10 +104,10 @@ test("update can mix ancestor and descendant changes without mutating registry",
 	expect(`${after.describe("")}`).toEqual(`${original.describe("")}`);
 });
 
-test("update preserves filters on the target sub-path", async ({ testFilters }) => {
+test("replace preserves filters on the target sub-path", async ({ testFilters }) => {
 	const locator = testFilters
 		.getLocatorSchema("fictional.filter@hasText")
-		.update("fictional.filter@hasText")
+		.replace("fictional.filter@hasText")
 		.locator("updated")
 		.getNestedLocator();
 
@@ -131,20 +131,26 @@ test("update patches definitions without altering chained filters or indices", a
 	expect(`${untouched.describe("")}`).toEqual("locator('body').locator('section').getByRole('button')");
 });
 
-test("update can remove locator options filters", async ({ testFilters }) => {
+test("update can remove locator options with null, and leaves them alone for undefined", async ({ testFilters }) => {
 	const original = testFilters.getNestedLocator("body.section@playground");
 	expect(`${original.describe("")}`).toEqual("locator('body').locator('section').filter({ hasText: /Playground/i })");
 
-	const locator = testFilters
+	const removed = testFilters
+		.getLocatorSchema("body.section@playground")
+		.update("body.section@playground")
+		.locator({ hasText: null })
+		.getNestedLocator();
+	expect(`${removed.describe("")}`).toEqual("locator('body').locator('section')");
+
+	const untouched = testFilters
 		.getLocatorSchema("body.section@playground")
 		.update("body.section@playground")
 		.locator({ hasText: undefined })
 		.getNestedLocator();
-
-	expect(`${locator.describe("")}`).toEqual("locator('body').locator('section')");
+	expect(`${untouched.describe("")}`).toEqual(`${original.describe("")}`);
 });
 
-test("update can switch locator strategies, caching all latest locator definitions and preserving state of filters and indices", async ({
+test("replace switches locator strategies and keeps the filter and index steps; update keeps the strategy", async ({
 	page,
 	testFilters,
 }) => {
@@ -156,7 +162,7 @@ test("update can switch locator strategies, caching all latest locator definitio
 
 	const manualLocator = page.locator("body").locator("newSelector").filter({ hasText: "Text" }).first();
 	const locator = schema
-		.update(path)
+		.replace(path)
 		.locator("newSelector")
 		.filter(path, { hasText: "Text" })
 		.nth(path, 0)
@@ -168,87 +174,77 @@ test("update can switch locator strategies, caching all latest locator definitio
 		.getByRole("region", { name: "Now a region" })
 		.filter({ hasText: "Text" })
 		.first();
-	const role = schema.update(path).getByRole("region", { name: "Now a region" }).getNestedLocator();
+	const role = schema.replace(path).getByRole("region", { name: "Now a region" }).getNestedLocator();
 	expect(`${role.describe("")}`).toEqual(`${manualRole.describe("")}`);
 
 	const manualText = page.locator("body").getByText("Text node").filter({ hasText: "Text" }).first();
-	const text = schema.update(path).getByText("Text node").getNestedLocator();
+	const text = schema.replace(path).getByText("Text node").getNestedLocator();
 	expect(`${text.describe("")}`).toEqual(`${manualText.describe("")}`);
 
 	const manualLabel = page.locator("body").getByLabel("Label").filter({ hasText: "Text" }).first();
-	const label = schema.update(path).getByLabel("Label").getNestedLocator();
+	const label = schema.replace(path).getByLabel("Label").getNestedLocator();
 	expect(`${label.describe("")}`).toEqual(`${manualLabel.describe("")}`);
 
 	const manualPlaceholder = page.locator("body").getByPlaceholder("Placeholder").filter({ hasText: "Text" }).first();
-	const placeholder = schema.update(path).getByPlaceholder("Placeholder").getNestedLocator();
+	const placeholder = schema.replace(path).getByPlaceholder("Placeholder").getNestedLocator();
 	expect(`${placeholder.describe("")}`).toEqual(`${manualPlaceholder.describe("")}`);
 
 	const manualAltText = page.locator("body").getByAltText("Alt").filter({ hasText: "Text" }).first();
-	const altText = schema.update(path).getByAltText("Alt").getNestedLocator();
+	const altText = schema.replace(path).getByAltText("Alt").getNestedLocator();
 	expect(`${altText.describe("")}`).toEqual(`${manualAltText.describe("")}`);
 
 	const manualTitle = page.locator("body").getByTitle("Title").filter({ hasText: "Text" }).first();
-	const title = schema.update(path).getByTitle("Title").getNestedLocator();
+	const title = schema.replace(path).getByTitle("Title").getNestedLocator();
 	expect(`${title.describe("")}`).toEqual(`${manualTitle.describe("")}`);
 
-	const manualFrameLocator = page.locator("body").locator("iframe[name=child]");
-	const frameLocator = schema.update(path).frameLocator("iframe[name=child]").getNestedLocator();
+	// a terminal frame is the iframe element, and the steps apply to it
+	const manualFrameLocator = page.locator("body").locator("iframe[name=child]").filter({ hasText: "Text" }).first();
+	const frameLocator = schema.replace(path).frameLocator("iframe[name=child]").getNestedLocator();
 	expect(`${frameLocator.describe("")}`).toEqual(`${manualFrameLocator.describe("")}`);
 
 	const manualTestId = page.locator("body").getByTestId("new-test-id").filter({ hasText: "Text" }).first();
-	const testId = schema.update(path).getByTestId("new-test-id").getNestedLocator();
+	const testId = schema.replace(path).getByTestId("new-test-id").getNestedLocator();
 	expect(`${testId.describe("")}`).toEqual(`${manualTestId.describe("")}`);
 
-	const manualId = page.locator("body").locator("#new-id").filter({ hasText: "Text" }).first();
-	const id = schema.update(path).getById("new-id").getNestedLocator();
+	const manualId = page.locator("body").locator('[id="new-id"]').filter({ hasText: "Text" }).first();
+	const id = schema.replace(path).getById("new-id").getNestedLocator();
 	expect(`${id.describe("")}`).toEqual(`${manualId.describe("")}`);
 
 	const manualDataCy = page.locator("body").locator('[data-cy="new-cy"]').filter({ hasText: "Text" }).first();
-	const dataCy = schema.update(path).locator('[data-cy="new-cy"]').getNestedLocator();
+	const dataCy = schema.replace(path).locator('[data-cy="new-cy"]').getNestedLocator();
 	expect(`${dataCy.describe("")}`).toEqual(`${manualDataCy.describe("")}`);
 
-	const resetLocator = schema.update(path).locator().getNestedLocator();
-	expect(`${resetLocator.describe("")}`).toEqual(`${dataCy.describe("")}`);
+	// update patches the strategy now in place without restating the primary
+	const manualPatched = page
+		.locator("body")
+		.locator('[data-cy="new-cy"]', { hasText: "more" })
+		.filter({ hasText: "Text" })
+		.first();
+	const patched = schema.update(path).locator({ hasText: "more" }).getNestedLocator();
+	expect(`${patched.describe("")}`).toEqual(`${manualPatched.describe("")}`);
 
-	const resetRole = schema.update(path).getByRole().getNestedLocator();
-	expect(`${resetRole.describe("")}`).toEqual(`${role.describe("")}`);
-
-	const resetText = schema.update(path).getByText().getNestedLocator();
-	expect(`${resetText.describe("")}`).toEqual(`${text.describe("")}`);
-
-	const resetLabel = schema.update(path).getByLabel().getNestedLocator();
-	expect(`${resetLabel.describe("")}`).toEqual(`${label.describe("")}`);
-
-	const resetPlaceholder = schema.update(path).getByPlaceholder().getNestedLocator();
-	expect(`${resetPlaceholder.describe("")}`).toEqual(`${placeholder.describe("")}`);
-
-	const resetAltText = schema.update(path).getByAltText().getNestedLocator();
-	expect(`${resetAltText.describe("")}`).toEqual(`${altText.describe("")}`);
-
-	const resetTitle = schema.update(path).getByTitle().getNestedLocator();
-	expect(`${resetTitle.describe("")}`).toEqual(`${title.describe("")}`);
-
-	const resetFrameLocator = schema.update(path).frameLocator().getNestedLocator();
-	expect(`${resetFrameLocator.describe("")}`).toEqual(`${frameLocator.describe("")}`);
-
-	const resetTestId = schema.update(path).getByTestId().getNestedLocator();
-	expect(`${resetTestId.describe("")}`).toEqual(`${testId.describe("")}`);
-
-	const resetId = schema.update(path).getById().getNestedLocator();
-	expect(`${resetId.describe("")}`).toEqual(`${id.describe("")}`);
-
-	const resetLocatorAgain = schema.update(path).locator().getNestedLocator();
-	expect(`${resetLocatorAgain.describe("")}`).toEqual(`${dataCy.describe("")}`);
+	// update never changes the strategy; replace does, and nothing is remembered from earlier strategies
+	expect(() => schema.update(path).getByRole("region")).toThrowError(
+		'update("body.section") cannot change the strategy from "locator" to "role"; use replace("body.section").getByRole(…) instead.',
+	);
+	// replace takes page.getByRole's arguments: the role is required (a compile error; from JavaScript a throw)
+	// @ts-expect-error an options-only call is update's form, not replace's
+	expect(() => schema.replace(path).getByRole({ name: "Now a region" })).toThrowError(
+		'getByRole requires a role value for "body.section".',
+	);
 
 	const lastRoleClearSteps = schema
-		.update(path)
-		.getByRole()
+		.replace(path)
+		.getByRole("region", { name: "Now a region" })
 		.clearSteps("body")
 		.clearSteps("body.section")
 		.getNestedLocator();
 	expect(`${lastRoleClearSteps.describe("")}`).toEqual("locator('body').getByRole('region', { name: 'Now a region' })");
 
-	const stillNoFiltersAndIndicesOnAdditionalSwitch = schema.update(path).locator().getNestedLocator();
+	const stillNoFiltersAndIndicesOnAdditionalSwitch = schema
+		.replace(path)
+		.locator('[data-cy="new-cy"]')
+		.getNestedLocator();
 	expect(`${stillNoFiltersAndIndicesOnAdditionalSwitch.describe("")}`).toEqual(
 		"locator('body').locator('[data-cy=\"new-cy\"]')",
 	);
@@ -323,4 +319,123 @@ test("update overloads cover multiple strategies and retain filter/index steps",
 		.getNestedLocator();
 
 	expect(`${framePatched.describe("")}`).toEqual("locator('iframe[name=seed]')");
+});
+
+test("replace and update accept ids verbatim and RegExp ids as patterns", async ({ page, testFilters }) => {
+	const path = "body.section" as const;
+	const schema = testFilters.getLocatorSchema(path);
+
+	// body.section is registered as locator, so the first id definition is a replace; update then patches it
+	const manualTrickyId = page.locator("body").locator('[id="settings.panel"]');
+	const trickyId = schema.replace(path).getById("settings.panel").getNestedLocator();
+	expect(`${trickyId.describe("")}`).toEqual(`${manualTrickyId.describe("")}`);
+
+	const manualRegExpId = page.locator("body").locator("internal:attr=[id=/^settings\\.panel$/i]");
+	const regExpId = schema
+		.update(path)
+		.getById(/^settings\.panel$/i)
+		.getNestedLocator();
+	expect(`${regExpId.describe("")}`).toEqual(`${manualRegExpId.describe("")}`);
+
+	expect(() => schema.update(path).getById("")).toThrowError(`getById requires a non-empty id for "${path}".`);
+	expect(() => schema.replace(path).getById("")).toThrowError(`getById requires a non-empty id for "${path}".`);
+	expect(() => schema.update(path).getById(/sticky/y)).not.toThrow();
+});
+
+test("update follows JSON Merge Patch for options", async ({ page }) => {
+	type LocalPath = "root" | "root.btn" | "root.sel";
+	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	registry.add("root").locator("body");
+	registry.add("root.btn").getByRole("button", { name: "Login", exact: true });
+	registry.add("root.sel").locator("section", { hasText: "x" });
+	const render = (locator: { describe: (d: string) => unknown }) => `${locator.describe("")}`;
+	const btn = () => registry.getLocatorSchema("root.btn").update();
+	const unchanged = render(page.locator("body").getByRole("button", { name: "Login", exact: true }));
+
+	// undefined and absent leave the options alone
+	expect(render(btn().getByRole("button", undefined).getNestedLocator())).toEqual(unchanged);
+	expect(render(btn().getByRole({ name: undefined }).getNestedLocator())).toEqual(unchanged);
+	expect(render(btn().getByRole().getNestedLocator())).toEqual(unchanged);
+	// a provided primary replaces it; a provided key replaces that key
+	expect(render(btn().getByRole("link").getNestedLocator())).toEqual(
+		render(page.locator("body").getByRole("link", { name: "Login", exact: true })),
+	);
+	expect(render(btn().getByRole({ name: "Save" }).getNestedLocator())).toEqual(
+		render(page.locator("body").getByRole("button", { name: "Save", exact: true })),
+	);
+	// null deletes one key, or every option
+	expect(render(btn().getByRole({ name: null }).getNestedLocator())).toEqual(
+		render(page.locator("body").getByRole("button", { exact: true })),
+	);
+	expect(render(btn().getByRole("button", null).getNestedLocator())).toEqual("locator('body').getByRole('button')");
+	expect(render(btn().getByRole(null).getNestedLocator())).toEqual("locator('body').getByRole('button')");
+	expect(render(btn().getByRole({ name: null, exact: null }).getNestedLocator())).toEqual(
+		"locator('body').getByRole('button')",
+	);
+	// the same for locator options
+	const sel = () => registry.getLocatorSchema("root.sel").update();
+	expect(render(sel().locator("section", undefined).getNestedLocator())).toEqual(
+		"locator('body').locator('section').filter({ hasText: 'x' })",
+	);
+	expect(render(sel().locator({ hasText: null }).getNestedLocator())).toEqual("locator('body').locator('section')");
+	expect(render(sel().locator("div").getNestedLocator())).toEqual(
+		"locator('body').locator('div').filter({ hasText: 'x' })",
+	);
+	// the registry is untouched
+	expect(render(registry.getNestedLocator("root.btn"))).toEqual(unchanged);
+});
+
+test("update keeps the registered strategy and names replace() for another", async ({ page }) => {
+	type LocalPath = "root" | "root.btn" | "root.item";
+	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	registry.add("root").locator("body");
+	registry.add("root.btn").getByRole("button");
+	registry.add("root.item").locator("li").filter({ hasText: "x" }).nth(0);
+
+	expect(() => registry.getLocatorSchema("root.btn").update().locator("div")).toThrowError(
+		'update("root.btn") cannot change the strategy from "role" to "locator"; use replace("root.btn").locator(…) instead.',
+	);
+	expect(() => registry.getLocatorSchema("root.btn").update().getByTestId("x")).toThrowError(
+		'update("root.btn") cannot change the strategy from "role" to "testId"; use replace("root.btn").getByTestId(…) instead.',
+	);
+	expect(() => registry.getLocatorSchema("root.btn").update().frameLocator()).toThrowError(
+		'update("root.btn") cannot change the strategy from "role" to "frameLocator"; use replace("root.btn").frameLocator(…) instead.',
+	);
+
+	// replace switches and keeps the steps
+	const switched = registry.getLocatorSchema("root.item").replace().getByRole("listitem").getNestedLocator();
+	expect(`${switched.describe("")}`).toEqual("locator('body').getByRole('listitem').filter({ hasText: 'x' }).first()");
+});
+
+test("update and replace reject an empty primary only where Playwright cannot use it", async ({ page }) => {
+	type LocalPath = "root" | "root.sel" | "root.btn" | "root.frame" | "root.tid" | "root.txt";
+	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	registry.add("root").locator("body");
+	registry.add("root.sel").locator("section");
+	registry.add("root.btn").getByRole("button");
+	registry.add("root.frame").frameLocator("iframe");
+	registry.add("root.tid").getByTestId("tid");
+	registry.add("root.txt").getByText("t");
+
+	expect(() => registry.getLocatorSchema("root.sel").update().locator("")).toThrowError(
+		'locator requires a non-empty selector for "root.sel".',
+	);
+	expect(() => registry.getLocatorSchema("root.sel").replace().locator("")).toThrowError(
+		'locator requires a non-empty selector for "root.sel".',
+	);
+	expect(() => registry.getLocatorSchema("root.frame").update().frameLocator("")).toThrowError(
+		'frameLocator requires a non-empty selector for "root.frame".',
+	);
+	expect(() =>
+		registry
+			.getLocatorSchema("root.btn")
+			.update()
+			.getByRole("" as never),
+	).toThrowError('getByRole requires a non-empty role for "root.btn".');
+	expect(`${registry.getLocatorSchema("root.tid").update().getByTestId("").getNestedLocator().describe("")}`).toEqual(
+		"locator('body').getByTestId('')",
+	);
+	expect(`${registry.getLocatorSchema("root.txt").replace().getByText("").getNestedLocator().describe("")}`).toEqual(
+		"locator('body').getByText('')",
+	);
 });

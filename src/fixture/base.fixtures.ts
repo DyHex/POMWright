@@ -1,23 +1,47 @@
 import { test as base } from "@playwright/test";
-import { type LogEntry, type LogLevel, PlaywrightReportLogger } from "../helpers/playwrightReportLogger";
+import {
+	initialLogLevel,
+	type LogEntry,
+	type LogLevel,
+	PlaywrightReportLogger,
+} from "../helpers/playwrightReportLogger";
 
 type BaseFixtures = {
 	log: PlaywrightReportLogger;
 };
 
+/**
+ * Playwright's `test` with one more fixture, `log`: a `PlaywrightReportLogger` named `TestCase`, whose entries are
+ * attached to the test's report when it ends, named in Playwright's `locale` and `timezoneId`. It records `warn` and
+ * `error` on a test's first run and every level on a retry. Extend it, or combine it with `mergeTests`, to add page
+ * objects as fixtures.
+ *
+ * @example
+ * ```ts
+ * import { test as base } from "pomwright";
+ *
+ * export const test = base.extend<{ loginPage: LoginPage }>({
+ *   loginPage: async ({ page }, use) => {
+ *     await use(new LoginPage(page));
+ *   },
+ * });
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/fixtures/
+ */
 export const test = base.extend<BaseFixtures>({
-	// biome-ignore lint/correctness/noEmptyPattern: Playwright does not support the use of _
-	log: async ({}, use, testInfo) => {
+	log: async ({ locale, timezoneId }, use, testInfo) => {
 		const contextName = "TestCase";
 		const sharedLogEntry: LogEntry[] = [];
 
-		const sharedLogLevel: { current: LogLevel; initial: LogLevel } =
-			testInfo.retry === 0 ? { current: "warn", initial: "warn" } : { current: "debug", initial: "debug" };
+		const level = initialLogLevel(testInfo.retry);
+		const sharedLogLevel: { current: LogLevel; initial: LogLevel } = { current: level, initial: level };
 
 		const log = new PlaywrightReportLogger(sharedLogLevel, sharedLogEntry, contextName);
 
 		await use(log);
 
-		log.attachLogsToTest(testInfo);
+		// timestamps in the locale and time zone the tests run with
+		log.attachLogsToTest(testInfo, { locale, timeZone: timezoneId });
 	},
 });

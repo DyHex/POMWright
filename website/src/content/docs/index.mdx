@@ -1,0 +1,45 @@
+---
+title: POMWright
+description: "Page objects and locator chains for Playwright: one locator per path, the chain built for you, page objects that check themselves."
+template: splash
+hero:
+  tagline: Register one locator per path. POMWright builds the Playwright locator chain from it, and page objects check their locators as they are created.
+  actions:
+    - text: Get started
+      link: /POMWright/docs/installation/
+      icon: right-arrow
+    - text: API reference
+      link: /POMWright/api/
+      variant: minimal
+    - text: Upgrading from 2.x
+      link: /POMWright/docs/upgrading-from-2x/
+      variant: minimal
+---
+
+import { CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+POMWright is a TypeScript library for [`@playwright/test`](https://playwright.dev/). It adds what a large suite of page
+objects needs on top of Playwright and keeps Playwright's own arguments, locators and reports.
+
+<CardGrid>
+	<LinkCard
+		title="Locators"
+		href="/POMWright/docs/locator-paths/"
+		description="One locator per dot-delimited path, with Playwright's methods; the chain of a path's segments built for every element you act on."
+	/>
+	<LinkCard
+		title="Page objects"
+		href="/POMWright/docs/page-objects/"
+		description="A base class that registers its locators, checks them as it is created, and navigates to and waits for its URL."
+	/>
+	<LinkCard
+		title="Session storage"
+		href="/POMWright/docs/session-storage/"
+		description="Playwright's page.sessionStorage with codecs and report steps, and seed, which stores entries before the app's first script."
+	/>
+	<LinkCard
+		title="Reports"
+		href="/POMWright/docs/logging/"
+		description="A log fixture whose entries are attached to the test's report, and @step, which turns a method into a report step."
+	/>
+</CardGrid>

@@ -111,7 +111,22 @@ test.describe("getLocator applies terminal filters for registered definitions", 
 			label: "id",
 			build: (registry: LocatorRegistryInternal<"terminal">) =>
 				registry.add("terminal").getById("unique-id").filter({ hasText: "filtered" }),
-			expected: "locator('#unique-id').filter({ hasText: 'filtered' })",
+			expected: `locator('[id="unique-id"]').filter({ hasText: 'filtered' })`,
+		},
+		{
+			label: "id with CSS-significant characters",
+			build: (registry: LocatorRegistryInternal<"terminal">) =>
+				registry.add("terminal").getById("settings.panel").filter({ hasText: "filtered" }),
+			expected: `locator('[id="settings.panel"]').filter({ hasText: 'filtered' })`,
+		},
+		{
+			label: "id as RegExp",
+			build: (registry: LocatorRegistryInternal<"terminal">) =>
+				registry
+					.add("terminal")
+					.getById(/^settings\.panel$/i)
+					.filter({ hasText: "filtered" }),
+			expected: `locator('internal:attr=[id=/^settings\\\\.panel$/i]').filter({ hasText: 'filtered' })`,
 		},
 	];
 
@@ -250,4 +265,29 @@ test("getLocator rejects partially matching paths", async ({ page }) => {
 	expect(() => registry.getLocator("fictional.filter@has")).toThrow(
 		'No locator schema registered for path "fictional.filter@has".',
 	);
+});
+
+test("getLocator rejects a malformed path from JavaScript with the path rules", async ({ page }) => {
+	type LocatorSchemaPaths = "list" | "list.item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	registry.add("list").locator("ul");
+	registry.add("list.item").locator("li");
+	const getLocator = registry.getLocator.bind(registry) as (path: string) => unknown;
+
+	expect(() => getLocator("list..item")).toThrowError(
+		"LocatorSchemaPath string cannot contain consecutive dots: list..item",
+	);
+	expect(() => getLocator("list.")).toThrowError("LocatorSchemaPath string cannot end with a dot: list.");
+	expect(() => getLocator("")).toThrowError("LocatorSchemaPath string cannot be empty");
+});
+
+test("getLocator reports a cycle through has references as before", async ({ page }) => {
+	type LocatorSchemaPaths = "a" | "b";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	registry.add("a").locator("li").filter({ has: "b" });
+	registry.add("b").locator("p").filter({ has: "a" });
+
+	expect(() => registry.getLocator("a")).toThrowError('Detected cyclic filter reference while resolving "a": "b".');
 });

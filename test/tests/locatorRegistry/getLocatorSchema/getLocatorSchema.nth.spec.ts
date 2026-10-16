@@ -1,4 +1,5 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
+import { LocatorRegistryInternal } from "../../../../src/locators";
 
 test("nth applies numeric index to targeted sub-path", async ({ testFilters }) => {
 	const locator = testFilters.getLocatorSchema("body.section.button").nth("body.section.button", 1).getNestedLocator();
@@ -57,4 +58,42 @@ test("filter and nth ordering apply per sub-path when chained on getLocatorSchem
 	expect(`${locator.describe("")}`).toEqual(
 		"locator('div.one').filter({ hasText: 'outer' }).first().locator('div.two').filter({ hasText: 'inner' }).last()",
 	);
+});
+
+test("nth on a frame sub-path picks the iframe element before the frame is entered", async ({ page }) => {
+	type LocalPath = "frame" | "frame.button";
+	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	registry.add("frame").frameLocator("iframe");
+	registry.add("frame.button").getByRole("button");
+
+	const locator = registry.getLocatorSchema("frame.button").nth("frame", 1).getNestedLocator();
+	expect(`${locator.describe("")}`).toEqual(
+		`${page.locator("iframe").nth(1).contentFrame().getByRole("button").describe("")}`,
+	);
+});
+
+test("nth hands every index but first and last to Playwright, as Playwright's own nth takes it", async ({
+	testFilters,
+}) => {
+	await testFilters.page.goto(testFilters.fullUrl);
+	const buttons = () => testFilters.getLocatorSchema("body.section@playground.button");
+	const playwright = testFilters.page
+		.locator("section")
+		.filter({ hasText: /Playground/i })
+		.getByRole("button");
+
+	// @ts-expect-error a string index, as in Playwright, is a compile error
+	const byString = buttons().nth("2").getNestedLocator();
+	await expect(byString).toHaveText("Green");
+	// @ts-expect-error the same call on Playwright's own locator
+	await expect(playwright.nth("2")).toHaveText("Green");
+
+	// @ts-expect-error undefined is not an index; it matches nothing, as in Playwright
+	await expect(buttons().nth(undefined).getNestedLocator()).toHaveCount(0);
+	// @ts-expect-error the same call on Playwright's own locator
+	await expect(playwright.nth(undefined)).toHaveCount(0);
+	// @ts-expect-error null is not an index; it matches nothing, as in Playwright
+	await expect(buttons().nth(null).getNestedLocator()).toHaveCount(0);
+
+	await expect(buttons().nth(-1).getNestedLocator()).toHaveText("Reset Color");
 });

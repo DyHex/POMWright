@@ -139,5 +139,5 @@ test("add.filter supports visible true/false", async ({ page }) => {
 
 	const locator = registry.getLocator("item");
 
-	expect(`${locator.describe("")}`).toEqual("getByRole('button').filter({ visible: true }).filter({ visible: false })");
+	expect(`${locator.describe("")}`).toEqual("getByRole('button').visible().filter({ visible: false })");
 });

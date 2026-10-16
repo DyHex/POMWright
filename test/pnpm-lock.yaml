@@ -13,8 +13,8 @@ importers:
         version: 17.3.1
     devDependencies:
       '@playwright/test':
-        specifier: 1.62.1
-        version: 1.62.1
+        specifier: 1.64.0
+        version: 1.64.0
       '@types/express':
         specifier: ^5.0.3
         version: 5.0.6
@@ -25,13 +25,13 @@ importers:
         specifier: ^5.1.0
         version: 5.2.1
       pomwright:
-        specifier: file:../pomwright-test-build.tgz
-        version: file:../pomwright-test-build.tgz(@playwright/test@1.62.1)
+        specifier: file:../.pack/pomwright
+        version: file:../.pack/pomwright(@playwright/test@1.64.0)
 
 packages:
 
-  '@playwright/test@1.62.1':
-    resolution: {integrity: sha512-DTcUc8qii+cpHvtOwggMtBRMjKZHXYWdw8syRYu2vtzuq4Wxphqq4NfCs5Zt44L6mA8rfDfj+PHnxFc/FeK6mQ==}
+  '@playwright/test@1.64.0':
+    resolution: {integrity: sha512-oTN9FNYuN6bqQMwiho6jJKLCG2/QOYCixGXuCjRmzOq23eODeukuY2XiAVoVpAECbuezMt1MHQjAiQxK8F+Y+g==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -164,11 +164,6 @@ packages:
     resolution: {integrity: sha512-Rx/WycZ60HOaqLKAi6cHRKKI7zxWbJ31MhntmtwMoaTeF7XFH9hhBp8vITaMidfljRQ6eYWCKkaTK+ykVJHP2A==}
     engines: {node: '>= 0.8'}
 
-  fsevents@2.3.2:
-    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
-    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
-    os: [darwin]
-
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
 
@@ -255,21 +250,20 @@ packages:
   path-to-regexp@8.3.0:
     resolution: {integrity: sha512-7jdwVIRtsP8MYpdXSwOS0YdD0Du+qOoF/AEPIt88PcCFrZCzx41oxku1jD88hZBwbNUIEfpqvuhjFaMAqMTWnA==}
 
-  playwright-core@1.62.1:
-    resolution: {integrity: sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw==}
+  playwright-core@1.64.0:
+    resolution: {integrity: sha512-T9r+MZkTECl2+oUcZ26YgZzTrYidTsIhYYkJix+6iDOymOb1FB2RLLSOxRGnZGv5DStt+aduIVbt+E8WygXYpg==}
     engines: {node: '>=20'}
     hasBin: true
 
-  playwright@1.62.1:
-    resolution: {integrity: sha512-0M+L3LAD8/nm554LOla9Ayx0j0tmFZ0FBcoQ7F1VuVHpM/XpiC8RcDzBQB8W5+hA8L22THxELzeF+2WcUzvcLg==}
+  playwright@1.64.0:
+    resolution: {integrity: sha512-kVzTnYFYEyQ9RGzBjNCd2+yEqWmVbxl3AHPynv3qQ6JTjv4a+kwRcnqQwIpuP3NnrnIrE/Q6wWAIAvMfIE2/Yg==}
     engines: {node: '>=20'}
     hasBin: true
 
-  pomwright@file:../pomwright-test-build.tgz:
-    resolution: {integrity: sha512-r+WigIlRBkERvFsLAarReGkMn2G0cJFzg7GIzFjg/5qRB/EfW1ARpIrmcE1iumggLUsFRPlcyJ63/y/NiULEGQ==, tarball: file:../pomwright-test-build.tgz}
-    version: 2.0.0
+  pomwright@file:../.pack/pomwright:
+    resolution: {directory: ../.pack/pomwright, type: directory}
     peerDependencies:
-      '@playwright/test': '>=1.57.0 <2.0.0'
+      '@playwright/test': '>=1.64.0 <2.0.0'
 
   proxy-addr@2.0.7:
     resolution: {integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==}
@@ -349,9 +343,9 @@ packages:
 
 snapshots:
 
-  '@playwright/test@1.62.1':
+  '@playwright/test@1.64.0':
     dependencies:
-      playwright: 1.62.1
+      playwright: 1.64.0
 
   '@types/body-parser@1.19.6':
     dependencies:
@@ -511,9 +505,6 @@ snapshots:
 
   fresh@2.0.0: {}
 
-  fsevents@2.3.2:
-    optional: true
-
   function-bind@1.1.2: {}
 
   get-intrinsic@1.3.0:
@@ -590,17 +581,15 @@ snapshots:
 
   path-to-regexp@8.3.0: {}
 
-  playwright-core@1.62.1: {}
+  playwright-core@1.64.0: {}
 
-  playwright@1.62.1:
+  playwright@1.64.0:
     dependencies:
-      playwright-core: 1.62.1
-    optionalDependencies:
-      fsevents: 2.3.2
+      playwright-core: 1.64.0
 
-  pomwright@file:../pomwright-test-build.tgz(@playwright/test@1.62.1):
+  pomwright@file:../.pack/pomwright(@playwright/test@1.64.0):
     dependencies:
-      '@playwright/test': 1.62.1
+      '@playwright/test': 1.64.0
 
   proxy-addr@2.0.7:
     dependencies:

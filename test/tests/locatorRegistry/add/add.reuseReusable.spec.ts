@@ -1,6 +1,6 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
-import { type FilterDefinition, LocatorRegistryInternal } from "../../../../src/locators";
+import { type FilterDefinition, LocatorRegistryInternal, type ReusableLocator } from "../../../../src/locators";
 
 const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
 
@@ -129,20 +129,24 @@ test("add reuse enforces matching locator type overrides", async ({ page }) => {
 		'must use the "role" strategy',
 	);
 
-	registry.add("button", { reuse: button });
-
+	// a throwing DSL call changes nothing: the path keeps the seed it was registered with
 	expect(registry.get("button")).toEqual({
 		definition: { role: "button", options: { name: "Submit" }, type: "role" },
 		locatorSchemaPath: "button",
 		steps: [],
 	});
 
+	const builder = registry.add("button.reuseLocator", { reuse: button });
 	// @ts-expect-error mismatched locator strategies are not allowed when reusing a locator (getById attempt on role locator)
-	expect(() => registry.add("button.reuseLocator", { reuse: button }).getById("Submit")).toThrowError(
-		'must use the "role" strategy',
-	);
+	expect(() => builder.getById("Submit")).toThrowError('must use the "role" strategy');
+	expect(registry.get("button.reuseLocator").definition).toEqual({
+		role: "button",
+		options: { name: "Submit" },
+		type: "role",
+	});
 
-	registry.add("button.reuseLocator", { reuse: button }).getByRole({ name: "Submit" });
+	// the failed call consumed nothing: the one matching override is still available on the same builder
+	builder.getByRole({ name: "Submit" });
 
 	expect(registry.get("button.reuseLocator")).toEqual({
 		definition: { role: "button", options: { name: "Submit" }, type: "role" },
@@ -190,6 +194,11 @@ test("add reuse allows only one matching locator override", async ({ page }) => 
 	builder.getByRole("heading", { name: "Summary" });
 
 	expect(() => builder.getByRole("heading", { name: "Other" })).toThrowError("only one matching override is allowed");
+	expect(registry.get("heading").definition).toEqual({
+		role: "heading",
+		options: { level: 2, name: "Summary" },
+		type: "role",
+	});
 });
 
 test("createReusable.filter supports Playwright Locator instances for has/hasNot", async ({ page }) => {
@@ -307,5 +316,172 @@ test("createReusable.filter supports visible true/false", async ({ page }) => {
 
 	const locator = registry.getLocator("item");
 
-	expect(`${locator.describe("")}`).toEqual("getByRole('button').filter({ visible: true }).filter({ visible: false })");
+	expect(`${locator.describe("")}`).toEqual("getByRole('button').visible().filter({ visible: false })");
+});
+
+test("reusable getById seeds store the id verbatim, inherit on omission, and reject an empty id", async ({ page }) => {
+	type LocatorSchemaPaths = "panel" | "panel.inherit" | "panel.override";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	const seed = registry.createReusable.getById("settings.panel");
+
+	registry.add("panel", { reuse: seed });
+	registry.add("panel.inherit", { reuse: seed }).getById(undefined);
+	registry.add("panel.override", { reuse: seed }).getById("#literal-hash");
+
+	expect(registry.get("panel").definition).toEqual({ id: "settings.panel", type: "id" });
+	expect(registry.get("panel.inherit").definition).toEqual({ id: "settings.panel", type: "id" });
+	expect(registry.get("panel.override").definition).toEqual({ id: "#literal-hash", type: "id" });
+
+	expect(() => registry.createReusable.getById("")).toThrowError("createReusable.getById requires a non-empty id.");
+});
+
+test('a seed\'s describe("") removes the description; anything but a string throws', async ({ page }) => {
+	type LocatorSchemaPaths = "heading";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	const seed = registry.createReusable.getByRole("heading", { level: 2 }).describe("");
+	registry.add("heading", { reuse: seed });
+	expect(registry.getLocator("heading").description()).toBeNull();
+	// @ts-expect-error describe takes a string
+	expect(() => registry.createReusable.getByRole("heading").describe(null)).toThrowError(
+		'createReusable.describe requires a string; pass "" to remove the description.',
+	);
+});
+
+test.describe("seeds are values, against the DOM", () => {
+	type SeedPaths = "sections" | "sections@first" | "sections@last" | "explorer" | "playground";
+
+	test.beforeEach(async ({ testFilters }) => {
+		await testFilters.page.goto(testFilters.fullUrl);
+	});
+
+	test("variants derived from one base seed are the base plus their own step", async ({ page }) => {
+		const registry = createTestRegistry<SeedPaths>(page);
+		const section = registry.createReusable.locator("section");
+		registry.add("sections", { reuse: section });
+		registry.add("sections@first", { reuse: section.nth(0) });
+		registry.add("sections@last", { reuse: section.nth("last") });
+
+		await expect(registry.getNestedLocator("sections")).toHaveCount(4);
+		await expect(registry.getNestedLocator("sections@first")).toHaveAttribute("id", "section1");
+		await expect(registry.getNestedLocator("sections@last")).toHaveAttribute("id", "section4");
+		expect(section.steps).toEqual([]);
+	});
+
+	test("a description or a filter given to one variant does not reach the next", async ({ page }) => {
+		const registry = createTestRegistry<SeedPaths>(page);
+		const heading = registry.createReusable.getByRole("heading", { level: 2 });
+		registry.add("explorer", { reuse: heading.describe("Explorer heading").filter({ hasText: "Explorer" }) });
+		registry.add("playground", { reuse: heading.filter({ hasText: "Playground" }) });
+
+		const playground = registry.getNestedLocator("playground");
+		await expect(playground).toHaveText("Primary Colors Playground");
+		expect(playground.description()).toBe("playground");
+		await expect(registry.getNestedLocator("explorer")).toHaveText("Primary Colors Explorer");
+		expect(heading.description).toBeUndefined();
+	});
+});
+
+test("seed.filter returns a seed with the filter and leaves the seed's steps alone", async ({ page }) => {
+	const registry = createTestRegistry<"x">(page);
+	const seed = registry.createReusable.locator("section");
+	const filtered = seed.filter({ hasText: "Explorer" });
+	expect(seed.steps).toEqual([]);
+	expect(filtered.steps).toEqual([{ kind: "filter", filter: { hasText: "Explorer" } }]);
+	expect(filtered).not.toBe(seed);
+});
+
+test("changing a seed's definition after creation changes nothing", async ({ page }) => {
+	const registry = createTestRegistry<"x">(page);
+	const seed = registry.createReusable.getByRole("button", { name: "Save" });
+	(seed.definition.options as { name: string }).name = "Changed";
+	registry.add("x", { reuse: seed });
+	expect(registry.get("x").definition).toEqual({ type: "role", role: "button", options: { name: "Save" } });
+});
+
+test.describe("a seeded override's options follow update's Merge Patch, against the DOM", () => {
+	type OptionPaths = "section" | "section.exact" | "section.loose" | "section.all" | "section.heading" | "section.x";
+
+	test.beforeEach(async ({ testFilters }) => {
+		await testFilters.page.goto(testFilters.fullUrl);
+	});
+
+	test("a null key deletes it, a lone null clears the options, a primary with null keeps none", async ({ page }) => {
+		const registry = createTestRegistry<OptionPaths>(page);
+		const reset = registry.createReusable.getByRole("button", { name: "Reset", exact: true });
+		registry.add("section").locator("#section1");
+		registry.add("section.exact", { reuse: reset });
+		registry.add("section.loose", { reuse: reset }).getByRole({ exact: null });
+		registry.add("section.all", { reuse: reset }).getByRole(null);
+		registry.add("section.heading", { reuse: reset }).getByRole("heading", null);
+
+		await expect(registry.getNestedLocator("section.exact")).toHaveCount(0);
+		await expect(registry.getNestedLocator("section.loose")).toHaveText(["Reset Color"]);
+		await expect(registry.getNestedLocator("section.all")).toHaveText(["Red", "Blue", "Green", "Reset Color"]);
+		await expect(registry.getNestedLocator("section.heading")).toHaveText("Primary Colors Section");
+		expect(registry.get("section.loose").definition).toEqual({
+			type: "role",
+			role: "button",
+			options: { name: "Reset" },
+		});
+	});
+
+	test("null as the first of two arguments throws: a primary is always a value", async ({ page }) => {
+		const registry = createTestRegistry<OptionPaths>(page);
+		const reset = registry.createReusable.getByRole("button", { name: "Reset" });
+		const view = registry.add("section.x", { reuse: reset }) as unknown as {
+			getByRole: (...args: unknown[]) => unknown;
+		};
+		expect(() => view.getByRole(null, null)).toThrowError('getByRole requires a role value for "section.x".');
+	});
+});
+
+test.describe("an any-frame seed", () => {
+	type FramePaths = "frames" | "frames.toggleC" | "stepped" | "framed" | "framed.toggle";
+	const anyFrameSeed = (steps: { kind: "index"; index: number }[]) =>
+		({
+			type: "frameLocator",
+			definition: { type: "frameLocator" },
+			steps,
+			description: undefined,
+			filter() {
+				return this;
+			},
+			nth() {
+				return this;
+			},
+			describe() {
+				return this;
+			},
+		}) as unknown as ReusableLocator<FramePaths, "frameLocator">;
+
+	test.beforeEach(async ({ iframePage }) => {
+		await iframePage.page.goto(iframePage.fullUrl);
+	});
+
+	test("without steps registers and resolves a path inside it", async ({ page }) => {
+		const registry = createTestRegistry<FramePaths>(page);
+		registry.add("frames", { reuse: anyFrameSeed([]) });
+		registry.add("frames.toggleC").getByTestId("toggle-c");
+		await expect(registry.getNestedLocator("frames.toggleC")).toHaveText("Toggle C: Off");
+	});
+
+	test("with a step throws at add and registers nothing", async ({ page }) => {
+		const registry = createTestRegistry<FramePaths>(page);
+		expect(() => registry.add("stepped", { reuse: anyFrameSeed([{ kind: "index", index: 0 }]) })).toThrowError(
+			'reuse cannot apply to "stepped": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.',
+		);
+		expect(() => registry.get("stepped")).toThrowError('No locator schema registered for path "stepped".');
+	});
+
+	test("an override that gives it a selector makes it a frame segment that takes steps", async ({ page }) => {
+		const registry = createTestRegistry<FramePaths>(page);
+		registry
+			.add("framed", { reuse: anyFrameSeed([]) })
+			.frameLocator("iframe")
+			.nth(0);
+		registry.add("framed.toggle").getByRole("button");
+		await expect(registry.getNestedLocator("framed.toggle")).toHaveText("Toggle A: Off");
+	});
 });

@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.5.6/schema.json",
 	"assist": {
 		"actions": {
 			"source": {
@@ -10,7 +10,7 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"recommended": true,
+			"preset": "recommended",
 			"style": {
 				"noParameterAssign": "error",
 				"useAsConstAssertion": "error",
@@ -33,6 +33,19 @@
 		"lineWidth": 120,
 		"includes": ["**"]
 	},
+	"overrides": [
+		{
+			"includes": ["**/*.astro"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnusedImports": "off",
+						"noUnusedVariables": "off"
+					}
+				}
+			}
+		}
+	],
 	"files": {
 		"includes": [
 			"**",
@@ -40,7 +53,11 @@
 			"!**/node_modules",
 			"!**/test/node_modules",
 			"!**/test/playwright-report",
-			"!**/test/test-results"
+			"!**/test/test-results",
+			"!**/test/test-data",
+			"!**/test/.doc-snippets",
+			"!**/website/.astro",
+			"!**/.pack"
 		]
 	}
 }

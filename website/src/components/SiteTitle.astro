@@ -1,0 +1,20 @@
+---
+import Default from "@astrojs/starlight/components/SiteTitle.astro";
+
+const { topics } = Astro.locals.starlightSidebarTopics;
+---
+<div class="title-and-tabs">
+	<Default><slot /></Default>
+	<nav class="topic-tabs" aria-label="Sections">
+		{topics.map((topic) => (
+			<a href={topic.link} aria-current={topic.isCurrent ? "page" : false}>{topic.label}</a>
+		))}
+	</nav>
+</div>
+<style>
+	.title-and-tabs { display: flex; align-items: center; gap: 1.5rem; }
+	.topic-tabs { display: none; gap: 1.25rem; }
+	.topic-tabs a { color: var(--sl-color-gray-2); text-decoration: none; font-weight: 600; }
+	.topic-tabs a[aria-current="page"] { color: var(--sl-color-white); border-bottom: 2px solid var(--sl-color-accent); }
+	@media (min-width: 50rem) { .topic-tabs { display: flex; } }
+</style>

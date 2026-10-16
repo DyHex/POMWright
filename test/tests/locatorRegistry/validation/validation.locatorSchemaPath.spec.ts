@@ -103,6 +103,7 @@ test("flags invalid LocatorSchemaPaths at compile time and rejects them at runti
 		" ", // NARROW NO-BREAK SPACE
 		" ", // MEDIUM MATHEMATICAL SPACE
 		"　", // IDEOGRAPHIC SPACE
+		"main\uFEFF.form", // ZERO WIDTH NO-BREAK SPACE (BOM), which JavaScript's \s matches
 	] as const;
 
 	for (const path of whitespacePaths) {

@@ -1,251 +1,450 @@
-import { type Frame, type Page, test } from "@playwright/test";
+/**
+ * `SessionStorage`: Playwright's `page.sessionStorage` with batches, step titles, origin checks, per-key
+ * codecs, and seeding before the app loads.
+ *
+ * Values are strings unless a codec is declared for the key, so without a schema the helper is exactly
+ * Playwright's contract: strings in, strings out, `null` for a missing key. A helper constructed with an
+ * `origin` (every page object with a string `baseUrl`) refuses to touch another origin's storage, which is
+ * unreachable without leaving the current document anyway. `seed` writes at once when the page is on the
+ * origin and otherwise defers to the page's seed registry, which keeps the navigation's fragment.
+ */
+import { type Page, test } from "@playwright/test";
+import { captureCallSite } from "./callSite";
+import { existingRegistryFor, originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSeed";
 
 /**
- * Defines the SessionStorage class to manage session storage in Playwright.
- * It provides methods to set, get, and clear session storage data, and to handle data before page navigation.
+ * How a session storage key's value is stored as a string and read back: `stringify` on the way in, `parse` on the way
+ * out. Declare one per key in a schema; `json<T>()` is the one POMWright ships.
+ *
+ * @example
+ * ```ts
+ * const number = (): Codec<number> => ({ parse: (raw) => Number(raw), stringify: (value) => String(value) });
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#codec
  */
-type SessionStorageState<T = unknown> = Record<string, T>;
-
-type SetOptions = {
-	reload?: boolean;
-	waitForContext?: boolean;
+export type Codec<T> = {
+	/**
+	 * Turns the stored string into the value. An error it throws makes `get` fail, naming the key and the value.
+	 *
+	 * @param raw The string as stored.
+	 * @returns The value.
+	 */
+	parse(raw: string): T;
+	/**
+	 * Turns the value into the string to store. It must return a string.
+	 *
+	 * @param value The value given to `set` or `seed`.
+	 * @returns The string to store.
+	 */
+	stringify(value: T): string;
 };
 
-type WaitForContextOptions = {
-	waitForContext?: boolean;
-};
+/**
+ * The JSON codec: `JSON.stringify` in, `JSON.parse` out. `T` types the key; the parsed value is not checked against
+ * it, exactly as `JSON.parse(…) as T`. For a string key that an app reads as JSON, `json<string>()` stores the quotes.
+ *
+ * @returns A codec.
+ *
+ * @example
+ * ```ts
+ * const storage = new SessionStorage(page, { schema: { user: json<{ name: string }>() } });
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#json
+ */
+export const json = <T>(): Codec<T> => ({
+	parse: (raw) => JSON.parse(raw) as T,
+	stringify: (value) => JSON.stringify(value),
+});
 
-type SessionStorageOptions = {
+/**
+ * Codecs by key: the `schema` option of `SessionStorage` and of a page object's `sessionStorage` option. A key that is
+ * not declared holds a string.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#sessionstorageschema
+ */
+export type SessionStorageSchema = Record<string, Codec<unknown>>;
+
+export type SessionStorageOptions<S extends SessionStorageSchema> = {
+	/** Prefix for step titles and error messages. */
 	label?: string;
+	/** The origin this helper belongs to: the default target of `seed`, and the only origin `set`, `get` and `clear` touch. */
+	origin?: string;
+	/** Codecs by key. */
+	schema?: S;
 };
 
-export class SessionStorage {
-	// Defines an object to hold states to be set in session storage, allowing any value type.
-	private queuedStates: SessionStorageState = {};
-	// Indicates if the session storage manipulation has been initiated.
-	private isInitiated = false;
+/** The decoded type of key `K`: the codec's type when declared, otherwise `string`. */
+export type Decoded<S extends SessionStorageSchema, K extends string> = K extends keyof S
+	? S[K] extends Codec<infer T>
+		? T
+		: never
+	: string;
 
-	// Initializes the class with a Playwright Page object and an optional label for step titles.
+/** A record whose every value is typed by its key's codec. */
+export type EntriesFor<S extends SessionStorageSchema, E> = { [K in keyof E]: Decoded<S, K & string> };
+
+/** A key list that cannot be the literal `[]`; computed lists, including empty ones, still pass. */
+export type NonEmpty<K extends string> = readonly K[] & ([K] extends [never] ? never : unknown);
+
+export type SeedOptions = {
+	/** The origin to seed; defaults to the helper's `origin`. */
+	origin?: string;
+};
+
+/** The shape `get()` returns: plain strings without a schema, otherwise declared keys decoded. */
+export type AllEntries<S extends SessionStorageSchema> = [keyof S] extends [never]
+	? Record<string, string>
+	: { [K in keyof S]?: Decoded<S, K & string> } & Record<string, string | Decoded<S, keyof S & string>>;
+
+const describeOrigin = (value: string): string | undefined => {
+	let url: URL;
+	try {
+		url = new URL(value);
+	} catch {
+		return undefined;
+	}
+	return url.host !== "" && url.pathname === "/" && url.search === "" && url.hash === "" ? url.origin : undefined;
+};
+
+/** Throws unless `value` is an origin; returns it normalised. */
+const normaliseOrigin = (value: string, title: string): string => {
+	const origin = describeOrigin(value);
+	if (origin === undefined) {
+		throw new Error(
+			`${title}: origin must be an origin such as "https://app.example" or "http://localhost:9000" ` +
+				`(scheme, host, optional port, no path, query or hash); received ${JSON.stringify(value)}`,
+		);
+	}
+	return origin;
+};
+
+const hasCodec = (schema: SessionStorageSchema, key: string): boolean => Object.hasOwn(schema, key);
+
+/** Encodes every entry for storage: declared keys through their codec, undeclared keys as the strings they must be. */
+export const encodeEntries = (
+	schema: SessionStorageSchema,
+	entries: Record<string, unknown>,
+	title: string,
+): Record<string, string> => {
+	const encoded: Record<string, string> = {};
+	for (const [key, value] of Object.entries(entries)) {
+		const codec = hasCodec(schema, key) ? schema[key] : undefined;
+		if (codec === undefined) {
+			if (typeof value !== "string") {
+				throw new TypeError(
+					`${title}: value for ${JSON.stringify(key)} is not a string and no codec is declared for it`,
+				);
+			}
+			encoded[key] = value;
+			continue;
+		}
+		let raw: unknown;
+		try {
+			raw = codec.stringify(value);
+		} catch (error) {
+			throw new TypeError(`${title}: value for ${JSON.stringify(key)} could not be encoded`, { cause: error });
+		}
+		if (typeof raw !== "string") {
+			throw new TypeError(`${title}: the codec for ${JSON.stringify(key)} returned ${typeof raw} instead of a string`);
+		}
+		encoded[key] = raw;
+	}
+	return encoded;
+};
+
+/** Decodes one stored value: `null` stays `null`, a declared key goes through its codec, anything else is the string as stored. */
+export const decodeValue = (schema: SessionStorageSchema, key: string, raw: string | null, title: string): unknown => {
+	if (raw === null) {
+		return null;
+	}
+	const codec = hasCodec(schema, key) ? schema[key] : undefined;
+	if (codec === undefined) {
+		return raw;
+	}
+	try {
+		return codec.parse(raw);
+	} catch (error) {
+		throw new TypeError(`${title}: value for ${JSON.stringify(key)} could not be decoded: ${raw}`, { cause: error });
+	}
+};
+
+const readTestOutcome: ReadTestOutcome = () => {
+	try {
+		const info = test.info();
+		return { status: info.status ?? "unknown", errors: info.errors };
+	} catch {
+		return undefined;
+	}
+};
+
+/**
+ * The browser's refusal to touch storage on a document without an origin, such as `about:blank`: Chromium and
+ * WebKit raise a `SecurityError`, Firefox says "The operation is insecure".
+ */
+const isNoOriginError = (error: unknown): error is Error =>
+	error instanceof Error && /SecurityError|Access is denied|The operation is insecure/.test(error.message);
+
+/**
+ * Playwright's `page.sessionStorage` with what a test suite adds: one call for several keys, a step in the report for
+ * every call, at the line that made it, an origin check, per-key codecs, and `seed`, which stores entries before the
+ * app's next load on an origin. Values are strings, stored and read exactly as given, unless the schema declares a
+ * codec for the key. Every page object has one, `sessionStorage`.
+ *
+ * @example
+ * ```ts
+ * const storage = new SessionStorage(page, { label: "Shop", origin: "https://shop.example" });
+ * await storage.seed({ token: "abc" });
+ * await page.goto("https://shop.example/");
+ * const token = await storage.get("token"); // "abc"
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/
+ */
+export class SessionStorage<S extends SessionStorageSchema = Record<never, never>> {
+	private readonly label: string | undefined;
+	private readonly origin: string | undefined;
+	private readonly schema: SessionStorageSchema;
+
+	/**
+	 * Creates a helper for a page. A page object creates its own, with its label, the origin of its string `baseUrl`
+	 * and its schema.
+	 *
+	 * @param page The page whose session storage the helper reads and writes.
+	 * @param options Optional settings.
+	 * @param options.label The prefix of step titles and error messages: `Shop` gives `Shop.SessionStorage.set:`.
+	 * @param options.origin The origin the helper belongs to: the default origin of `seed`, and the only one `set`,
+	 * `get` and `clear` touch. Without it the helper works on whatever origin the page is on.
+	 * @param options.schema Codecs by key, for keys that hold structured values.
+	 * @throws When `origin` is not an origin: `Shop.SessionStorage.constructor: origin must be an origin such as …`
+	 */
 	constructor(
-		private page: Page,
-		private options: SessionStorageOptions = {},
-	) {}
-
-	private getStepLabel(methodName: string) {
-		const prefix = this.options.label ? `${this.options.label}.` : "";
-		return `${prefix}SessionStorage.${methodName}:`;
+		private readonly page: Page,
+		options: SessionStorageOptions<S> = {},
+	) {
+		this.label = options.label;
+		this.schema = options.schema ?? {};
+		this.origin = options.origin === undefined ? undefined : normaliseOrigin(options.origin, this.title("constructor"));
 	}
 
-	private async hasContext() {
-		return await this.page.evaluate(() => {
-			return typeof window !== "undefined" && window.sessionStorage !== undefined;
+	private title(method: string): string {
+		return `${this.label === undefined ? "" : `${this.label}.`}SessionStorage.${method}`;
+	}
+
+	/**
+	 * Runs `body` as a step, boxed so the report shows it at the line that called the helper; a recorded seed failure is
+	 * thrown first. Playwright takes a boxed step's location from the async stack after its first frame, so this helper
+	 * is not `async` (it would be that frame) and every method awaits it rather than returning it (which cuts the stack).
+	 */
+	private step<T>(method: string, body: () => Promise<T>): Promise<T> {
+		return test.step(
+			`${this.title(method)}:`,
+			async () => {
+				existingRegistryFor(this.page)?.throwIfFailed();
+				return body();
+			},
+			{ box: true },
+		);
+	}
+
+	/** One call into `page.sessionStorage`; the browser's refusal on a document without an origin is explained. */
+	private async access<T>(method: string, call: () => Promise<T>): Promise<T> {
+		try {
+			return await call();
+		} catch (error) {
+			if (isNoOriginError(error) || (error instanceof Error && originOf(this.page.url()) === undefined)) {
+				throw new Error(
+					`${this.title(method)}: the page has no origin yet (${this.page.url()}); navigate to the origin first or use seed()`,
+					{ cause: error },
+				);
+			}
+			throw error;
+		}
+	}
+
+	/** A helper with an origin touches only that origin's storage. */
+	private assertOnOrigin(method: string): void {
+		if (this.origin === undefined) {
+			return;
+		}
+		const current = originOf(this.page.url());
+		if (current !== undefined && current !== this.origin) {
+			throw new Error(
+				`${this.title(method)}: the page is on ${current}, not on this page object's origin ${this.origin}; ` +
+					"another origin's sessionStorage is reachable only from a document on it. " +
+					`Use the page object for ${current}, or a standalone SessionStorage without an origin`,
+			);
+		}
+	}
+
+	private async write(method: string, encoded: Record<string, string>): Promise<void> {
+		for (const [key, value] of Object.entries(encoded)) {
+			await this.access(method, () => this.page.sessionStorage.setItem(key, value));
+		}
+	}
+
+	/**
+	 * Writes one entry, or several, to the session storage of the origin the page is on: each value through its key's
+	 * codec, or as the string it must be. Every value is encoded before any is written, so a bad value writes nothing.
+	 *
+	 * @param key The key.
+	 * @param value The value: a string, or the type of the key's codec.
+	 * @param entries Several keys and values, written in one call.
+	 * @throws When a value for a key without a codec is not a string
+	 * (`Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it`), when the page is on
+	 * another origin than the helper's, and when the page has no origin yet
+	 * (`Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()`).
+	 *
+	 * @example
+	 * ```ts
+	 * await storage.set("token", "abc");
+	 * await storage.set({ token: "abc", locale: "nb" });
+	 * ```
+	 */
+	set<K extends string>(key: K, value: Decoded<S, K>): Promise<void>;
+	set<E extends Record<string, unknown>>(entries: EntriesFor<S, E>): Promise<void>;
+	async set(keyOrEntries: string | Record<string, unknown>, value?: unknown): Promise<void> {
+		const entries = typeof keyOrEntries === "string" ? { [keyOrEntries]: value } : keyOrEntries;
+		await this.step("set", async () => {
+			this.assertOnOrigin("set");
+			await this.write("set", encodeEntries(this.schema, entries, this.title("set")));
 		});
 	}
 
-	private async waitForContextAvailability() {
-		try {
-			const contextExists = await this.hasContext();
-			if (contextExists) {
+	/**
+	 * Reads the session storage of the origin the page is on: every entry, one key, or several, each value through its
+	 * key's codec. A missing key reads as `null`. A literal `[]` does not compile; a list that is empty at run time
+	 * reads nothing.
+	 *
+	 * @param key One key: returns its value, or `null`.
+	 * @param keys Several keys: returns a record with every key, `null` for each that is missing.
+	 * @returns Without an argument, every entry; otherwise the value or the record.
+	 * @throws When a stored value cannot be decoded by its codec
+	 * (`Shop.SessionStorage.get: value for "user" could not be decoded: {not json`), when the page is on another origin
+	 * than the helper's, and when the page has no origin yet.
+	 *
+	 * @example
+	 * ```ts
+	 * const token = await storage.get("token"); // "abc", or null
+	 * const entries = await storage.get(["token", "locale"]); // { token: "abc", locale: null }
+	 * ```
+	 */
+	get(): Promise<AllEntries<S>>;
+	get<K extends string>(key: K): Promise<Decoded<S, K> | null>;
+	get<K extends string>(keys: NonEmpty<K>): Promise<{ [P in K]: Decoded<S, P> | null }>;
+	async get(keyOrKeys?: string | readonly string[]): Promise<unknown> {
+		// awaited, not returned: see step()
+		return await this.step("get", async () => {
+			this.assertOnOrigin("get");
+			const title = this.title("get");
+			if (typeof keyOrKeys === "string") {
+				return decodeValue(
+					this.schema,
+					keyOrKeys,
+					await this.access("get", () => this.page.sessionStorage.getItem(keyOrKeys)),
+					title,
+				);
+			}
+			if (keyOrKeys !== undefined) {
+				const pairs = await Promise.all(
+					keyOrKeys.map(
+						async (key) =>
+							[
+								key,
+								decodeValue(
+									this.schema,
+									key,
+									await this.access("get", () => this.page.sessionStorage.getItem(key)),
+									title,
+								),
+							] as const,
+					),
+				);
+				return Object.fromEntries(pairs);
+			}
+			const items = await this.access("get", () => this.page.sessionStorage.items());
+			return Object.fromEntries(
+				items.map((item) => [item.name, decodeValue(this.schema, item.name, item.value, title)]),
+			);
+		});
+	}
+
+	/**
+	 * Removes entries from the session storage of the origin the page is on: every entry, one key, or several.
+	 *
+	 * @param key One key.
+	 * @param keys Several keys. A literal `[]` does not compile; a list that is empty at run time removes nothing.
+	 * @throws When the page is on another origin than the helper's, and when the page has no origin yet.
+	 *
+	 * @example
+	 * ```ts
+	 * await storage.clear("token");
+	 * await storage.clear(); // everything
+	 * ```
+	 */
+	clear(): Promise<void>;
+	clear(key: string): Promise<void>;
+	clear<K extends string>(keys: NonEmpty<K>): Promise<void>;
+	async clear(keyOrKeys?: string | readonly string[]): Promise<void> {
+		await this.step("clear", async () => {
+			this.assertOnOrigin("clear");
+			if (keyOrKeys === undefined) {
+				await this.access("clear", () => this.page.sessionStorage.clear());
 				return;
 			}
-		} catch (_e) {
-			// Execution context was destroyed; wait for a new one.
-		}
-
-		await new Promise<void>((resolve) => {
-			const handler = async (frame: Frame) => {
-				if (frame !== this.page.mainFrame()) {
-					return;
-				}
-				try {
-					const contextExists = await this.hasContext();
-					if (!contextExists) {
-						return;
-					}
-				} catch (_e) {
-					return;
-				}
-				this.page.off("framenavigated", handler);
-				resolve();
-			};
-			this.page.on("framenavigated", handler);
-		});
-	}
-
-	private async ensureContext({ waitForContext = false }: WaitForContextOptions = {}) {
-		try {
-			const contextExists = await this.hasContext();
-			if (contextExists) {
-				return;
-			}
-		} catch (_e) {
-			// Ignore and fall through.
-		}
-
-		if (!waitForContext) {
-			throw new Error("SessionStorage context is not available.");
-		}
-
-		await this.waitForContextAvailability();
-	}
-
-	/** Writes states to session storage. Accepts an object with key-value pairs representing the states. */
-	private async writeToSessionStorage<T = unknown>(states: SessionStorageState<T>) {
-		await this.page.evaluate((storage) => {
-			for (const [key, value] of Object.entries(storage)) {
-				window.sessionStorage.setItem(key, JSON.stringify(value));
-			}
-		}, states);
-	}
-
-	/** Reads all states from session storage and returns them as an object. */
-	private async readFromSessionStorage<T = unknown>(): Promise<SessionStorageState<T>> {
-		const storage = await this.page.evaluate(() => {
-			const storage: Record<string, unknown> = {};
-			for (let i = 0; i < sessionStorage.length; i++) {
-				const key = sessionStorage.key(i);
-				if (key !== null) {
-					const item = sessionStorage.getItem(key);
-					try {
-						storage[key] = item ? JSON.parse(item) : null;
-					} catch (_e) {
-						storage[key] = item;
-					}
-				}
-			}
-			return storage;
-		});
-		return storage as SessionStorageState<T>;
-	}
-
-	/**
-	 * Sets the specified states in session storage.
-	 * Optionally waits for the next main-frame navigation to establish a valid context before writing,
-	 * and reloads the page after setting the data.
-	 *
-	 * Parameters:
-	 * states: Object representing the states to set in session storage.
-	 * reload: Boolean indicating whether to reload the page after setting the session storage data.
-	 * waitForContext: Boolean indicating whether to wait for a main-frame navigation and a valid context.
-	 */
-	public async set<T = unknown>(states: SessionStorageState<T>, options: SetOptions = {}) {
-		await test.step(this.getStepLabel("set"), async () => {
-			await this.ensureContext({ waitForContext: options.waitForContext });
-			await this.writeToSessionStorage(states);
-			if (options.reload) {
-				await this.page.reload();
+			for (const key of typeof keyOrKeys === "string" ? [keyOrKeys] : keyOrKeys) {
+				await this.access("clear", () => this.page.sessionStorage.removeItem(key));
 			}
 		});
 	}
 
 	/**
-	 * Queues states to be set in the sessionStorage before the next navigation occurs.
-	 * Handles different scenarios based on multiple calls made before the navigation occurs.
+	 * Stores entries for an origin before the app's next load there, so the app's first script sees them, without
+	 * leaving the page the test is on. On the origin already, it writes at once. Elsewhere, the next navigation of the
+	 * main frame that reaches the origin (`goto`, a link, a script, a form POST, a server redirect) stores them and
+	 * continues, keeping its URL fragment. A seed that is still waiting when the page closes fails the test.
 	 *
-	 * 1. No Context, Single Call: Queues and sets states upon the next navigation.
-	 * 2. No Context, Multiple Calls: Merges states from multiple calls and sets them upon the next navigation.
-	 * 3. With Context: Still queues until the next navigation.
+	 * @param key The key.
+	 * @param value The value: a string, or the type of the key's codec.
+	 * @param entries Several keys and values.
+	 * @param options `{ origin }`: the origin to seed. Defaults to the helper's origin, which a page object's helper has.
+	 * @throws When there is no origin (`Shop.SessionStorage.seed: an origin is required; pass { origin } or construct
+	 * the helper with one`); later, at the navigation or when the page closes, failing the test with the line of this
+	 * call in the stack, when a service worker or a later route answered the navigation, when a form POST cannot be
+	 * re-issued, or when the seed was never applied.
 	 *
-	 * Parameters:
-	 * states: Object representing the states to queue for setting in session storage.
+	 * @example
+	 * ```ts
+	 * await loginPage.sessionStorage.seed({ token: "eyJ…" });
+	 * await loginPage.navigation.goto(); // the app's first script already sees the token
+	 * ```
 	 */
-	public async setOnNextNavigation<T = unknown>(states: SessionStorageState<T>) {
-		this.queuedStates = { ...this.queuedStates, ...states };
-
-		const populateStorage = async () => {
-			await test.step(this.getStepLabel("setOnNextNavigation"), async () => {
-				await this.writeToSessionStorage(this.queuedStates);
-			});
-			this.queuedStates = {}; // Clear queued states
-		};
-
-		if (!this.isInitiated) {
-			this.isInitiated = true;
-			const handler = async (frame: Frame) => {
-				if (frame !== this.page.mainFrame()) {
-					return;
-				}
-				await populateStorage();
-				this.page.off("framenavigated", handler);
-				this.isInitiated = false;
-			};
-			this.page.on("framenavigated", handler);
-		}
-	}
-
-	/**
-	 * Fetches states from session storage.
-	 * If specific keys are provided, fetches only those states; otherwise, fetches all states.
-	 *
-	 * Parameters:
-	 * keys: Optional array of keys to specify which states to fetch from session storage.
-	 * waitForContext: Boolean indicating whether to wait for a main-frame navigation and a valid context.
-	 *
-	 * Returns:
-	 * Object containing the fetched states.
-	 */
-	public async get<T = unknown>(keys?: string[]): Promise<SessionStorageState<T>>;
-	public async get<T = unknown>(
-		keys: string[] | undefined,
-		options: WaitForContextOptions,
-	): Promise<SessionStorageState<T>>;
-	public async get<T = unknown>(keys?: string[], options: WaitForContextOptions = {}): Promise<SessionStorageState<T>> {
-		let result: SessionStorageState<T> = {};
-		await test.step(this.getStepLabel("get"), async () => {
-			await this.ensureContext(options);
-			const allData = await this.readFromSessionStorage<T>();
-			if (keys && keys.length > 0) {
-				for (const key of keys) {
-					if (Object.hasOwn(allData, key)) {
-						const value = allData[key];
-						if (value !== undefined) {
-							result[key] = value;
-						}
-					}
-				}
-			} else {
-				result = allData;
-			}
-		});
-		return result;
-	}
-
-	/**
-	 * Clears states in sessionStorage. When keys are provided, clears only those entries.
-	 * Pass `waitForContext` to wait for the next main-frame navigation and validate that a usable context exists.
-	 */
-	public async clear(): Promise<void>;
-	public async clear(options: WaitForContextOptions): Promise<void>;
-	public async clear(key: string | string[]): Promise<void>;
-	public async clear(key: string | string[], options: WaitForContextOptions): Promise<void>;
-	public async clear(
-		keyOrOptions?: string | string[] | WaitForContextOptions,
-		options: WaitForContextOptions = {},
+	seed<K extends string>(key: K, value: Decoded<S, K>, options?: SeedOptions): Promise<void>;
+	seed<E extends Record<string, unknown>>(entries: EntriesFor<S, E>, options?: SeedOptions): Promise<void>;
+	async seed(
+		keyOrEntries: string | Record<string, unknown>,
+		valueOrOptions?: unknown,
+		maybeOptions?: SeedOptions,
 	): Promise<void> {
-		const { keys, waitForContext } = (() => {
-			if (Array.isArray(keyOrOptions)) {
-				return { keys: keyOrOptions, waitForContext: options.waitForContext };
+		const site = captureCallSite(SessionStorage.prototype.seed);
+		const [entries, options] =
+			typeof keyOrEntries === "string"
+				? [{ [keyOrEntries]: valueOrOptions }, maybeOptions]
+				: [keyOrEntries, valueOrOptions as SeedOptions | undefined];
+		await this.step("seed", async () => {
+			const title = this.title("seed");
+			const requested = options?.origin;
+			const origin = requested === undefined ? this.origin : normaliseOrigin(requested, title);
+			if (origin === undefined) {
+				throw new Error(`${title}: an origin is required; pass { origin } or construct the helper with one`);
 			}
-			if (typeof keyOrOptions === "string") {
-				return { keys: [keyOrOptions], waitForContext: options.waitForContext };
-			}
-			if (keyOrOptions) {
-				return { keys: undefined, waitForContext: keyOrOptions.waitForContext };
-			}
-			return { keys: undefined, waitForContext: options.waitForContext };
-		})();
-
-		await test.step(this.getStepLabel("clear"), async () => {
-			await this.ensureContext({ waitForContext });
-			if (!keys || keys.length === 0) {
-				await this.page.evaluate(() => sessionStorage.clear());
+			const encoded = encodeEntries(this.schema, entries, title);
+			if (originOf(this.page.url()) === origin) {
+				await this.write("seed", encoded);
 				return;
 			}
-			await this.page.evaluate((keysToClear) => {
-				for (const key of keysToClear) {
-					sessionStorage.removeItem(key);
-				}
-			}, keys);
+			await registryFor(this.page, readTestOutcome).add(origin, encoded, title, site);
 		});
 	}
 }

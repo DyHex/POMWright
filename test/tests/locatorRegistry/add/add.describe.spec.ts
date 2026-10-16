@@ -152,3 +152,21 @@ test("describe preserves explicit descriptions and defaults to the target path w
 	expect(registry.getLocator("source.copy").description()).toEqual("source.copy");
 	expect(registry.getLocator("custom.copy").description()).toEqual("Custom button");
 });
+
+test('describe("") removes the description; anything but a string throws', async ({ page }) => {
+	type LocatorSchemaPaths = "list" | "list.item";
+
+	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	registry.add("list").locator("ul").describe("");
+	registry.add("list.item").getByRole("listitem");
+
+	expect(registry.getLocator("list").description()).toBeNull();
+	expect(`${registry.getLocator("list")}`).toEqual("locator('ul')");
+	const fresh = createTestRegistry<LocatorSchemaPaths>(page);
+	const builder = fresh.add("list").locator("ul");
+	// @ts-expect-error describe takes a string
+	expect(() => builder.describe(undefined)).toThrowError(
+		'describe requires a string for "list"; pass "" to remove the description.',
+	);
+	expect(fresh.getLocator("list").description()).toEqual("list");
+});

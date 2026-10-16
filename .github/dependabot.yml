@@ -1,0 +1,21 @@
+# Keeps the commit pins of the GitHub Actions in .github/workflows and the documentation site's exact npm versions in
+# website/ current: one grouped pull request a month each, which CI checks like any other. The library's own npm
+# dependencies are not covered here.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+  - package-ecosystem: npm
+    directory: /website
+    schedule:
+      interval: monthly
+    groups:
+      website:
+        patterns:
+          - "*"
