@@ -102,6 +102,13 @@ ShopLogin: baseUrl must be an origin such as "https://example.com" or "http://lo
 (scheme, host, optional port, no path, query or hash); received "localhost:9000".
 ```
 
+A value that is neither a string nor a RegExp, such as an unset environment variable that the project's types call a
+`string`, throws the same way instead of building a page object that never matches its page:
+
+```
+ShopLogin: baseUrl must be a string or a RegExp; received undefined.
+```
+
 ```ts
 abstract class ShopApp<Paths extends string> extends PageObject<Paths> {
   protected constructor(page: Page, urlPath: string) {
@@ -174,11 +181,16 @@ export class CheckoutPage extends PageObject<
 }
 ```
 
-A project that registers every segment usually sets `strictChains` once, in its domain base class:
+A project that registers every segment usually sets `strictChains` once, in its domain base class. The constructor's
+options are importable as `PageObjectOptions<Options>` (and `locators` as `LocatorRegistryOptions`), so the base class
+forwards them by name instead of restating their shape:
 
 ```ts
+import type { Page } from "@playwright/test";
+import { PageObject, type PageObjectOptions } from "pomwright";
+
 export abstract class Shop<Paths extends string> extends PageObject<Paths> {
-  protected constructor(page: Page, urlPath: string, options?: { label?: string }) {
+  protected constructor(page: Page, urlPath: string, options?: PageObjectOptions) {
     super(page, "https://shop.example", urlPath, { ...options, locators: { strictChains: true } });
   }
 }
@@ -436,8 +448,9 @@ OrdersPage: expected to have left "https://app.example/orders"; found "https://a
 OrdersPage: left "https://app.example/orders" but returned to it; found "https://app.example/orders"
 ```
 
-A string page's identity is its exact URL: `/orders?tab=1` is not `/orders` for `expectThisPage`, and it is another
-page for `expectAnotherPage`. A page whose identity should tolerate a query is a RegExp page object (see below).
+A string page's identity is its exact URL, in the form the browser reports and `fullUrl` holds: a `urlPath` of `/søk`
+is `/s%C3%B8k`, `/a b` is `/a%20b`, as `new URL` writes them and as Playwright's `toHaveURL(string)` compares them.
+`/orders?tab=1` is not `/orders` for `expectThisPage`, and it is another page for `expectAnotherPage`. A page whose identity should tolerate a query is a RegExp page object (see below).
 
 ---
 

@@ -483,10 +483,12 @@ This section separates public API from internal implementation details and expla
 #### Type exports
 
 - `PageObjectTypeOptions`, `BaseUrlTypeFromOptions`, `UrlPathTypeFromOptions`, `FullUrlTypeFromOptions`,
-  `StorageTypeFromOptions`.
+  `StorageTypeFromOptions`, and `PageObjectOptions`, the constructor's options, for a domain base class that forwards
+  them.
 - `Codec`, `SessionStorageSchema`, and the `json` codec.
 - `NavigationOptions`, `ThisPageOptions`, `NavigationFor`, `UrlMatcher`.
-- `LocatorRegistry`, the accessor types, and what the registry hands out: `LocatorQueryBuilder`,
+- `LocatorRegistry`, `LocatorRegistryOptions` (the `strictChains` option), the accessor types, and what the registry
+  hands out: `LocatorQueryBuilder`,
   `LocatorUpdateBuilder`, `ReusableLocator`, `FilterDefinition`, `IndexSelector`, `LocatorSchemaPathFormat` and
   `LocatorSchemaPathArgument` (see *Types you can import* in `locator-registry.md`).
 

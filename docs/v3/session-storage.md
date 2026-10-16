@@ -165,7 +165,10 @@ leaving the page the test is on:
 - **Elsewhere:** the entries become pending for the origin. The next main-frame navigation that reaches the origin,
   by `goto`, a link, a script redirect, a meta refresh, a form POST, a server redirect or a redirect chain, is
   answered with a small document of POMWright's own that stores the entries and then continues the navigation. The
-  app's document is loaded after that, so its first script already sees the entries.
+  app's document is loaded after that, so its first script already sees the entries. The navigation keeps its URL
+  fragment, as the browser keeps it: a hash-routed app opens on `#/orders/7`, and a login callback that receives its
+  token in the fragment (`/callback#access_token=…`) gets it. `page.goto` returns once the app's document has
+  loaded, as without a seed.
 
 The two patterns:
 

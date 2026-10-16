@@ -156,6 +156,7 @@ This means even if a path reaches runtime as a plain string, it is still validat
 Typical runtime errors:
 
 - `LocatorSchemaPath string cannot be empty`
+- `LocatorSchemaPath must be a string; received 42.` (a path that is not a string, from JavaScript)
 - `LocatorSchemaPath string cannot start with a dot: .foo`
 - `LocatorSchemaPath string cannot end with a dot: foo.`
 - `LocatorSchemaPath string cannot contain consecutive dots: foo..bar`
@@ -360,13 +361,13 @@ in the message.
 
 A path can only be registered once. Registering it again throws at the second strategy call, before any step chained
 after it runs, and shows both records: the existing one and the attempted one (its strategy only). A `Locator` in a
-step is shown as Playwright prints it:
+step is shown as Playwright prints it, and a RegExp as its source and flags, each time it appears:
 
 ```ts
 registry.add("item").locator("li").filter({ has: page.locator("b") });
 registry.add("item").locator("li");
 // A locator schema with the path "item" already exists.
-// Existing Schema: {
+// Existing and attempted schemas: {
 //   "existing": {
 //     "locatorSchemaPath": "item",
 //     "definition": { "type": "locator", "selector": "li" },
@@ -858,7 +859,10 @@ const replaced = registry
     .getNestedLocator();
 ```
 
-`replace().frameLocator()` without a selector installs the any-frame locator.
+`replace(subPath).frameLocator()` without a selector installs the any-frame locator on an ancestor, where it must
+then be the first resolved segment. It throws at the call on the query's own path, which the any-frame form cannot
+resolve to, and on a segment with `filter` or `nth` steps in the query, which it cannot carry: `clearSteps(subPath)`
+first.
 
 ### Steps and descriptions are untouched
 
@@ -1001,12 +1005,13 @@ The three ways to register, side by side:
 | --- | --- | --- |
 | `add(path)` | exactly one of the ten methods | `filter`, `nth` in any order and number, `describe` (the last wins) |
 | `add(path, { reuse: "other" })` | the copy of `other` | the same, after the copied steps (none on a copy of an any-frame path) |
-| `add(path, { reuse: seed })` | the seed's; optionally one override of the seed's strategy, as the first call | the same, with or without the override |
+| `add(path, { reuse: seed })` | the seed's; optionally one override of the seed's strategy | the same, with or without the override |
 
 The override of a seed is a PATCH of the seed, with `update()`'s argument shapes and JSON Merge Patch:
 
 - A provided primary replaces the seed's; an omitted one (`getByRole({ … })`, `getByTestId(undefined)`,
-  `frameLocator()`) keeps it.
+  `frameLocator()`) keeps it, and an override with no argument at all (`getByRole()`, `getByTestId()`, for every
+  strategy, as on `update()`) keeps the seed's definition.
 - Options merge key by key: on a seed `getByRole("button", { name: "Save", exact: true })`, `getByRole({ name:
   "Cancel" })` gives `{ name: "Cancel", exact: true }`, `getByRole({ exact: null })` deletes `exact`, a lone
   `getByRole(null)` clears the options, and `getByRole("link", null)` sets the role and clears them.
@@ -1014,10 +1019,15 @@ The override of a seed is a PATCH of the seed, with `update()`'s argument shapes
   throws `getByRole requires a role value for "<path>".`, as does `null` for a strategy without options
   (`getByTestId(null)`, `getById(null)`, `frameLocator(null)`).
 - An empty string is a value, stored or rejected exactly as on `add`.
-- The override is the first call, and there is at most one: after it, and after `filter`, `nth` or `describe`, the
-  builder offers only `filter`, `nth` and `describe` (a strategy method there is a compile error, and `….getByRole is
-  not a function` from JavaScript). A mismatched strategy throws, and the path keeps the seed. Nothing is
-  unregistered.
+- There is at most one override. In a chain it is the first call: what `filter`, `nth` and `describe` return offers
+  only those three (a strategy method there is a compile error, and `….getByRole is not a function` from
+  JavaScript). The seeded builder itself, kept in a variable, takes its override before or after steps, which change
+  nothing about the definition; a second override throws `… was already provided from reuse; only one matching
+  override is allowed.` and the path keeps the first. A mismatched strategy throws, and the path keeps the seed.
+  Nothing is unregistered.
+- A hand-made seed object is checked as every builder checks its first argument: `{ definition: { type: "locator",
+  selector: "" } }` throws `reuse requires a non-empty selector for "<path>".`, a missing role `reuse requires a role
+  value for "<path>".`, and nothing is registered.
 - A frame seed needs a selector: `createReusable.frameLocator("iframe")`. The any-frame form has no element and no
   steps: a hand-made seed object with an any-frame definition registers as `add(path).frameLocator()` does, and
   throws at `add` if it carries steps or a description.
@@ -1182,6 +1192,13 @@ Common errors and what they usually mean:
   - `filter`/`nth`/`describe` called before a strategy during registration (a compile error in TypeScript).
 - `A locator definition for "..." has already been provided; only one locator type can be set for a registration.`
   - Multiple strategy calls on a non-reuse registration.
+- `A locator definition for "..." was already provided from reuse; only one matching override is allowed.`
+  - A second override on a seeded builder kept in a variable.
+- `reuse requires a <field> value for "...".`, `reuse requires a non-empty <field> for "...".`
+  - A hand-made seed object whose first argument is missing, empty where Playwright cannot use it, or of a type
+    Playwright cannot take.
+- `LocatorSchemaPath must be a string; received ....`
+  - A path that is not a string, from JavaScript.
 - `The locator definition for "..." must use the "..." strategy when reusing a locator.`
   - Mismatched strategy override while using `{ reuse: seed }`.
 - `reuse requires a registered path or a seed from createReusable for "...".`
@@ -1191,11 +1208,15 @@ Common errors and what they usually mean:
 - `frameLocator() without a selector must be the first segment of the chain; "..." has the ancestor "...".`
   - An any-frame segment registered below a registered ancestor (Playwright's rule).
 - `frameLocator() without a selector does not point to a particular iframe; "..." cannot be resolved on its own, filtered or indexed; resolve a path inside it.`
-  - An any-frame segment used as a terminal or as a `has`/`hasNot` reference, or given a step in a query.
+  - An any-frame segment used as a terminal or as a `has`/`hasNot` reference.
 - `<method>() cannot apply to "...": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.`
   and `reuse cannot apply to "...": …`
-  - `filter`, `nth` or `describe` on an any-frame registration (a copy of an any-frame path), or a hand-made seed
-    that brings steps or a description to an any-frame definition.
+  - `filter`, `nth` or `describe` on an any-frame registration (a copy of an any-frame path), `filter` or `nth` on an
+    any-frame segment in a query, or a hand-made seed that brings steps or a description to an any-frame definition.
+- `replace() cannot apply to "...": it has filter or nth steps, and frameLocator() without a selector takes none; call clearSteps("...") first.`
+  - `replace(sub).frameLocator()` on a segment that has steps in the query: clear them first.
+- `replace() cannot apply to "...": it is the path this query resolves, and frameLocator() without a selector has no element to resolve to; replace an ancestor instead.`
+  - `replace().frameLocator()` on the query's own path.
 - `Locator registry verification failed for N of M paths:` followed by one line per path
   - `verify()` found path references that cannot resolve, or, under `strictChains`, unregistered ancestors; fix each
     listed path.
@@ -1208,7 +1229,7 @@ Troubleshooting checklist:
 
 1. Confirm path literal is valid and registered.
 2. Confirm query sub-path is in the same chain root.
-3. Confirm reuse override strategy matches seed type, and that the override comes first.
+3. Confirm reuse override strategy matches seed type, and that a seeded builder gets at most one override.
 4. Unskip a segment before changing it.
 5. For a strategy change on a query builder, use `replace`, not `update`.
 6. For an any-frame segment, keep it first in its chain and resolve a path inside it.
