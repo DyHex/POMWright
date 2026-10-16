@@ -7,7 +7,7 @@
 > decision number from the plan is given. When 3.0.0 ships, drop the markers and this note; what remains is the basis
 > for the changelog entry and the announcement.
 >
-> Last updated 2026-10-16. Plans covered: 1.1-1.2 (getById), executed and committed on
+> Last updated 2026-10-17. Plans covered: 1.1-1.2 (getById), executed and committed on
 > `chore/bugfixes-quality-improvements-and-docs` (commits e709d0c to 735066b); 1.3-1.4 (URL composition and
 > navigation), executed and committed on the same branch on 2026-10-08 (commits bc8d980 to 4682146); 1.5 (session
 > storage), executed and committed on the same branch on 2026-10-10 (commits a05e8fd to ab76175); 1.6-1.8
@@ -23,7 +23,8 @@
 > 11 to 13 (the documentation redone as a Starlight site, the editor's hovers, the step locations of the helpers),
 > written and decided on 2026-10-16, see [PLAN-5-DOCS.md](PLAN-5-DOCS.md); of these, 11 (the helpers' step locations,
 > the snippet check, the Docs section and *Upgrading from 2.x*) executed and committed on the same branch on 2026-10-16
-> (commits 801e4ac to 449ea50 and the ledger commit).
+> (commits 801e4ac to 449ea50 and the ledger commit bc4d850), and 12 (the doc comments, the API and Internal sections,
+> the API coverage check, `docs/v3` removed) on 2026-10-17 (commits f17d184 to 3118c0d and the ledger commit).
 
 ## Overview
 
@@ -565,7 +566,7 @@ abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
   affected code, and 2.x and 3.0.0 code side by side. These notes link to it instead of carrying their own migration
   paragraphs and checklist. **[done, plan 11]**
 - Doc comments for every export and public member (summary, parameters, return value, errors thrown, example, and a
-  link to the API page), so the API reads from the editor's hovers. **[planned, plan 12]**
+  link to the API page), so the API reads from the editor's hovers. **[done, plan 12]**
 - The README is rewritten for 3.0.0: what POMWright is and what it solves, with links to the site. **[planned, plan 13]**
 - `AGENTS.md` rewritten as the persistent contributor guide, including the 3.0.0 workflow and the documentation's
   rules; the incorrect "thenable query builders" wording removed (analysis section 5). **[done]**

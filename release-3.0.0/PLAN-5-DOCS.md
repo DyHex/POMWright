@@ -39,6 +39,21 @@ anchor resolved. The Docs pages link to these API pages and anchors, which plan 
 `#pageobjectoptions`, `#pageobjecttypeoptions`). The execution-time decisions are in [DECISIONS.md](DECISIONS.md)
 (plans 11 to 13).
 
+**Part B (plan 12) executed 2026-10-17** on the same branch, one commit per execution step: f17d184 (B1, doc comments
+and API pages for `PageObject`, the registry and its accessors, the registration, the query and update builders, seeds),
+17f566d (B2, doc comments and API pages for navigation, session storage, the logger, `test`, `step` and the types;
+*Error messages*; the API index; `scripts/check-api-coverage.mjs` in `pnpm typecheck` and `pack-test.sh`; changeset
+`doc-comments`), 5ab09ea (B3, the twelve Internal pages and four diagrams), 3118c0d (B4, `docs/v3` removed, AGENTS.md,
+the release notes' *Documentation* section and a test comment updated), B5 (the full run found nothing to fix, so it has
+no commit), and the ledger commit for B6 that carries this note. Final run: `pnpm format` and `pnpm lint` clean, 670
+unit tests with no type errors, `pnpm build`, `pnpm pack-test` 1317 passed (439 per browser) with both type checks, the
+snippet check (191 blocks compiled, 12 `nocheck`) and the coverage check (34 exports, 94 members, 0 problems); the 50
+pages built and link-checked in the scratchpad preview with no stub left, every Mermaid diagram rendered there, every
+external link and anchor resolved, every `@see` link found its page and anchor in the preview, and the hovers read back
+through the TypeScript language service from a consumer file. Plan 13 checks `internal/documentation.md`, which
+describes the site as plan 13 delivers it. The execution-time decisions are in [DECISIONS.md](DECISIONS.md) (plans 11 to
+13).
+
 The sample pages (section 3) are in [PLAN-5-DOCS-samples/](PLAN-5-DOCS-samples/README.md), written in full as they would
 ship, beside the TypeDoc output they are compared with.
 

@@ -1,8 +1,8 @@
 # AGENTS.md
 
 Persistent context and working rules for AI agents and humans contributing to POMWright. Read it fully before
-changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-16, after plan 11, Part A of
-the documentation redo (the helpers' step locations, the snippet check, the Docs section of the site), was executed.
+changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-17, after plan 12, Part B of
+the documentation redo (the doc comments, the API and Internal sections, the API coverage check), was executed.
 
 ## 1. What POMWright is
 
@@ -38,14 +38,14 @@ the documentation redo (the helpers' step locations, the snippet check, the Docs
 | `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts` (`SessionStorage`: `page.sessionStorage` with batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `seed`), `sessionStorageSeed.ts` (the seed registry, one per page: the writer and redirect documents, the proxy while a seed is pending, the bypass and never-applied failures), `callSite.ts` (`captureCallSite(boundary)` and `atCallSite`: a later error pointed at the consumer's call, for `seed` and the page-object check), `playwrightReportLogger.ts` (messages kept as given, other arguments as `console.log` prints them, one attachment per entry in call order, names in Playwright's `locale` and `timezoneId`), `stepDecorator.ts` (`@step`, for methods that return a Promise). | yes |
 | `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject` (constructor options `label`, `navOptions`, `sessionStorage`, `locators: { strictChains }`): `defineLocators()` and `verify()` run once, right after construction (a check scheduled with `queueMicrotask`) or at the first locator call, through a facade on `locatorRegistry`; labelled, sticky errors with the construction site; the optional actions hook, evaluated per run. The `test` fixture that provides `log`. | yes |
 | `test/` | Standalone pnpm project that installs the packed package from `.pack/pomwright` and runs Playwright against it. Section 4. | yes |
-| `website/` | The documentation site's content, written from plan 11 on (section 9): `src/content/docs/docs/`, the Docs section (24 pages: Getting started, Principles, one page per concept, *Upgrading from 2.x*); `snippets/`, the docs' example app (`login.page.ts`, `fixtures.ts`) that every page's examples import. The API and Internal sections arrive with plan 12, the Starlight project around them with plan 13. | yes |
+| `website/` | The documentation site's content (section 9): `src/content/docs/docs/`, the Docs section (24 pages: Getting started, Principles, one page per concept, *Upgrading from 2.x*); `src/content/docs/api/`, the API reference (14 pages, one per class or group, `errors` and the index); `src/content/docs/internal/`, how POMWright works (12 pages); `snippets/`, the docs' example app (`login.page.ts`, `fixtures.ts`) that every page's examples import. The Starlight project around them arrives with plan 13. | yes |
 | `docs/v2/` | Frozen 2.x reference. | no |
 | `docs/v1/`, `docs/v1-to-v2-migration/` | Archived. | no |
 | `release-3.0.0/` | Working folder for the 3.0.0 release: analysis, numbered plans, release notes, decisions log. Section 6. | yes |
 | `.changeset/` | Changesets config. `CHANGELOG.md` is generated from changesets at release time. | config only |
 | `.github/workflows/` | `checks.yaml` (reusable): `changes`, `lint` (always), `package` (unit tests, build and pack once, the tarball as a run artifact) and `harness` (the browsers the caller passes, each at the Playwright pin and at the latest 1.x, each testing that tarball), and with the `node-floor` input, which `pr.yaml` and `main.yaml` set, `harness-node-floor` (chromium at the pin on Node 20, the `engines` floor); every third-party action is pinned to a commit with its version in a comment, kept current by `.github/dependabot.yml` (monthly, grouped); `package` and `harness` are skipped when only `*.md` files outside `website/` changed since the last green commit of the branch (the newest commit whose run of the same workflow succeeded) or, on a pull request, since its base; never since the previous push alone, which would let a docs-only push turn a red run green. `pr.yaml` (`PR`) runs it for every pull request, draft or not, with the harness on chromium only; `main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit; both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs the changesets action after `CI` succeeds on a push to `main`, guarded by its job condition, and publishes with npm provenance (`id-token: write`, `NPM_CONFIG_PROVENANCE`). | yes |
 | `pack-build.sh`, `pack-extract.sh`, `pack-test.sh`, `playwright.base.ts` | Build and pack the tarball and extract it into `.pack/pomwright`; the extraction; run the harness (section 3); shared Playwright config. | yes |
-| `scripts/` | `write-esm-entry.mjs` (part of `pnpm build`), `check-doc-snippets.mjs` (compiles the docs' TypeScript examples, part of `pnpm typecheck`, section 9), `ci-last-green.sh`, `ci-changes.sh` and `ci-playwright-version.sh` (the decisions of `checks.yaml`; `ci-last-green.sh` reads the runs API through `gh`, the other two run locally as they are). | yes |
+| `scripts/` | `write-esm-entry.mjs` (part of `pnpm build`), `check-doc-snippets.mjs` (compiles the docs' TypeScript examples) and `check-api-coverage.mjs` (the API reference and the doc comments against the installed declarations), both part of `pnpm typecheck` (section 9), `ci-last-green.sh`, `ci-changes.sh` and `ci-playwright-version.sh` (the decisions of `checks.yaml`; `ci-last-green.sh` reads the runs API through `gh`, the other two run locally as they are). | yes |
 | `vitest.config.ts` | Unit-test discovery limited to `src/**/*.test.ts`, node environment, so Playwright specs are never picked up; typecheck mode on, so `expectTypeOf` and `// @ts-expect-error` assertions are enforced, in `src/**/*.test.ts` and in the type-only `src/**/*.test-d.ts`. | yes |
 | `tsconfig.vitest.json` | The tsconfig vitest's typecheck uses: extends the root, scoped to `src/`, target `es2024` (the root has no `include` and would sweep `dist/` and `test/`). | yes |
 | `biome.json`, `tsconfig.json`, `.editorconfig` | Lint and format, strict TypeScript, tabs. | yes |
@@ -78,7 +78,8 @@ the documentation redo (the helpers' step locations, the snippet check, the Docs
   `playwright.base.ts`, the `src/locators` files the source-level specs import, and the compile-only probes; then
   `tsc -p test/tsconfig.declarations.json` (`declaration: true`, `noEmit`), the declaration emit of
   `tests/packaging/publicTypes.emit.ts`; then `scripts/check-doc-snippets.mjs`, every `ts` block of
-  `website/src/content/docs` against the installed package (section 9). `pack-test.sh` runs all three.
+  `website/src/content/docs` against the installed package, and `scripts/check-api-coverage.mjs`, the API reference and
+  the doc comments against the installed declarations (section 9). `pack-test.sh` runs all four.
 - CI switches of `pack-test.sh`: `POMWRIGHT_TARBALL=<path>` tests that tarball instead of building (it installs the
   root for `tsc` only); `PLAYWRIGHT_VERSION=<version>` swaps `@playwright/test` at the root and in `test/` together
   (one version for `tsc`; it rewrites both manifests and lockfiles, so restore them after a local try);
@@ -242,7 +243,7 @@ deletes it from the repository.
 | File | Role |
 | --- | --- |
 | `POMWRIGHT-2.1.0-ANALYSIS.md` | Source-verified findings numbered 1.1 to 1.10, 2, 3.1 to 3.8, 4, 5. Each has `Fix / Skip / Discuss` boxes and a `Notes:` block. Section 6 is the working order. |
-| `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` (executed 2026-10-06), `PLAN-1.3-1.4-URL-NAVIGATION.md` (executed 2026-10-08), `PLAN-1.5-SESSION-STORAGE.md` (executed 2026-10-10), `PLAN-1.6-1.8-REGISTRATION-AND-FRAMES.md` (executed 2026-10-13), `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md` (executed 2026-10-13), `PLAN-4-PACKAGING-TOOLING-CI.md` (executed 2026-10-14), `PLAN-1.9-TYPES-AND-EXPORTS.md` (executed 2026-10-14), `PLAN-1.10-2-SMALL-FIXES.md` (executed 2026-10-15), `PLAN-3-STRUCTURE.md` (executed 2026-10-16), `PLAN-10-QUALITY-REVIEW.md` (plan 10, the quality review, executed 2026-10-16) and `PLAN-5-DOCS.md` Part A (plan 11, the Docs section, executed 2026-10-16) are done, one commit per execution step each. The remaining plans, their scope, and their order are in `PLANS.md`; the next one is `PLAN-5-DOCS.md` Part B (plan 12: the doc comments, the API and Internal sections). |
+| `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` (executed 2026-10-06), `PLAN-1.3-1.4-URL-NAVIGATION.md` (executed 2026-10-08), `PLAN-1.5-SESSION-STORAGE.md` (executed 2026-10-10), `PLAN-1.6-1.8-REGISTRATION-AND-FRAMES.md` (executed 2026-10-13), `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md` (executed 2026-10-13), `PLAN-4-PACKAGING-TOOLING-CI.md` (executed 2026-10-14), `PLAN-1.9-TYPES-AND-EXPORTS.md` (executed 2026-10-14), `PLAN-1.10-2-SMALL-FIXES.md` (executed 2026-10-15), `PLAN-3-STRUCTURE.md` (executed 2026-10-16), `PLAN-10-QUALITY-REVIEW.md` (plan 10, the quality review, executed 2026-10-16) and `PLAN-5-DOCS.md` Parts A and B (plan 11, the Docs section, executed 2026-10-16; plan 12, the doc comments, the API and Internal sections, executed 2026-10-17) are done, one commit per execution step each. The remaining plans, their scope, and their order are in `PLANS.md`; the next one is `PLAN-5-DOCS.md` Part C (plan 13: the site, CI, deployment, the README). |
 | `PLANS.md` | The ordered list of remaining plans with the analysis items each covers and its status. Updated when a plan is written, split, or executed. |
 | `RELEASE-NOTES-3.0.0.md` | Consumer-facing notes. Only what is done or committed to by a plan in this folder, each item with a status marker. Never a copy of the analysis. |
 | `DECISIONS.md` | Current decisions across all plans, big and small, with date and reason. A reversed decision is replaced, not kept; git history has the rest. Open questions at the bottom. |
@@ -289,7 +290,8 @@ Rules:
   `.changeset/package-exports-and-engines.md`, `.changeset/types-and-exports.md`,
   `.changeset/small-fixes-and-cleanup.md`, `.changeset/seeds-and-path-reuse.md` (all `major`),
   `.changeset/strict-chains.md` and `.changeset/page-object-options.md` (`minor`) and
-  `.changeset/quality-review-fixes.md` and `.changeset/helper-step-locations.md` (`patch`).
+  `.changeset/quality-review-fixes.md`, `.changeset/helper-step-locations.md` and `.changeset/doc-comments.md`
+  (`patch`).
 
 ## 8. Do not
 
@@ -318,12 +320,25 @@ Rules:
   changing the branch-protection rule with it (every pull request would be blocked for non-admins).
 - Write a chain, description or message into the docs without reading it from a probe, or change one in the code
   without updating the pages that show it (section 9).
+- Add an export or a public member without its doc comment and its heading on an API page (section 9).
 
 ## 9. Documentation
 
-- The documentation is the site's content in `website/src/content/docs/`: `docs/` holds the Docs section; `api/` and
-  `internal/` arrive with plan 12 and the Starlight project with plan 13 (`release-3.0.0/PLAN-5-DOCS.md`). The 2.x docs
-  are linked at the tag, `https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2`.
+- The documentation is the site's content in `website/src/content/docs/`, in three sections: `docs/` to learn, `api/`
+  to look up, `internal/` to understand; the Starlight project around them arrives with plan 13
+  (`release-3.0.0/PLAN-5-DOCS.md`). The 2.x docs are linked at the tag,
+  `https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2`.
+- The doc comments in `src/` are the API reference in the editor, written from the same facts as the API pages: every
+  export and every public or protected member has a summary, `@param` for each parameter (nested options as
+  `@param options.label`), `@returns` where the type does not say it, `@throws` with the real message, an `@example`,
+  and on an export `@see` with its API page. An overload without a comment shows its method's first one, so the first
+  overload carries the full comment; a type a chain hovers (the view after a locator method, `NavigationFor`) carries
+  comments on its own members. A decorator at the start of a comment line is read as a JSDoc tag, so `@step`'s comment
+  has no example block.
+- API pages follow playwright.dev's class pages: a summary with one example, then the members as `###` headings,
+  alphabetical within their group, each with **Usage**, **Arguments**, **Returns** and **Throws**; a type of the page has
+  a `## Name` section. Internal pages state what a part is for, how it works and why, with the files involved and no
+  line numbers, and link `AGENTS.md` rather than copy it.
 - The code and its tests decide what the docs say. Every chain, description and message a page shows is copied from a
   probe against the build (section 3); where a rendered string hides an option, the stored record is read instead. A
   change to a message, a rendering or a mechanism greps `website/` for the old text and updates the pages with it, and a
@@ -344,3 +359,9 @@ Rules:
   and only declare what the visible lines use; `nocheck` skips a block and lists it (used only for 2.x code on
   *Upgrading from 2.x*); a deliberate error is shown with `// @ts-expect-error`, which the check enforces.
   `ci-changes.sh` counts a change under `website/` as code, so a pages-only change still runs it.
+- `scripts/check-api-coverage.mjs` reads the installed declarations (`.pack/pomwright/dist/index.d.ts`, the extracted
+  tarball in CI; a path argument overrides it) and fails on an export without an API page (its `title`) or a `## Name`
+  section, a public or protected member without a `### member` heading on that page, or an export, member or
+  constructor without a summary or a `@param` for each parameter. A union, a conditional type or a tuple has no members
+  to check. A Mermaid diagram renders in the browser, so the build does not catch its syntax: render the page and look
+  (a semicolon in a sequence message, or parentheses in an unquoted edge label, break it).
