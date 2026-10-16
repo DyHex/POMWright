@@ -39,7 +39,6 @@ the documentation redo (the helpers' step locations, the snippet check, the Docs
 | `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject` (constructor options `label`, `navOptions`, `sessionStorage`, `locators: { strictChains }`): `defineLocators()` and `verify()` run once, right after construction (a check scheduled with `queueMicrotask`) or at the first locator call, through a facade on `locatorRegistry`; labelled, sticky errors with the construction site; the optional actions hook, evaluated per run. The `test` fixture that provides `log`. | yes |
 | `test/` | Standalone pnpm project that installs the packed package from `.pack/pomwright` and runs Playwright against it. Section 4. | yes |
 | `website/` | The documentation site's content, written from plan 11 on (section 9): `src/content/docs/docs/`, the Docs section (24 pages: Getting started, Principles, one page per concept, *Upgrading from 2.x*); `snippets/`, the docs' example app (`login.page.ts`, `fixtures.ts`) that every page's examples import. The API and Internal sections arrive with plan 12, the Starlight project around them with plan 13. | yes |
-| `docs/v3/` | The 3.0.0 working copy of `docs/v2`, created 2026-10-06. Context only since plan 11, which wrote the documentation anew in `website/`; plan 12 deletes it. | no |
 | `docs/v2/` | Frozen 2.x reference. | no |
 | `docs/v1/`, `docs/v1-to-v2-migration/` | Archived. | no |
 | `release-3.0.0/` | Working folder for the 3.0.0 release: analysis, numbered plans, release notes, decisions log. Section 6. | yes |
@@ -259,8 +258,8 @@ Rules:
 3. **Keep the three ledgers current.** When a plan is agreed: add its decisions to `DECISIONS.md` and its
    consumer-facing items to `RELEASE-NOTES-3.0.0.md` as *planned*. When it is executed: tick `Fix` or `Skip` with
    notes in the analysis, flip the release-note items to *done*, and append any execution-time decisions.
-4. **Docs are written in `website/src/content/docs/`** (section 9). `docs/v3` is context until plan 12 deletes it;
-   `docs/v2` is frozen. README and CHANGELOG keep linking to v2 until plan 13 rewrites the README.
+4. **Docs are written in `website/src/content/docs/`** (section 9). `docs/v2` is frozen. README and CHANGELOG keep
+   linking to v2 until plan 13 rewrites the README.
 5. **Links inside `release-3.0.0/` are relative to that folder**, for example `../src/locators/utils.ts#L64`, so
    they stay clickable in VS Code.
 6. **3.0.0 is one major.** Breaking changes from any plan ride it; there are no intermediate 2.x releases from this

@@ -67,7 +67,7 @@ type Paths = "main" | "main.button" | "main.link" | "extra";
 type Locale = "en" | "nb";
 const loginLabel = { en: "Log in", nb: "Logg inn" } as const;
 
-// the composition pattern of docs/v3/composing-locator-modules.md, with page-object state as an argument
+// the locator module pattern of the docs (Locator modules), with page-object state as an argument
 type ModulePaths = "main" | "main.button";
 function defineModule<ExternalPaths extends string = never>(
 	registry: LocatorRegistry<ModulePaths | ExternalPaths>,

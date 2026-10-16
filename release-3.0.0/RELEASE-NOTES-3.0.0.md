@@ -554,59 +554,18 @@ abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
 
 ## Documentation
 
-- `docs/v3` created as the working documentation set for 3.0.0. `docs/v2` is frozen as the 2.x reference.
-  **[done]**
-- The `getById` section of `docs/v3/locator-registry.md` rewritten: string and RegExp semantics, validation,
-  multiple matches, what the resolved selector looks like, and a 2.x to 3.0 migration subsection. **[done]**
-- `AGENTS.md` rewritten as the persistent contributor guide, including the 3.0.0 workflow. Removes the incorrect
-  "thenable query builders" wording (analysis section 5, AGENTS.md). **[done]**
-- The `PageObject` and navigation sections of `docs/v3/PageObject.md` and `docs/v3/overview.md` rewritten: URL
-  rules and guards, how `fullUrl` is composed, the four navigation methods and their options, a real failure
-  message, and a 2.x to 3.0 migration note. **[done]**
-- `docs/v3/session-storage.md` rewritten: codecs with worked examples, every method form, `seed` and what it
-  supports and costs, multi-origin flows, the service-worker limitation with every fix, and a 2.x to 3.0 migration
-  with usage cases side by side. `overview.md` and `PageObject.md` follow. **[done, plan 1.5]**
-- `docs/v3/locator-registry.md`: the frame sections rewritten around `locator` plus `contentFrame()`, steps on
-  frames with the ancestor-context recommendation, the any-frame segment, the strategy-method requirements, the
-  `update`/`replace` split with the Merge Patch rules, a `verify()` section, the error reference, the tested
-  guarantees, and a 2.x to 3.0 migration subsection; the sticky-flag caveat removed; the floor in `overview.md` and
-  `session-storage.md`. **[done, plan 1.6-1.8]**
-- `docs/v3/PageObject.md`: a *Hooks and lifecycle* section written for page-object authors with a 2.x and 3.0
-  example, the optional actions hook with `null` and `[]` explained, one registry per instance, the `return [];`
-  boilerplate removed from the examples and the `page as Page` cast removed (analysis section 5);
-  `composing-locator-modules.md` shows a locator module that takes page-object state, such as a locale, as an extra
-  argument; `overview.md`, `locator-registry.md` and `session-storage.md` follow. **[done, plan 1.7]**
-- `docs/v3/locator-registry.md`: the importable types with a forwarding helper, `replace()`'s arguments, typed seed
-  modules, the 26 path whitespace characters; `composing-locator-modules.md`: what a module may return and how it is
-  typed, and why a registering function returns `void`; `PageObject.md`: `PageObjectTypeOptions`; `overview.md`: the
-  type exports. **[done, plan 1.9]**
-- The documentation is redone as a site, built with Starlight and hosted on GitHub Pages at
-  `https://dyhex.github.io/POMWright/`, in three sections: Docs (getting started, principles, one page per concept, each
-  from the Playwright concept beneath it, with diagrams), API (every export and member in Playwright's form) and Internal
-  (how POMWright works). Every example is compiled against the package in CI, every link is checked, and the site is
-  deployed after every green `CI` on `main`. The `docs/v3` entries above describe the working copy it replaces.
-  **[Docs section done, plan 11; API, Internal and the site planned, plans 12 and 13]**
+- A documentation site at `https://dyhex.github.io/POMWright/`, in three sections: Docs (getting started, principles,
+  one page per concept, each from the Playwright concept beneath it, with diagrams), API (every export and member in
+  Playwright's form, with the real error messages, and a page listing every message) and Internal (how POMWright works,
+  for contributors and the curious). Every example is compiled against the package in CI, the API reference is checked
+  against the published declarations, and every link is checked; the site is deployed after every green `CI` on
+  `main`. It replaces `docs/v2` for 3.0.0; the 2.x documentation stays in the repository at the `v2.1.0` tag.
+  **[Docs, API and Internal sections done, plans 11 and 12; the site planned, plan 13]**
 - *Upgrading from 2.x*, one page with every migration step: what changed and why, how it shows up, how to find the
   affected code, and 2.x and 3.0.0 code side by side. These notes link to it instead of carrying their own migration
   paragraphs and checklist. **[done, plan 11]**
-- Doc comments for every export and public member (summary, parameters, return value, errors thrown, example), so the
-  API reads from the editor's hovers. **[planned, plan 12]**
+- Doc comments for every export and public member (summary, parameters, return value, errors thrown, example, and a
+  link to the API page), so the API reads from the editor's hovers. **[planned, plan 12]**
 - The README is rewritten for 3.0.0: what POMWright is and what it solves, with links to the site. **[planned, plan 13]**
-
-- `docs/v3/locator-registry.md`: *Skipping a segment: `skip` and `unskip`* replaces the `remove` section, the clone
-  guarantee, `describe("")`, the sub-path and skip messages; `overview.md`: `skip`/`unskip`, `@step` on methods that
-  return a Promise; `logging.md`: what messages and arguments become, the attachment format, locale and time zone.
-  **[done, plan 1.10-2]**
-
-- `docs/v3/locator-registry.md`: where Playwright shows a locator's description and where its chain; unregistered
-  segments as namespaces and the opt-in `strictChains`; reuse by path with `filter`, `nth` and `describe`; seeds as
-  values; corrected: a seeded override is the first call and at most one. `PageObject.md`: the `locators` option with
-  every constructor option on one example; `composing-locator-modules.md`: reuse by path as the preferred way to share
-  a locator between modules, a seed export still valid; `overview.md` follows (analysis 3.3, 3.4, 3.5, 3.8).
-  **[done, plan 9]**
-
-- `docs/v3/locator-registry.md`: a seeded builder held in a variable (one override, before or after steps), the
-  no-argument override, and the error reference for hand-made seeds, any-frame replacements and non-string paths;
-  `PageObject.md`: `PageObjectOptions` in a domain base class, string URLs compared as the browser reports them, the
-  type check of `baseUrl` and `urlPath`; `session-storage.md`: a seeded hop keeps the fragment; `overview.md`: the type
-  exports. **[done, plan 10]**
+- `AGENTS.md` rewritten as the persistent contributor guide, including the 3.0.0 workflow and the documentation's
+  rules; the incorrect "thenable query builders" wording removed (analysis section 5). **[done]**
