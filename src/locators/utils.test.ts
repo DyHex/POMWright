@@ -609,3 +609,42 @@ describe("isReusableLocator", () => {
 		}
 	});
 });
+
+describe("validateLocatorSchemaPath, a path that is not a string", () => {
+	it("names the type instead of failing inside the checks; an empty string keeps its message", () => {
+		const validate = validateLocatorSchemaPath as (path: unknown) => void;
+		expect(() => validate(42)).toThrowError("LocatorSchemaPath must be a string; received 42.");
+		expect(() => validate(["a"])).toThrowError("LocatorSchemaPath must be a string; received an object.");
+		expect(() => validate({})).toThrowError("LocatorSchemaPath must be a string; received an object.");
+		expect(() => validate(undefined)).toThrowError("LocatorSchemaPath must be a string; received undefined.");
+		expect(() => validate(null)).toThrowError("LocatorSchemaPath must be a string; received null.");
+		expect(() => validate("")).toThrowError("LocatorSchemaPath string cannot be empty");
+	});
+});
+
+describe("stringifyForLog, objects seen twice", () => {
+	it("prints a RegExp or a Locator each time it appears; only a real cycle is [Circular]", () => {
+		const re = /Save/i;
+		const bold = new FakeLocator("locator('b')");
+		const printed = JSON.parse(stringifyForLog({ a: { name: re, has: bold }, b: [{ hasText: re, has: bold }] }));
+		const regExp = { type: "RegExp", source: "Save", flags: "i" };
+		expect(printed).toEqual({
+			a: { name: regExp, has: "locator('b')" },
+			b: [{ hasText: regExp, has: "locator('b')" }],
+		});
+		const shared = { x: 1 };
+		expect(JSON.parse(stringifyForLog({ first: shared, second: shared }))).toEqual({
+			first: { x: 1 },
+			second: { x: 1 },
+		});
+	});
+});
+
+describe("applyDefinitionPatch, another strategy", () => {
+	it("is an internal error: a seeded override keeps the seed's strategy", () => {
+		const seed = { type: "role", role: "button", options: { name: "Save" } } as const;
+		expect(() => applyDefinitionPatch(seed, { type: "text", text: "x" })).toThrowError(
+			'applyDefinitionPatch: a "role" seed cannot take a "text" patch.',
+		);
+	});
+});

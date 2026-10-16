@@ -24,6 +24,7 @@ import {
 	anyFrameNoElementMessage,
 	anyFrameNotFirstMessage,
 	applyIndexSelector,
+	assertStrategyPrimary,
 	cloneLocatorStrategyDefinition,
 	createLocator,
 	expandSchemaPath,
@@ -32,6 +33,7 @@ import {
 	isLocatorInstance,
 	isReusableLocator,
 	normalizeSteps,
+	strategyOf,
 	stringifyForLog,
 	validateLocatorSchemaPath,
 } from "./utils";
@@ -212,6 +214,12 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		if (!isReusableLocator(reuse)) {
 			throw new Error(`reuse requires a registered path or a seed from createReusable for "${path}".`);
 		}
+		// a seed from createReusable passed this check when it was made; a hand-made one gets it here
+		const seedDefinition = reuse.definition;
+		if (!isAnyFrameDefinition(seedDefinition)) {
+			const primary = (seedDefinition as unknown as Record<string, unknown>)[strategyOf(seedDefinition.type).primary];
+			assertStrategyPrimary(seedDefinition.type, primary, { method: "reuse", path: path as string });
+		}
 
 		const reusedRecord: LocatorSchemaRecord<
 			LocatorSchemaPathType,
@@ -253,7 +261,9 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		const existing = this.schemas.get(path);
 		if (existing) {
 			const errorDetails = stringifyForLog({ existing, attempted: record });
-			throw new Error(`A locator schema with the path "${path}" already exists.\nExisting Schema: ${errorDetails}`);
+			throw new Error(
+				`A locator schema with the path "${path}" already exists.\nExisting and attempted schemas: ${errorDetails}`,
+			);
 		}
 		this.schemas.set(path, this.normalizeRecord(record));
 	}
@@ -479,7 +489,8 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 
 	/**
 	 * Resolves a chained Playwright {@link Locator} for a nested path, traversing each registered
-	 * segment and applying their steps in order. Throws if any segment in the chain is missing.
+	 * segment and applying their steps in order. Throws if the path is not registered; an unregistered
+	 * ancestor is left out of the chain.
 	 *
 	 * @example
 	 * ```ts
@@ -581,7 +592,7 @@ export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
 >;
 
 /**
- * Creates a v2 locator registry bound to a Playwright {@link Page} and returns the registry plus
+ * Creates a locator registry bound to a Playwright {@link Page} and returns the registry plus
  * pre-bound helpers for ergonomic use in page objects and tests. Path unions are validated at
  * compile time and runtime. The returned `add`/`getLocator`/`getNestedLocator`/`getLocatorSchema`
  * accessors are pre-bound to the registry instance for dependency injection.

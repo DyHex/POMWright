@@ -65,7 +65,14 @@ export const formatLocatorSchemaPathForError = (path: string): string =>
 			(char) => `\\u${char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0")}`,
 		);
 
+/** How an error message names a value that is not of the expected type: a primitive as itself, anything else as an object. */
+export const describeReceived = (value: unknown): string =>
+	value === null || (typeof value !== "object" && typeof value !== "function") ? String(value) : "an object";
+
 export const validateLocatorSchemaPath = (path: string) => {
+	if (typeof path !== "string") {
+		throw new Error(`LocatorSchemaPath must be a string; received ${describeReceived(path)}.`);
+	}
 	if (!path) {
 		throw new Error("LocatorSchemaPath string cannot be empty");
 	}
@@ -193,28 +200,31 @@ export function assertDescription(
 	throw new Error(`${source.method} requires a string${where}; pass "" to remove the description.`);
 }
 
+/**
+ * JSON for error messages. A Playwright `Locator` is printed as Playwright prints it, a RegExp as its source and
+ * flags, each time it appears; `"[Circular]"` marks only an object that contains itself.
+ */
 export const stringifyForLog = (value: unknown) => {
-	const seen = new WeakSet();
-	return JSON.stringify(
-		value,
-		(_key, current) => {
-			// a Playwright Locator as Playwright prints it, not its internals
-			if (isLocatorInstance(current)) {
-				return String(current);
-			}
-			if (typeof current === "object" && current !== null) {
-				if (seen.has(current)) {
-					return "[Circular]";
-				}
-				seen.add(current);
-			}
-			if (current instanceof RegExp) {
-				return { type: "RegExp", source: current.source, flags: current.flags };
-			}
+	const printable = (current: unknown, ancestors: readonly object[]): unknown => {
+		if (isLocatorInstance(current)) {
+			return String(current);
+		}
+		if (current instanceof RegExp) {
+			return { type: "RegExp", source: current.source, flags: current.flags };
+		}
+		if (typeof current !== "object" || current === null) {
 			return current;
-		},
-		2,
-	);
+		}
+		if (ancestors.includes(current)) {
+			return "[Circular]";
+		}
+		const inside = [...ancestors, current];
+		if (Array.isArray(current)) {
+			return current.map((item) => printable(item, inside));
+		}
+		return Object.fromEntries(Object.entries(current).map(([key, item]) => [key, printable(item, inside)]));
+	};
+	return JSON.stringify(printable(value, []), null, 2);
 };
 
 /** `"first"` and `"last"` are POMWright's; every other value goes to Playwright's `nth` as given. */
@@ -451,14 +461,17 @@ export const applyDefinitionPatch = (
 	seed: LocatorStrategyDefinition,
 	patch: LocatorStrategyDefinition | LocatorStrategyDefinitionPatch,
 ): LocatorStrategyDefinition => {
-	const spec = strategyOf(patch.type);
+	if (patch.type !== seed.type) {
+		throw new Error(`applyDefinitionPatch: a "${seed.type}" seed cannot take a "${patch.type}" patch.`);
+	}
+	const spec = strategyOf(seed.type);
 	const base = cloneLocatorStrategyDefinition(seed) as unknown as DefinitionFields;
 	const given = patch as unknown as DefinitionFields;
 	const primary = given[spec.primary] !== undefined ? given[spec.primary] : base[spec.primary];
 	const options = spec.options
 		? mergeOptions(base.options ?? undefined, given.options as OptionsPatch<object> | null | undefined)
 		: undefined;
-	return assembleDefinition(patch.type, primary, options);
+	return assembleDefinition(seed.type, primary, options);
 };
 
 /** Reads a definition or a patch field by field, for the generic merge and replacement in `locatorUpdateBuilder.ts`. */
@@ -478,6 +491,14 @@ export const anyFrameNoElementMessage = (part: string) =>
 /** A step or description offered to an any-frame definition: by `filter()`, `nth()`, `describe()` or a reused seed. */
 export const anyFrameStepsMessage = (what: string, part: string) =>
 	`${what} cannot apply to "${part}": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.`;
+
+/** `replace(sub).frameLocator()` on a segment that has steps in the query: the any-frame form takes none. */
+export const anyFrameReplaceStepsMessage = (part: string) =>
+	`replace() cannot apply to "${part}": it has filter or nth steps, and frameLocator() without a selector takes none; call clearSteps("${part}") first.`;
+
+/** `replace().frameLocator()` on the path a query resolves: the any-frame form has no terminal form. */
+export const anyFrameReplaceTerminalMessage = (part: string) =>
+	`replace() cannot apply to "${part}": it is the path this query resolves, and frameLocator() without a selector has no element to resolve to; replace an ancestor instead.`;
 
 /** The any-frame form of a frame segment: `frameLocator()` registered without a selector. */
 export const isAnyFrameDefinition = (definition: LocatorStrategyDefinition): definition is FrameLocatorDefinition =>

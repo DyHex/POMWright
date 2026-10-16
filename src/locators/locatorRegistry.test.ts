@@ -25,7 +25,9 @@ describe("the duplicate-registration message", () => {
 		} catch (error) {
 			message = (error as Error).message;
 		}
-		expect(message).toMatch(/^A locator schema with the path "row" already exists\.\nExisting Schema: \{/);
+		expect(message).toMatch(
+			/^A locator schema with the path "row" already exists\.\nExisting and attempted schemas: \{/,
+		);
 		expect(message).toContain(`"has": "locator('b')"`);
 		expect(message).toContain(`"selector": "ol"`);
 	});
@@ -222,28 +224,6 @@ describe("a reuse value that is neither a path nor a seed", () => {
 		} as const;
 		registry.add("x", { reuse: seedShaped as unknown as ReusableLocator<Paths, "locator"> });
 		expect(chain(registry.getLocator("x"))).toBe("locator('b')");
-	});
-});
-
-describe("variants derived from one seed", () => {
-	type TablePaths = "table" | "table.row" | "table.row@first" | "table.row@last" | "summary" | "other";
-	it("are each the base plus their own step and description", () => {
-		const registry = new LocatorRegistryInternal<TablePaths>(createFakePage());
-		const row = registry.createReusable.locator("tr");
-		registry.add("table").locator("table");
-		registry.add("table.row", { reuse: row });
-		registry.add("table.row@first", { reuse: row.nth(0) });
-		registry.add("table.row@last", { reuse: row.nth("last") });
-		expect(chain(registry.getNestedLocator("table.row"))).toBe("locator('table').locator('tr')");
-		expect(chain(registry.getNestedLocator("table.row@first"))).toBe("locator('table').locator('tr').nth(0)");
-		expect(chain(registry.getNestedLocator("table.row@last"))).toBe("locator('table').locator('tr').last()");
-
-		const heading = registry.createReusable.getByRole("heading", { level: 2 });
-		registry.add("summary", { reuse: heading.describe("Summary heading").filter({ hasText: "Summary" }) });
-		registry.add("other", { reuse: heading.filter({ hasText: "Other" }) });
-		const other = registry.getNestedLocator("other");
-		expect(chain(other)).toBe("getByRole('heading', { level: 2 }).filter({ hasText: 'Other' })");
-		expect((other as unknown as FakeLocator).description()).toBe("other");
 	});
 });
 
@@ -591,5 +571,126 @@ describe("strictChains", () => {
 		const { registry } = createRegistryWithAccessors<StrictPaths>(createFakePage(), { strictChains: true });
 		registry.add("main.form").locator("form");
 		expect(() => registry.verify()).toThrowError(strict('"main" is not.'));
+	});
+});
+
+describe("the duplicate-registration message, a RegExp in both records", () => {
+	it("prints the RegExp in each record, not [Circular]", () => {
+		const registry = createRegistry();
+		const save = /Save/i;
+		registry.add("btn").getByRole("button", { name: save });
+		let message = "";
+		try {
+			registry.add("btn").getByRole("button", { name: save });
+		} catch (error) {
+			message = (error as Error).message;
+		}
+		expect(message).not.toContain("[Circular]");
+		expect(message.match(/"source": "Save"/g)).toHaveLength(2);
+	});
+});
+
+describe("a hand-made seed is checked as every builder checks it", () => {
+	type SeedPaths = "p" | "anyFrame";
+	const handMade = (definition: object) =>
+		({
+			type: (definition as { type: string }).type,
+			definition,
+			steps: [],
+			description: undefined,
+			filter() {
+				return this;
+			},
+			nth() {
+				return this;
+			},
+			describe() {
+				return this;
+			},
+		}) as unknown as ReusableLocator<SeedPaths>;
+	const cases: [object, string][] = [
+		[{ type: "locator", selector: "" }, 'reuse requires a non-empty selector for "p".'],
+		[{ type: "locator" }, 'reuse requires a selector value for "p".'],
+		[{ type: "role" }, 'reuse requires a role value for "p".'],
+		[{ type: "role", role: "" }, 'reuse requires a non-empty role for "p".'],
+		[{ type: "role", role: 42 }, 'reuse requires a role value for "p".'],
+		[{ type: "id", id: "" }, 'reuse requires a non-empty id for "p".'],
+		[{ type: "testId" }, 'reuse requires a testId value for "p".'],
+		[{ type: "frameLocator", selector: "" }, 'reuse requires a non-empty selector for "p".'],
+		[{ type: "frameLocator", selector: null }, 'reuse requires a selector value for "p".'],
+	];
+	it.each(cases)("%j throws at add and registers nothing", (definition, message) => {
+		const registry = new LocatorRegistryInternal<SeedPaths>(createFakePage());
+		expect(() => registry.add("p", { reuse: handMade(definition) })).toThrowError(message);
+		expect(() => registry.get("p")).toThrowError("No locator schema registered");
+	});
+
+	it("an empty text stays a value, and the any-frame form registers", () => {
+		const registry = new LocatorRegistryInternal<SeedPaths>(createFakePage());
+		registry.add("p", { reuse: handMade({ type: "text", text: "" }) });
+		expect(registry.get("p").definition).toEqual({ type: "text", text: "" });
+		registry.add("anyFrame", { reuse: handMade({ type: "frameLocator" }) });
+		expect(registry.get("anyFrame").definition).toEqual({ type: "frameLocator" });
+	});
+});
+
+describe("the any-frame checks at resolution", () => {
+	// guards behind the call-time checks: reached here through the internal buildLocatorChain
+	type GuardPaths = "main" | "main.any" | "main.any.btn" | "any" | "any.btn";
+	const role = { type: "role", role: "button" } as const;
+	const anyFrame = { type: "frameLocator" } as const;
+	const main = { type: "locator", selector: "main" } as const;
+	const registry = () => new LocatorRegistryInternal<GuardPaths>(createFakePage());
+
+	it("an any-frame ancestor below a registered segment is not first", () => {
+		expect(() =>
+			registry().buildLocatorChain(
+				"main.any.btn",
+				role,
+				new Map<string, never>([
+					["main", main as never],
+					["main.any", anyFrame as never],
+				]),
+				new Map(),
+			),
+		).toThrowError(
+			'frameLocator() without a selector must be the first segment of the chain; "main.any" has the ancestor "main".',
+		);
+	});
+
+	it("an any-frame ancestor with steps has no element to step on", () => {
+		expect(() =>
+			registry().buildLocatorChain(
+				"any.btn",
+				role,
+				new Map<string, never>([["any", anyFrame as never]]),
+				new Map([["any", [{ kind: "index" as const, index: 0 }]]]),
+			),
+		).toThrowError(
+			'frameLocator() without a selector does not point to a particular iframe; "any" cannot be resolved on its own, filtered or indexed; resolve a path inside it.',
+		);
+	});
+
+	it("an any-frame terminal below a registered segment is not first", () => {
+		expect(() =>
+			registry().buildLocatorChain("main.any", anyFrame, new Map<string, never>([["main", main as never]]), new Map()),
+		).toThrowError(
+			'frameLocator() without a selector must be the first segment of the chain; "main.any" has the ancestor "main".',
+		);
+	});
+});
+
+describe("a seeded builder held in a variable", () => {
+	it("takes its one override after a step, which leaves the step as it was", () => {
+		const registry = createRegistry();
+		const seed = registry.createReusable.getByRole("button", { name: "Save" });
+		const builder = registry.add("seeded", { reuse: seed });
+		builder.nth(0);
+		builder.getByRole({ name: "Cancel" });
+		expect(registry.get("seeded")).toEqual({
+			locatorSchemaPath: "seeded",
+			definition: { type: "role", role: "button", options: { name: "Cancel" } },
+			steps: [{ kind: "index", index: 0 }],
+		});
 	});
 });

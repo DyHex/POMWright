@@ -17,7 +17,9 @@ import type {
 	RegistryPath,
 } from "./types";
 import {
-	anyFrameNoElementMessage,
+	anyFrameReplaceStepsMessage,
+	anyFrameReplaceTerminalMessage,
+	anyFrameStepsMessage,
 	assertDescription,
 	cloneLocatorStrategyDefinition,
 	copyFilter,
@@ -84,8 +86,8 @@ export class LocatorQueryBuilderInternal<
 	/**
 	 * Starts a PATCH-style update for the locator definition at the given `subPath` within this
 	 * builder. Returns a builder exposing the same locator-type methods as `registry.add`, with all
-	 * arguments optional to merge with the existing definition. The registry remains unchanged until
-	 * you resolve with `getLocator`/`getNestedLocator`.
+	 * arguments optional to merge with the existing definition. The registry never changes; the update
+	 * applies to this query.
 	 *
 	 * If `subPath` is omitted, the terminal path for this builder (`path` passed to
 	 * `getLocatorSchema`) is used. The steps and the description are left as they are, and a segment
@@ -158,7 +160,7 @@ export class LocatorQueryBuilderInternal<
 
 		this.ensureSubPath(resolvedSubPath);
 		this.ensureNotSkipped("filter", resolvedSubPath);
-		this.ensureStepTarget(resolvedSubPath);
+		this.ensureStepTarget("filter", resolvedSubPath);
 		const existing = this.steps.get(resolvedSubPath) ?? [];
 		existing.push({ kind: "filter", filter: copyFilter(filter) });
 		this.steps.set(resolvedSubPath, existing);
@@ -221,7 +223,7 @@ export class LocatorQueryBuilderInternal<
 
 		this.ensureSubPath(resolvedSubPath);
 		this.ensureNotSkipped("nth", resolvedSubPath);
-		this.ensureStepTarget(resolvedSubPath);
+		this.ensureStepTarget("nth", resolvedSubPath);
 		const existing = this.steps.get(resolvedSubPath) ?? [];
 		existing.push({ kind: "index", index });
 		this.steps.set(resolvedSubPath, existing);
@@ -255,7 +257,7 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Starts a POST-style replacement for the locator definition at the given `subPath` within this
+	 * Starts a PUT-style replacement for the locator definition at the given `subPath` within this
 	 * builder. Returns a builder exposing the same locator-type methods as `registry.add`, requiring
 	 * primary arguments where Playwright does. Registry state is unchanged; the replacement applies
 	 * to the builder clone when resolved. If `subPath` is omitted, the terminal path for this
@@ -298,6 +300,15 @@ export class LocatorQueryBuilderInternal<
 		updates: LocatorUpdate,
 	) {
 		const nextDefinition = buildReplacementDefinition(updates, subPath);
+		// the any-frame form has no element: it cannot be what this query resolves, nor carry steps
+		if (isAnyFrameDefinition(nextDefinition)) {
+			if ((subPath as string) === this.path) {
+				throw new Error(anyFrameReplaceTerminalMessage(subPath));
+			}
+			if ((this.steps.get(subPath) ?? []).length > 0) {
+				throw new Error(anyFrameReplaceStepsMessage(subPath));
+			}
+		}
 		this.definitions.set(subPath, cloneLocatorStrategyDefinition(nextDefinition));
 		return this;
 	}
@@ -404,9 +415,9 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/** An any-frame segment has no element, so a filter or index step on it is rejected at the call. */
-	private ensureStepTarget(subPath: string) {
+	private ensureStepTarget(method: "filter" | "nth", subPath: string) {
 		if (isAnyFrameDefinition(this.ensureSubPath(subPath))) {
-			throw new Error(anyFrameNoElementMessage(subPath));
+			throw new Error(anyFrameStepsMessage(`${method}()`, subPath));
 		}
 	}
 }

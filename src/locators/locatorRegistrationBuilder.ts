@@ -162,8 +162,12 @@ export class LocatorRegistrationBuilder<
 	getByRole(
 		options: Seeded extends true ? OptionsPatch<RoleDefinition["options"]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getByRole(
-		roleOrOptions: RoleDefinition["role"] | RoleDefinition["options"] | OptionsPatch<RoleDefinition["options"]> | null,
+		...inherit: Seeded extends true ? [] : [never]
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByRole(
+		roleOrOptions?: RoleDefinition["role"] | RoleDefinition["options"] | OptionsPatch<RoleDefinition["options"]> | null,
 		options?: RoleDefinition["options"] | OptionsPatch<RoleDefinition["options"]> | null,
 	) {
 		if (this.seededDefinition) {
@@ -200,8 +204,12 @@ export class LocatorRegistrationBuilder<
 	getByText(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByText"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getByText(
-		textOrOptions:
+		...inherit: Seeded extends true ? [] : [never]
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByText(
+		textOrOptions?:
 			| Parameters<Page["getByText"]>[0]
 			| Parameters<Page["getByText"]>[1]
 			| OptionsPatch<Parameters<Page["getByText"]>[1]>
@@ -233,8 +241,12 @@ export class LocatorRegistrationBuilder<
 	getByLabel(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByLabel"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getByLabel(
-		textOrOptions:
+		...inherit: Seeded extends true ? [] : [never]
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByLabel(
+		textOrOptions?:
 			| Parameters<Page["getByLabel"]>[0]
 			| Parameters<Page["getByLabel"]>[1]
 			| OptionsPatch<Parameters<Page["getByLabel"]>[1]>
@@ -266,8 +278,12 @@ export class LocatorRegistrationBuilder<
 	getByPlaceholder(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByPlaceholder"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getByPlaceholder(
-		textOrOptions:
+		...inherit: Seeded extends true ? [] : [never]
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByPlaceholder(
+		textOrOptions?:
 			| Parameters<Page["getByPlaceholder"]>[0]
 			| Parameters<Page["getByPlaceholder"]>[1]
 			| OptionsPatch<Parameters<Page["getByPlaceholder"]>[1]>
@@ -299,8 +315,12 @@ export class LocatorRegistrationBuilder<
 	getByAltText(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByAltText"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getByAltText(
-		textOrOptions:
+		...inherit: Seeded extends true ? [] : [never]
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByAltText(
+		textOrOptions?:
 			| Parameters<Page["getByAltText"]>[0]
 			| Parameters<Page["getByAltText"]>[1]
 			| OptionsPatch<Parameters<Page["getByAltText"]>[1]>
@@ -332,8 +352,12 @@ export class LocatorRegistrationBuilder<
 	getByTitle(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByTitle"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	getByTitle(
-		textOrOptions:
+		...inherit: Seeded extends true ? [] : [never]
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByTitle(
+		textOrOptions?:
 			| Parameters<Page["getByTitle"]>[0]
 			| Parameters<Page["getByTitle"]>[1]
 			| OptionsPatch<Parameters<Page["getByTitle"]>[1]>
@@ -366,8 +390,12 @@ export class LocatorRegistrationBuilder<
 	locator(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["locator"]>[1]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
 	locator(
-		selectorOrOptions:
+		...inherit: Seeded extends true ? [] : [never]
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	locator(
+		selectorOrOptions?:
 			| Parameters<Page["locator"]>[0]
 			| Parameters<Page["locator"]>[1]
 			| OptionsPatch<Parameters<Page["locator"]>[1]>
@@ -442,6 +470,13 @@ export class LocatorRegistrationBuilder<
 	 */
 	getByTestId(
 		testId: Seeded extends true ? Parameters<Page["getByTestId"]>[0] | undefined : Parameters<Page["getByTestId"]>[0],
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
+	getByTestId(
+		...inherit: Seeded extends true ? [] : [never]
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByTestId(
+		testId?: Parameters<Page["getByTestId"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
 		if (testId === undefined && this.seededDefinition) {
 			return this.commit({ type: "testId" });
@@ -467,7 +502,12 @@ export class LocatorRegistrationBuilder<
 	 */
 	getById(
 		id: Seeded extends true ? string | RegExp | undefined : string | RegExp,
-	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	/** When seeded, no argument keeps the seed's definition, as `update()` does. */
+	getById(
+		...inherit: Seeded extends true ? [] : [never]
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getById(id?: string | RegExp): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
 		if (id === undefined && this.seededDefinition) {
 			return this.commit({ type: "id" });
 		}

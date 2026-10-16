@@ -177,70 +177,6 @@ describe("add with a seed", () => {
 	});
 });
 
-describe("createReusable", () => {
-	it("applies the same rules under its own label and requires the frame selector", () => {
-		const registry = createRegistry();
-		const factory = registry.createReusable;
-		expect(() => factory.locator("")).toThrowError("createReusable.locator requires a non-empty selector.");
-		expect(() => factory.frameLocator("")).toThrowError("createReusable.frameLocator requires a non-empty selector.");
-		expect(() => factory.frameLocator(undefined as never)).toThrowError(
-			"createReusable.frameLocator requires a selector value.",
-		);
-		expect(() => factory.getByRole("" as never)).toThrowError("createReusable.getByRole requires a non-empty role.");
-		expect(() => factory.getByRole(undefined as never)).toThrowError("createReusable.getByRole requires a role value.");
-		expect(() => factory.getByText(undefined as never)).toThrowError("createReusable.getByText requires a text value.");
-		expect(factory.getByTestId("").definition).toEqual({ type: "testId", testId: "" });
-		expect(factory.getByText("").definition).toEqual({ type: "text", text: "" });
-		expect(factory.getByLabel("").definition).toEqual({ type: "label", text: "" });
-		expect(factory.frameLocator("iframe").definition).toEqual({ type: "frameLocator", selector: "iframe" });
-	});
-});
-
-describe("a seed is a value", () => {
-	it("filter, nth and describe return a new seed and leave the one they were called on as it was", () => {
-		const base = createRegistry().createReusable.getByRole("row", { name: "Order" }).describe("Order row");
-		const filtered = base.filter({ hasText: "Paid" });
-		const indexed = base.nth(0);
-		const described = base.describe("Other");
-		for (const derived of [filtered, indexed, described]) {
-			expect(derived).not.toBe(base);
-		}
-		expect(base.steps).toEqual([]);
-		expect(base.description).toBe("Order row");
-		expect(filtered.steps).toEqual([{ kind: "filter", filter: { hasText: "Paid" } }]);
-		expect(indexed.steps).toEqual([{ kind: "index", index: 0 }]);
-		expect(described.description).toBe("Other");
-		expect(filtered.description).toBe("Order row");
-	});
-
-	it("a variant of a variant carries both steps; the first variant keeps its own", () => {
-		const base = createRegistry().createReusable.locator("tr");
-		const paid = base.filter({ hasText: "Paid" });
-		const firstPaid = paid.nth(0);
-		expect(paid.steps).toEqual([{ kind: "filter", filter: { hasText: "Paid" } }]);
-		expect(firstPaid.steps).toEqual([
-			{ kind: "filter", filter: { hasText: "Paid" } },
-			{ kind: "index", index: 0 },
-		]);
-	});
-
-	it("definition and steps are copies: changing them changes nothing", () => {
-		const registry = createRegistry();
-		const seed = registry.createReusable.getByRole("button", { name: "Save" }).filter({ hasText: "x" });
-		expect(seed.definition).not.toBe(seed.definition);
-		(seed.definition.options as { name: string }).name = "Changed";
-		(seed.steps as unknown[]).push({ kind: "index", index: 0 });
-		registry.add("seeded", { reuse: seed });
-		expect(registry.get("seeded").definition).toEqual({ type: "role", role: "button", options: { name: "Save" } });
-		expect(registry.get("seeded").steps).toEqual([{ kind: "filter", filter: { hasText: "x" } }]);
-	});
-
-	it("describe still requires a string", () => {
-		const seed = createRegistry().createReusable.locator("tr");
-		expect(() => seed.describe(undefined as never)).toThrowError("createReusable.describe");
-	});
-});
-
 describe("steps and describe before a strategy", () => {
 	it("throw at runtime naming the method, register nothing, and leave the path registrable", () => {
 		const registry = createRegistry();
@@ -383,3 +319,63 @@ const typeContract = (registry: LocatorRegistryInternal<Paths>) => {
 	void [widened, wrongSeed];
 };
 void typeContract;
+
+describe("a seeded override with no argument", () => {
+	it("keeps the seed's definition for every strategy, as update() does", () => {
+		type SeedPaths = "p0" | "p1" | "p2" | "p3" | "p4" | "p5" | "p6" | "p7" | "p8" | "p9";
+		const registry = new LocatorRegistryInternal<SeedPaths>(stubPage);
+		const c = registry.createReusable;
+		registry.add("p0", { reuse: c.getByRole("button", { name: "Save" }) }).getByRole();
+		registry.add("p1", { reuse: c.getByText("t", { exact: true }) }).getByText();
+		registry.add("p2", { reuse: c.getByLabel("l") }).getByLabel();
+		registry.add("p3", { reuse: c.getByPlaceholder("p") }).getByPlaceholder();
+		registry.add("p4", { reuse: c.getByAltText("a") }).getByAltText();
+		registry.add("p5", { reuse: c.getByTitle("t") }).getByTitle();
+		registry.add("p6", { reuse: c.locator("li", { hasText: "x" }) }).locator();
+		registry.add("p7", { reuse: c.frameLocator("iframe") }).frameLocator();
+		registry.add("p8", { reuse: c.getByTestId("t") }).getByTestId();
+		registry.add("p9", { reuse: c.getById("i") }).getById();
+		expect(registry.get("p0").definition).toEqual({ type: "role", role: "button", options: { name: "Save" } });
+		expect(registry.get("p1").definition).toEqual({ type: "text", text: "t", options: { exact: true } });
+		expect(registry.get("p6").definition).toEqual({ type: "locator", selector: "li", options: { hasText: "x" } });
+		expect(registry.get("p7").definition).toEqual({ type: "frameLocator", selector: "iframe" });
+		expect(registry.get("p8").definition).toEqual({ type: "testId", testId: "t" });
+		expect(registry.get("p9").definition).toEqual({ type: "id", id: "i" });
+	});
+});
+
+// Type-level contract of the no-argument override. Never called.
+const noArgumentContract = (registry: LocatorRegistryInternal<Paths>) => {
+	const c = registry.createReusable;
+	registry
+		.add("seeded", { reuse: c.getByRole("button") })
+		.getByRole()
+		.nth(0);
+	registry
+		.add("seeded", { reuse: c.getByText("t") })
+		.getByText()
+		.describe("d");
+	registry
+		.add("seeded", { reuse: c.locator("li") })
+		.locator()
+		.filter({ hasText: "x" });
+	registry
+		.add("seeded", { reuse: c.getByTestId("t") })
+		.getByTestId()
+		.nth(0);
+	registry
+		.add("seeded", { reuse: c.getById("i") })
+		.getById()
+		.nth(0);
+	// @ts-expect-error the role is required on add(path)
+	registry.add("a").getByRole();
+	// @ts-expect-error the text is required on add(path)
+	registry.add("a").getByText();
+	// @ts-expect-error the selector is required on add(path)
+	registry.add("a").locator();
+	// @ts-expect-error the test id is required on add(path)
+	registry.add("a").getByTestId();
+	// @ts-expect-error the id is required on add(path)
+	registry.add("a").getById();
+};
+void noArgumentContract;

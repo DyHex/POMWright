@@ -185,3 +185,67 @@ describe("describe on a query", () => {
 		);
 	});
 });
+
+describe("the any-frame form in a query", () => {
+	type FramePaths = "frame" | "frame.btn" | "main" | "main.frame" | "main.frame.btn" | "any" | "any.btn";
+	const createFrameRegistry = () => {
+		const registry = new LocatorRegistryInternal<FramePaths>(createFakePage());
+		registry.add("frame").frameLocator("iframe").nth(1);
+		registry.add("frame.btn").getByRole("button");
+		registry.add("main").locator("main");
+		registry.add("main.frame").frameLocator("iframe");
+		registry.add("main.frame.btn").getByRole("button");
+		registry.add("any").frameLocator();
+		registry.add("any.btn").getByRole("button");
+		return registry;
+	};
+	const STEPPED =
+		'replace() cannot apply to "frame": it has filter or nth steps, and frameLocator() without a selector takes none; call clearSteps("frame") first.';
+	const anyFrameSteps = (method: string, path: string) =>
+		`${method} cannot apply to "${path}": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.`;
+
+	it("replace().frameLocator() on a segment with steps throws at the call, naming clearSteps, and changes nothing", () => {
+		const query = createFrameRegistry().getLocatorSchema("frame.btn");
+		expect(() => query.replace("frame").frameLocator()).toThrowError(STEPPED);
+		expect(String(query.getNestedLocator())).toBe("locator('iframe').nth(1).contentFrame().getByRole('button')");
+		const added = createFrameRegistry().getLocatorSchema("main.frame.btn").nth("main.frame", 0);
+		expect(() => added.replace("main.frame").frameLocator()).toThrowError(
+			'replace() cannot apply to "main.frame": it has filter or nth steps, and frameLocator() without a selector takes none; call clearSteps("main.frame") first.',
+		);
+	});
+
+	it("after clearSteps the replacement resolves; query methods chain in any order", () => {
+		const query = createFrameRegistry()
+			.getLocatorSchema("frame.btn")
+			.clearSteps("frame")
+			.replace("frame")
+			.frameLocator();
+		expect(String(query.getNestedLocator())).toBe("frameLocator().getByRole('button')");
+	});
+
+	it("replace().frameLocator() on the query's own path throws at the call", () => {
+		const query = createFrameRegistry().getLocatorSchema("frame.btn");
+		expect(() => query.replace().frameLocator()).toThrowError(
+			'replace() cannot apply to "frame.btn": it is the path this query resolves, and frameLocator() without a selector has no element to resolve to; replace an ancestor instead.',
+		);
+	});
+
+	it("the first-segment rule stays at resolution, where the chain is known", () => {
+		const query = createFrameRegistry().getLocatorSchema("main.frame.btn").replace("main.frame").frameLocator();
+		expect(() => query.getNestedLocator()).toThrowError(
+			'frameLocator() without a selector must be the first segment of the chain; "main.frame" has the ancestor "main".',
+		);
+		const skipped = createFrameRegistry()
+			.getLocatorSchema("main.frame.btn")
+			.replace("main.frame")
+			.frameLocator()
+			.skip("main");
+		expect(String(skipped.getNestedLocator())).toBe("frameLocator().getByRole('button')");
+	});
+
+	it("filter and nth on an any-frame segment give the message add gives", () => {
+		const query = createFrameRegistry().getLocatorSchema("any.btn");
+		expect(() => query.nth("any", 1)).toThrowError(anyFrameSteps("nth()", "any"));
+		expect(() => query.filter("any", { visible: true })).toThrowError(anyFrameSteps("filter()", "any"));
+	});
+});
