@@ -7,7 +7,7 @@
 > decision number from the plan is given. When 3.0.0 ships, drop the markers and this note; what remains is the basis
 > for the changelog entry and the announcement.
 >
-> Last updated 2026-10-15. Plans covered: 1.1-1.2 (getById), executed and committed on
+> Last updated 2026-10-16. Plans covered: 1.1-1.2 (getById), executed and committed on
 > `chore/bugfixes-quality-improvements-and-docs` (commits e709d0c to 735066b); 1.3-1.4 (URL composition and
 > navigation), executed and committed on the same branch on 2026-10-08 (commits bc8d980 to 4682146); 1.5 (session
 > storage), executed and committed on the same branch on 2026-10-10 (commits a05e8fd to ab76175); 1.6-1.8
@@ -17,7 +17,8 @@
 > the same branch on 2026-10-14 (commits fc33244 to 837f1c8, with the CI follow-ups 8c2eb1b, 9d95a78 and 95975cf);
 > 1.9 (types and exports), executed and committed on the same branch on 2026-10-14 (commits 46a04e9 to 4220bfa);
 > 1.10-2 (small fixes and dead code), executed and committed on the same branch on 2026-10-15 (commits 07e7398 to
-> 3c0dcf6).
+> 3c0dcf6); 9 (structure: the strategy table, seeds, reuse by path, descriptions, sparse chains and `strictChains`),
+> executed and committed on the same branch on 2026-10-16 (commits 555290c to 0850bf1).
 
 ## Overview
 
@@ -320,6 +321,57 @@ matches nothing, instead of being dropped, which matched every element. TypeScri
 
 **Migration.** Call `nth` only when there is an index: `if (i !== undefined) query.nth(i)`.
 
+### Seeds from `createReusable` no longer change **[done, plan 9]**
+
+`filter`, `nth` and `describe` on a seed return a new seed and leave the seed they were called on as it was, as a
+Playwright `Locator` does; `seed.definition` returns a copy. In 2.x they changed the seed itself and returned it, so
+variants derived from one base seed carried each other's steps and description:
+
+```ts
+const row = registry.createReusable.locator("tr");
+registry.add("table.row@first", { reuse: row.nth(0) });
+registry.add("table.row@last", { reuse: row.nth("last") });
+// 2.x:   table.row@last is locator('table').locator('tr').first().last(), the first row
+// 3.0.0: table.row@last is locator('table').locator('tr').last()
+```
+
+A seeded `add` keeps its shape: an optional override of the seed's strategy as the first call, then `filter`, `nth` and
+`describe`. The override now takes `update`'s argument shapes and Merge Patch: `getByRole({ exact: null })` deletes the
+key (2.x stored `null`), `getByRole(null)` clears the seed's options (2.x ignored it), and `getByRole("link", null)`
+sets the role and clears them; all three now compile.
+
+**Migration.** Use the result of a seed method: `add(path, { reuse: seed.filter(f) })` instead of `seed.filter(f);`
+followed by `add(path, { reuse: seed })`, which now registers the seed without the filter.
+
+### Reuse by path returns `filter`, `nth` and `describe` **[done, plan 9]**
+
+`add(path, { reuse: "other" })` copies `other` as before (the strategy, its steps and an explicit description) and now
+returns `filter`, `nth` and `describe`, chained after the copied steps; 2.x returned nothing (`void`). There is no
+strategy override and no `clearSteps` after a path: reuse keeps the reused locator and can only narrow it. A copy of an
+any-frame `frameLocator()` path takes no steps or description, as the original takes none: the three methods throw on
+it; where the copy may sit is checked by `verify()`, as for every any-frame path. This makes a registered path the
+preferred way to share a locator across locator modules; exporting a `createReusable` seed stays possible.
+
+```ts
+registry.add("common.listItem").getByRole("listitem");
+registry.add("main.list.lastItem", { reuse: "common.listItem" }).nth("last").describe("Last item");
+```
+
+**Migration.** Drop a `void` annotation on the result. A module compiled with `declaration: true` that returns the
+result from an expression-bodied arrow uses a block body or `: void`, as for a seed reuse.
+
+## Additions
+
+### Opt-in `strictChains` **[done, plan 9]**
+
+`createRegistryWithAccessors(page, { strictChains: true })` and the `PageObject` constructor option `locators: {
+strictChains: true }` make `verify()` require every ancestor of every registered path to be registered, and name every
+unregistered one: `"main.form.button.save": strictChains requires every ancestor to be registered; "main.form" and
+"main.form.button" are not.` A page object checks right after construction, as for every `verify()` failure; a
+standalone registry when it calls `verify()`. The option is a boolean and defaults to `false`. Without the option
+nothing changes: an unregistered segment is a name that groups paths and is left out of the chain. `skip` and `unskip`
+work in both modes; under the option an any-frame `frameLocator()` is a root path.
+
 ## Bug fixes
 
 - `getById(string)` no longer breaks on ids with punctuation, whitespace, quotes, or a leading digit (analysis 1.1).
@@ -384,6 +436,21 @@ matches nothing, instead of being dropped, which matched every element. TypeScri
 - A page object's registry error and a never-applied `seed` point at the consumer's line even when the consumer's file
   is named `pageObject.ts` or `sessionStorage.ts`. **[done, plan 1.10-2]**
 
+- Variants derived from one `createReusable` seed no longer share steps or a description (analysis 3.8).
+  **[done, plan 9]**
+- A reuse value that is neither a registered path nor a seed (`{ reuse: null }` from JavaScript) throws `reuse requires
+  a registered path or a seed from createReusable for "<path>".` instead of a `TypeError`. **[done, plan 9]**
+- A first argument Playwright cannot take, from JavaScript (`null`, a number, an object, a RegExp for a role, `locator`
+  or `frameLocator`), throws `<method> requires a <field> value for "<path>".` on every builder instead of being stored
+  and failing later with a `TypeError`, resolving to nonsense (`locator('null')`, `getByTestId('42')`) or doing
+  nothing; `getByRole(null, null)` is valid nowhere. **[done, plan 9]**
+- A seeded override's `null` option key is deleted instead of stored (a stored `name: null` failed at resolution), and
+  a JavaScript `(undefined, options)` no longer drops the options: a seeded override now stores what `update` stores,
+  for every strategy. **[done, plan 9]**
+- A hand-made seed object with an any-frame `frameLocator()` definition (no selector) can no longer bring steps or a
+  description into the registry: it throws at `add` instead of failing at the first resolution below the path; one
+  without steps or a description registers as `add(path).frameLocator()` does. **[done, plan 9]**
+
 ## Removed and internal cleanup
 
 - The internal helpers `cssEscape` and `normalizeIdValue` are removed from `src/locators/utils.ts`. Neither was
@@ -411,6 +478,10 @@ matches nothing, instead of being dropped, which matched every element. TypeScri
 - Unreachable branches in the registry and the query builder are removed, `getLocator` no longer builds a query
   builder (about twice as fast), a nested resolution clones each segment once instead of twice, and `seed` and
   `PageObject` share one call-site helper (analysis sections 1.10 and 2). **[done, plan 1.10-2]**
+
+- The ten locator strategies are described once, in one internal table that the clone, the seeded override, `update`,
+  `replace` and locator creation read; a new strategy without its builder method is a compile error. The unused
+  debug-step record of the chain builder is removed (analysis 3.1, 3.3 and section 2). **[done, plan 9]**
 
 ## Tooling, CI, and tests
 
@@ -476,6 +547,10 @@ matches nothing, instead of being dropped, which matched every element. TypeScri
   against DOM, the logger's attachments, call sites in consumer files named like POMWright's, and the public types.
   **[done, plan 1.10-2]**
 
+- Unit tests for the strategy table and its completeness, immutable seeds, reuse by path, the reuse check, the `null`
+  primary and `strictChains`; harness specs for seeds and reuse by path against DOM, `strictChains` on a standalone
+  registry and a page object, and the public types. **[done, plan 9]**
+
 ## Documentation
 
 - `docs/v3` created as the working documentation set for 3.0.0. `docs/v2` is frozen as the 2.x reference.
@@ -511,6 +586,13 @@ matches nothing, instead of being dropped, which matched every element. TypeScri
   guarantee, `describe("")`, the sub-path and skip messages; `overview.md`: `skip`/`unskip`, `@step` on methods that
   return a Promise; `logging.md`: what messages and arguments become, the attachment format, locale and time zone.
   **[done, plan 1.10-2]**
+
+- `docs/v3/locator-registry.md`: where Playwright shows a locator's description and where its chain; unregistered
+  segments as namespaces and the opt-in `strictChains`; reuse by path with `filter`, `nth` and `describe`; seeds as
+  values; corrected: a seeded override is the first call and at most one. `PageObject.md`: the `locators` option with
+  every constructor option on one example; `composing-locator-modules.md`: reuse by path as the preferred way to share
+  a locator between modules, a seed export still valid; `overview.md` follows (analysis 3.3, 3.4, 3.5, 3.8).
+  **[done, plan 9]**
 
 ## Upgrade checklist (2.x to 3.0.0)
 
@@ -565,3 +647,7 @@ Grows as plans land.
 27. Set `use: { locale: "nb-NO" }` (or pass a locale to `attachLogsToTest`) to keep the 2.x log attachment names, and
     pass `JSON.stringify(data, null, 2)` for nested log data. **[done, plan 1.10-2]**
 28. Call `nth` only when there is an index. **[done, plan 1.10-2]**
+29. Use the result of `filter`, `nth` and `describe` on a `createReusable` seed; a seed method called as a statement no
+    longer changes the seed. **[done, plan 9]**
+30. Drop `void` annotations on `add(path, { reuse: "other" })`; give an expression-bodied arrow that returns it a block
+    body or `: void` where `declaration: true` is set. **[done, plan 9]**

@@ -1,8 +1,8 @@
 # AGENTS.md
 
 Persistent context and working rules for AI agents and humans contributing to POMWright. Read it fully before
-changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-15, after the
-small-fixes plan (analysis 1.10 and the section 2 code bullets) was executed.
+changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-16, after the
+structure plan (analysis 3.1, 3.3, 3.4, 3.5, 3.8 and the section 2 `debugSteps` bullet) was executed.
 
 ## 1. What POMWright is
 
@@ -33,10 +33,10 @@ small-fixes plan (analysis 1.10 and the section 2 code bullets) was executed.
 | Path | What it is | Edit? |
 | --- | --- | --- |
 | `index.ts` | Package entry. tsup bundles the CommonJS build from here; `scripts/write-esm-entry.mjs` then writes the ESM entry. | yes |
-| `src/` | Runtime: 17 files, about 4,700 lines, plus colocated vitest unit tests (`**/*.test.ts`: `pageObject.test.ts`, `locators/utils.test.ts`, `locators/locatorRegistry.test.ts`, `locators/locatorRegistrationBuilder.test.ts`, `locators/locatorUpdateBuilder.test.ts`, `locators/locatorQueryBuilder.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`, `helpers/sessionStorage.test.ts`, `helpers/sessionStorageSeed.test.ts`, `helpers/callSite.test.ts`, `helpers/playwrightReportLogger.test.ts`, `helpers/stepDecorator.test.ts`), the type-only `helpers/stepDecorator.test-d.ts` (decorator syntax, which vitest's runtime cannot load), and `locators/fakePage.ts`, test support only: a page whose locators record the chain they were built from, never imported by the runtime and so never bundled. | yes |
-| `src/locators/` | `locatorRegistry.ts` (registry, resolution with frames as `locator` plus `contentFrame()` and the any-frame segment, cycle detection, `verify()`), `locatorRegistrationBuilder.ts` (`add(path).getByRole(...)` DSL, seeded registrations, the boundary checks), `locatorUpdateBuilder.ts` (`update` as a same-strategy JSON Merge Patch, `replace` with Playwright's argument lists through a `Mode` type parameter; the class `LocatorUpdateBuilderInternal`, the public alias `LocatorUpdateBuilder`), `locatorQueryBuilder.ts` (`getLocatorSchema(path)` chain: `filter`, `nth`, `clearSteps`, `skip`/`unskip`, `describe`, `update`, `replace`, `getLocator`, `getNestedLocator`; the class `LocatorQueryBuilderInternal`, the public alias `LocatorQueryBuilder`), `reusableLocatorBuilder.ts` (`createReusable`), `types.ts` (definitions, `ReusableLocator`, `FilterDefinition`, `IndexSelector`, `OptionsPatch`, compile-time path validation), `utils.ts` (path validation with `LOCATOR_SCHEMA_PATH_WHITESPACE`, `assertPrimaryValue`, `assertIdValue` and `assertDescription`, the id selector helpers, `createLocator`, `applyIndexSelector`, `isAnyFrameDefinition`, `isLocatorInstance`, `methodForStrategy`, cloning and copying (`copyFilter`, `normalizeSteps`), patching). | yes |
+| `src/` | Runtime: 17 files, about 4,600 lines, plus colocated vitest unit tests (`**/*.test.ts`: `pageObject.test.ts`, `locators/utils.test.ts`, `locators/locatorRegistry.test.ts`, `locators/locatorRegistrationBuilder.test.ts`, `locators/locatorUpdateBuilder.test.ts`, `locators/locatorQueryBuilder.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`, `helpers/sessionStorage.test.ts`, `helpers/sessionStorageSeed.test.ts`, `helpers/callSite.test.ts`, `helpers/playwrightReportLogger.test.ts`, `helpers/stepDecorator.test.ts`), the type-only `helpers/stepDecorator.test-d.ts` (decorator syntax, which vitest's runtime cannot load), and `locators/fakePage.ts`, test support only: a page whose locators record the chain they were built from, never imported by the runtime and so never bundled. | yes |
+| `src/locators/` | `locatorRegistry.ts` (registry, resolution with frames as `locator` plus `contentFrame()` and the any-frame segment, cycle detection, `verify()` with the opt-in `strictChains`, reuse by path and by seed through one seeded builder), `locatorRegistrationBuilder.ts` (`add(path).getByRole(...)` DSL, seeded registrations with `update`'s argument shapes, the boundary checks, no steps on an any-frame definition), `locatorUpdateBuilder.ts` (`update` as a same-strategy JSON Merge Patch, `replace` with Playwright's argument lists through a `Mode` type parameter; the class `LocatorUpdateBuilderInternal`, the public alias `LocatorUpdateBuilder`), `locatorQueryBuilder.ts` (`getLocatorSchema(path)` chain: `filter`, `nth`, `clearSteps`, `skip`/`unskip`, `describe`, `update`, `replace`, `getLocator`, `getNestedLocator`; the class `LocatorQueryBuilderInternal`, the public alias `LocatorQueryBuilder`), `reusableLocatorBuilder.ts` (`createReusable`; a seed is a value whose methods return new seeds), `types.ts` (definitions, `ReusableLocator`, `FilterDefinition`, `IndexSelector`, `OptionsPatch`, compile-time path validation), `utils.ts` (the `STRATEGIES` table, one row per strategy, that creation, cloning, the seeded patch, `update` and `replace` read; path validation with `LOCATOR_SCHEMA_PATH_WHITESPACE`, `assertStrategyPrimary` over `assertPrimaryValue` and `assertIdValue`, `assertDescription`, the id selector helpers, `createLocator`, `applyIndexSelector`, `isAnyFrameDefinition`, `isLocatorInstance`, `isReusableLocator`, `methodForStrategy`, `mergeOptions`, cloning and copying (`copyFilter`, `normalizeSteps`), patching). | yes |
 | `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts` (`SessionStorage`: `page.sessionStorage` with batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `seed`), `sessionStorageSeed.ts` (the seed registry, one per page: the writer and redirect documents, the proxy while a seed is pending, the bypass and never-applied failures), `callSite.ts` (`captureCallSite(boundary)` and `atCallSite`: a later error pointed at the consumer's call, for `seed` and the page-object check), `playwrightReportLogger.ts` (messages kept as given, other arguments as `console.log` prints them, one attachment per entry in call order, names in Playwright's `locale` and `timezoneId`), `stepDecorator.ts` (`@step`, for methods that return a Promise). | yes |
-| `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject`: `defineLocators()` and `verify()` run once, right after construction (a check scheduled with `queueMicrotask`) or at the first locator call, through a facade on `locatorRegistry`; labelled, sticky errors with the construction site; the optional actions hook, evaluated per run. The `test` fixture that provides `log`. | yes |
+| `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject` (constructor options `label`, `navOptions`, `sessionStorage`, `locators: { strictChains }`): `defineLocators()` and `verify()` run once, right after construction (a check scheduled with `queueMicrotask`) or at the first locator call, through a facade on `locatorRegistry`; labelled, sticky errors with the construction site; the optional actions hook, evaluated per run. The `test` fixture that provides `log`. | yes |
 | `test/` | Standalone pnpm project that installs the packed package from `.pack/pomwright` and runs Playwright against it. Section 4. | yes |
 | `docs/v3/` | Working documentation for 3.0.0, created 2026-10-06 as a verbatim copy of `docs/v2`. The `getById` deep dive in `locator-registry.md` is already rewritten for 3.0.0. Every doc edit goes here. | yes |
 | `docs/v2/` | Frozen 2.x reference. | no |
@@ -119,7 +119,7 @@ small-fixes plan (analysis 1.10 and the section 2 code bullets) was executed.
   `pageObject.ts` and `sessionStorage.ts`), `logging/` (the `log` fixture's attachments, read by an auto fixture torn
   down after it), `step/`, `testApp/`, `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
   published entries, one shared copy, closed deep imports, the manifest; `publicTypes.typecheck.ts` and
-  `publicTypes.emit.ts`, compile-only). 50 spec files, about 6,800 lines. One spec file per DSL method,
+  `publicTypes.emit.ts`, compile-only). 51 spec files, about 7,200 lines. One spec file per DSL method,
   for example `add.getById.spec.ts` or `getLocatorSchema.update.spec.ts`; one DOM-level spec per fixture page under
   `testApp/`, for example `testIds.spec.ts`.
 - Know what each spec exercises. Most `locatorRegistry/` specs import `LocatorRegistryInternal` from
@@ -179,12 +179,24 @@ small-fixes plan (analysis 1.10 and the section 2 code bullets) was executed.
 - `getById` stores values verbatim: strings resolve as `[id="…"]` (exact, case-sensitive, no prefix handling),
   RegExps as `internal:attr=[id=/source/flags]` with every flag passed through. POMWright adds no regex semantics of
   its own.
-- Every builder requires the strategy's first argument through `assertPrimaryValue`; an empty string is rejected only
-  where Playwright cannot use it (`locator`, `frameLocator`, `getByRole`, `getById`) and stored verbatim otherwise;
-  `undefined` means "not provided" (it inherits on seeded and update builders). A throwing DSL call changes nothing.
-  `update` keeps the registered strategy and follows JSON Merge Patch (`null` deletes); `replace` changes the
-  strategy and takes Playwright's argument lists (the first argument required, Playwright's option types); neither
-  touches steps. Roles are Playwright's compile-time type; there is no runtime role list.
+- Per-strategy rules live in one place, the `STRATEGIES` table in `utils.ts`; a new strategy is a row plus its method
+  on each builder, and the type tests fail until both exist. No per-strategy `switch` elsewhere.
+- Every builder requires the strategy's first argument through `assertStrategyPrimary`; an empty string is rejected
+  only where Playwright cannot use it (`locator`, `frameLocator`, `getByRole`, `getById`) and stored verbatim
+  otherwise; `undefined` means "not provided" (it inherits on seeded and update builders). A primary is always a
+  value: `null`, a number, an object or a RegExp where Playwright takes a string gets the missing-value message on
+  every builder; with two arguments the first is the primary, and a lone `null` where options may stand is the
+  options. A throwing DSL call changes nothing. `update` keeps the registered strategy and follows JSON Merge Patch
+  (`null` deletes); a seeded override parses and merges exactly as `update` does; `replace` changes the strategy and
+  takes Playwright's argument lists (the first argument required, Playwright's option types); none touches steps.
+  Roles are Playwright's compile-time type; there is no runtime role list.
+- A seed never changes: `filter`, `nth` and `describe` return a new seed, `definition` and `steps` are copies. Reuse
+  by path copies the record (strategy, steps, an explicit description) and returns `filter`, `nth` and `describe`;
+  no strategy override and no `clearSteps` after a path. An any-frame `frameLocator()` definition takes no steps or
+  description from any source (checked at the call); its position is `verify()`'s first-segment check.
+- An unregistered path segment is a name that groups paths and is left out of the chain; `strictChains: true` (an
+  option of the registry and of `PageObject`) makes `verify()` require every ancestor to be registered. It is never
+  the default. The default description of a resolved locator is its path.
 - A `frameLocator(selector)` segment is `locator(selector)` plus its steps, then `contentFrame()` for the descendants
   and the `<iframe>` element as a terminal; `frameLocator()` is Playwright's any-frame locator, first segment only, no
   steps, no terminal form. Never reintroduce `target.frameLocator(selector)` with dropped steps.
@@ -221,9 +233,9 @@ become the basis for the changelog entry and announcement, and `docs/v3` becomes
 | `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` (executed 2026-10-06), `PLAN-1.3-1.4-URL-NAVIGATION.md` (executed 2026-10-08) and
   `PLAN-1.5-SESSION-STORAGE.md` (executed 2026-10-10), `PLAN-1.6-1.8-REGISTRATION-AND-FRAMES.md` (executed
   2026-10-13), `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md` (executed 2026-10-13), `PLAN-4-PACKAGING-TOOLING-CI.md` (executed
-  2026-10-14) and `PLAN-1.9-TYPES-AND-EXPORTS.md` (executed 2026-10-14) and `PLAN-1.10-2-SMALL-FIXES.md` (executed 2026-10-15) are
-  done, one commit per execution step each. The remaining plans, their scope, and their order are in `PLANS.md`; the
-  next one is `PLAN-3-STRUCTURE.md`. |
+  2026-10-14) and `PLAN-1.9-TYPES-AND-EXPORTS.md` (executed 2026-10-14) and `PLAN-1.10-2-SMALL-FIXES.md` (executed 2026-10-15) and `PLAN-3-STRUCTURE.md` (executed
+  2026-10-16) are done, one commit per execution step each. The remaining plans, their scope, and their order are in
+  `PLANS.md`; the next one is `PLAN-5-DOCS.md`. |
 | `PLANS.md` | The ordered list of remaining plans with the analysis items each covers and its status. Updated when a plan is written, split, or executed. |
 | `RELEASE-NOTES-3.0.0.md` | Consumer-facing notes. Only what is done or committed to by a plan in this folder, each item with a status marker. Never a copy of the analysis. |
 | `DECISIONS.md` | Current decisions across all plans, big and small, with date and reason. A reversed decision is replaced, not kept; git history has the rest. Open questions at the bottom. |
@@ -264,8 +276,9 @@ Rules:
 - Pending 3.0.0 changesets so far: `.changeset/getbyid-verbatim-ids-and-regex.md`,
   `.changeset/url-composition-and-navigation.md`, `.changeset/session-storage-on-webstorage.md`,
   `.changeset/registration-guards-and-frames.md`, `.changeset/pageobject-lifecycle.md`,
-  `.changeset/package-exports-and-engines.md`, `.changeset/types-and-exports.md` and
-  `.changeset/small-fixes-and-cleanup.md` (all `major`).
+  `.changeset/package-exports-and-engines.md`, `.changeset/types-and-exports.md`,
+  `.changeset/small-fixes-and-cleanup.md`, `.changeset/seeds-and-path-reuse.md` (all `major`) and
+  `.changeset/strict-chains.md` (`minor`).
 
 ## 8. Do not
 
@@ -279,7 +292,10 @@ Rules:
   of a failed seeded override, a call to `defineLocators()` or `pageActionsToPerformAfterNavigation()` from the
   `PageObject` constructor, `update()`'s optional patch arguments on `replace()`, the `UrlTypeOptions` name, a query
   `remove()` that deletes a segment's definition, steps or description, `@step` on methods that do not return a
-  Promise, a hard-coded log locale or sorted log entries, or JSON re-formatting of log messages.
+  Promise, a hard-coded log locale or sorted log entries, JSON re-formatting of log messages, a seed method that
+  changes the seed, a `void` path reuse, a `null` stored as a primary or as a seeded option key, or steps on an
+  any-frame definition.
+- Add a per-strategy `switch` outside the `STRATEGIES` table, or make `strictChains` the default (section 5).
 - Keep a reference to an object a caller passed to a builder, or filter stack frames by file name (section 5).
 - Re-export a class as a public type, return `this` from a public builder step, or hide internals with `@internal`
   and `stripInternal` (section 5).

@@ -502,7 +502,8 @@ an empty or missing id throws at registration in all three builders. The other s
   [L442](../src/locators/locatorRegistry.ts#L442) is redundant for the same reason.
 - [x] Closed 2026-10-13 by plan 1.6-1.8 with the frame branch it sat in. [locatorRegistry.ts:474](../src/locators/locatorRegistry.ts#L474) shadows `isTerminalStep` from
   [L459](../src/locators/locatorRegistry.ts#L459).
-- [ ] `debugSteps` is built at [L448-454](../src/locators/locatorRegistry.ts#L448-L454),
+- [x] Fixed 2026-10-16 by plan 9: the record and its nullable index are deleted; `buildLocatorChain` returns the
+  `Locator`; no `explain` (3.3). `debugSteps` is built at [L448-454](../src/locators/locatorRegistry.ts#L448-L454),
   [L485](../src/locators/locatorRegistry.ts#L485), [L511-517](../src/locators/locatorRegistry.ts#L511-L517) and returned at
   [L524](../src/locators/locatorRegistry.ts#L524). All three callers destructure only `locator`
   ([L322](../src/locators/locatorRegistry.ts#L322), [locatorQueryBuilder.ts:367](../src/locators/locatorQueryBuilder.ts#L367),
@@ -555,9 +556,14 @@ an empty or missing id throws at registration in all three builders. The other s
 
 ### 3.1 Eight parallel per-strategy switches
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Done 2026-10-16 by plan 9 ([plan](PLAN-3-STRUCTURE.md)): one `STRATEGIES` table in `utils.ts` (method,
+> primary field, options, empty-string rule, the any-frame optional primary, `create` with Playwright's signature);
+> creation, the clone, the seeded patch, `update`'s merge and `replace`'s build read it; the name lists and the
+> pre-definition builder type are derived; type tests pin every builder to the table, so a strategy without its row
+> or its methods does not compile. The builders' public methods stay explicit (their overloads, docs and replace
+> tuples). Behaviour-preserving: 5,355 DSL calls byte-identical to 181475e.
 
 **Where.** [utils.ts:125-162](../src/locators/utils.ts#L125-L162), [L164-219](../src/locators/utils.ts#L164-L219),
 [L221-302](../src/locators/utils.ts#L221-L302); [locatorUpdateBuilder.ts:66-198](../src/locators/locatorUpdateBuilder.ts#L66-L198),
@@ -589,9 +595,13 @@ code path for all strategies, `nth`/`filter` work on frames, and 1.6 disappears.
 
 ### 3.3 The 2.1.0 default `describe(path)` should be an option
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [ ] Fix  - [x] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Decided 2026-10-16 by plan 9: the path stays the default description, with no option. The complaint is half
+> true: the path shows in the report's step rows, an assertion's `Locator:` line and `toString()`, while every call
+> log and every strict-mode violation still shows the chain that was tried (verified in the runner). `has` inners keep
+> their description (it is printed nowhere). No `explain`: the debug-step record is deleted (section 2). Documented in
+> `docs/v3/locator-registry.md` (*Default descriptions*).
 
 **Where.** [locatorRegistry.ts:520-522](../src/locators/locatorRegistry.ts#L520-L522).
 
@@ -606,9 +616,12 @@ sub-locators. The dead `debugSteps` data is most of a `registry.explain(path)` t
 
 ### 3.4 Sparse chains are a silent failure mode
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Done 2026-10-16 by plan 9 as an opt-in: unregistered segments stay the default and are documented as names
+> that group paths (85% of one 2.1.0 consumer project's registrations use them); `strictChains: true` on
+> `createRegistryWithAccessors` and the `PageObject` option `locators: { strictChains }` make `verify()` require every
+> ancestor of every path and name each missing one. No warning per sparse path.
 
 **Where.** [locatorRegistry.ts:440](../src/locators/locatorRegistry.ts#L440); documented as supported-but-discouraged at
 [locator-registry.md:393-397](../docs/v2/locator-registry.md#L393-L397).
@@ -620,9 +633,12 @@ the README's "implicit DOM structure validation".
 
 ### 3.5 Path reuse returns `void`
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Done 2026-10-16 by plan 9: `add(path, { reuse: "other" })` returns `filter`, `nth` and `describe`, which narrow
+> the copy after its copied steps; no strategy override and no `clearSteps` after a path (reuse is reuse); a copy of an
+> any-frame path refuses all three. A reuse value that is neither a path nor a seed throws a message instead of a
+> `TypeError`. The `void` was a documented 2.x design; what it lacked was narrowing.
 
 **Where.** [locatorRegistry.ts:168-178](../src/locators/locatorRegistry.ts#L168-L178); documented at
 [locator-registry.md:570](../docs/v2/locator-registry.md#L570).
@@ -656,9 +672,12 @@ No measurable cost today; only worth a per-class definition cache if profiling e
 
 ### 3.8 NEW: seed builders mutate in place
 
-- [ ] Fix  - [ ] Skip  - [ ] Discuss
+- [x] Fix  - [ ] Skip  - [ ] Discuss
 
-> Notes:
+> Notes: Done 2026-10-16 by plan 9: a seed is a value; `filter`, `nth` and `describe` return a new seed and
+> `definition` a copy, so variants derived from one base no longer carry each other's steps. With it, a seeded
+> override follows `update()`'s argument shapes and Merge Patch (a `null` key had been stored), and a primary
+> Playwright cannot take throws on every builder.
 
 **Where.** [reusableLocatorBuilder.ts:42-55](../src/locators/reusableLocatorBuilder.ts#L42-L55) push onto the shared
 list and return `this`, so `base.filter(...) === base` and `base.steps` now contains the filter. The docs' "Seed
