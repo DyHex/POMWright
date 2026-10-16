@@ -19,7 +19,11 @@
 > 1.10-2 (small fixes and dead code), executed and committed on the same branch on 2026-10-15 (commits 07e7398 to
 > 3c0dcf6); 9 (structure: the strategy table, seeds, reuse by path, descriptions, sparse chains and `strictChains`),
 > executed and committed on the same branch on 2026-10-16 (commits 555290c to 0850bf1); 10 (quality review of the 3.0.0
-> code: findings R1 to R22), executed and committed on the same branch on 2026-10-16 (commits 4c6ec60 to 4d9c124).
+> code: findings R1 to R22), executed and committed on the same branch on 2026-10-16 (commits 4c6ec60 to 4d9c124);
+> 11 to 13 (the documentation redone as a Starlight site, the editor's hovers, the step locations of the helpers),
+> written and decided on 2026-10-16, see [PLAN-5-DOCS.md](PLAN-5-DOCS.md); of these, 11 (the helpers' step locations,
+> the snippet check, the Docs section and *Upgrading from 2.x*) executed and committed on the same branch on 2026-10-16
+> (commits 801e4ac to 449ea50 and the ledger commit).
 
 ## Overview
 
@@ -433,6 +437,9 @@ abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
 - A path that is not a string, from JavaScript, throws `LocatorSchemaPath must be a string; received 42.` instead of a
   `TypeError`; the duplicate-registration message no longer prints a RegExp used twice as `"[Circular]"`, and is headed
   `Existing and attempted schemas:`. **[done, plan 10]**
+- The navigation steps (`LoginPage: Navigate to this Page`, …) and the session storage steps (`Auth.SessionStorage.set:`,
+  …) show the test's line in the HTML report and the trace, as `@step` rows do, instead of a line in POMWright's bundle or
+  no location. **[done, plan 11]**
 
 ## Removed and internal cleanup
 
@@ -573,8 +580,18 @@ abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
   modules, the 26 path whitespace characters; `composing-locator-modules.md`: what a module may return and how it is
   typed, and why a registering function returns `void`; `PageObject.md`: `PageObjectTypeOptions`; `overview.md`: the
   type exports. **[done, plan 1.9]**
-- A new documentation site built with Starlight and hosted on GitHub Pages, using `docs/v3` as its source.
-  **[roadmap]**
+- The documentation is redone as a site, built with Starlight and hosted on GitHub Pages at
+  `https://dyhex.github.io/POMWright/`, in three sections: Docs (getting started, principles, one page per concept, each
+  from the Playwright concept beneath it, with diagrams), API (every export and member in Playwright's form) and Internal
+  (how POMWright works). Every example is compiled against the package in CI, every link is checked, and the site is
+  deployed after every green `CI` on `main`. The `docs/v3` entries above describe the working copy it replaces.
+  **[Docs section done, plan 11; API, Internal and the site planned, plans 12 and 13]**
+- *Upgrading from 2.x*, one page with every migration step: what changed and why, how it shows up, how to find the
+  affected code, and 2.x and 3.0.0 code side by side. These notes link to it instead of carrying their own migration
+  paragraphs and checklist. **[done, plan 11]**
+- Doc comments for every export and public member (summary, parameters, return value, errors thrown, example), so the
+  API reads from the editor's hovers. **[planned, plan 12]**
+- The README is rewritten for 3.0.0: what POMWright is and what it solves, with links to the site. **[planned, plan 13]**
 
 - `docs/v3/locator-registry.md`: *Skipping a segment: `skip` and `unskip`* replaces the `remove` section, the clone
   guarantee, `describe("")`, the sub-path and skip messages; `overview.md`: `skip`/`unskip`, `@step` on methods that

@@ -752,7 +752,10 @@ property (that `add` clones the seed). Either return a new builder per call or d
 
 ## 5. Documentation errors
 
-> Notes:
+> Notes: plan 11 (2026-10-16, [PLAN-5-DOCS.md](PLAN-5-DOCS.md) Part A) closed the `docs/v2`/`docs/v3` bullets
+> below by writing the documentation anew in `website/src/content/docs/`, and with them plan 10's D1 (no page names a
+> version in its title) and D3 (a type or parameter keyed on `fullUrl` being a `RegExp` takes `UrlMatcher`, on
+> *Upgrading from 2.x* and *TypeScript*). The README bullets close with plan 13's README.
 
 ### README.md
 
@@ -765,35 +768,50 @@ property (that `add` clones the seed). Either return a new builder per call or d
 
 ### docs/v2/overview.md
 
-- [ ] [L1](../docs/v2/overview.md#L1) titled v2.0.0 while describing 2.1.0 behaviour.
-- [ ] [L70](../docs/v2/overview.md#L70), [L99](../docs/v2/overview.md#L99) "POC".
-- [ ] [L111-112](../docs/v2/overview.md#L111-L112) missing comma in the import list.
-- [ ] [L124](../docs/v2/overview.md#L124) `class LoginPage<Paths>` declares a type parameter that shadows the union and
-  fails the `string` constraint.
-- [ ] [L302](../docs/v2/overview.md#L302) comment text outside the comment.
-- [ ] [L327-330](../docs/v2/overview.md#L327-L330) `data.theme` is never re-read after `reload()`, so the final assertion
-  cannot pass.
-- [ ] [L386](../docs/v2/overview.md#L386) imports `expect` from `pomwright`; it is not exported.
-- [ ] [L429-433](../docs/v2/overview.md#L429-L433) stale type-export list (omits `LogEntry`, `LogLevel`, accessors).
-- [ ] [L509](../docs/v2/overview.md#L509), [L511-513](../docs/v2/overview.md#L511-L513) "differances", "Indepth",
-  "SessiosStorage".
+- [x] [L1](../docs/v2/overview.md#L1) titled v2.0.0 while describing 2.1.0 behaviour. Closed 2026-10-16 (plan 11): no
+  page of the site names a version in its title (plan 10's D1).
+- [x] [L70](../docs/v2/overview.md#L70), [L99](../docs/v2/overview.md#L99) "POC". Closed 2026-10-16 (plan 11): the pages
+  say page object.
+- [x] [L111-112](../docs/v2/overview.md#L111-L112) missing comma in the import list. Closed 2026-10-16 (plan 11): every
+  example compiles in the snippet check.
+- [x] [L124](../docs/v2/overview.md#L124) `class LoginPage<Paths>` declares a type parameter that shadows the union and
+  fails the `string` constraint. Closed 2026-10-16 (plan 11): *Your first page object* and *Page objects* compile in the
+  snippet check.
+- [x] [L302](../docs/v2/overview.md#L302) comment text outside the comment. Closed 2026-10-16 (plan 11): the snippet
+  check.
+- [x] [L327-330](../docs/v2/overview.md#L327-L330) `data.theme` is never re-read after `reload()`, so the final
+  assertion cannot pass. Closed 2026-10-16 (plan 11): *Session storage* reads a value back with `get` after `set`, with
+  no reload in between.
+- [x] [L386](../docs/v2/overview.md#L386) imports `expect` from `pomwright`; it is not exported. Closed 2026-10-16 (plan
+  11): the examples import `expect` from `@playwright/test` or from a fixtures file that re-exports it.
+- [x] [L429-433](../docs/v2/overview.md#L429-L433) stale type-export list (omits `LogEntry`, `LogLevel`, accessors).
+  Closed 2026-10-16 (plan 11): *TypeScript* lists every exported type; the API index (plan 12) lists every export.
+- [x] [L509](../docs/v2/overview.md#L509), [L511-513](../docs/v2/overview.md#L511-L513) "differances", "Indepth",
+  "SessiosStorage". Closed 2026-10-16 (plan 11): replaced by the site's pages.
 
 ### docs/v2/locator-registry.md
 
-- [ ] [L26](../docs/v2/locator-registry.md#L26) TOC entries merged; numbering restarts.
-- [ ] [L283](../docs/v2/locator-registry.md#L283) claims CSS escaping (1.1).
-- [ ] [L287-291](../docs/v2/locator-registry.md#L287-L291) RegExp example hides 1.2.
-- [ ] [L320-322](../docs/v2/locator-registry.md#L320-L322) `getNestedLocator(path)...getNestedLocator()` should be
+- [x] [L26](../docs/v2/locator-registry.md#L26) TOC entries merged; numbering restarts. Closed 2026-10-16 (plan 11): the
+  site builds each page's table of contents from its headings.
+- [x] [L283](../docs/v2/locator-registry.md#L283) claims CSS escaping (1.1). Closed 2026-10-16 (plan 11): *Locating by
+  id* describes the verbatim `[id="…"]` selector.
+- [x] [L287-291](../docs/v2/locator-registry.md#L287-L291) RegExp example hides 1.2. Closed 2026-10-16 (plan 11):
+  *Locating by id* describes RegExps through the attribute engine, flags included.
+- [x] [L320-322](../docs/v2/locator-registry.md#L320-L322) `getNestedLocator(path)...getNestedLocator()` should be
   `getLocatorSchema`. Also, recommending a page-rooted nested chain for `has` is rarely right, because `has` is
-  evaluated relative to the outer element *(Playwright semantics)*.
+  evaluated relative to the outer element *(Playwright semantics)*. Closed 2026-10-16 (plan 11): *Filters and indices*
+  uses `getLocatorSchema`, and says a `has` path resolves to its own locator because Playwright evaluates `has` inside
+  the element being filtered.
 - [x] [L345](../docs/v2/locator-registry.md#L345) v1 "inline frame locator" wording. Closed 2026-10-13: `docs/v3` has
   *Frames in filters* instead.
 - [x] [L668](../docs/v2/locator-registry.md#L668) lists an error string that does not exist in `src`. Closed 2026-10-13: the
   `docs/v3` error reference carries the 3.0.0 messages.
-- [ ] [L727](../docs/v2/locator-registry.md#L727) best practice 5 recommends terminal-only resolution without saying so.
+- [x] [L727](../docs/v2/locator-registry.md#L727) best practice 5 recommends terminal-only resolution without saying so.
+  Closed 2026-10-16 (plan 11): *Resolving locators* says what `getLocator` resolves to and when to use it.
 - [x] Missing: 1.6 (frame steps ignored), 1.8 (`undefined` clears options). Closed 2026-10-13: both behaviours are
   replaced and documented in `docs/v3` (steps on frames apply; `update` is a Merge Patch with `null`).
-- [ ] Missing: 1.10 (`remove`→`update` drops steps); documented when plan 8 decides it.
+- [x] Missing: 1.10 (`remove`→`update` drops steps); documented when plan 8 decides it. Closed 2026-10-16 (plan 11):
+  `remove` is replaced by `skip` and `unskip` (plan 1.10-2), documented on *Queries* and *Upgrading from 2.x*.
 
 ### docs/v2/PageObject.md
 
@@ -814,17 +832,21 @@ property (that `add` clones the seed). Either return a new builder per call or d
 
 ### docs/v2/logging.md
 
-- [ ] [L18](../docs/v2/logging.md#L18) `expect` import.
-- [ ] [L98-104](../docs/v2/logging.md#L98-L104) uses undeclared `sharedLogLevel`/`sharedLogEntry`.
+- [x] [L18](../docs/v2/logging.md#L18) `expect` import. Closed 2026-10-16 (plan 11): *Logging to the report* imports
+  `test` from `pomwright` only.
+- [x] [L98-104](../docs/v2/logging.md#L98-L104) uses undeclared `sharedLogLevel`/`sharedLogEntry`. Closed 2026-10-16
+  (plan 11): the page's own fixture declares its level and entries and compiles in the snippet check.
 
 ### docs/v2/composing-locator-modules.md
 
-- [ ] [L317](../docs/v2/composing-locator-modules.md#L317) "diviate".
+- [x] [L317](../docs/v2/composing-locator-modules.md#L317) "diviate". Closed 2026-10-16 (plan 11): replaced by *Locator
+  modules*.
 
 ### AGENTS.md
 
-- [ ] [L14](../AGENTS.md#L14) "thenable query builders". There is no `then` anywhere in `src`; v2 builders are
-  synchronous. An agent following this will try to add thenables back.
+- [x] [L14](../AGENTS.md#L14) "thenable query builders". There is no `then` anywhere in `src`; v2 builders are
+  synchronous. An agent following this will try to add thenables back. Closed 2026-10-06, when AGENTS.md was rewritten
+  (section 5: builders are synchronous, no thenables); ticked in plan 11.
 
 ---
 
