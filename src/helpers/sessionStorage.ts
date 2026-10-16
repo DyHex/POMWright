@@ -165,12 +165,20 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		return `${this.label === undefined ? "" : `${this.label}.`}SessionStorage.${method}`;
 	}
 
-	/** Runs `body` as a step; a recorded seed failure is thrown first. */
-	private async step<T>(method: string, body: () => Promise<T>): Promise<T> {
-		return test.step(`${this.title(method)}:`, async () => {
-			existingRegistryFor(this.page)?.throwIfFailed();
-			return body();
-		});
+	/**
+	 * Runs `body` as a step, boxed so the report shows it at the line that called the helper; a recorded seed failure is
+	 * thrown first. Playwright takes a boxed step's location from the async stack after its first frame, so this helper
+	 * is not `async` (it would be that frame) and every method awaits it rather than returning it (which cuts the stack).
+	 */
+	private step<T>(method: string, body: () => Promise<T>): Promise<T> {
+		return test.step(
+			`${this.title(method)}:`,
+			async () => {
+				existingRegistryFor(this.page)?.throwIfFailed();
+				return body();
+			},
+			{ box: true },
+		);
 	}
 
 	/** One call into `page.sessionStorage`; the browser's refusal on a document without an origin is explained. */
@@ -225,7 +233,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	get<K extends string>(key: K): Promise<Decoded<S, K> | null>;
 	get<K extends string>(keys: NonEmpty<K>): Promise<{ [P in K]: Decoded<S, P> | null }>;
 	async get(keyOrKeys?: string | readonly string[]): Promise<unknown> {
-		return this.step("get", async () => {
+		// awaited, not returned: see step()
+		return await this.step("get", async () => {
 			this.assertOnOrigin("get");
 			const title = this.title("get");
 			if (typeof keyOrKeys === "string") {

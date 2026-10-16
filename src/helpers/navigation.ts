@@ -3,6 +3,9 @@ import { createUrlMatcher, isAbsoluteUrl, resolveUrl, type UrlMatcher } from "./
 
 type WaitUntil = NonNullable<Parameters<Page["goto"]>[1]>["waitUntil"];
 
+/** A boxed step is reported at the line that called the helper, as a `@step` row is, not inside POMWright. */
+const BOXED = { box: true };
+
 /** A URL with a scheme; the only `goto` target accepted when the page object's `baseUrl` is a RegExp. */
 export type AbsoluteUrl = `${string}:${string}`;
 
@@ -118,35 +121,47 @@ class Navigation {
 			}
 			const fullUrl = this.fullUrl;
 			const options = first;
-			await test.step(`${this.label}: Navigate to this Page`, async () => {
-				await this.page.goto(fullUrl, {
-					waitUntil: this.resolveWaitUntil(options),
-					timeout: this.resolveTimeout(options),
-				});
-				if (options?.runPostNavigationActions !== false) {
-					await this.executeActions();
-				}
-			});
+			await test.step(
+				`${this.label}: Navigate to this Page`,
+				async () => {
+					await this.page.goto(fullUrl, {
+						waitUntil: this.resolveWaitUntil(options),
+						timeout: this.resolveTimeout(options),
+					});
+					if (options?.runPostNavigationActions !== false) {
+						await this.executeActions();
+					}
+				},
+				BOXED,
+			);
 			return;
 		}
 
 		const target = this.resolveTarget(first);
-		await test.step(`${this.label}: Navigate to ${target}`, async () => {
-			await this.page.goto(target, {
-				waitUntil: this.resolveWaitUntil(second),
-				timeout: this.resolveTimeout(second),
-			});
-		});
+		await test.step(
+			`${this.label}: Navigate to ${target}`,
+			async () => {
+				await this.page.goto(target, {
+					waitUntil: this.resolveWaitUntil(second),
+					timeout: this.resolveTimeout(second),
+				});
+			},
+			BOXED,
+		);
 	}
 
 	/** Wait until the browser is on this page (URL and load state), then run the post-navigation actions. */
 	public async expectThisPage(options?: ThisPageOptions): Promise<void> {
-		await test.step(`${this.label}: Expect this Page`, async () => {
-			await this.waitForUrl(this.matcher, `expected URL ${this.describeFullUrl()}`, options);
-			if (options?.runPostNavigationActions !== false) {
-				await this.executeActions();
-			}
-		});
+		await test.step(
+			`${this.label}: Expect this Page`,
+			async () => {
+				await this.waitForUrl(this.matcher, `expected URL ${this.describeFullUrl()}`, options);
+				if (options?.runPostNavigationActions !== false) {
+					await this.executeActions();
+				}
+			},
+			BOXED,
+		);
 	}
 
 	/**
@@ -154,14 +169,18 @@ class Navigation {
 	 * fail at once if the URL is back on this page, which catches a redirect that bounced back.
 	 */
 	public async expectAnotherPage(options?: NavigationOptions): Promise<void> {
-		await test.step(`${this.label}: Expect any other Page`, async () => {
-			await this.waitForUrl((url) => !this.matcher(url), `expected to have left ${this.describeFullUrl()}`, options);
-			if (this.matcher(new URL(this.page.url()))) {
-				throw new Error(
-					`${this.label}: left ${this.describeFullUrl()} but returned to it; found ${JSON.stringify(this.page.url())}`,
-				);
-			}
-		});
+		await test.step(
+			`${this.label}: Expect any other Page`,
+			async () => {
+				await this.waitForUrl((url) => !this.matcher(url), `expected to have left ${this.describeFullUrl()}`, options);
+				if (this.matcher(new URL(this.page.url()))) {
+					throw new Error(
+						`${this.label}: left ${this.describeFullUrl()} but returned to it; found ${JSON.stringify(this.page.url())}`,
+					);
+				}
+			},
+			BOXED,
+		);
 	}
 }
 
