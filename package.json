@@ -38,7 +38,7 @@
 	"scripts": {
 		"build": "tsup index.ts --format cjs --dts && node scripts/write-esm-entry.mjs",
 		"release": "pnpm run build && changeset publish",
-		"lint": "biome check .",
+		"lint": "biome check --error-on-warnings .",
 		"format": "biome format --write .",
 		"harness:install": "bash pack-build.sh && pnpm -C test install --frozen-lockfile",
 		"typecheck": "tsc --noEmit -p test && tsc -p test/tsconfig.declarations.json",

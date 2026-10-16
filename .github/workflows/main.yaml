@@ -17,6 +17,7 @@ jobs:
     with:
       browsers: '["chromium", "firefox", "webkit"]'
       workflow: main.yaml
+      node-floor: true # the chromium harness on Node 20 as well
 
   # The gate. Its job id is the required status check of main ("build"): do not rename it without changing the
   # branch protection rule with it.

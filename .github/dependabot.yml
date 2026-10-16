@@ -1,0 +1,12 @@
+# Keeps the commit pins of the GitHub Actions in .github/workflows current: one grouped pull request a month, which
+# CI checks like any other. npm dependencies are not covered here.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
