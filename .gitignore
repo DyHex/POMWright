@@ -50,6 +50,9 @@ test/test-results/
 test/blob-report/
 test/playwright/.cache/
 
+# The documentation's TypeScript examples, extracted and compiled by scripts/check-doc-snippets.mjs
+test/.doc-snippets/
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 

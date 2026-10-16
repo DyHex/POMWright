@@ -1,9 +1,10 @@
 name: Checks
 
 # The jobs of every CI run, called by pr.yaml (pull requests) and main.yaml (pushes to main). Lint always runs; the
-# unit tests, the build and the harness are skipped, which GitHub reports as success, when only *.md files changed since
-# the last green commit of the branch (the newest commit whose run of the caller's workflow succeeded) or, on a pull
-# request, since its base. Never since the previous push alone: that would let a docs-only push turn a red run green.
+# unit tests, the build and the harness are skipped, which GitHub reports as success, when only *.md files outside
+# website/ (whose pages' examples the harness's type check compiles) changed since the last green commit of the branch
+# (the newest commit whose run of the caller's workflow succeeded) or, on a pull request, since its base. Never since the
+# previous push alone: that would let a docs-only push turn a red run green.
 # The package job builds and packs once; every harness job tests that tarball, on the browsers the caller asks for, and
 # with node-floor (set by pr.yaml and main.yaml) also on chromium at the pin on Node 20, the floor of package.json's engines (the unit tests stay on
 # Node 24: vitest needs 22.12). Third-party actions are pinned to commits, the version in a comment; Dependabot
@@ -50,7 +51,7 @@ jobs:
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: echo "sha=$(bash scripts/ci-last-green.sh "$GITHUB_REPOSITORY" "$WORKFLOW" "$EVENT" "$BRANCH" "$HEAD_REPO" "$HEAD_SHA")" >>"$GITHUB_OUTPUT"
       - id: changes
-        name: Anything other than *.md changed?
+        name: Anything other than *.md outside website/ changed?
         env:
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           GREEN: ${{ steps.green.outputs.sha }}

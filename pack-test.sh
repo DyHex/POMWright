@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Builds and packs pomwright, installs the packed package into test/ with a frozen lockfile, type-checks the harness
-# against the published declarations, downloads the browsers and runs Playwright. Arguments go to `playwright test`:
+# and the documentation's examples against the published declarations, downloads the browsers and runs Playwright.
+# Arguments go to `playwright test`:
 #   pnpm pack-test --project=chromium tests/testApp/testIds.spec.ts --reporter=line
 # Never needs sudo. Playwright's system libraries are a once-per-machine step (`pnpm -C test exec playwright
 # install-deps`, with sudo; `install-deps --dry-run` lists what is missing without it).
@@ -33,6 +34,7 @@ fi
 
 pnpm -C "$SCRIPT_DIR" exec tsc --noEmit -p test
 pnpm -C "$SCRIPT_DIR" exec tsc -p test/tsconfig.declarations.json
+node "$SCRIPT_DIR/scripts/check-doc-snippets.mjs"
 # shellcheck disable=SC2086 # PLAYWRIGHT_INSTALL_ARGS is a word list on purpose
 pnpm -C "$TEST_DIR" exec playwright install ${PLAYWRIGHT_INSTALL_ARGS:-}
 pnpm -C "$TEST_DIR" exec playwright test "$@"

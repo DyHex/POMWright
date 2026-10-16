@@ -42,6 +42,7 @@
 			"!**/test/playwright-report",
 			"!**/test/test-results",
 			"!**/test/test-data",
+			"!**/test/.doc-snippets",
 			"!**/.pack"
 		]
 	}
