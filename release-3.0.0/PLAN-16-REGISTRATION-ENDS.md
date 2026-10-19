@@ -14,7 +14,9 @@ queries, and of an error at `verify()` instead of at the `add` line).
 
 **Executed 2026-10-19**, one commit per step: d2d4bed (1, the runtime, its doc comments and the unit tests), 67189a1
 (2, the harness), ea7cacf (3, the docs and AGENTS.md), and the ledger commit for step 4 that carries this note; step 5
-(verification) records its result below. As executed: the five text-like locator methods check in `commitTextLike`;
+(verification) found nothing to fix: lint clean, 688 unit tests with no type errors, `pnpm pack-test` 1403 passed and 1
+skipped (the download on WebKit, as before) on chromium, firefox and webkit with both type checks, the snippet check
+(193) and the coverage check (0 problems), the site build with every link valid. As executed: the five text-like locator methods check in `commitTextLike`;
 the *Upgrading from 2.x* grep also finds a registration kept in a `this.` field (section 7.4's draft did not); see
 DECISIONS.md's execution-time rows.
 
