@@ -23,7 +23,7 @@ type Paths =
   | "main.form@login"
   | "main.form@login.input@email"
   | "main.form@login.input@password"
-  | "main.form@login.button@submit";
+  | "main.form@login.button@login";
 
 export class LoginPage extends PageObject<Paths> {
   constructor(page: Page) {
@@ -35,14 +35,14 @@ export class LoginPage extends PageObject<Paths> {
     this.add("main.form@login").getByRole("form", { name: "Log in" });
     this.add("main.form@login.input@email").getByLabel("Email");
     this.add("main.form@login.input@password").getByLabel("Password");
-    this.add("main.form@login.button@submit").getByRole("button", { name: "Log in" });
+    this.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
   }
 
   @step()
   async logIn(email: string, password: string) {
     await this.getNestedLocator("main.form@login.input@email").fill(email);
     await this.getNestedLocator("main.form@login.input@password").fill(password);
-    await this.getNestedLocator("main.form@login.button@submit").click();
+    await this.getNestedLocator("main.form@login.button@login").click();
   }
 }
 ```
@@ -108,7 +108,7 @@ What the definition cannot see:
 - **What is set after a field that resolves a locator.** `readonly submit = this.getNestedLocator("…")` runs the
   definition while the class is still being built: the fields below it and the constructor body have not run yet, so
   the definition reads them as `undefined`. A getter resolves when it is read and is always safe:
-  `get submit() { return this.getNestedLocator("main.form@login.button@submit"); }`.
+  `get submit() { return this.getNestedLocator("main.form@login.button@login"); }`.
 
 ## How a mistake is reported
 
@@ -118,7 +118,7 @@ error as `cause`, and the line that constructed the page object in the stack:
 ```text
 LoginPage: defineLocators() failed: A locator schema with the path "main" already exists. …
 LoginPage: Locator registry verification failed for 1 of 5 paths:
-  "main.form@login.button@submit": No locator schema registered for path "main.form@login.title".
+  "main.form@login": No locator schema registered for path "main.form@login.heading".
 ```
 
 The page object keeps the error: every later locator call on it throws it again, and `defineLocators()` never runs a

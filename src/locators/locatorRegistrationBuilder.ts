@@ -18,6 +18,7 @@ import {
 	applyDefinitionPatch,
 	assertDescription,
 	assertStrategyPrimary,
+	cloneLocatorStrategyDefinition,
 	copyFilter,
 	isAnyFrameDefinition,
 	normalizeSteps,
@@ -684,7 +685,8 @@ export class LocatorRegistrationBuilder<
 		const mergedDefinition = this.seededDefinition
 			? applyDefinitionPatch(this.definition as LocatorStrategyDefinition, definition)
 			: (definition as LocatorStrategyDefinition);
-		this.definition = mergedDefinition;
+		// a copy: a later filter, nth or describe re-registers from it, and the caller may still hold the original
+		this.definition = cloneLocatorStrategyDefinition(mergedDefinition);
 		if (this.reuseType && this.seededDefinition) {
 			this.overrideApplied = true;
 		}

@@ -191,7 +191,7 @@ time.
 ```text
 LoginPage: defineLocators() failed: A locator schema with the path "main" already exists. …
 LoginPage: Locator registry verification failed for 1 of 5 paths:
-  "main.form@login.button@submit": No locator schema registered for path "main.form@login.title".
+  "main.form@login": No locator schema registered for path "main.form@login.heading".
 ```
 
 ### pageActionsToPerformAfterNavigation()

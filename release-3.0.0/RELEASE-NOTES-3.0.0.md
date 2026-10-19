@@ -389,8 +389,9 @@ abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
 - The types a consumer needs to name the builder chain, seeds, filters and path arguments are exported (analysis
   1.9d). **[done, plan 1.9]**
 
-- A caller's options or filter object changed after `add()`, `filter()` or `createReusable`, or a seed's step after
-  `add(path, { reuse })`, no longer changes the registered locator: builders store copies (analysis 1.10, found in
+- A caller's options or filter object changed after `add()`, `filter()` or `createReusable`, a RegExp it passed
+  rewritten with `compile()`, or a seed's step after `add(path, { reuse })`, no longer changes the registered locator:
+  builders store copies, RegExps included (analysis 1.10, found in
   the plan 1.10-2 review). **[done, plan 1.10-2]**
 - `filter` and `nth` on a hidden segment are no longer accepted and silently dropped, and a throwing `update()` after
   hiding a segment no longer brings it back (analysis 1.10). **[done, plan 1.10-2]**

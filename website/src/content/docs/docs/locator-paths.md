@@ -18,11 +18,11 @@ type Paths =
   | "main"
   | "main.form@login"
   | "main.form@login.input@email"
-  | "main.form@login.button@submit";
+  | "main.form@login.button@login";
 ```
 
-Each path's ancestors are its prefixes: `main` and `main.form@login` are ancestors of `main.form@login.button@submit`.
-A segment is any text without a dot or whitespace. Names that say what and which (`form@login`, `button@submit`) keep
+Each path's ancestors are its prefixes: `main` and `main.form@login` are ancestors of `main.form@login.button@login`.
+A segment is any text without a dot or whitespace. Names that say what and which (`form@login`, `input@email`) keep
 paths readable in reports; the `@` is a convention, not syntax.
 
 The union is the list of everything the registry can hold. TypeScript checks every path you pass against it, and
@@ -95,7 +95,7 @@ object calls it for you. See [Verifying a registry](/POMWright/docs/verifying-re
 What happens to a registration, from the call to the `Locator` an action uses:
 
 ```mermaid
-flowchart LR
+flowchart TD
   add["add(path).getByRole(…).filter(…)"] -->|"copies the arguments"| record["record: path, definition, steps, description"]
   record --> registry[("registry: one record per path")]
   registry -->|"getNestedLocator(path)"| copies["a copy of each registered record on the path"]

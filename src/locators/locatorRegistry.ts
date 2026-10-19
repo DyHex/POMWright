@@ -520,7 +520,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 *
 	 * @example
 	 * ```ts
-	 * await registry.getNestedLocator("main.form@login.button@submit").click();
+	 * await registry.getNestedLocator("main.form@login.button@login").click();
 	 * // locator('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
 	 * ```
 	 */

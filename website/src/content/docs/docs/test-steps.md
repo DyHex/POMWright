@@ -13,7 +13,7 @@ after the class and the method:
 import type { Page } from "@playwright/test";
 import { PageObject, step } from "pomwright";
 
-type Paths = "main" | "main.form@login" | "main.form@login.button@submit";
+type Paths = "main" | "main.form@login" | "main.form@login.button@login";
 
 export class LoginPage extends PageObject<Paths> {
   constructor(page: Page) {
@@ -23,12 +23,12 @@ export class LoginPage extends PageObject<Paths> {
   protected defineLocators(): void {
     this.add("main").locator("main");
     this.add("main.form@login").getByRole("form", { name: "Log in" });
-    this.add("main.form@login.button@submit").getByRole("button", { name: "Log in" });
+    this.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
   }
 
   @step()
   async submit() {
-    await this.getNestedLocator("main.form@login.button@submit").click();
+    await this.getNestedLocator("main.form@login.button@login").click();
   }
 }
 ```

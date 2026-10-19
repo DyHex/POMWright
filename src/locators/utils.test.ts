@@ -18,6 +18,8 @@ import {
 	assertStrategyPrimary,
 	buildIdSelector,
 	cloneLocatorStrategyDefinition,
+	copyFields,
+	copyValue,
 	createLocator,
 	escapeCssString,
 	escapeRegExpForSelector,
@@ -428,6 +430,57 @@ describe("normalizeSteps", () => {
 		const has = new FakeLocator("locator('b')");
 		const copy = normalizeSteps<"a", "a">([{ kind: "filter", filter: { has: has as never } }]);
 		expect((copy[0] as { filter: { has: unknown } }).filter.has).toBe(has);
+	});
+
+	it("copies a RegExp in a filter, so compile() on the original changes nothing", () => {
+		const hasText = /Save/;
+		const copy = normalizeSteps<"a", "a">([{ kind: "filter", filter: { hasText } }]);
+		hasText.compile("Other", "i");
+		expect((copy[0] as { filter: { hasText: RegExp } }).filter.hasText).toEqual(/Save/);
+	});
+});
+
+describe("copyValue and copyFields", () => {
+	it("copies a RegExp with its source and flags; compile() on the original leaves the copy alone", () => {
+		const original = /order-\d+/gi;
+		const copy = copyValue(original);
+		expect(copy).not.toBe(original);
+		expect(copy).toEqual(/order-\d+/gi);
+		original.compile("other", "m");
+		expect(copy).toEqual(/order-\d+/gi);
+	});
+
+	it("keeps primitives, undefined and Locators as they are", () => {
+		const locator = new FakeLocator("locator('b')");
+		expect(copyValue(locator)).toBe(locator);
+		for (const value of ["Save", 2, true, undefined, null]) {
+			expect(copyValue(value)).toBe(value);
+		}
+	});
+
+	it("copies every field of an object, RegExps included, and keeps its keys", () => {
+		const name = /Save/;
+		const has = new FakeLocator("locator('b')");
+		const fields = { name, exact: true, level: 2, has, missing: undefined };
+		const copy = copyFields(fields);
+		expect(copy).not.toBe(fields);
+		expect(Object.keys(copy)).toEqual(["name", "exact", "level", "has", "missing"]);
+		expect(copy.name).not.toBe(name);
+		expect(copy.name).toEqual(/Save/);
+		expect(copy.has).toBe(has);
+	});
+});
+
+describe("cloneLocatorStrategyDefinition", () => {
+	it("copies a RegExp first argument and every RegExp option", () => {
+		const text = /Total/;
+		const name = /Save/;
+		const textCopy = cloneLocatorStrategyDefinition({ type: "text", text, options: { exact: false } });
+		const roleCopy = cloneLocatorStrategyDefinition({ type: "role", role: "button", options: { name } });
+		text.compile("Other");
+		name.compile("Other");
+		expect(textCopy).toEqual({ type: "text", text: /Total/, options: { exact: false } });
+		expect(roleCopy).toEqual({ type: "role", role: "button", options: { name: /Save/ } });
 	});
 });
 

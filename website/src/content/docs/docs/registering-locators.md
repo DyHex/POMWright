@@ -13,11 +13,11 @@ path is resolved, from the page or from the locator of the segment before it.
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"main" | "main.form@login" | "main.form@login.button@submit">;
+declare const registry: LocatorRegistry<"main" | "main.form@login" | "main.form@login.button@login">;
 // ---cut---
 registry.add("main").locator("main");
 registry.add("main.form@login").getByRole("form", { name: "Log in" });
-registry.add("main.form@login.button@submit").getByRole("button", { name: "Log in" });
+registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 ```
 
 In a page object the same calls are `this.add(…)` inside `defineLocators()`.
@@ -145,8 +145,10 @@ options.name = "Cancel";
 registry.getLocator("form.button"); // getByRole('button', { name: 'Save' })
 ```
 
-The copy is one level deep: a `Locator` or a RegExp inside an options object is kept as it is, since neither can be
-changed through Playwright's API. To change a locator for one use, query it; see [Queries](/POMWright/docs/queries/).
+The copy reaches every value you pass. A RegExp is copied too, whether it is the first argument, an option or a filter
+value, so rewriting yours afterwards with `compile()` changes nothing registered. A `Locator` is kept as it is: every
+method of a `Locator` returns a new one, so the one you passed cannot change. This holds for `add`, `createReusable`
+and queries alike. To change a locator for one use, query it; see [Queries](/POMWright/docs/queries/).
 
 ## When locators are registered
 

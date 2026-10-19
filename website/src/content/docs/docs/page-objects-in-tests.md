@@ -43,30 +43,43 @@ test's report (see [Logging](/POMWright/docs/logging/)). Extend it instead of Pl
 
 ```ts title="fixtures.ts"
 import { test as base } from "pomwright";
+import { AccountPage } from "./account.page";
 import { LoginPage } from "./login.page";
 
 export { expect } from "@playwright/test";
 
-export const test = base.extend<{ loginPage: LoginPage }>({
+type PageObjects = {
+  loginPage: LoginPage;
+  accountPage: AccountPage;
+};
+
+export const test = base.extend<PageObjects>({
   loginPage: async ({ page }, use) => {
     await use(new LoginPage(page));
+  },
+  accountPage: async ({ page }, use) => {
+    await use(new AccountPage(page));
   },
 });
 ```
 
-A test imports `test` and `expect` from that file and asks for what it uses:
+Each page object is a fixture of its own. The file also re-exports Playwright's `expect`, so a test that asserts imports
+both from one place. A test imports `test` from that file and asks for the fixtures it uses:
 
 ```ts title="login.spec.ts"
-import { expect, test } from "./fixtures";
+import { test } from "./fixtures";
 
-test("a registered customer can log in", async ({ loginPage, log, page }) => {
+test("a registered customer can log in", async ({ loginPage, accountPage, log }) => {
   await loginPage.navigation.goto();
   await loginPage.logIn("ada@shop.example", "correct horse");
   log.info("logged in as ada@shop.example");
 
-  await expect(page).toHaveURL("https://shop.example/account");
+  await accountPage.navigation.expectThisPage();
 });
 ```
+
+`loginPage` and `accountPage` are created on the same `page`, the test's, so the test acts on the login page and then
+waits on the account page in one browser tab.
 
 The `log` fixture records `warn` and `error` entries on a test's first run, and every level on a retry, so this `info`
 entry shows up when the test is retried; see [Logging](/POMWright/docs/logging/#levels).
@@ -96,12 +109,13 @@ export const test = mergeTests(pomwright, pageObjects);
 A page object registers its locators and checks them right after it is constructed, so a mistake that TypeScript
 cannot see, such as a path in the union that was never registered but is used in a filter, fails in the fixture. The
 test fails before its body runs, with the page object's name, every path that failed, and the line of `super(...)` in
-the stack. Here the submit button is filtered by `main.form@login.title`, which `LoginPage`'s union names and
-`defineLocators()` never registers:
+the stack. Here `LoginPage` finds its form as the one that contains the login heading,
+`locator("form").filter({ has: "main.form@login.heading" })`, and the heading's path is in its union, but
+`defineLocators()` never registers it:
 
 ```text
 Error: LoginPage: Locator registry verification failed for 1 of 5 paths:
-  "main.form@login.button@submit": No locator schema registered for path "main.form@login.title".
+  "main.form@login": No locator schema registered for path "main.form@login.heading".
 ```
 
 [Verifying a registry](/POMWright/docs/verifying-registries/) lists what the check finds, and

@@ -7,7 +7,7 @@ description: "Every resolved locator is described by its path; where Playwright 
 
 Playwright lets you name a locator with [`locator.describe()`](https://playwright.dev/docs/api/class-locator#locator-describe):
 the report and some error messages then show the name instead of the selector chain. POMWright gives every locator it
-resolves a description, its path, so a report reads `main.form@login.button@submit` where it would otherwise show a
+resolves a description, its path, so a report reads `main.form@login.button@login` where it would otherwise show a
 long chain.
 
 ## The path by default

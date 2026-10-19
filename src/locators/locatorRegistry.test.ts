@@ -84,6 +84,70 @@ describe("a registered locator cannot change after registration", () => {
 		);
 	});
 
+	it("ignores a change to the options object before a later step on the same registration", () => {
+		const registry = createRegistry();
+		const options = { name: "Save" };
+		const view = registry.add("btn").getByRole("button", options);
+		options.name = "Other";
+		view.nth(0).describe("Save button");
+		expect(chain(registry.getLocator("btn"))).toBe("getByRole('button', { name: 'Save' }).nth(0)");
+	});
+
+	it("ignores compile() on a RegExp after add: a first argument, an option, a filter", () => {
+		const registry = createRegistry();
+		const text = /Total/;
+		const name = /Save/;
+		const hasText = /Row/;
+		registry.add("x").getByText(text);
+		registry.add("btn").getByRole("button", { name });
+		registry.add("row").locator("li").filter({ hasText });
+		for (const re of [text, name, hasText]) {
+			re.compile("Other", "i");
+		}
+		expect(chain(registry.getLocator("x"))).toBe("getByText(/Total/)");
+		expect(chain(registry.getLocator("btn"))).toBe("getByRole('button', { name: /Save/ })");
+		expect(chain(registry.getLocator("row"))).toBe("locator('li').filter({ hasText: /Row/ })");
+	});
+
+	it("ignores compile() on a RegExp before a later step on the same registration", () => {
+		const registry = createRegistry();
+		const name = /Save/;
+		const view = registry.add("btn").getByRole("button", { name });
+		name.compile("Other");
+		view.nth(0);
+		expect(chain(registry.getLocator("btn"))).toBe("getByRole('button', { name: /Save/ }).nth(0)");
+	});
+
+	it("ignores compile() on a seed's RegExps: its arguments, its definition and its steps", () => {
+		const registry = createRegistry();
+		const text = /Total/;
+		const hasText = /Row/;
+		const seed = registry.createReusable.getByText(text).filter({ hasText });
+		text.compile("Other");
+		hasText.compile("Other");
+		(seed.definition as { text: RegExp }).text.compile("Changed");
+		(seed.steps[0] as { filter: { hasText: RegExp } }).filter.hasText.compile("Changed");
+		registry.add("seeded", { reuse: seed });
+		expect(chain(registry.getLocator("seeded"))).toBe("getByText(/Total/).filter({ hasText: /Row/ })");
+	});
+
+	it("ignores compile() on a RegExp a query was given, until it resolves", () => {
+		const registry = createRegistry();
+		const updated = /Save/;
+		const replaced = /Total/;
+		const filtered = /Open/;
+		registry.add("btn").getByRole("button", { name: "Cancel" });
+		const update = registry.getLocatorSchema("btn").update().getByRole({ name: updated });
+		const replace = registry.getLocatorSchema("btn").replace().getByText(replaced);
+		const filter = registry.getLocatorSchema("btn").filter({ hasText: filtered });
+		for (const re of [updated, replaced, filtered]) {
+			re.compile("Other");
+		}
+		expect(chain(update.getLocator())).toBe("getByRole('button', { name: /Save/ })");
+		expect(chain(replace.getLocator())).toBe("getByText(/Total/)");
+		expect(chain(filter.getLocator())).toBe("getByRole('button', { name: 'Cancel' }).filter({ hasText: /Open/ })");
+	});
+
 	it("ignores a change to a query's filter object after the call", () => {
 		const registry = createRegistry();
 		const filter = { hasText: "Save" };

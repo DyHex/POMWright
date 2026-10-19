@@ -28,12 +28,12 @@ import type { LocatorRegistry } from "pomwright";
 export type Paths =
   | "main"
   | "main.form@login"
-  | "main.form@login.button@submit";
+  | "main.form@login.button@login";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").locator("main");
   registry.add("main.form@login").getByRole("form", { name: "Log in" });
-  registry.add("main.form@login.button@submit").getByRole("button", { name: "Log in" });
+  registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 }
 ```
 
@@ -60,7 +60,7 @@ import type { Paths } from "./login.locators";
 
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
-const submit = registry.getNestedLocator("main.form@login.button@submit");
+const submit = registry.getNestedLocator("main.form@login.button@login");
 // locator('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
 
 await submit.click();
@@ -71,7 +71,7 @@ Each segment's locator is resolved inside the one before it:
 ```mermaid
 flowchart LR
   main["main<br/>locator('main')"] -->|inside| form["main.form@login<br/>getByRole('form', { name: 'Log in' })"]
-  form -->|inside| submit["main.form@login.button@submit<br/>getByRole('button', { name: 'Log in' })"]
+  form -->|inside| submit["main.form@login.button@login<br/>getByRole('button', { name: 'Log in' })"]
 ```
 
 The chain finds the form's button and not the other two, because each step searches inside the previous one. This is
@@ -97,7 +97,7 @@ import type { Paths } from "./login.locators";
 declare const page: Page;
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
-const submit = registry.getLocator("main.form@login.button@submit");
+const submit = registry.getLocator("main.form@login.button@login");
 
 await page.getByRole("dialog", { name: "Session expired" }).locator(submit).click();
 // getByRole('dialog', { name: 'Session expired' }).locator(getByRole('button', { name: 'Log in' }))

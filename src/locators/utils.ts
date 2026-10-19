@@ -176,9 +176,24 @@ export function assertIdValue(
 	assertPrimaryValue(id, { ...source, field: "id", allowEmpty: false });
 }
 
-/** A filter as given, copied one level deep: its values are strings, booleans, RegExps and Locators. */
+/**
+ * A leaf of a definition, an options object or a filter, as the registry keeps it. A RegExp is copied with its source
+ * and flags, since `RegExp.prototype.compile()` rewrites one in place; a primitive is a value; a Locator is kept, since
+ * every method of a Locator returns a new one.
+ */
+export const copyValue = <Value>(value: Value): Value =>
+	value instanceof RegExp ? (new RegExp(value) as Value) : value;
+
+/**
+ * An options or filter object, copied with every value through `copyValue`. Its values are leaves (strings, numbers,
+ * booleans, RegExps, Locators), so nothing below it is left to copy.
+ */
+export const copyFields = <Fields extends object>(fields: Fields): Fields =>
+	Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, copyValue(value)])) as Fields;
+
+/** A filter as given, copied with `copyFields`: a copy shares nothing a caller can change. */
 export const copyFilter = <Filter>(filter: Filter): Filter =>
-	typeof filter === "object" && filter !== null ? { ...filter } : filter;
+	typeof filter === "object" && filter !== null ? copyFields(filter) : filter;
 
 /** Copies steps and their filter objects, so no copy shares anything a caller or another copy can change. */
 export const normalizeSteps = <LocatorSchemaPathType extends string, AllowedPaths extends string>(
@@ -417,13 +432,14 @@ export function assertStrategyPrimary(
 export const createLocator = (target: LocatorBuilderTarget, definition: LocatorStrategyDefinition): Locator =>
 	strategyOf(definition.type).create(target, definition as never);
 
+/** A definition copied all the way to its leaves: the first argument and every option through `copyValue`. */
 export const cloneLocatorStrategyDefinition = (definition: LocatorStrategyDefinition): LocatorStrategyDefinition => {
 	const spec = strategyOf(definition.type);
 	const fields = definition as unknown as DefinitionFields;
 	return assembleDefinition(
 		definition.type,
-		fields[spec.primary],
-		spec.options && fields.options ? { ...fields.options } : undefined,
+		copyValue(fields[spec.primary]),
+		spec.options && fields.options ? copyFields(fields.options) : undefined,
 	);
 };
 

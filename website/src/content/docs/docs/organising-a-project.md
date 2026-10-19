@@ -104,12 +104,12 @@ page object calls it from `defineLocators()`:
 ```ts title="login.locators.ts"
 import type { LocatorRegistry } from "pomwright";
 
-export type Paths = "main" | "main.form@login" | "main.form@login.button@submit";
+export type Paths = "main" | "main.form@login" | "main.form@login.button@login";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").locator("main");
   registry.add("main.form@login").getByRole("form", { name: "Log in" });
-  registry.add("main.form@login.button@submit").getByRole("button", { name: "Log in" });
+  registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 }
 ```
 
@@ -130,7 +130,7 @@ export class LoginPage extends ShopPage<Paths> {
 
   @step()
   async submit() {
-    await this.getNestedLocator("main.form@login.button@submit").click();
+    await this.getNestedLocator("main.form@login.button@login").click();
   }
 }
 ```

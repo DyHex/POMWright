@@ -8,7 +8,7 @@
 [![Static Badge](https://img.shields.io/badge/created%40-ICE-ffcd00)](https://www.ice.no/)
 
 POMWright is a TypeScript library for [Playwright Test](https://playwright.dev/) that organises a suite's locators
-and page objects. You register one locator per dot-delimited path, such as `main.form@login.button@submit`, with
+and page objects. You register one locator per dot-delimited path, such as `main.form@login.button@login`, with
 Playwright's own methods, and POMWright builds the Playwright locator chain from the locators of the path's segments.
 A page object registers its locators and checks them as it is created, so a mistake in a locator fails the fixture
 before the test body runs.
@@ -18,7 +18,7 @@ before the test body runs.
 ## What it adds to Playwright
 
 - **Locator chains from paths.** Playwright recommends chaining locators, so that each element is found inside the one
-  it belongs to. POMWright builds those chains: `getNestedLocator("main.form@login.button@submit")` resolves to
+  it belongs to. POMWright builds those chains: `getNestedLocator("main.form@login.button@login")` resolves to
   `locator('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })`, and the trace viewer
   and the report show the path. Paths are checked at compile time and at run time.
 - **Page objects that check themselves.** `PageObject` registers its locators once and checks every path right after it
@@ -56,7 +56,7 @@ type Paths =
   | "main.form@login"
   | "main.form@login.input@email"
   | "main.form@login.input@password"
-  | "main.form@login.button@submit";
+  | "main.form@login.button@login";
 
 export class LoginPage extends PageObject<Paths> {
   constructor(page: Page) {
@@ -68,14 +68,14 @@ export class LoginPage extends PageObject<Paths> {
     this.add("main.form@login").getByRole("form", { name: "Log in" });
     this.add("main.form@login.input@email").getByLabel("Email");
     this.add("main.form@login.input@password").getByLabel("Password");
-    this.add("main.form@login.button@submit").getByRole("button", { name: "Log in" });
+    this.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
   }
 
   @step()
   async logIn(email: string, password: string) {
     await this.getNestedLocator("main.form@login.input@email").fill(email);
     await this.getNestedLocator("main.form@login.input@password").fill(password);
-    await this.getNestedLocator("main.form@login.button@submit").click();
+    await this.getNestedLocator("main.form@login.button@login").click();
   }
 }
 ```

@@ -269,7 +269,7 @@ failing path named, instead of failing the first action that used it:
 
 ```text
 LoginPage: Locator registry verification failed for 1 of 5 paths:
-  "main.form@login.button@submit": No locator schema registered for path "main.form@login.title".
+  "main.form@login": No locator schema registered for path "main.form@login.heading".
 ```
 
 Fix the reference. A standalone registry from `createRegistryWithAccessors` calls `registry.verify()` itself. See

@@ -21,16 +21,20 @@ prints it and a RegExp as its source and flags.
 
 A record never shares an object with code outside the registry:
 
-- **At registration.** The builders copy the options object and each filter object a caller passes, one level deep,
-  which is as deep as these objects go: their values are strings, numbers, booleans, RegExps and Locators. A caller
-  that changes its object afterwards changes nothing registered.
+- **At registration.** The builders copy the options object and each filter object a caller passes, and every value
+  in them: the values are strings, numbers, booleans, RegExps and Locators, so nothing lies deeper. A RegExp, in an
+  object or as a first argument, is copied with its source and flags, because `RegExp.prototype.compile()` rewrites one
+  in place. A Locator is kept: every method of a Locator returns a new one. A caller that changes what it passed
+  afterwards changes nothing registered, and neither does a later `filter`, `nth` or `describe` on the same
+  registration, which registers again from the builder's own copy of the definition.
 - **On every read.** `getLocator`, `getNestedLocator`, `getLocatorSchema`, `verify` and the resolution of a `has` path
   read a clone of the record. A query owns its copies and changes only them; every `getLocatorSchema` call starts a new
   set.
 - **Seeds.** A seed copies its definition and steps when it is made, returns copies from `definition` and `steps`, and
   each of its methods returns a new seed.
 
-The helpers are `cloneLocatorStrategyDefinition`, `copyFilter` and `normalizeSteps` in `src/locators/utils.ts`.
+The helpers are `cloneLocatorStrategyDefinition`, `copyFilter`, `normalizeSteps`, and under them `copyFields` and
+`copyValue`, in `src/locators/utils.ts`.
 
 ## Why
 

@@ -522,7 +522,10 @@ an empty or missing id throws at registration in all three builders. The other s
   [L180-183](../src/locators/locatorRegistry.ts#L180-L183) only reachable via `any`.
 - [x] Fixed 2026-10-15 by plan 1.10-2: a query keeps the clones `getIfExists` returns (one per segment, 6 instead
   of 11 on a five-segment chain with a `has` path); every read is a clone, and builders copy what callers pass, after
-  a probe showed that a caller's options and filter objects stayed live in the registry. Triple cloning per segment: [locatorQueryBuilder.ts:47-57](../src/locators/locatorQueryBuilder.ts#L47-L57),
+  a probe showed that a caller's options and filter objects stayed live in the registry. Completed 2026-10-19: every
+  RegExp is copied as well (`compile()` rewrote a shared one), and the registration builder keeps a copy of its
+  definition (a later step re-registered the caller's options object).
+  Triple cloning per segment: [locatorQueryBuilder.ts:47-57](../src/locators/locatorQueryBuilder.ts#L47-L57),
   [locatorRegistry.ts:267-272](../src/locators/locatorRegistry.ts#L267-L272),
   [locatorQueryBuilder.ts:420](../src/locators/locatorQueryBuilder.ts#L420).
 - [x] Fixed 2026-10-14 by plan 1.9: the four unused aliases deleted (all left over from the v2 registry's development

@@ -18,7 +18,7 @@ Playwright feature it builds on.
 
 ## One locator per path, chained by default
 
-Each element gets a path that says where it is (`main.form@login.button@submit`) and one locator that says what it is
+Each element gets a path that says where it is (`main.form@login.button@login`) and one locator that says what it is
 (`getByRole("button", { name: "Log in" })`). Resolving a path chains the locators of its segments, so a locator stays
 short and is still unique in its context, and a page whose structure changes fails the test instead of letting it find
 a similar element elsewhere. See [Resolving locators](/POMWright/docs/resolving-locators/).

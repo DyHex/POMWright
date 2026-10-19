@@ -33,8 +33,9 @@
 
 ### Fixes
 
-- A caller's options or filter object changed after `add()`, `filter()` or `createReusable`, or a seed's step after
-  `add(path, { reuse })`, no longer changes the registered locator: builders store copies (analysis 1.10).
+- A caller's options or filter object changed after `add()`, `filter()` or `createReusable`, a RegExp it passed
+  rewritten with `compile()`, or a seed's step after `add(path, { reuse })`, no longer changes the registered locator:
+  builders store copies, RegExps included (analysis 1.10).
 - A static method decorated with `@step` is titled by its class instead of `Function`, and a bare `@step` on a static
   method compiled with `experimentalDecorators` is no longer left unwrapped (analysis 1.10).
 - An array or a `filter`-only object in `has`/`hasNot` is reported as an unsupported filter reference instead of

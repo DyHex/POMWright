@@ -17,14 +17,14 @@ import type { LocatorRegistry } from "pomwright";
 export type Paths =
   | "main"
   | "main.form@login"
-  | "main.form@login.button@submit"
+  | "main.form@login.button@login"
   | "main.list"
   | "main.list.item";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").locator("main");
   registry.add("main.form@login").getByRole("form", { name: "Log in" });
-  registry.add("main.form@login.button@submit").getByRole("button", { name: "Log in" });
+  registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
   registry.add("main.list").locator("ul");
   registry.add("main.list.item").getByRole("listitem");
 }
@@ -189,7 +189,7 @@ import type { Paths } from "./shop.locators";
 
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
-await registry.getNestedLocator("main.form@login.button@submit").click();
+await registry.getNestedLocator("main.form@login.button@login").click();
 // locator('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
 ```
 

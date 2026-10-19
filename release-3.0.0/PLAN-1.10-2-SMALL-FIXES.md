@@ -762,6 +762,15 @@ Every DSL call that keeps an object the caller passed in keeps a copy, one level
 P13: all six cases of P18 leave the registered and the queried locator unchanged, and the unit and harness suites
 pass. A RegExp and a `Locator` are kept by reference: their observable content cannot change (P19).
 
+> **Amended 2026-10-19, after the documentation review.** P19 holds for a `Locator` but not for a RegExp:
+> `RegExp.prototype.compile()` rewrites its source and flags in place, and after `add` it changed the registered
+> locator (a first argument, an option, a filter value, and a seed through `seed.definition`). A plain registration
+> also kept the caller's options object, which a later `filter`, `nth` or `describe` on the same registration
+> registered again. Both are fixed without a plan of their own: `copyValue` copies every RegExp leaf inside
+> `cloneLocatorStrategyDefinition` and `copyFilter`, and the registration builder keeps a copy of its definition.
+> DECISIONS.md carries the amended row; unit tests in `utils.test.ts` and `locatorRegistry.test.ts` and the harness
+> spec `add.get.clone.spec.ts` pin it.
+
 ### 3.7 Messages (1.10, fifth bullet)
 
 | case | today | **decided** (7.6) | alternative |
@@ -1149,7 +1158,8 @@ Taken with the user on 2026-10-15, in two review rounds; the chosen option is st
 - [x] 7.7 A registered locator cannot change after registration: every resolution works on a clone, and each
   `getLocatorSchema` call is a new one (7.18).
 - [x] 7.8 Builders store copies of the options and filter objects callers pass, one level deep (a deep clone breaks
-  `Locator`s and is not needed, P19); `normalizeSteps` copies filter objects.
+  `Locator`s and is not needed, P19); `normalizeSteps` copies filter objects. Amended 2026-10-19 (section 3.6): every
+  RegExp is copied too, and the registration builder keeps a copy of its definition.
 - [x] 7.9 `describe` takes a string on all four builders; `describe("")` removes a description and is documented; no
   `describe(null)`; a non-string from JavaScript throws. The default description stays the path when none is set;
   making the default an option is plan 9 (analysis 3.3). Rejected: `""` meaning "use the path".

@@ -76,13 +76,13 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 import type { LocatorRegistry } from "pomwright";
 import { defineLocators as addCommon, type Paths as Common } from "./common.locators";
 
-export type Paths = Common | "main.form@login" | "main.form@login.button@submit";
+export type Paths = Common | "main.form@login" | "main.form@login.button@login";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   addCommon(registry);
   registry.add("main.heading").getByRole("heading", { name: "Log in" });
   registry.add("main.form@login").getByRole("form", { name: "Log in" });
-  registry.add("main.form@login.button@submit").getByRole("button", { name: "Log in" });
+  registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 }
 ```
 
