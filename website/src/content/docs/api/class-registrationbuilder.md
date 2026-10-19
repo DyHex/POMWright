@@ -6,7 +6,9 @@ description: "What add(path) returns: the ten locator methods with Playwright's 
 `add(path)` returns a registration: the ten locator methods, one of which registers the path. After it come the steps
 Playwright chains after a locator, `filter`, `nth` and `describe`, applied every time the path is resolved, in the order
 chained. The registration is used in one statement and not kept, so POMWright does not export its type; TypeScript
-offers the steps only after a locator method.
+offers the steps only after a locator method. It ends at the next call on the registry (`add`, `getLocator`,
+`getNestedLocator`, `getLocatorSchema`, `verify`, or resolving a query); a registration kept in a variable takes its
+steps before then, and every method of it throws after.
 
 ```ts
 import type { LocatorRegistry } from "pomwright";
@@ -29,18 +31,19 @@ The chains on this page are shown without the description, which is the path unl
 
 Each takes the arguments of the Playwright method it is named after and returns the registration, for `filter`, `nth`
 and `describe`. Each throws at the call, naming the method and the path, when its first argument is missing (from
-JavaScript) or is an empty string where Playwright cannot use one, when the path already has a locator, and, from
-JavaScript, when the path breaks the path rules:
+JavaScript) or is an empty string where Playwright cannot use one, when the path already has a locator, when the
+registration has ended, and, from JavaScript, when the path breaks the path rules:
 
 ```text
 getByRole requires a role value for "main.button@save".
 A locator schema with the path "main" already exists.
 A locator definition for "main" has already been provided; only one locator type can be set for a registration.
+getByRole() cannot apply to "main.button@save": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
 LocatorSchemaPath string cannot contain consecutive dots: main..list
 ```
 
 The second message goes on with the existing and the attempted locator; the third is a second locator method on one
-registration.
+registration; the fourth a locator method of a registration kept in a variable after the registry was called again.
 
 ### frameLocator()
 
@@ -362,8 +365,14 @@ locator requires a non-empty selector for "main.list".
 
 ## Steps
 
-Available after a locator method, chained in any order and number, and applied in that order. From JavaScript, a step
-before the locator method throws:
+Available after a locator method, chained in any order and number, and applied in that order. A step of a
+registration kept in a variable, after the registry was called again, throws:
+
+```text
+nth() cannot apply to "main.list.item": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+```
+
+From JavaScript, a step before the locator method throws:
 
 ```text
 filter() needs a locator strategy first for "main.list.item"; call getByRole, getByText, getByLabel, getByPlaceholder, getByAltText, getByTitle, locator, frameLocator, getByTestId or getById before it.
@@ -509,4 +518,5 @@ A locator definition for "main.link@help" was already provided from reuse; only 
 ```
 
 The first for another locator method than the seed's; the second for a second call of it on a registration kept in a
-variable (chained, TypeScript no longer offers the method).
+variable (chained, TypeScript no longer offers the method). A kept registration takes its override before the registry
+is called again, as every registration takes its steps.

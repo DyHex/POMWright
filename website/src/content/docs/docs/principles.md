@@ -25,10 +25,11 @@ a similar element elsewhere. See [Resolving locators](/POMWright/docs/resolving-
 
 ## Nothing changes behind your back
 
-A registered locator never changes after `add()`: the registry keeps copies of the objects you pass, and every
-resolution works on its own copy. A query (`getLocatorSchema(path)`) is a private copy of a path's chain, changed for
-one use. A seed from `createReusable` is a value: its methods return new seeds, as a Playwright `Locator`'s do. So code
-that tweaks a locator for one test cannot change it for the next. See [Queries](/POMWright/docs/queries/) and
+A registered locator never changes after `add()`: a registration ends with its chain, at the next call on the registry,
+the registry keeps copies of the objects you pass, and every resolution works on its own copy. A query
+(`getLocatorSchema(path)`) is a private copy of a path's chain, changed for one use. A seed from `createReusable` is a
+value: its methods return new seeds, as a Playwright `Locator`'s do. So code that tweaks a locator for one test cannot
+change it for the next. See [Queries](/POMWright/docs/queries/) and
 [Reusing locators](/POMWright/docs/reusing-locators/).
 
 ## Fail early, at fixture setup

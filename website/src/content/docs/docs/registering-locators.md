@@ -150,6 +150,29 @@ value, so rewriting yours afterwards with `compile()` changes nothing registered
 method of a `Locator` returns a new one, so the one you passed cannot change. This holds for `add`, `createReusable`
 and queries alike. To change a locator for one use, query it; see [Queries](/POMWright/docs/queries/).
 
+A registration itself ends at the next call on the registry: the next `add`, `getLocator`, `getNestedLocator`,
+`getLocatorSchema`, `verify`, or the resolution of a query. A registration kept in a variable takes its steps before
+then, as if they were chained; after that, a call of it throws and changes nothing:
+
+```ts
+import type { LocatorRegistry } from "pomwright";
+
+declare const registry: LocatorRegistry<"list" | "list.item">;
+// ---cut---
+const item = registry.add("list.item").getByRole("listitem");
+item.nth(0); // still part of the registration
+
+registry.add("list").locator("ul"); // ends the registration of list.item
+item.filter({ hasText: "Open" }); // throws; list.item stays getByRole('listitem').first()
+```
+
+```text
+filter() cannot apply to "list.item": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+```
+
+So nothing that reads the registry ever sees a registration change. In a page object, the check that runs after
+`defineLocators()` ends the last one.
+
 ## When locators are registered
 
 A page object registers its locators in `defineLocators()`, which runs once, right after the page object is

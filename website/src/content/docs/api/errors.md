@@ -66,6 +66,18 @@ string or RegExp where one is needed, or is an empty string where Playwright can
 `frameLocator`, `getByRole` and `getById`. `getByText("")`, `getByTestId("")` and the other text methods store the
 empty string, which Playwright matches. See [registering locators](/POMWright/docs/registering-locators/#the-first-argument).
 
+### A registration that has ended
+
+```text
+nth() cannot apply to "main.list.item": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+getByRole() cannot apply to "main.button@save": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+```
+
+A method of a registration kept in a variable, called after the registry was called again (the next `add`,
+`getLocator`, `getNestedLocator`, `getLocatorSchema`, `verify`, or the resolution of a query). Give the registration
+all its steps before that, in its chain; for a variation of one use, query the path. See
+[registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change).
+
 ### A step before the locator method
 
 ```text

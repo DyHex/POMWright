@@ -190,6 +190,26 @@ with an empty attribute. See [Registering locators](/POMWright/docs/registering-
 call the strategy first, `add("list.item").getByRole("listitem").nth(0)`. A seeded registration keeps its optional
 override as the first call. See [Registering locators](/POMWright/docs/registering-locators/).
 
+### A registration ends at the next call on the registry
+
+**Fails at run time.** In 2.x a registration kept in a variable could be given more steps at any time: after other
+registrations, after its path was resolved, from a page object's method in the middle of a test, and the registered
+locator changed with them. In 3.0.0 it ends at the next call on its registry (`add`, `getLocator`, `getNestedLocator`,
+`getLocatorSchema`, `verify`, or resolving a query), and a later step, locator method or seeded override of it throws:
+
+```text
+filter() cannot apply to "list.item": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+```
+
+Find the registrations kept in variables, and give each all its steps before the registry is called again; a step
+meant for one use becomes a query:
+
+```sh
+grep -rnE '((const|let) +\w+|this\.\w+) *= .*\badd\(' --include=*.ts .
+```
+
+See [Registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change).
+
 ### `remove` is `skip` and `unskip`
 
 **Compile error.** 2.x's `remove(subPath)` deleted a segment's definition, steps and description from the query, and a

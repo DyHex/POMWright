@@ -12,7 +12,8 @@ description when one was set. The default description, the path, is not stored: 
 resolved.
 
 A path is registered by its locator method, not by `add(path)`: the registration builder calls `register` when the
-locator method runs, and each later `filter`, `nth` or `describe` calls `replace` with the record so far. A registration
+locator method runs, and each later `filter`, `nth` or `describe` calls `replace` with the record so far, until the
+registration ends at the next call on the registry (see [builders](/POMWright/internal/builders/)). A registration
 that never reaches a locator method registers nothing. `register` checks the path rules and throws for a path that
 already has a record, printing the existing and the attempted record, with a Playwright `Locator` shown as Playwright
 prints it and a RegExp as its source and flags.

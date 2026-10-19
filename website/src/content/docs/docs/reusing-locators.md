@@ -95,7 +95,8 @@ The seed's strategy decides which method is offered: on a role seed, `locator(â€
 JavaScript it throws `The locator definition for "card.text" must use the "role" strategy when reusing a locator.` A
 second change throws too: `A locator definition for "card.title" was already provided from reuse; only one matching
 override is allowed.` When you keep the registration in a variable, the one change may come before or after its `filter`, `nth` and
-`describe` calls.
+`describe` calls, until the registry is called again (see
+[Registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change)).
 
 ## Seeds in modules
 

@@ -16,9 +16,13 @@ type, so TypeScript offers the right methods at each step:
 - after one, only `filter`, `nth` and `describe`: the locator method returns a small view object with those three,
   whose methods record a step and return the view again.
 
-The builder writes the registry on every call (the first call registers, later ones replace the record), so a
-registration is complete whenever the chain stops. From JavaScript, a step before a locator method or a second locator
-method throws, naming the path.
+The builder writes the registry on every call: the first call registers, later ones replace the record, so the record
+grows with the chain. A chain has no end the builder can see, so the registry ends it: it keeps the registration the
+latest `add` started and ends it at its next call (`add`, `getLocator`, `getNestedLocator`, `getLocatorSchema`,
+`verify`, or a resolution, a query's included). Every method of an ended registration checks that first and throws, so
+a registration kept in a variable cannot change its path once anything else has happened on the registry, and nothing
+that reads the registry sees a registration still changing. From JavaScript, a step before a locator method or a
+second locator method throws, naming the path.
 
 With `{ reuse: seed }` the builder starts from the seed's record and registers it at once. Its one optional call of the
 seed's own locator method patches the record as `update` does. Another strategy's method throws, and so does a second
