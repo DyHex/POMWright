@@ -47,7 +47,7 @@ Every page object has a `navigation` helper:
 | method | does |
 | --- | --- |
 | `goto(options?)` | `page.goto(fullUrl)`, then the page object's [actions after navigation](/POMWright/docs/page-objects/#actions-after-navigation) |
-| `goto(target, options?)` | `page.goto` to `target`, resolved against `baseUrl` exactly as Playwright resolves against `baseURL` (`goto("/account")`, `goto("?tab=2")`); never runs the actions |
+| `goto(target, options?)` | `page.goto` to `target`, resolved against `baseUrl` exactly as Playwright resolves against `baseURL` (`goto("/account")`, `goto("?tab=2")`), and an absolute URL as it is, on any domain (`goto("https://help.example/faq")`); never runs the actions |
 | `expectThisPage(options?)` | one `page.waitForURL` for this page's URL, then the actions |
 | `expectAnotherPage(options?)` | one `page.waitForURL` for any other URL, then a check that the browser did not come straight back |
 
@@ -61,6 +61,9 @@ test("the account link", async ({ loginPage }) => {
   await loginPage.navigation.goto("/account");
 });
 ```
+
+As with `page.goto`, a complete URL is used as it is, so `goto(target)` also leaves the page object's origin:
+`loginPage.navigation.goto("https://help.example/faq")` goes from `https://shop.example` to the help site.
 
 A page's identity is its exact URL: `/orders?tab=1` is not `/orders` for `expectThisPage`, and counts as another page
 for `expectAnotherPage`. When the URL is already right, `page.waitForURL` returns at once, after the requested load

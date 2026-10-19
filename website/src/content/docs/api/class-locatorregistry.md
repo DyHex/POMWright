@@ -107,9 +107,9 @@ reuse requires a registered path or a seed from createReusable for "main.list.it
 ### getLocator()
 
 Resolves the locator registered for a path alone: its locator and its own steps, without its ancestors, described by
-the path. Use it for chains you build yourself and for filters; act on elements with
-[`getNestedLocator()`](#getnestedlocator), whose chain keeps finding the right element when the page gains a similar
-one. See [resolving locators](/POMWright/docs/resolving-locators/#a-locator-without-its-ancestors-getlocator).
+the path. Use it for chains you build yourself, for filters and for every match on the page at once; act on one element
+with [`getNestedLocator()`](#getnestedlocator), whose chain keeps finding the right element when the page gains a
+similar one. See [resolving locators](/POMWright/docs/resolving-locators/#a-locator-without-its-ancestors-getlocator).
 
 **Usage**
 

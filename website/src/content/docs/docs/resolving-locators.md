@@ -1,6 +1,6 @@
 ---
 title: Resolving locators
-description: "How a path becomes a Playwright locator: getNestedLocator chains every registered segment, getLocator gives the path's own locator for chains you build yourself."
+description: "How a path becomes a Playwright locator: getNestedLocator chains every registered segment, getLocator gives the path's own locator, for chains you build yourself, filters and every match on the page."
 ---
 
 ## Introduction
@@ -15,7 +15,7 @@ There are two ways to resolve a path:
 | method | resolves | use it for |
 | --- | --- | --- |
 | `getNestedLocator(path)` | every registered segment of the path, first to last | every element you act on or assert |
-| `getLocator(path)` | the path's own locator, without its ancestors | a chain you build yourself, or a locator inside a filter |
+| `getLocator(path)` | the path's own locator, without its ancestors | a chain you build yourself, a locator inside a filter, every match on the page, etc. |
 
 Both are synchronous and lazy, like Playwright's own locator methods: they build a `Locator` and touch nothing in the
 browser until an action or assertion uses it.
@@ -82,6 +82,18 @@ instead of quietly finding a similar element elsewhere.
 In a page object the same method is `this.getNestedLocator(path)`; see [your first page
 object](/POMWright/docs/first-page-object/).
 
+### How much to chain
+
+A path does not need a segment for every element between the page and its target. Each registered segment is a
+condition the page must keep, so register the ones a user would recognise, such as a landmark, a form, a dialog or a
+table, and only as many as it takes to make the chain unique on the page. `main.form@login.button@login` registers
+`main`, the form and the button; the layout `div`s between them are not segments, so wrapping the form in another
+`div` changes nothing, while moving the button out of the form fails the test.
+
+A chain that copies the markup element by element fails on changes a user never notices. A chain with too few segments
+finds a similar element elsewhere. A segment you want in the path's name but not in the chain stays unregistered; see
+[segments without a locator](/POMWright/docs/resolving-locators/#segments-without-a-locator).
+
 ## A locator without its ancestors: `getLocator`
 
 `getLocator(path)` resolves only the locator registered for the path itself, with its own steps. It brings no context
@@ -105,10 +117,11 @@ await page.getByRole("dialog", { name: "Session expired" }).locator(submit).clic
 
 or as the inner locator of a filter, `page.getByRole("form").filter({ has: submit })`. A path given to
 `filter({ has })` is resolved the same way, automatically, because Playwright evaluates `has` inside the element being
-filtered; see [filters and indices](/POMWright/docs/filters-and-indices/).
+filtered; see [filters and indices](/POMWright/docs/filters-and-indices/). Because it searches the whole page, it is
+also the locator for every match on the page at once; see [several matches](/POMWright/docs/resolving-locators/#several-matches).
 
-On its own, for an element you act on, `getLocator` gives up what the chain provides. Here it matches all three "Log
-in" buttons, and an action fails with Playwright's strict mode error:
+To act on one element, resolve the chain instead. On its own, `getLocator` gives up the context the chain provides:
+here it matches all three "Log in" buttons, and an action fails with Playwright's strict mode error:
 
 ```text
 locator.click: Error: strict mode violation: getByRole('button', { name: 'Log in' }) resolved to 3 elements:
@@ -117,8 +130,89 @@ locator.click: Error: strict mode violation: getByRole('button', { name: 'Log in
     3) <button>Log in</button> aka getByRole('dialog', { name: 'Session expired' }).getByRole('button', { name: 'Log in' })
 ```
 
-Even where a path's own locator happens to be unique today, resolve the chain: when the page gains a similar element
-elsewhere, `getNestedLocator` still finds the one under its ancestors, and `getLocator` starts to fail.
+Resolve the chain even where a path's own locator is unique on the page today: when the page gains a similar element
+elsewhere, `getNestedLocator` keeps finding the one under its ancestors, and when the element moves out of them, the
+test fails instead of following it. Which moves count depends on the segments you register; see
+[how much to chain](/POMWright/docs/resolving-locators/#how-much-to-chain).
+
+## Several matches
+
+A locator that matches several elements is a Playwright locator like any other: assert on all of them, count them, or
+act on each with `nth`. Which method resolves it decides where the matches are counted.
+
+A path can be meant to match several elements: every row of a table, every order in a list. Name such a path in the
+plural, so that a test that uses it reads as acting on several elements, and give one of them a singular path of its
+own:
+
+```ts
+import type { LocatorRegistry } from "pomwright";
+
+declare const registry: LocatorRegistry<
+  "main" | "main.list@orders" | "main.list@orders.items" | "main.list@orders.item@first"
+>;
+// ---cut---
+registry.add("main").locator("main");
+registry.add("main.list@orders").getByRole("list", { name: "Orders" });
+registry.add("main.list@orders.items").getByRole("listitem");
+// locator('main').getByRole('list', { name: 'Orders' }).getByRole('listitem'): every order
+registry.add("main.list@orders.item@first", { reuse: "main.list@orders.items" }).nth("first");
+// locator('main').getByRole('list', { name: 'Orders' }).getByRole('listitem').first(): one order
+```
+
+The `item@first` path is there to show the naming. Usually you register only `main.list@orders.items` and pick one
+order where a test needs it: `getNestedLocator("main.list@orders.items").nth(0)`, or, to keep the path as the
+description in the report, a query, `getLocatorSchema("main.list@orders.items").nth(0).getNestedLocator()` (see
+[queries](/POMWright/docs/queries/)). A singular path of its own pays off when many tests use that one element.
+
+`getLocator(path)` matches the element wherever it is on the page, so it answers a question about the whole page, such
+as how many "Log in" buttons it has:
+
+```ts
+import { expect } from "@playwright/test";
+import type { LocatorRegistry } from "pomwright";
+import type { Paths } from "./login.locators";
+
+declare const registry: LocatorRegistry<Paths>;
+// ---cut---
+await expect(registry.getLocator("main.form@login.button@login")).toHaveCount(3);
+// the form's, the aside's and the dialog's; getNestedLocator matches only the form's
+```
+
+`getNestedLocator(path)` matches every element inside its ancestors. To fill in every row of one table, iterate over
+the chain, which leaves alone the same kind of input elsewhere on the page:
+
+```html
+<main>
+  <table aria-label="Cart">
+    <tr><td>Lamp</td><td><input aria-label="Quantity" /></td></tr>
+    <tr><td>Chair</td><td><input aria-label="Quantity" /></td></tr>
+    <tr><td>Desk</td><td><input aria-label="Quantity" /></td></tr>
+  </table>
+  <aside><label>Quantity <input /></label></aside>
+</main>
+```
+
+```ts
+import { expect } from "@playwright/test";
+import type { LocatorRegistry } from "pomwright";
+
+declare const registry: LocatorRegistry<"main" | "main.table@cart" | "main.table@cart.inputs@quantity">;
+// ---cut---
+registry.add("main").locator("main");
+registry.add("main.table@cart").getByRole("table", { name: "Cart" });
+registry.add("main.table@cart.inputs@quantity").getByLabel("Quantity");
+
+const quantities = ["1", "2", "5"];
+const quantityInputs = registry.getNestedLocator("main.table@cart.inputs@quantity");
+// locator('main').getByRole('table', { name: 'Cart' }).getByLabel('Quantity'): 3 inputs, the aside's is not one
+
+await expect(quantityInputs).toHaveCount(quantities.length);
+for (const [row, value] of quantities.entries()) {
+  await quantityInputs.nth(row).fill(value);
+}
+```
+
+`getLocator("main.table@cart.inputs@quantity")` would match all four inputs.
 
 ## Segments without a locator
 

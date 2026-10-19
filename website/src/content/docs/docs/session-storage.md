@@ -44,7 +44,7 @@ import { json, SessionStorage } from "pomwright";
 
 declare const page: Page;
 // ---cut---
-type User = { name: string; age: number };
+type User = { name: string; age: number; nickname?: string };
 
 const storage = new SessionStorage(page, {
   label: "Shop",
@@ -56,6 +56,10 @@ await storage.set({ user: { name: "Ada", age: 36 }, token: "abc" }); // user sto
 const user = await storage.get("user"); // User | null
 const token = await storage.get("token"); // string | null
 ```
+
+An optional property follows JSON: `{ name: "Ada", age: 36 }` is stored as `{"name":"Ada","age":36}`, without
+`nickname`, and read back without it; a property set to `undefined` is left out the same way. A required property
+stays required: a `user` without `name` does not compile.
 
 A key that is not declared must be a string, at compile time and at runtime. `T` in `json<T>()` is not checked
 against the parsed value, exactly like `JSON.parse(…) as T`. Some storage layers JSON-encode everything, strings

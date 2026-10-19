@@ -55,7 +55,9 @@ export class LoginPage extends PageObject<Paths> {
   navigation, see [URLs and navigation](/POMWright/docs/urls-and-navigation/#options-and-timeouts)), `sessionStorage`
   (the codecs of the session storage keys) and `locators` (`{ strictChains }`, see
   [Verifying a registry](/POMWright/docs/verifying-registries/#strictchains-every-ancestor-registered)).
-- `defineLocators()` registers the locators. It is the one method every page object implements.
+- `defineLocators()` registers the locators. It is the one method every page object implements. A site's base class
+  can implement it once, registering the locators every page shares before each page's own, and offer the methods that
+  use them; see [Locator modules](/POMWright/docs/locator-modules/#locators-every-page-shares-in-a-base-class).
 - The page object offers `add`, `getNestedLocator`, `getLocator` and `getLocatorSchema`, plus `page`, `baseUrl`,
   `urlPath`, `fullUrl`, `label`, `navigation` and `sessionStorage`; its registry is `this.locatorRegistry`.
 

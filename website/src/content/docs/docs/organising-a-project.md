@@ -56,7 +56,9 @@ export class AccountPage extends ShopPage<Paths> {
 `PageObjectOptions` is the type of the constructor's options, so the base class forwards them without restating their
 shape. The origin comes from the environment here; the constructor checks it, so a malformed value fails when the
 page object is constructed, naming the page object. A base class is also the place for options the whole site shares,
-such as `locators: { strictChains: true }` (see [Verifying a registry](/POMWright/docs/verifying-registries/)).
+such as `locators: { strictChains: true }` (see [Verifying a registry](/POMWright/docs/verifying-registries/)), and
+for the locators every page shares, with the methods that use them (see
+[Locator modules](/POMWright/docs/locator-modules/#locators-every-page-shares-in-a-base-class)).
 
 Some page objects of a site have a path that varies, a RegExp (see [URLs and navigation](/POMWright/docs/urls-and-navigation/)).
 A base class that allows that takes the options type as its second type parameter and keeps the origin a string:

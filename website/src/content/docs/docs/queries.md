@@ -11,10 +11,11 @@ returns a private copy of the path's chain, its segments with their definitions,
 the copy and resolve it; the registry stays as it is, and the next `getLocatorSchema` starts from the registry again.
 
 ```mermaid
-flowchart LR
-  registry[("registry")] -->|"getLocatorSchema(path): a copy"| query["query"]
-  query -->|"filter, nth, clearSteps, describe,<br/>update, replace, skip, unskip"| query
-  query -->|"getNestedLocator() or getLocator()"| locator["Playwright Locator"]
+flowchart TD
+  registry[("registry")] -->|"getLocatorSchema(path)"| query["query: a copy of the path's chain"]
+  query --> changes["filter, nth, clearSteps, describe,<br/>update, replace, skip, unskip"]
+  changes --> changes
+  changes -->|"getNestedLocator() or getLocator()"| locator["Playwright Locator"]
 ```
 
 The examples on this page use this registry:
@@ -142,6 +143,54 @@ registry.getLocatorSchema("main.list.item").replace("main.list").getByRole("list
 
 Neither `update` nor `replace` touches the segment's steps or its description: a step is something Playwright chains
 after the locator, whatever its strategy. Take them away with `clearSteps()` and `describe("")`.
+
+## Keeping a query
+
+A query is an object you can keep in a variable. Its methods change it, and every `getNestedLocator()` resolves it as
+it is at that moment, so one query can follow an element whose state the test changes. Here an "Add to wishlist"
+button reads "Remove from wishlist" once it has been clicked:
+
+```html
+<main>
+  <article aria-label="Desk lamp">
+    <h2>Desk lamp</h2>
+    <button>Add to wishlist</button>
+  </article>
+</main>
+```
+
+```ts
+import { expect } from "@playwright/test";
+import type { LocatorRegistry } from "pomwright";
+
+declare const registry: LocatorRegistry<"main" | "main.product@lamp" | "main.product@lamp.button@wishlist">;
+// ---cut---
+registry.add("main").locator("main");
+registry.add("main.product@lamp").getByRole("article", { name: "Desk lamp" });
+registry.add("main.product@lamp.button@wishlist").getByRole("button", { name: "Add to wishlist" });
+
+const wishlistButton = registry.getLocatorSchema("main.product@lamp.button@wishlist");
+await wishlistButton.getNestedLocator().click();
+
+wishlistButton.update().getByRole({ name: "Remove from wishlist" });
+// locator('main').getByRole('article', { name: 'Desk lamp' }).getByRole('button', { name: 'Remove from wishlist' })
+await expect(wishlistButton.getNestedLocator()).toBeVisible();
+await wishlistButton.getNestedLocator().click(); // the lamp leaves the wishlist again
+```
+
+One path and a query cover every state of the button, so the registry needs no path per state, such as
+`main.product@lamp.button@addToWishlist` and `main.product@lamp.button@removeFromWishlist`. Register those instead if
+you prefer a named path for each state.
+
+- `update()` changes `wishlistButton` itself, so its result needs no variable. It also returns the query, so
+  `wishlistButton.update().getByRole(…).getNestedLocator()` does the same in one line.
+- A `Locator` resolved before the change keeps the old name, as every Playwright locator keeps what it was built from:
+  resolve the query again after each change.
+- The registry does not change: `registry.getNestedLocator("main.product@lamp.button@wishlist")` still finds the "Add
+  to wishlist" button, and every new `getLocatorSchema` call starts from it.
+- A query does not end when the registry is called again, as a registration kept in a variable does (see
+  [Registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change)): keep it as long as
+  the test needs it.
 
 ## Leaving an ancestor out: `skip` and `unskip`
 

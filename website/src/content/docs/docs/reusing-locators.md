@@ -94,9 +94,26 @@ registry.add("card.anyHeading", { reuse: heading }).getByRole({ level: null });
 The seed's strategy decides which method is offered: on a role seed, `locator(…)` is a compile error, and from
 JavaScript it throws `The locator definition for "card.text" must use the "role" strategy when reusing a locator.` A
 second change throws too: `A locator definition for "card.title" was already provided from reuse; only one matching
-override is allowed.` When you keep the registration in a variable, the one change may come before or after its `filter`, `nth` and
+override is allowed.`
+
+When you keep the registration in a variable, the one change may come before or after its `filter`, `nth` and
 `describe` calls, until the registry is called again (see
-[Registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change)).
+[Registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change)). Its place makes no
+difference to the result: the change patches the seed's locator, and the steps always follow the locator, in the order
+they were given:
+
+```ts
+import type { LocatorRegistry } from "pomwright";
+
+declare const registry: LocatorRegistry<"card.title@first">;
+const heading = registry.createReusable.getByRole("heading", { level: 2 });
+// ---cut---
+const firstTitle = registry.add("card.title@first", { reuse: heading });
+firstTitle.filter({ hasText: "Summary" }).nth(0);
+firstTitle.getByRole({ name: "Summary" });
+// getByRole('heading', { name: 'Summary', level: 2 }).filter({ hasText: 'Summary' }).first(),
+// as getByRole({ name: "Summary" }).filter({ hasText: "Summary" }).nth(0) in one chain
+```
 
 ## Seeds in modules
 

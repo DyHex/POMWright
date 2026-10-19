@@ -83,8 +83,9 @@ or rewritten.
 and `all()` work as usual. It finds elements in open shadow roots, not in closed ones, and inside a frame only when its
 path runs through a [frame segment](/POMWright/docs/frames/).
 
-A page in quirks mode (no doctype) matches `#SETTINGS` to `id="settings"`; `getById("SETTINGS")` does not, in any
-document mode.
+A CSS id selector is case-insensitive in quirks mode (a page without a doctype), so there `#SETTINGS` matches
+`id="settings"`. `getById` is case-sensitive in every document mode: `getById("settings")` matches `id="settings"`,
+and `getById("SETTINGS")` does not.
 
 ## Reference
 

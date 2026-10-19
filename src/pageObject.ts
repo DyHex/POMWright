@@ -188,7 +188,7 @@ export abstract class PageObject<
 	public readonly add: AddAccessor<LocatorSchemaPathType>;
 	/**
 	 * Resolves the locator registered for a path alone, with its own steps and without its ancestors: for chains you
-	 * build yourself and for filters. Act on elements with `getNestedLocator`.
+	 * build yourself, for filters and for every match on the page at once. Act on one element with `getNestedLocator`.
 	 */
 	public readonly getLocator: GetLocatorAccessor<LocatorSchemaPathType>;
 	/**

@@ -12,7 +12,7 @@ POMWright registers a frame as a path segment: `frameLocator(selector)` is the `
 it resolve inside the frame.
 
 ```mermaid
-flowchart LR
+flowchart TD
   section["checkout.section@payment<br/>getByRole('region', { name: 'Payment' })"] -->|inside| iframe["checkout.section@payment.frame<br/>locator('iframe'), the iframe element"]
   iframe -->|"contentFrame()"| field["checkout.section@payment.frame.cardNumber<br/>getByLabel('Card number')"]
 ```

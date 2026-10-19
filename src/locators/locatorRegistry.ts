@@ -510,8 +510,9 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 
 	/**
 	 * Resolves the locator registered for a path alone: its locator and its own steps, without its ancestors, described
-	 * by the path. For chains you build yourself and for filters (`filter({ has: registry.getLocator(path) })`); act on
-	 * elements with `getNestedLocator`, whose chain keeps finding the right element when the page gains a similar one.
+	 * by the path. For chains you build yourself, for filters (`filter({ has: registry.getLocator(path) })`) and for every
+	 * match on the page at once; act on one element with `getNestedLocator`, whose chain keeps finding the right element
+	 * when the page gains a similar one.
 	 *
 	 * @param path A registered path.
 	 * @returns A Playwright `Locator`.

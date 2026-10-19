@@ -53,8 +53,8 @@ type Paths =
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.add("main").locator("main");
-registry.add("main.section@orders.heading").getByRole("heading", { name: "Orders" });
 registry.add("main.section@orders").locator("section").filter({ has: "main.section@orders.heading" });
+registry.add("main.section@orders.heading").getByRole("heading", { name: "Orders" });
 registry.add("main.section@orders.item@open").getByRole("listitem").filter({ hasText: "Open" });
 
 registry.getNestedLocator("main.section@orders.item@open");
