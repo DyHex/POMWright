@@ -236,7 +236,9 @@ timeout and prints a real diff. Use the negated form for `expectAnotherPage`.
 > per-key codecs declared once for structured values; (b) `setOnNextNavigation` is replaced by `seed`, which answers
 > the next main-frame navigation to the origin with a document that stores the entries before the app's first script,
 > for `goto`, links, script and meta redirects, form POSTs and server redirects (seen through a proxy active only while
-> a seed is pending); `addInitScript` was rejected because it cannot be removed and overwrites what the app wrote;
+> a seed is pending); `addInitScript` was rejected because it cannot be removed and overwrites what the app wrote
+> (outdated since Playwright 1.59: plan 15 rebuilt `seed` on `addInitScript` on 2026-10-19, written only on the first
+> arrival at the origin and disposed at the commit, with no route or proxy);
 > (c) seeds merge per origin in one registry per page; (d) nothing is queued or left registered once a seed is
 > applied, a bypassed or never-applied seed fails the test; (e) a literal `[]` is a compile-time error and a computed
 > empty list means no keys; (f) `""` reads back as `""`; (g) `waitForContext` is gone, a page without an origin
@@ -832,7 +834,8 @@ property (that `add` clones the seed). Either return a new builder per call or d
   rewritten around strings-by-default and per-key codecs.
 - [x] [L66](../docs/v2/session-storage.md#L66) accurate but contradicts the method's implied use; add the
   `addInitScript` alternative. Closed 2026-10-10: `setOnNextNavigation` is replaced by `seed`, and `addInitScript` is
-  documented as rejected (it cannot be removed and overwrites what the app wrote).
+  documented as rejected (it cannot be removed and overwrites what the app wrote). Since plan 15 (2026-10-19), `seed`
+  is built on `addInitScript`, removed through its `Disposable` and written only on the first arrival.
 
 ### docs/v2/logging.md
 

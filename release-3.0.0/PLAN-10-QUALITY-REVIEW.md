@@ -1,5 +1,8 @@
 # Plan 10: quality review of the 3.0.0 code
 
+> R5 and R22 (the URL fragment and WebKit's early `goto` through `seed`) fixed the route design that
+> [plan 15](PLAN-15-SEED-INIT-SCRIPT.md) replaced on 2026-10-19; a native navigation keeps both.
+
 Working document, kept in `release-3.0.0/` beside the plans it follows. Plan 10 is an objective review of POMWright as it
 stands on `chore/bugfixes-quality-improvements-and-docs`, the code that will ship as 3.0.0, with fresh eyes: missing
 items, new bugs (including interactions between plans 1 to 9), unintended behaviour, inconsistencies, things that should

@@ -7,7 +7,7 @@
 > decision number from the plan is given. When 3.0.0 ships, drop the markers and this note; what remains is the basis
 > for the changelog entry and the announcement.
 >
-> Last updated 2026-10-17. Plans covered: 1.1-1.2 (getById), executed and committed on
+> Last updated 2026-10-19. Plans covered: 1.1-1.2 (getById), executed and committed on
 > `chore/bugfixes-quality-improvements-and-docs` (commits e709d0c to 735066b); 1.3-1.4 (URL composition and
 > navigation), executed and committed on the same branch on 2026-10-08 (commits bc8d980 to 4682146); 1.5 (session
 > storage), executed and committed on the same branch on 2026-10-10 (commits a05e8fd to ab76175); 1.6-1.8
@@ -26,7 +26,9 @@
 > (commits 801e4ac to 449ea50 and the ledger commit bc4d850), and 12 (the doc comments, the API and Internal sections,
 > the API coverage check, `docs/v3` removed) on 2026-10-17 (commits f17d184 to 3118c0d and the ledger commit 67ec030),
 > and 13 (the site, its CI job and deployment, the README) on 2026-10-17 (commits c84ddd4 to 84a550f and the ledger
-> commit); its pre-merge step C8 is pending.
+> commit); its pre-merge step C8 is pending. 14 (dependencies) executed on 2026-10-19. 15 (`seed` on `addInitScript`),
+> executed and committed on the same branch on 2026-10-19 (commits 7ad64e2 to 0724ec7 and the ledger commit), see
+> [PLAN-15-SEED-INIT-SCRIPT.md](PLAN-15-SEED-INIT-SCRIPT.md).
 
 ## Overview
 
@@ -122,21 +124,21 @@ titles, origin checks, typed values, and seeding before the app loads.
 - `get(keys)` returns every requested key with `null` when absent; `get()` returns the present entries. A literal
   `get([])` or `clear([])` no longer compiles; a computed empty list reads nothing or removes nothing (2.x read or
   cleared everything).
-- `setOnNextNavigation` is replaced by `seed(entries, { origin? })`. It intercepts the next navigation to the origin,
-  whether by `goto`, a link, a script redirect, a form POST or a server redirect, and stores the entries in the
-  browser before the app's document exists, so the app's first script sees them. It never leaves the page the test
-  is on, so an origin can be seeded with data learned on the previous one. Already on the origin, it writes at once.
-  While a seed is pending, and only then, navigations to other origins pass through Playwright so that server
-  redirects can be seen; nothing is registered on a page that never seeds. A seed that is still pending when the
-  page closes fails the test; two page objects seeding the same origin merge. Whole-page navigation mocks must be
-  registered after `seed`; API mocks are unaffected.
+- `setOnNextNavigation` is replaced by `seed(entries, { origin? })`. Away from the origin, it adds an init script
+  that stores the entries when the page's main frame first arrives at the origin, by any navigation (`goto`, a link,
+  a script, a form POST of any encoding, a server redirect, a page a service worker or a mock serves), before the
+  app's first script runs, and removes it once that document has run it, so a reload never overwrites what the app
+  wrote. Navigations are never intercepted: the app sees the same request, headers, history entry and navigation
+  type as without a seed, and `page.goto` returns the app's response. It never leaves the page the test is on, so an
+  origin can be seeded with data learned on the previous one. Already on the origin, it writes at once. Nothing is
+  registered on a page that never seeds; two page objects seeding the same origin merge. A seed that is still pending
+  when the page closes fails the test, as does a write the browser refuses; `seed` itself throws in a browser without
+  the Navigation API and when the page commits a document on the origin while it registers. (Rebuilt on
+  `addInitScript` by plan 15, replacing plan 1.5's interception.) **[done, plan 15]**
 - `waitForContext` is removed: an operation on a page without an origin fails at once with a message naming the
   fix. `reload` is removed: call `page.reload()`.
 - A page object's helper operates on that page object's origin and throws, naming both origins, when the page is on
   another one. A standalone helper without an origin operates on the current origin; its `seed` needs `{ origin }`.
-- Service workers: a worker registered by the app that answers navigations also answers a pending seed, and
-  Playwright's routes cannot see it. The test then fails at once with a message naming the fixes: `serviceWorkers:
-  "block"`, seeding before the app's first load in the context, or unregistering the worker in the test.
 
 ### Steps on frame segments apply, and `frameLocator()` is Playwright's any-frame locator **[done, plan 1.6-1.8]**
 
@@ -426,12 +428,6 @@ abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
 - A `baseUrl` or `urlPath` that is neither a string nor a RegExp, such as an unset environment variable, throws at
   construction (`LoginPage: baseUrl must be a string or a RegExp; received undefined.`) instead of building a page
   object that never matches, passes `expectAnotherPage` and gives its storage no origin. **[done, plan 10]**
-- A seeded navigation keeps the URL fragment (`#/orders/7`, `#access_token=…`), directly and through a server
-  redirect; it was dropped, so a hash-routed app opened on the wrong route and a login callback that receives its token
-  in the fragment lost it. **[done, plan 10]**
-- On WebKit, `page.goto()` to an origin with a pending `seed` no longer returns before the app's document has loaded, so
-  `page.url()`, `page.title()` or `page.evaluate()` right after it read the app, as on chromium and firefox.
-  **[done, plan 10]**
 - A hand-made seed object is checked as every builder is: a missing or empty first argument throws at `add` (`reuse
   requires a selector value for "<path>".`). **[done, plan 10]**
 - `replace(sub).frameLocator()` throws at the call on a segment that has steps in the query (naming `clearSteps`) and on
@@ -499,7 +495,10 @@ abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
   origin, a COOP variant and a service worker; `testStorage` and `testStorageSecond` page objects; a
   `sessionStorage.spec.ts` covering codecs, every method form, the no-origin and wrong-origin errors, seeding by
   `goto`, link and form POST, multi-origin chains, COOP, and the service-worker cases; unit tests for the pure
-  parts and the type contract. The spec passes on Firefox and WebKit as well. **[done, plan 1.5]**
+  parts and the type contract. The spec passes on Firefox and WebKit as well. **[done, plan 1.5]** Since plan 15
+  every hop, multipart and `text/plain` POSTs included, is compared with the same hop without a seed; the app's own
+  writes, `waitUntil: "commit"`, an arrival by `goBack`, a 204, a download, a browser without the Navigation API and a
+  refused write are covered; the fixture's service-worker page, whose script never ran, works. **[done, plan 15]**
 - The harness pins `@playwright/test` 1.64.0; the three `toString` expectations that 1.64 renders as `.visible()`
   follow, and the sticky `y` flag is asserted against DOM. **[done, plan 1.6-1.8]**
 - `/iframe` gains a hidden iframe section and the iframe page object gains stepped, hidden and any-frame paths;

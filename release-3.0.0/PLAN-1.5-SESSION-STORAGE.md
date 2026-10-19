@@ -1,5 +1,8 @@
 # Plan: `SessionStorage` on Playwright's WebStorage API (analysis item 1.5)
 
+> The `seed` mechanism of this plan (the route, the writer and redirect documents, the proxy) is superseded by
+> [plan 15](PLAN-15-SEED-INIT-SCRIPT.md), executed 2026-10-19: `seed` is an init script removed at the commit.
+
 Working document, kept in `release-3.0.0/` beside the analysis it answers (item 1.5 and the `session-storage.md`
 bullets of section 5). File links are relative to this folder. Written 2026-10-08; reviewed and redesigned on
 2026-10-09 (deferred `seed`, per-key codecs, single-key forms, origin guard, service-worker handling) and

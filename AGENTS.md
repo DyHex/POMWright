@@ -1,14 +1,14 @@
 # AGENTS.md
 
 Persistent context and working rules for AI agents and humans contributing to POMWright. Read it fully before
-changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-17, after plan 13, Part C of
-the documentation redo (the site, its CI job and deployment, the README), was executed; its pre-merge step C8 is pending.
+changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-19, after plan 15 (`seed` on
+`addInitScript`) was executed; plan 13's pre-merge step C8, now its own plan, is pending.
 
 ## 1. What POMWright is
 
 - A TypeScript companion library for `@playwright/test`, published to npm as `pomwright` under Apache-2.0. Peer
-  range `@playwright/test >=1.64.0 <2.0.0` (1.61 added `page.sessionStorage`, 1.63 the any-frame `frameLocator()`,
-  1.64 the per-element regex reset that makes every RegExp flag deterministic). Playwright is never a runtime
+  range `@playwright/test >=1.64.0 <2.0.0` (1.59 made `addInitScript` return a `Disposable`, 1.61 added
+  `page.sessionStorage`, 1.63 the any-frame `frameLocator()`, 1.64 the per-element regex reset that makes every RegExp flag deterministic). Playwright is never a runtime
   dependency. Node 20 or later (`engines`), Playwright's own floor; re-read it from Playwright's `engines` whenever
   the peer floor moves.
 - Packaging mirrors `@playwright/test`: one CommonJS build (`dist/index.js`, `dist/index.d.ts`) behind an `exports`
@@ -35,7 +35,7 @@ the documentation redo (the site, its CI job and deployment, the README), was ex
 | `index.ts` | Package entry. tsup bundles the CommonJS build from here; `scripts/write-esm-entry.mjs` then writes the ESM entry. | yes |
 | `src/` | Runtime: 17 files, about 4,600 lines, plus colocated vitest unit tests (`**/*.test.ts`: `pageObject.test.ts`, `locators/utils.test.ts`, `locators/locatorRegistry.test.ts`, `locators/locatorRegistrationBuilder.test.ts`, `locators/locatorUpdateBuilder.test.ts`, `locators/locatorQueryBuilder.test.ts`, `locators/reusableLocatorBuilder.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`, `helpers/sessionStorage.test.ts`, `helpers/sessionStorageSeed.test.ts`, `helpers/callSite.test.ts`, `helpers/playwrightReportLogger.test.ts`, `helpers/stepDecorator.test.ts`, `helpers/stepLocations.test.ts`), the type-only `helpers/stepDecorator.test-d.ts` (decorator syntax, which vitest's runtime cannot load), and `locators/fakePage.ts`, test support only: a page whose locators record the chain they were built from, never imported by the runtime and so never bundled. | yes |
 | `src/locators/` | `locatorRegistry.ts` (registry, resolution with frames as `locator` plus `contentFrame()` and the any-frame segment, cycle detection, `verify()` with the opt-in `strictChains`, reuse by path and by seed through one seeded builder), `locatorRegistrationBuilder.ts` (`add(path).getByRole(...)` DSL, seeded registrations with `update`'s argument shapes, the boundary checks, no steps on an any-frame definition), `locatorUpdateBuilder.ts` (`update` as a same-strategy JSON Merge Patch, `replace` with Playwright's argument lists through a `Mode` type parameter; the class `LocatorUpdateBuilderInternal`, the public alias `LocatorUpdateBuilder`), `locatorQueryBuilder.ts` (`getLocatorSchema(path)` chain: `filter`, `nth`, `clearSteps`, `skip`/`unskip`, `describe`, `update`, `replace`, `getLocator`, `getNestedLocator`; the class `LocatorQueryBuilderInternal`, the public alias `LocatorQueryBuilder`), `reusableLocatorBuilder.ts` (`createReusable`; a seed is a value whose methods return new seeds), `types.ts` (definitions, `ReusableLocator`, `FilterDefinition`, `IndexSelector`, `OptionsPatch`, compile-time path validation), `utils.ts` (the `STRATEGIES` table, one row per strategy, that creation, cloning, the seeded patch, `update` and `replace` read; path validation with `LOCATOR_SCHEMA_PATH_WHITESPACE`, `assertStrategyPrimary` over `assertPrimaryValue` and `assertIdValue`, `assertDescription`, the id selector helpers, `createLocator`, `applyIndexSelector`, `isAnyFrameDefinition`, `isLocatorInstance`, `isReusableLocator`, `methodForStrategy`, `mergeOptions`, cloning and copying (`copyFilter`, `normalizeSteps`), patching). | yes |
-| `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts` (`SessionStorage`: `page.sessionStorage` with batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `seed`), `sessionStorageSeed.ts` (the seed registry, one per page: the writer and redirect documents, the proxy while a seed is pending, the bypass and never-applied failures), `callSite.ts` (`captureCallSite(boundary)` and `atCallSite`: a later error pointed at the consumer's call, for `seed` and the page-object check), `playwrightReportLogger.ts` (messages kept as given, other arguments as `console.log` prints them, one attachment per entry in call order, names in Playwright's `locale` and `timezoneId`), `stepDecorator.ts` (`@step`, for methods that return a Promise). | yes |
+| `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts` (`SessionStorage`: `page.sessionStorage` with batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `seed`), `sessionStorageSeed.ts` (the seed registry, one per page: an init script per pending origin that writes only in the main frame, on the origin, on the first arrival, disposed at the main frame's commit there; the Navigation API check, the commit-during-registration check, the refused-write and never-applied failures), `callSite.ts` (`captureCallSite(boundary)` and `atCallSite`: a later error pointed at the consumer's call, for `seed` and the page-object check), `playwrightReportLogger.ts` (messages kept as given, other arguments as `console.log` prints them, one attachment per entry in call order, names in Playwright's `locale` and `timezoneId`), `stepDecorator.ts` (`@step`, for methods that return a Promise). | yes |
 | `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject` (constructor options `label`, `navOptions`, `sessionStorage`, `locators: { strictChains }`): `defineLocators()` and `verify()` run once, right after construction (a check scheduled with `queueMicrotask`) or at the first locator call, through a facade on `locatorRegistry`; labelled, sticky errors with the construction site; the optional actions hook, evaluated per run. The `test` fixture that provides `log`. | yes |
 | `test/` | Standalone pnpm project that installs the packed package from `.pack/pomwright` and runs Playwright against it. Section 4. | yes |
 | `website/` | The documentation site's content (section 9): `src/content/docs/docs/`, the Docs section (24 pages: Getting started, Principles, one page per concept, *Upgrading from 2.x*); `src/content/docs/api/`, the API reference (14 pages, one per class or group, `errors` and the index); `src/content/docs/internal/`, how POMWright works (12 pages); `snippets/`, the docs' example app (`login.page.ts`, `fixtures.ts`) that every page's examples import. Around them the Starlight site, a pnpm project of its own (`package.json`, `pnpm-lock.yaml`, exact versions): `astro.config.mjs` (base `/POMWright`, the link check, Mermaid, the pre-release banner and `noindex` until C8), `sidebar.mjs` (the three sections), `plugins/expressive-code-cut.mjs` (hides an example's `// ---cut---` prelude), `src/components/` (`SiteTitle.astro`, the sections as tabs; `Banner.astro`, pre-release), `src/styles/custom.css`, `src/content/docs/index.mdx` (the home page). | yes |
@@ -120,10 +120,12 @@ the documentation redo (the site, its CI job and deployment, the README), was ex
   hidden iframe section), `/testids` (ids that are valid HTML but awkward as CSS selectors, and one empty
   `data-testid`), `/testnav` (with `/testnav/item/:id` and `/testnav/bounce`,
   the navigation fixture: query, hash, trailing slash, delayed and bouncing navigations), and `/teststorage` (GET and
-  POST, with `/teststorage/frame`, `/redirect`, `/chain`, `/login`, `/login307`, `/login308`, `/api`, `/sw.js` and
-  `/sw-passthrough.js`: the session storage fixture, whose first script snapshots `sessionStorage`; hops to the
-  second origin `http://127.0.0.1:9000`, the same server, by every kind of navigation; iframes, COOP and COEP flags,
-  and two service workers). New fixture pages go in as new routes, not into the static page.
+  POST, urlencoded, multipart or `text/plain`, with `/teststorage/frame` (`?nested=1` adds `srcdoc`, `about:blank` and
+  `data:` frames), `/redirect`, `/chain`, `/login`, `/login307`, `/login308`, `/api`, `/race` (an app that writes and
+  leaves at once), `/bounce`, `/204`, `/download`, `/sw.js` and `/sw-passthrough.js`: the session storage fixture,
+  whose first script snapshots `sessionStorage` and which shows the navigation's type and `document.referrer`; hops to
+  the second origin `http://127.0.0.1:9000`, the same server, by every kind of navigation; iframes, COOP and COEP
+  flags, and two service workers). New fixture pages go in as new routes, not into the static page.
 - Page objects live under `page-object-models/testApp/pages/<name>/` as `<name>.locatorSchema.ts` plus
   `<name>.page.ts`, all extending `testApp.base.ts` (which carries a storage schema through its options type);
   `teststorage/` also has `teststorage-second.page.ts`, a `PageObject` on the second origin. `fixtures/testApp.fixtures.ts`
@@ -227,13 +229,16 @@ the documentation redo (the site, its CI job and deployment, the README), was ex
   actions run. A standalone registry calls `verify()` itself. Never move either hook back into the constructor.
 - Session storage mirrors `page.sessionStorage`: values are strings stored verbatim unless a codec is declared for the
   key (`json<T>()`, `Codec<T>`), `get` returns `null` for a missing key, a literal `[]` does not compile, and a helper
-  with an origin touches only that origin. `seed` never navigates itself: it registers one route and two listeners on
-  the page only while a seed is pending and removes them once the writer document has committed and issued its
-  replace; a bypassed, unsupported or never-applied seed fails the test with the `seed` call site in the stack. The
-  continuation keeps the navigation's URL fragment (a target's own fragment wins), and the writer document moves to
-  `/.pomwright-seed-continue` with `history.replaceState` before its replace: from its own URL a replace with a fragment
-  only scrolls, and WebKit's `goto` would not wait for one without. Never reintroduce `addInitScript`, JSON-encoding
-  every value, or a write from a `framenavigated` listener.
+  with an origin touches only that origin. `seed` never navigates and never intercepts a navigation: away from the
+  origin it adds one `page.addInitScript` per pending origin, which writes only in the main frame, on the origin, on the
+  first arrival there (`navigation.activation.from` is `null`, so a reload or a hop within the origin keeps what the
+  app wrote), and disposes of it when the main frame commits on the origin. Its four listeners (`framenavigated`,
+  `domcontentloaded`, `console`, `close`) exist only while a seed is pending or an applied document may still report a
+  refused write, until that document's `domcontentloaded` or the next commit. `seed` throws at the call in a browser
+  without the Navigation API (checked once per page) and when the main frame commits on the origin while the script is
+  registering; a refused write and a never-applied seed fail the test with the `seed` call site in the stack. Never
+  reintroduce JSON-encoding every value, or a write from a `framenavigated` listener (it loses the race against the
+  app's first script).
 - URLs mirror Playwright's `baseURL` handling with one base per page object: each part is a string or a RegExp, a
   string `baseUrl` is a non-empty origin and a string `urlPath` is `""` or a single-slash path, all validated at
   construction; two strings resolve with `new URL`, and a string path is compared in the form `new URL` gives it (as
@@ -256,7 +261,7 @@ deletes it from the repository.
 | File | Role |
 | --- | --- |
 | `POMWRIGHT-2.1.0-ANALYSIS.md` | Source-verified findings numbered 1.1 to 1.10, 2, 3.1 to 3.8, 4, 5. Each has `Fix / Skip / Discuss` boxes and a `Notes:` block. Section 6 is the working order. |
-| `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` (executed 2026-10-06), `PLAN-1.3-1.4-URL-NAVIGATION.md` (executed 2026-10-08), `PLAN-1.5-SESSION-STORAGE.md` (executed 2026-10-10), `PLAN-1.6-1.8-REGISTRATION-AND-FRAMES.md` (executed 2026-10-13), `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md` (executed 2026-10-13), `PLAN-4-PACKAGING-TOOLING-CI.md` (executed 2026-10-14), `PLAN-1.9-TYPES-AND-EXPORTS.md` (executed 2026-10-14), `PLAN-1.10-2-SMALL-FIXES.md` (executed 2026-10-15), `PLAN-3-STRUCTURE.md` (executed 2026-10-16), `PLAN-10-QUALITY-REVIEW.md` (plan 10, the quality review, executed 2026-10-16) and `PLAN-5-DOCS.md` Parts A, B and C (plan 11, the Docs section, executed 2026-10-16; plan 12, the doc comments, the API and Internal sections, and plan 13, the site, CI, deployment and the README, executed 2026-10-17) are done, one commit per execution step each. What remains is plan 13's pre-merge step C8 (section 9), run when the user says the branch is ready for `main`. |
+| `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` (executed 2026-10-06), `PLAN-1.3-1.4-URL-NAVIGATION.md` (executed 2026-10-08), `PLAN-1.5-SESSION-STORAGE.md` (executed 2026-10-10), `PLAN-1.6-1.8-REGISTRATION-AND-FRAMES.md` (executed 2026-10-13), `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md` (executed 2026-10-13), `PLAN-4-PACKAGING-TOOLING-CI.md` (executed 2026-10-14), `PLAN-1.9-TYPES-AND-EXPORTS.md` (executed 2026-10-14), `PLAN-1.10-2-SMALL-FIXES.md` (executed 2026-10-15), `PLAN-3-STRUCTURE.md` (executed 2026-10-16), `PLAN-10-QUALITY-REVIEW.md` (plan 10, the quality review, executed 2026-10-16) and `PLAN-5-DOCS.md` Parts A, B and C (plan 11, the Docs section, executed 2026-10-16; plan 12, the doc comments, the API and Internal sections, and plan 13, the site, CI, deployment and the README, executed 2026-10-17), `PLAN-14-DEPENDENCIES.md` (executed 2026-10-19) and `PLAN-15-SEED-INIT-SCRIPT.md` (`seed` on `addInitScript`, executed 2026-10-19) are done, one commit per execution step each. What remains is plan 13's pre-merge step C8 (section 9), now `PLAN-PRE-MERGE.md`, run when the user says the branch is ready for `main`. |
 | `PLANS.md` | The ordered list of remaining plans with the analysis items each covers and its status. Updated when a plan is written, split, or executed. |
 | `RELEASE-NOTES-3.0.0.md` | Consumer-facing notes. Only what is done or committed to by a plan in this folder, each item with a status marker. Never a copy of the analysis. |
 | `DECISIONS.md` | Current decisions across all plans, big and small, with date and reason. A reversed decision is replaced, not kept; git history has the rest. Open questions at the bottom. |
@@ -324,8 +329,9 @@ Rules:
   `remove()` that deletes a segment's definition, steps or description, `@step` on methods that do not return a
   Promise, a hard-coded log locale or sorted log entries, JSON re-formatting of log messages, a seed method that
   changes the seed, a `void` path reuse, a `null` stored as a primary or as a seeded option key, steps on an
-  any-frame definition, a seed continuation without the navigation's fragment, a `location.replace` from the
-  writer document's own URL, or a navigation or session storage step without `box: true`.
+  any-frame definition, or a navigation or session storage step without `box: true`.
+- Give `seed` a route, a proxy or a document of POMWright's own, a script without the first-arrival check, or a binding
+  exposed to the app's page (section 5).
 - Add a per-strategy `switch` outside the `STRATEGIES` table, or make `strictChains` the default (section 5).
 - Keep a reference to an object a caller passed to a builder, or filter stack frames by file name (section 5).
 - Re-export a class as a public type, return `this` from a public builder step, or hide internals with `@internal`
