@@ -39,7 +39,7 @@ Guide: [test steps](/POMWright/docs/test-steps/).
 import { step } from "pomwright";
 
 export class Checkout {
-  @step
+  @step()
   async open() {} // "Checkout.open"
 
   @step("Pay with the test card")
@@ -63,7 +63,7 @@ export class Checkout {
 
   `test.step()`'s options, such as `box` (report the step at the line that called the method) and `timeout`.
 
-`@step` without parentheses takes neither.
+`@step` also works without parentheses, and then takes neither.
 
 ## Returns
 
@@ -72,4 +72,12 @@ export class Checkout {
 
 ```text
 @step decorates methods that return a Promise: make the method async
+```
+
+## Throws
+
+From JavaScript, on something that is not a method:
+
+```text
+@step decorator can only be applied to methods.
 ```

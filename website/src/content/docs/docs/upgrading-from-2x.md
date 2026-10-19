@@ -268,8 +268,8 @@ mistyped `has` or `hasNot` path, a cycle, or an any-frame segment in the wrong p
 failing path named, instead of failing the first action that used it:
 
 ```text
-LoginPage: Locator registry verification failed for 1 of 2 paths:
-  "list.item": No locator schema registered for path "list.titel".
+LoginPage: Locator registry verification failed for 1 of 5 paths:
+  "main.form@login.button@submit": No locator schema registered for path "main.form@login.title".
 ```
 
 Fix the reference. A standalone registry from `createRegistryWithAccessors` calls `registry.verify()` itself. See

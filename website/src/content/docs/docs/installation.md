@@ -6,9 +6,10 @@ description: "Install POMWright beside Playwright Test: the versions it needs, h
 ## Introduction
 
 POMWright is a library for [Playwright Test](https://playwright.dev/docs/intro). It adds what Playwright leaves to you
-when a suite grows: page objects whose locators are registered once per path and chained for you, a session storage
-helper, a logger that attaches to the report, and a decorator for test steps. It has no runner, no assertions and no
-browser handling of its own; your tests stay Playwright tests.
+when a suite grows: page objects whose locators are registered once per path and chained for you, with a base URL
+and a navigation helper of their own or from a base class, so one Playwright project can test several origins; a session
+storage helper; a logger that attaches to the report; and a decorator for test steps. It has no runner, no assertions
+and no browser handling of its own; your tests stay Playwright tests.
 
 **You will learn**
 
@@ -19,7 +20,7 @@ browser handling of its own; your tests stay Playwright tests.
 ## Requirements
 
 - **Node.js 20** or later, the version Playwright itself needs.
-- **`@playwright/test` 1.64** or later, below 2.0. POMWright declares it as a peer dependency: your project installs
+- **`"@playwright/test": ">=1.64.0 <2.0.0"`**. POMWright declares it as a peer dependency: your project installs
   Playwright, and POMWright uses that copy.
 - **TypeScript** is what these docs use. POMWright also works from JavaScript; every rule its types state is also
   checked at runtime.
@@ -49,15 +50,19 @@ holds two copies of POMWright, even when some files `import` it and others `requ
 
 ## TypeScript settings
 
-Playwright compiles your TypeScript itself ([TypeScript](https://playwright.dev/docs/test-typescript)), and POMWright
-needs no setting of its own. A few settings meet POMWright's code:
+POMWright needs no `tsconfig.json` setting: with TypeScript's defaults everything in these docs compiles, and
+Playwright compiles your TypeScript itself ([TypeScript](https://playwright.dev/docs/test-typescript)). Three settings
+change how code that uses POMWright is checked. None is required, and each only matters when you turn it on:
 
-- **Decorators.** [`@step`](/POMWright/docs/test-steps/) works with TypeScript's standard decorators, the default, and
-  with `experimentalDecorators: true`, in your editor and in Playwright's runner.
-- **`noImplicitOverride`.** With it, a page object's `pageActionsToPerformAfterNavigation()` needs the `override`
-  keyword, as any overridden method does.
-- **`declaration: true`.** A project that publishes its page objects as a package can name every type POMWright hands
-  out; see [TypeScript](/POMWright/docs/typescript/).
+- **Decorators.** Nothing to enable. [`@step`](/POMWright/docs/test-steps/) works with TypeScript's standard
+  decorators, the default, and with `experimentalDecorators: true`, in your editor and in Playwright's runner. Use
+  whichever your project already does.
+- **`noImplicitOverride`.** Off by default. When it is on, TypeScript requires the `override` keyword on a page object's
+  `pageActionsToPerformAfterNavigation()`, as on any method that replaces one from a base class, and reports TS4114
+  without it. With the setting off, the keyword is allowed but not needed. `defineLocators()` never needs it.
+- **`declaration: true`.** Off by default, and only needed by a project that publishes its page objects as a package.
+  When it is on, every exported value's type must be nameable. POMWright's types are, except in one pattern; see
+  [Locator modules](/POMWright/docs/locator-modules/#what-a-module-may-return).
 
 The examples in these docs are compiled with `strict` and `noUncheckedIndexedAccess`.
 

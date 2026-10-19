@@ -49,11 +49,12 @@ It never touches the page, and it costs about a microsecond per path.
 ## In a page object
 
 A page object runs `defineLocators()` and then `verify()` once, right after it is constructed. A failure is reported
-with the page object's label and the original error as `cause`, at the line that constructed it:
+with the page object's label and the original error as `cause`, at the line that constructed it. For a `LoginPage` whose
+submit button is filtered by `main.form@login.title`, a path in its union that it never registers:
 
 ```text
-LoginPage: Locator registry verification failed for 1 of 2 paths:
-  "list.item": No locator schema registered for path "list.titel".
+LoginPage: Locator registry verification failed for 1 of 5 paths:
+  "main.form@login.button@submit": No locator schema registered for path "main.form@login.title".
 ```
 
 There is no way to turn it off: it fails only where a resolution would fail. See [Page objects](/POMWright/docs/page-objects/)

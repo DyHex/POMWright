@@ -3,8 +3,8 @@ title: Principles
 description: "The ideas POMWright is built on: mirror Playwright, one locator per path, nothing changes behind your back, fail early, check at runtime."
 ---
 
-These are the rules POMWright's design follows. Knowing them makes its behaviour predictable: when a rule here and a
-detail elsewhere seem to disagree, the detail is the exception the page explains.
+These are the rules POMWright's design follows. Knowing them makes its behaviour predictable. Where a page seems to
+break one of them, it says why.
 
 ## Mirror Playwright, add only what it lacks
 

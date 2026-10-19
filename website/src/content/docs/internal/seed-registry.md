@@ -6,8 +6,9 @@ description: "How seed() stores entries before the app's first script: one regis
 ## The problem
 
 An app that reads session storage as it starts must find the entries there before its first script runs. Writing
-after the load is too late. Playwright's `addInitScript` runs before every load, cannot be removed, and overwrites what
-the app writes on its next load; writing from a `framenavigated` listener races the app's first script and loses.
+after the load is too late. Playwright's `addInitScript` runs before every load until the test removes it, so it
+overwrites what the app writes when a page reloads, and the test would have to know when the app has loaded to remove
+it. Writing from a `framenavigated` listener races the app's first script and loses.
 `seed` instead answers the navigation itself, with a document of POMWright's own that stores the entries and then
 continues, so the entries exist before the app's document does.
 

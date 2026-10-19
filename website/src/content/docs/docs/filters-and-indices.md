@@ -48,13 +48,13 @@ import type { LocatorRegistry } from "pomwright";
 type Paths =
   | "main"
   | "main.section@orders"
-  | "main.section.heading@orders"
+  | "main.section@orders.heading"
   | "main.section@orders.item@open";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.add("main").locator("main");
-registry.add("main.section.heading@orders").getByRole("heading", { name: "Orders" });
-registry.add("main.section@orders").locator("section").filter({ has: "main.section.heading@orders" });
+registry.add("main.section@orders.heading").getByRole("heading", { name: "Orders" });
+registry.add("main.section@orders").locator("section").filter({ has: "main.section@orders.heading" });
 registry.add("main.section@orders.item@open").getByRole("listitem").filter({ hasText: "Open" });
 
 registry.getNestedLocator("main.section@orders.item@open");
@@ -71,13 +71,13 @@ Filters that refer to each other in a loop cannot be resolved, and verification 
 
 ```text
 Locator registry verification failed for 2 of 2 paths:
-  "a": Detected cyclic filter reference while resolving "a": "b".
-  "b": Detected cyclic filter reference while resolving "b": "a".
+  "main.list@orders": Detected cyclic filter reference while resolving "main.list@orders": "main.list@archive".
+  "main.list@archive": Detected cyclic filter reference while resolving "main.list@archive": "main.list@orders".
 ```
 
 A reference that is neither a `Locator` nor a path, from JavaScript, fails the same way:
-`Unsupported filter reference while resolving "a". Filter has/hasNot supports Playwright Locator instances or registry
-path strings.`
+`Unsupported filter reference while resolving "main.list@orders". Filter has/hasNot supports Playwright Locator
+instances or registry path strings.`
 
 ## Indices: `nth`
 

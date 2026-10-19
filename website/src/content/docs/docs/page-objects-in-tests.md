@@ -34,8 +34,7 @@ export const test = base.extend<{ loginPage: LoginPage }>({
 ```
 
 Playwright creates a fixture only for the tests that ask for it, and a new one for every test, so every test has its
-own page object on its own page. Creating one is cheap: its locators are registered and checked in about a microsecond
-per path.
+own page object on its own page. Creating one is cheap.
 
 ## POMWright's `test` and the `log` fixture
 
@@ -97,10 +96,11 @@ export const test = mergeTests(pomwright, pageObjects);
 A page object registers its locators and checks them right after it is constructed, so a mistake that TypeScript
 cannot see, such as a path in the union that was never registered but is used in a filter, fails in the fixture. The
 test fails before its body runs, with the page object's name, every path that failed, and the line of `super(...)` in
-the stack:
+the stack. Here the submit button is filtered by `main.form@login.title`, which `LoginPage`'s union names and
+`defineLocators()` never registers:
 
 ```text
-Error: LoginPage: Locator registry verification failed for 1 of 3 paths:
+Error: LoginPage: Locator registry verification failed for 1 of 5 paths:
   "main.form@login.button@submit": No locator schema registered for path "main.form@login.title".
 ```
 

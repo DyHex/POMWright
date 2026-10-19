@@ -56,8 +56,8 @@ one. For buttons with the ids `button.submit.ab12`, `button.submit.CD34` and `ot
 | `/submit/` | both `button.submit` ids |
 | `/^submit/` | none |
 
-The selector is `internal:attr=[id=/^button\.submit\.[a-z0-9]{4}$/i]`. This suits generated ids with
-a stable shape, and "every element whose id contains" lists together with `nth`, `filter`, `count()` or `all()`.
+The selector is `internal:attr=[id=/^button\.submit\.[a-z0-9]{4}$/i]`. Use a RegExp for generated ids with a
+stable shape, or with `nth`, `filter`, `count()` or `all()` for every element whose id matches.
 
 ### Flags
 

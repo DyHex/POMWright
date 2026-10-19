@@ -95,7 +95,7 @@ export class CheckoutPage extends PageObject<"main"> {
   private readonly log: PlaywrightReportLogger;
 
   constructor(page: Page, log: PlaywrightReportLogger) {
-    super(page, "https://shop.example", "/checkout", { label: "CheckoutPage" });
+    super(page, "https://shop.example", "/checkout");
     this.log = log.getNewChildLogger("CheckoutPage");
   }
 

@@ -222,7 +222,12 @@ await storage.set({ token: "abc", locale: "nb" });
 
 ```text
 Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it
+Shop.SessionStorage.set: value for "user" could not be encoded
+Shop.SessionStorage.set: the codec for "user" returned undefined instead of a string
 ```
+
+The second when the key's codec throws, with its error as `cause`; the third when it returns something other than a
+string.
 
 ---
 

@@ -54,14 +54,12 @@ LocatorSchemaPath string cannot contain whitespace chars: main.form button
 LocatorSchemaPath must be a string; received 42.
 ```
 
-A whitespace character that is hard to see is shown escaped: a no-break space reads `main .form`.
+A whitespace character that is hard to see is shown escaped: a no-break space reads `main\u00A0.form`.
 
 ## Segments without a locator
 
-Only the paths you resolve need a locator. A segment that has none is a name that groups paths, and resolution leaves
-it out of the chain: `main.form` can be registered while `main` is not. Whether to register every segment is a style
-choice; a project that does can have the registry check it, see
-[`strictChains`](/POMWright/docs/verifying-registries/#strictchains-every-ancestor-registered).
+Only the paths you resolve need a locator: a segment without one is a name that groups paths, and resolution leaves it
+out of the chain. See [Resolving locators](/POMWright/docs/resolving-locators/#segments-without-a-locator).
 
 ## The registry
 

@@ -160,7 +160,7 @@ export class LocatorUpdateBuilderInternal<
 	 * deletes one option and a lone `null` all of them.
 	 * @returns The query.
 	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
-	 * the strategy from "role" to "role"; use replace("main.button@save").getByRole(…) instead.`
+	 * the strategy from "text" to "role"; use replace("main.button@save").getByRole(…) instead.`
 	 *
 	 * @example
 	 * ```ts

@@ -20,10 +20,11 @@ The builder writes the registry on every call (the first call registers, later o
 registration is complete whenever the chain stops. From JavaScript, a step before a locator method or a second locator
 method throws, naming the path.
 
-With `{ reuse: seed }` the builder starts from the seed's record and registers it at once. Its one optional call of
-the seed's own locator method patches the record as `update` does; a second call, or another strategy's method,
-throws, and the path keeps the seed. With `{ reuse: "other.path" }` it starts from a copy of that record and returns
-only the view: a copy keeps the locator it reused.
+With `{ reuse: seed }` the builder starts from the seed's record and registers it at once. Its one optional call of the
+seed's own locator method patches the record as `update` does. Another strategy's method throws, and so does a second
+call on a registration kept in a variable; a call that throws leaves the record as it was. With
+`{ reuse: "other.path" }` it starts from a copy of that record and returns only the view: a copy keeps the locator it
+reused.
 
 ## The query
 
@@ -48,7 +49,8 @@ and requires its strategy, `replace` builds a complete definition of any strateg
 
 A public builder type is a type alias over the internal class, declared under the public name:
 `type LocatorQueryBuilder<…> = LocatorQueryBuilderInternal<…>`. A class re-exported as a type would be written into the
-bundled declarations' export list as a value, so a consumer could construct one and the class would become API. The
-alias keeps the class internal; hovers show its internal name, and its doc comments are the public documentation.
-Every public method returns a type a consumer can import, except the registration views, which are used in one
-statement and never named.
+bundled declarations' export list as a value, so a consumer's `new` would compile and then fail at run time, since the
+bundle exports nothing by that name. The alias keeps the class internal: hovers and errors show the public name, and the
+internal one appears only in the error for a private member. The class's doc comments are the public documentation.
+Every public method returns a type a consumer can import, except the registration views, which are used in one statement
+and never named.

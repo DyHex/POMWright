@@ -16,7 +16,7 @@ type Paths = "main" | "main.button@login";
 
 export class LoginPage extends PageObject<Paths> {
   constructor(page: Page) {
-    super(page, "https://shop.example", "/login", { label: "LoginPage" });
+    super(page, "https://shop.example", "/login");
   }
 
   protected defineLocators(): void {
@@ -181,7 +181,7 @@ export class LoginPage extends PageObject<"main" | "main.button@login"> {
 
 - void
 
-**Errors**
+**Throws**
 
 An error thrown inside `defineLocators()`, or by the verification after it, is reported with the page object's
 label and the original error as `cause`, and its stack points at the line that constructed the page object. The page
@@ -190,8 +190,8 @@ time.
 
 ```text
 LoginPage: defineLocators() failed: A locator schema with the path "main" already exists. …
-LoginPage: Locator registry verification failed for 1 of 2 paths:
-  "list.item": No locator schema registered for path "list.titel".
+LoginPage: Locator registry verification failed for 1 of 5 paths:
+  "main.form@login.button@submit": No locator schema registered for path "main.form@login.title".
 ```
 
 ### pageActionsToPerformAfterNavigation()

@@ -92,9 +92,10 @@ registry.add("card.anyHeading", { reuse: heading }).getByRole({ level: null });
 ```
 
 The seed's strategy decides which method is offered: on a role seed, `locator(…)` is a compile error, and from
-JavaScript it throws `The locator definition for "card.bad" must use the "role" strategy when reusing a locator.` A
+JavaScript it throws `The locator definition for "card.text" must use the "role" strategy when reusing a locator.` A
 second change throws too: `A locator definition for "card.title" was already provided from reuse; only one matching
-override is allowed.` A builder kept in a variable takes its one change before or after its steps.
+override is allowed.` When you keep the registration in a variable, the one change may come before or after its `filter`, `nth` and
+`describe` calls.
 
 ## Seeds in modules
 
@@ -124,12 +125,12 @@ carry (`createReusable.frameLocator requires a selector value.`). A copy of an a
 description, as the original takes none:
 
 ```text
-nth() cannot apply to "copy": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
+nth() cannot apply to "bannerFrame": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
 ```
 
 A seed object made by hand is checked like a builder's first argument (`reuse requires a non-empty selector for
-"hand.made".`), and a reuse value that is neither a path nor a seed throws `reuse requires a registered path or a seed
-from createReusable for "x.z".`
+"main.list".`), and a reuse value that is neither a path nor a seed throws `reuse requires a registered path or a seed
+from createReusable for "main.list.item".`
 
 ## Reference
 

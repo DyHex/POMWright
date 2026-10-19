@@ -43,7 +43,7 @@ type Paths = "main" | "main.heading";
 
 export class AccountPage extends ShopPage<Paths> {
   constructor(page: Page) {
-    super(page, "/account", { label: "AccountPage" });
+    super(page, "/account");
   }
 
   protected defineLocators(): void {
@@ -91,6 +91,11 @@ export abstract class ShopPage<
 }
 ```
 
+`ShopOptions` turns a subclass's options into the ones `PageObject` receives. `baseUrlType` is always `string`, since
+every page of the shop is on its origin. `urlPathType` and `storage` are passed through: a subclass that declares
+`{ urlPathType: RegExp }` takes a RegExp path, and one that declares `storage` gets a typed session storage helper. A
+subclass with neither is written `ShopPage<Paths>`, as with the first base class.
+
 ## Locators in modules
 
 A page object with many locators keeps them in a module beside it, a function that registers them on a registry. The
@@ -116,7 +121,7 @@ import { ShopPage } from "./shop.page";
 
 export class LoginPage extends ShopPage<Paths> {
   constructor(page: Page) {
-    super(page, "/login", { label: "LoginPage" });
+    super(page, "/login");
   }
 
   protected defineLocators(): void {

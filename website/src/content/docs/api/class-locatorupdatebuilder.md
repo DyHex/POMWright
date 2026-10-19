@@ -109,7 +109,7 @@ In `replace` mode without a selector, on the query's own path or on a segment th
 
 ```text
 replace() cannot apply to "main.frame@payment": it is the path this query resolves, and frameLocator() without a selector has no element to resolve to; replace an ancestor instead.
-replace() cannot apply to "main.list": it has filter or nth steps, and frameLocator() without a selector takes none; call clearSteps("main.list") first.
+replace() cannot apply to "main.frame@payment": it has filter or nth steps, and frameLocator() without a selector takes none; call clearSteps("main.frame@payment") first.
 ```
 
 ### getByAltText()

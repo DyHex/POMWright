@@ -92,7 +92,6 @@ import { PageObject } from "pomwright";
 export class OrdersPage extends PageObject<"main"> {
   constructor(page: Page) {
     super(page, "https://shop.example", "/orders", {
-      label: "OrdersPage",
       navOptions: { waitUntil: "domcontentloaded", timeout: 15_000 },
     });
   }
@@ -122,7 +121,7 @@ import { PageObject } from "pomwright";
 
 export class AccountPage extends PageObject<"main", { urlPathType: RegExp }> {
   constructor(page: Page) {
-    super(page, "https://shop.example", /^\/account\/\d+$/, { label: "AccountPage" });
+    super(page, "https://shop.example", /^\/account\/\d+$/);
   }
 
   protected defineLocators(): void {
@@ -159,7 +158,8 @@ Such a page has no single URL to go to, so `goto()` without a target is not avai
 JavaScript: `AccountPage: goto() without a URL needs a string fullUrl; this page object has a RegExp URL. Pass an
 absolute URL instead.`). `goto(target)` still works; on a RegExp `baseUrl` the target must be absolute.
 
-A page whose identity includes a query, `/orders?tab=2`, is such a page too: `urlPath: /^\/orders\?tab=\d+$/`.
+A page whose query varies, `/orders?tab=2` and `/orders?tab=3` alike, is such a page too:
+`urlPath: /^\/orders\?tab=\d+$/`. A page with one fixed query is a string: `urlPath: "/orders?tab=2"`.
 
 ## Reference
 

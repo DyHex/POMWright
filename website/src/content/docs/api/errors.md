@@ -19,7 +19,7 @@ rejects these paths where they are written, so the messages come from JavaScript
 ```text
 LocatorSchemaPath must be a string; received 42.
 LocatorSchemaPath string cannot be empty
-LocatorSchemaPath string cannot contain whitespace chars: main .form
+LocatorSchemaPath string cannot contain whitespace chars: main\u00A0.form
 LocatorSchemaPath string cannot start with a dot: .main
 LocatorSchemaPath string cannot end with a dot: main.
 LocatorSchemaPath string cannot contain consecutive dots: main..list
@@ -78,7 +78,7 @@ first.
 ### A description that is not a string
 
 ```text
-describe requires a string for "main.footer"; pass "" to remove the description.
+describe requires a string for "main.list.item@first"; pass "" to remove the description.
 createReusable.describe requires a string; pass "" to remove the description.
 ```
 
@@ -98,15 +98,16 @@ Thrown by `add(path, { reuse })`: the reused path is not registered (register it
 reuses itself; or the value is neither a path nor a seed (from JavaScript).
 
 ```text
-The locator definition for "main.button@x" must use the "role" strategy when reusing a locator.
-A locator definition for "main.button@y" was already provided from reuse; only one matching override is allowed.
+The locator definition for "main.button@cancel" must use the "role" strategy when reusing a locator.
+A locator definition for "main.link@help" was already provided from reuse; only one matching override is allowed.
 ```
 
-Thrown by the locator method after `add(path, { reuse: seed })`: another strategy than the seed's, or a second call.
+Thrown by the locator method after `add(path, { reuse: seed })`: another strategy than the seed's, or a second call on a
+registration kept in a variable.
 A seed's locator can be patched once, with its own method; for another strategy, make another seed.
 
 ```text
-reuse cannot apply to "other": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
+reuse cannot apply to "bannerFrame": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
 ```
 
 A seed of the any-frame `frameLocator()` with steps or a description, which it cannot have.
@@ -140,7 +141,7 @@ path that is not registered is left out of the chain and is not an error; with
 ### A cycle of filter paths
 
 ```text
-Detected cyclic filter reference while resolving "list.a": "list.b".
+Detected cyclic filter reference while resolving "list@orders": "list@archive".
 ```
 
 Two paths whose `has` or `hasNot` filters name each other, directly or through others. Remove one reference.
@@ -171,7 +172,7 @@ Thrown at the call by the methods of a [query](/POMWright/api/class-locatorquery
 
 ```text
 "main.button@save" is not a valid sub-path of "main.list.item".
-"a.b" is not a valid sub-path of "a.b.c". It is a segment of that path, but no locator schema is registered for it.
+"main.form" is not a valid sub-path of "main.form.button@save". It is a segment of that path, but no locator schema is registered for it.
 ```
 
 A `subPath` must be the query's path or one of its registered ancestors.
@@ -220,8 +221,8 @@ Thrown by the constructor. A string `baseUrl` is an origin with a scheme and not
 
 ```text
 LoginPage: defineLocators() failed: A locator schema with the path "main" already exists. …
-LoginPage: Locator registry verification failed for 1 of 2 paths:
-  "list.item": No locator schema registered for path "list.titel".
+LoginPage: Locator registry verification failed for 1 of 5 paths:
+  "main.form@login.button@submit": No locator schema registered for path "main.form@login.title".
 ```
 
 An error from `defineLocators()`, or from the check of every path after it, labelled with the page object and with
@@ -246,10 +247,11 @@ part.
 ```text
 AccountPage: goto() without a URL needs a string fullUrl; this page object has a RegExp URL. Pass an absolute URL instead.
 AccountPage: goto("/account") needs an absolute URL because baseUrl is a RegExp.
-Cannot resolve "/login" against baseUrl "localhost:9000".
+Cannot resolve "http://" against baseUrl "https://shop.example".
 ```
 
-Thrown by `goto()`: from JavaScript on a page object whose URL is a RegExp, and for a target that cannot be resolved.
+Thrown by `goto()`: from JavaScript on a page object whose URL is a RegExp, and for a target that is not a URL, such as
+a scheme with nothing after it.
 
 ---
 
@@ -269,7 +271,7 @@ an origin must be on it.
 ```text
 Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it
 Shop.SessionStorage.set: value for "user" could not be encoded
-Shop.SessionStorage.set: the codec for "value" returned undefined instead of a string
+Shop.SessionStorage.set: the codec for "user" returned undefined instead of a string
 Shop.SessionStorage.get: value for "user" could not be decoded: {not json
 ```
 

@@ -75,7 +75,7 @@ A step needs a method before it. `add(path)` offers only the ten methods, so `ad
 from JavaScript it throws:
 
 ```text
-filter() needs a locator strategy first for "a"; call getByRole, getByText, getByLabel, getByPlaceholder, getByAltText, getByTitle, locator, frameLocator, getByTestId or getById before it.
+filter() needs a locator strategy first for "main"; call getByRole, getByText, getByLabel, getByPlaceholder, getByAltText, getByTitle, locator, frameLocator, getByTestId or getById before it.
 ```
 
 ## The first argument
@@ -92,13 +92,13 @@ that do not parse, `getByRole("")` names no role, and an empty id is invalid HTM
 [Locating by id](/POMWright/docs/locating-by-id/#validation)):
 
 ```text
-locator requires a non-empty selector for "list".
+locator requires a non-empty selector for "main.list".
 getByRole requires a non-empty role for "main.button".
 ```
 
 `getByTestId("")` and the text methods keep an empty string, because Playwright matches it: `getByTestId("")` finds an
 element with `data-testid=""`. From JavaScript, a first argument Playwright cannot take, such as `null`, a number or an
-object where a string belongs, gets the missing-value message: `locator requires a selector value for "a".`
+object where a string belongs, gets the missing-value message: `locator requires a selector value for "main.list".`
 
 The only call without a first argument is `frameLocator()`, which registers Playwright's any-frame locator (see
 [Frames](/POMWright/docs/frames/#any-frame-framelocator-without-a-selector)).
@@ -151,9 +151,10 @@ changed through Playwright's API. To change a locator for one use, query it; see
 ## When locators are registered
 
 A page object registers its locators in `defineLocators()`, which runs once, right after the page object is
-constructed. The order of the registrations does not matter: a filter may name a path that is registered later, and the
-check that runs after `defineLocators()` finds a name that is never registered. See
-[Verifying a registry](/POMWright/docs/verifying-registries/).
+constructed. For filters the order does not matter: a `has` or `hasNot` path may be registered after the filter that
+names it, and the check that runs after `defineLocators()` reports a name that is never registered (see
+[Verifying a registry](/POMWright/docs/verifying-registries/)). A path you reuse must be registered before the copy (see
+[Reusing locators](/POMWright/docs/reusing-locators/#reuse-by-path)).
 
 ## Reference
 

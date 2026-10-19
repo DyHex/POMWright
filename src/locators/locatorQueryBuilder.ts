@@ -137,8 +137,10 @@ export class LocatorQueryBuilderInternal<
 	 * them.
 	 * @returns This query.
 	 * @throws When `subPath` is not a registered segment of the chain (`"main.button@save" is not a valid sub-path of
-	 * "main.list.item".`), or when it is skipped in this query (`filter() cannot apply to "main.list": it is skipped in
-	 * this query; call unskip("main.list") first.`).
+	 * "main.list.item".`), when it is skipped in this query (`filter() cannot apply to "main.list": it is skipped in this
+	 * query; call unskip("main.list") first.`), or when it is a `frameLocator()` without a selector, which has no element
+	 * (`filter() cannot apply to "consent": frameLocator() without a selector has no element to filter, index or
+	 * describe; …`).
 	 *
 	 * @example
 	 * ```ts
@@ -218,8 +220,10 @@ export class LocatorQueryBuilderInternal<
 	 * @param index A number, `"first"` or `"last"`.
 	 * @returns This query.
 	 * @throws When `subPath` is not a registered segment of the chain (`"main.button@save" is not a valid sub-path of
-	 * "main.list.item".`), or when it is skipped in this query (`nth() cannot apply to "main.list": it is skipped in this
-	 * query; call unskip("main.list") first.`).
+	 * "main.list.item".`), when it is skipped in this query (`nth() cannot apply to "main.list": it is skipped in this
+	 * query; call unskip("main.list") first.`), or when it is a `frameLocator()` without a selector, which has no element
+	 * (`nth() cannot apply to "consent": frameLocator() without a selector has no element to filter, index or describe;
+	 * …`).
 	 *
 	 * @example
 	 * ```ts

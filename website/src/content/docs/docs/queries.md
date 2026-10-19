@@ -77,7 +77,7 @@ query's own path. A path outside the chain, or a segment of it without a locator
 
 ```text
 "main.button@save" is not a valid sub-path of "main.list.item".
-"a.b" is not a valid sub-path of "a.b.c". It is a segment of that path, but no locator schema is registered for it.
+"main.form" is not a valid sub-path of "main.form.button@save". It is a segment of that path, but no locator schema is registered for it.
 ```
 
 ## Steps: `filter`, `nth`, `clearSteps`

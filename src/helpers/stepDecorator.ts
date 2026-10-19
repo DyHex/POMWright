@@ -112,6 +112,7 @@ const createStepDecorator =
  * @param value The method, when `@step` is written without parentheses.
  * @param context The decorator context, when `@step` is written without parentheses.
  * @returns The decorator.
+ * @throws From JavaScript, on something that is not a method: `@step decorator can only be applied to methods.`
  *
  * @see https://dyhex.github.io/POMWright/api/step/
  */

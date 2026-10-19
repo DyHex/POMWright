@@ -27,7 +27,7 @@ type Paths =
 
 export class LoginPage extends PageObject<Paths> {
   constructor(page: Page) {
-    super(page, "https://shop.example", "/login", { label: "LoginPage" });
+    super(page, "https://shop.example", "/login");
   }
 
   protected defineLocators(): void {
@@ -105,10 +105,10 @@ What the definition cannot see:
 
 - **A value assigned after an `await` that follows `new`.** The definition has run by then: pass the value to the
   constructor.
-- **Fields declared below a field that resolves a locator.** `readonly submit = this.getNestedLocator("…")` runs the
-  definition while the class is still being built. A getter resolves when it is read and is always safe:
+- **What is set after a field that resolves a locator.** `readonly submit = this.getNestedLocator("…")` runs the
+  definition while the class is still being built: the fields below it and the constructor body have not run yet, so
+  the definition reads them as `undefined`. A getter resolves when it is read and is always safe:
   `get submit() { return this.getNestedLocator("main.form@login.button@submit"); }`.
-- **State a constructor never set because it threw after `super(...)`.** Validate arguments before calling `super`.
 
 ## How a mistake is reported
 
@@ -117,8 +117,8 @@ error as `cause`, and the line that constructed the page object in the stack:
 
 ```text
 LoginPage: defineLocators() failed: A locator schema with the path "main" already exists. …
-LoginPage: Locator registry verification failed for 1 of 2 paths:
-  "list.item": No locator schema registered for path "list.titel".
+LoginPage: Locator registry verification failed for 1 of 5 paths:
+  "main.form@login.button@submit": No locator schema registered for path "main.form@login.title".
 ```
 
 The page object keeps the error: every later locator call on it throws it again, and `defineLocators()` never runs a
@@ -193,7 +193,7 @@ option, the method needs the `override` keyword.
 ## One registry per page object
 
 Every page object has its own registry, defined once. Definitions may depend on the page object's own state, so they
-are not shared between instances; defining and checking costs about a microsecond per path.
+are not shared between instances.
 
 ## Reference
 

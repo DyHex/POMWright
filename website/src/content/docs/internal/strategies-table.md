@@ -34,10 +34,10 @@ Every per-strategy rule reads the table; there is no `switch` on the strategy el
 
 ## Why a table
 
-Before the table, eight functions each had a `switch` over the strategies, and a rule, such as which strategies keep
-an empty string, had to be kept in agreement across all of them. In the table it is one cell. The types follow it:
-`satisfies` makes the compiler require a row for every definition type, and `StrategyMethod`, the union of the
-`method` column, is the type the builders' method sets are checked against.
+Before the table there were five `switch` statements over the strategies, in `utils.ts` and `locatorUpdateBuilder.ts`,
+and a rule, such as which strategies keep an empty string, had to be kept in agreement across all of them. In the table
+it is one cell. The types follow it: `satisfies` makes the compiler require a row for every definition type, and
+`StrategyMethod`, the union of the `method` column, is the type the builders' method sets are checked against.
 
 ## Adding a strategy
 
@@ -45,5 +45,6 @@ an empty string, had to be kept in agreement across all of them. In the table it
 2. Its row in `STRATEGIES`.
 3. Its method on each builder: the registration, the update builder and `createReusable`.
 
-The type tests of the registration and update builders compare each builder's methods with `StrategyMethod`, so they
-fail until the method exists on every builder, and the unit tests of the table pin every row.
+The type tests of the registration builder, the update builder and `createReusable` compare each builder's methods
+with `StrategyMethod`, so they fail until the method exists on every builder, and the unit tests of the table pin every
+row.

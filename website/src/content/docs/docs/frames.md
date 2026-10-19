@@ -126,7 +126,7 @@ Resolved on its own: `frameLocator() without a selector does not point to a part
 resolved on its own, filtered or indexed; resolve a path inside it.` "Any iframe inside this element" is a different
 question, answered by `frameLocator("iframe")` below that element's segment.
 
-`frameLocator("")` throws (`frameLocator requires a non-empty selector for "f".`). A query can install the any-frame form
+`frameLocator("")` throws (`frameLocator requires a non-empty selector for "checkout.section@payment.frame".`). A query can install the any-frame form
 on an ancestor with `replace(subPath).frameLocator()`; see [Queries](/POMWright/docs/queries/).
 
 ## Reference

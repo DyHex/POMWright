@@ -381,9 +381,9 @@ so the locator shows as its chain. It applies where this path is resolved, not w
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"main.list.item@described">;
+declare const registry: LocatorRegistry<"main.list.item@first">;
 // ---cut---
-registry.add("main.list.item@described").getByRole("listitem").describe("Order");
+registry.add("main.list.item@first").getByRole("listitem").nth("first").describe("First order");
 ```
 
 **Arguments**
@@ -397,7 +397,7 @@ registry.add("main.list.item@described").getByRole("listitem").describe("Order")
 **Throws**
 
 ```text
-describe requires a string for "main.footer"; pass "" to remove the description.
+describe requires a string for "main.list.item@first"; pass "" to remove the description.
 ```
 
 ### filter()
@@ -504,8 +504,9 @@ registry.add("main.link@plain", { reuse: saveButton }).getByRole("link", null);
 **Throws**
 
 ```text
-The locator definition for "main.button@x" must use the "role" strategy when reusing a locator.
-A locator definition for "main.button@y" was already provided from reuse; only one matching override is allowed.
+The locator definition for "main.button@cancel" must use the "role" strategy when reusing a locator.
+A locator definition for "main.link@help" was already provided from reuse; only one matching override is allowed.
 ```
 
-The first for another locator method than the seed's, the second for a second call of it.
+The first for another locator method than the seed's; the second for a second call of it on a registration kept in a
+variable (chained, TypeScript no longer offers the method).

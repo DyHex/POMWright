@@ -49,4 +49,5 @@ push to `main`:
 
 Publishing waits for `CI` on `main`, so nothing is published past a red run, and `pages.yaml` deploys the site (see
 [documentation](/POMWright/internal/documentation/)). Third-party actions are pinned to commits and kept current by
-Dependabot, as are the site's npm versions.
+Dependabot, which also proposes the npm versions of the root, `test/` and `website/` once a month, grouped, except
+`@playwright/test`, which moves by decision.

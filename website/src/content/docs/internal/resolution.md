@@ -26,7 +26,7 @@ flowchart TD
   terminal --> describe["describe(description, or the path)"]
 ```
 
-- **Segments.** The ancestors are the path's prefixes (`main`, `main.form`, … of `main.form.submit`) that have a
+- **Segments.** The ancestors are the path's prefixes (`main` and `main.form` of `main.form.submit`) that have a
   record. An unregistered prefix is a name that groups paths and is left out; with `strictChains`, `verify()` requires
   every one to be registered. A query's `skip` leaves a registered one out for that query.
 - **Locators.** Each segment's locator is created on the one before it, by the method the

@@ -84,10 +84,8 @@ const isMatcher: AccountUrl extends UrlMatcher ? true : false = true;
 ## `declaration: true`
 
 A project that publishes page objects as a package compiles with `declaration: true`, which needs every exported value's
-type to be nameable. With the types above it is. One pattern fails: an arrow function whose body is a registration,
-`(registry) => registry.add("list").locator("ul")`, returns what `add(path)` returns, which is not exported, and
-TypeScript reports TS4023. A function that registers returns nothing: give it a block body or a `: void` return type.
-See [Locator modules](/POMWright/docs/locator-modules/#what-a-module-may-return).
+type to be nameable. With the types above it is, except for a function that returns a registration by accident; see
+[Locator modules](/POMWright/docs/locator-modules/#what-a-module-may-return).
 
 ## Reference
 

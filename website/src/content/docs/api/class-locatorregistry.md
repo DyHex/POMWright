@@ -308,7 +308,7 @@ await getNestedLocator("main.button@save").click();
 **Returns**
 
 - Object
-  - `registry` [LocatorRegistry](#methods)\<Paths\>
+  - `registry` [LocatorRegistry](/POMWright/api/class-locatorregistry/)\<Paths\>
   - `add` [AddAccessor](#addaccessor)\<Paths\>
   - `getLocator` [GetLocatorAccessor](#getlocatoraccessor)\<Paths\>
   - `getNestedLocator` [GetNestedLocatorAccessor](#getnestedlocatoraccessor)\<Paths\>

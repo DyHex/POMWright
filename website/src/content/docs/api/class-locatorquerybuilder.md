@@ -125,11 +125,20 @@ registry.getLocatorSchema("main.list.item").filter("main.list", { hasText: "Open
 
 - `filter` [FilterDefinition](/POMWright/api/types/#filterdefinition)
 
-  Playwright's filter options. `has` and `hasNot` also take a registered path, resolved as its last segment alone.
+  Playwright's filter options. `has` and `hasNot` also take a registered path, resolved to that path's own locator, without its
+  ancestors.
 
 **Returns**
 
 - LocatorQueryBuilder
+
+**Throws**
+
+On a `frameLocator()` without a selector, which has no element:
+
+```text
+filter() cannot apply to "consent": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
+```
 
 ### getLocator()
 
@@ -208,6 +217,14 @@ The registered `nth(0)` of `main.list.item` stays unless cleared: `nth("last")` 
 
 - LocatorQueryBuilder
 
+**Throws**
+
+On a `frameLocator()` without a selector, which has no element:
+
+```text
+nth() cannot apply to "consent": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
+```
+
 ### replace()
 
 Replaces a segment's definition with one of any strategy, for this query. Returns an
@@ -276,11 +293,13 @@ registry.getLocatorSchema("main.list.item").skip("main.list").getNestedLocator()
 
 **Throws**
 
-A change to a skipped segment, and a second `skip` of it, throw at the call:
+A change to a skipped segment and a second `skip` of it throw at the call, and so does skipping the query's own path
+(from JavaScript):
 
 ```text
 filter() cannot apply to "main.list": it is skipped in this query; call unskip("main.list") first.
 skip() cannot skip "main.list": it is already skipped in this query.
+skip() cannot skip "main.list.item": it is the path this query resolves; skip one of its ancestors.
 ```
 
 ### unskip()
@@ -362,5 +381,5 @@ A `subPath` outside the query's chain, or a segment of it without a locator, thr
 
 ```text
 "main.button@save" is not a valid sub-path of "main.list.item".
-"a.b" is not a valid sub-path of "a.b.c". It is a segment of that path, but no locator schema is registered for it.
+"main.form" is not a valid sub-path of "main.form.button@save". It is a segment of that path, but no locator schema is registered for it.
 ```

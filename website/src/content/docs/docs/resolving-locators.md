@@ -22,7 +22,7 @@ browser until an action or assertion uses it.
 
 The examples on this page use this registry:
 
-```ts title="checkout.locators.ts"
+```ts title="login.locators.ts"
 import type { LocatorRegistry } from "pomwright";
 
 export type Paths =
@@ -56,7 +56,7 @@ one, with that segment's `filter` and `nth` steps right after it:
 
 ```ts
 import type { LocatorRegistry } from "pomwright";
-import type { Paths } from "./checkout.locators";
+import type { Paths } from "./login.locators";
 
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
@@ -92,7 +92,7 @@ its path:
 ```ts
 import type { Page } from "@playwright/test";
 import type { LocatorRegistry } from "pomwright";
-import type { Paths } from "./checkout.locators";
+import type { Paths } from "./login.locators";
 
 declare const page: Page;
 declare const registry: LocatorRegistry<Paths>;
@@ -144,21 +144,9 @@ segment registered can ask the registry to check it: see [`strictChains`](/POMWr
 
 ## What the report shows
 
-A resolved locator carries its path as its [description](https://playwright.dev/docs/api/class-locator#locator-describe),
-so reports stay readable while the chain does the work:
-
-- The HTML report shows the path next to each action and assertion (`Expect "toHaveValue"
-  main.form@login.input@email`), and an assertion error shows it on its `Locator:` line.
-- The call log of every action and assertion, and every strict mode error, show the chain Playwright actually
-  waited for.
-
-Give a path a description of your own, or remove it to see the chain everywhere, with `describe`; see
-[descriptions](/POMWright/docs/descriptions/).
-
-:::note
-A locator you chain further yourself, `registry.getNestedLocator("main.form@login").getByRole("button")`, is a new
-Playwright locator: it has no description and prints its whole chain.
-:::
+A resolved locator carries its path as its [description](https://playwright.dev/docs/api/class-locator#locator-describe):
+the HTML report shows the path next to each action and assertion, while the call log and a strict mode error show the
+chain Playwright waited for. See [Descriptions](/POMWright/docs/descriptions/#where-playwright-shows-it).
 
 ## Changing a chain in one test
 

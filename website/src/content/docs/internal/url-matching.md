@@ -36,7 +36,7 @@ parts of a URL apart:
 Each RegExp is used with its own flags, and its `lastIndex` is reset before each test, so a `g` or `y` flag cannot make
 a second test start where the first stopped. No anchors are added or removed.
 
-Before, the two parts were joined into one RegExp, which made a base RegExp match up to the exact character where the
+In 2.x, the two parts were joined into one RegExp, which made a base RegExp match up to the exact character where the
 path began, dropped the flags, and broke a `^` on the path. Testing the parts apart uses the seam the URL parser already
 provides, and a base such as `/identity-provider/` matches any host that contains it.
 
