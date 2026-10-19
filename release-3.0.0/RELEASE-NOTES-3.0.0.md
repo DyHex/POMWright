@@ -555,6 +555,10 @@ abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
   paths, fragments through `seed`, and every fixture page object's verification; the seed builder's tests in a file of
   their own. **[done, plan 10]**
 
+- The repository's tooling is brought up to date: pnpm 12, TypeScript 6, tsup 9, biome 2.5.15, vitest 5.0.5, and the
+  GitHub Actions at their latest majors; Dependabot proposes every npm project's versions. The published bundle is
+  unchanged. **[done, plan 14]**
+
 ## Documentation
 
 - A documentation site at `https://dyhex.github.io/POMWright/`, in three sections: Docs (getting started, principles,

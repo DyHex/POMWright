@@ -388,6 +388,18 @@ answered.
 | 2026-10-17, execution | The branch was pushed on the user's go-ahead (2026-10-17), for the first deploy and the check of the live site (C3), which also ran draft PR #46's checks with the new `site` job. | A deploy cannot be checked without one; nothing else is pushed without being asked. |
 | 2026-10-17, execution | The first deploy (C3) passed: on the push of 84a550f, `Pages` built and deployed and PR #46's checks passed, the new *Documentation and site* job included. `https://dyhex.github.io/POMWright/` serves all 51 pages of its sitemap with status 200, each with the banner and `noindex`; in a browser the assets load under `/POMWright/`, the diagrams render, the section tabs mark the current section, search answers, and an unknown URL gets the 404 page. | The checks C3 names. |
 
+## Plan 14: dependencies ([PLAN-14-DEPENDENCIES.md](PLAN-14-DEPENDENCIES.md))
+
+| Date | Decision | Why |
+| --- | --- | --- |
+| 2026-10-19 | pnpm 12.14.0 in the root, `test/` and `website/`, with `pnpm/action-setup` v6.1.0 in every workflow and its `version` input equal to the field; a root `pnpm-workspace.yaml` (no `packages`) with `allowBuilds: { esbuild: true }`. Rejected: pnpm 10.34.7. | pnpm 12 fails an install whose dependency has an install script it was not allowed to run; esbuild (through tsup) is the only one. It runs on Node 20, so the floor job keeps it. |
+| 2026-10-19 | TypeScript 6.0.3, with `"types": ["node"]` in the root `tsconfig.json`. TypeScript 7 later, as a change of its own. Rejected: 7.0.2 now, with the `@typescript/typescript6` fallback. | 7.0 ships no compiler API: tsup's declaration build and the two doc checks fail on it. TypeScript 6 includes only listed `@types` packages. |
+| 2026-10-19 | 3.0.0 is released with changesets 2 (`@changesets/cli` 2.31.1, `changelog-github` 0.7.0, `changesets/action` v1.9.0); changesets 3 and action v2 come after the release, on a patch release, with npm Trusted Publishing. Rejected: upgrading now. | Action v2 refuses CLI 2 and no longer writes `.npmrc` from `NPM_TOKEN`, which `publish.yaml` relies on; none of it can be tried without publishing, so the 3.0.0 release would be its first run. |
+| 2026-10-19 | Node `24.x` stays in CI and for contributors, Node 20 in the floor job; Node 26 when it is LTS, as a change of its own. `@types/node` follows on 24.x. | Node 26 is not LTS yet. |
+| 2026-10-19 | Dependabot also proposes the npm versions of the root and `test/`, monthly and grouped, ignoring `@playwright/test` (and `test/`'s local `pomwright`). | The library's tooling had fallen several majors behind; the Playwright pins are the peer floor, which moves by decision. |
+| 2026-10-19 | What does not move: `@playwright/test` 1.64.0 (the floor; CI's latest rows run 1.64.1), `mermaid` 11 (`astro-mermaid` 2.1.0 takes `^10 \|\| ^11`). | As decided for the floor in plan 1.6-1.8; mermaid 12 is outside the plugin's range. |
+| 2026-10-19, execution | As executed: pnpm 12 writes a leading document into every lockfile that pins pnpm 12.14.0 and its platform binaries by integrity; the lockfile format stays `9.0`. tsup 9's `dist/index.js` is byte-identical to tsup 8's, and `dist/index.d.ts` differs only in its last export statement (a value list and an `export type` list). `changelog-github` 0.7.0 is checked by loading it (a changelog run needs a GitHub token); `changeset status` reports the major bump. The pushed branch's PR run checks the new action majors on GitHub. | Read back from the build and the lockfiles. |
+
 ## Open questions
 
 None as of 2026-10-16. The one question raised for plan 1.3-1.4 (enforcement of type-level tests) was decided the
