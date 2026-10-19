@@ -87,10 +87,12 @@ the documentation redo (the site, its CI job and deployment, the README), was ex
   `tests/packaging/publicTypes.emit.ts`; then `scripts/check-doc-snippets.mjs`, every `ts` block of
   `website/src/content/docs` against the installed package, and `scripts/check-api-coverage.mjs`, the API reference and
   the doc comments against the installed declarations (section 9). `pack-test.sh` runs all four.
-- The documentation site: `pnpm -C website install --frozen-lockfile`, then `pnpm -C website build` (into
-  `website/dist`, failing on a link or an anchor that does not exist) or `pnpm -C website dev` (port 4391, at
-  `/POMWright/`; the harness keeps 9000). Astro 7 needs Node 22.22 or later; the site builds on Node 24, and the
-  library's Node 20 floor is untouched. The site's dependencies never enter the root `package.json`.
+- The documentation site, each script after a frozen install of `website/`: `pnpm docs:dev`, a dev server that reloads
+  on every edit, at `http://localhost:4391/POMWright/` (the harness keeps 9000), without the link check; `pnpm
+  docs:build`, into `website/dist`, failing on a link or an anchor that does not exist; `pnpm docs:preview`, that build
+  served as it deploys, at `http://localhost:4392/POMWright/`, the check to run before a push. Astro 7 needs Node 22.22
+  or later; the site builds on Node 24, and the library's Node 20 floor is untouched. The site's dependencies never
+  enter the root `package.json`, whose scripts only call into `website/`.
 - CI switches of `pack-test.sh`: `POMWRIGHT_TARBALL=<path>` tests that tarball instead of building (it installs the
   root for `tsc` only); `PLAYWRIGHT_VERSION=<version>` swaps `@playwright/test` at the root and in `test/` together
   (one version for `tsc`; it rewrites both manifests and lockfiles, so restore them after a local try);

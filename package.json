@@ -44,7 +44,10 @@
 		"typecheck": "tsc --noEmit -p test && tsc -p test/tsconfig.declarations.json && node scripts/check-doc-snippets.mjs && node scripts/check-api-coverage.mjs",
 		"pack-test": "bash pack-test.sh",
 		"test:unit": "vitest run",
-		"test": "pnpm test:unit && pnpm pack-test"
+		"test": "pnpm test:unit && pnpm pack-test",
+		"docs:dev": "pnpm -C website install --frozen-lockfile && pnpm -C website dev",
+		"docs:build": "pnpm -C website install --frozen-lockfile && pnpm -C website build",
+		"docs:preview": "pnpm docs:build && pnpm -C website preview"
 	},
 	"keywords": [
 		"Playwright",

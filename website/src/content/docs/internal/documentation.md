@@ -31,9 +31,11 @@ harness's type check runs the first two as well.
 
 ## Building and publishing
 
-`website/` is a pnpm project of its own, so Astro and Starlight stay out of the library's dependencies:
-`pnpm -C website install`, then `pnpm -C website dev` to work on pages at `http://localhost:4391/POMWright/`, or
-`pnpm -C website build`, which writes `website/dist` and checks every link. The site's configuration is
+`website/` is a pnpm project of its own, so Astro and Starlight stay out of the library's dependencies. Three scripts
+of the root `package.json` install it and run it: `pnpm docs:dev` serves the pages at
+`http://localhost:4391/POMWright/` and reloads on every edit, but does not check links; `pnpm docs:build` writes
+`website/dist` and checks every link; `pnpm docs:preview` builds and serves that build at
+`http://localhost:4392/POMWright/`, as it will be deployed. The site's configuration is
 `website/astro.config.mjs`; the three sections and their sidebars are `website/sidebar.mjs`, shown as tabs beside the
 title by a component of its own; an Expressive Code plugin hides an example's compile-only prelude; Mermaid diagrams
 render in the browser, so the build does not catch a syntax error in one: open the page.
