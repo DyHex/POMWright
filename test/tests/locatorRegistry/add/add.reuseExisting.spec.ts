@@ -53,8 +53,9 @@ test("add reuse by path reports compile-time fallback reason when forced at runt
 		},
 	) => void;
 
+	// called on the registry, as add always is: it ends the registration before it, so it needs its registry
 	expect(() =>
-		addUnsafe("button.copy", {
+		addUnsafe.call(registry, "button.copy", {
 			reuse: ["Invalid reuse path, reuse path cannot be the same as registration path: button.copy"],
 		}),
 	).toThrowError(
@@ -181,15 +182,19 @@ test.describe("reuse by path of an any-frame path", () => {
 		const registry = createTestRegistry<FramePaths>(page);
 		registry.add("anyFrame").frameLocator();
 		const copy = registry.add("frames", { reuse: "anyFrame" });
-		registry.add("frames.toggleC").getByTestId("toggle-c");
-
-		await expect(registry.getNestedLocator("frames.toggleC")).toHaveText("Toggle C: Off");
 		const refused = (method: string) =>
 			`${method} cannot apply to "frames": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.`;
 		expect(() => copy.filter({ hasText: "x" })).toThrowError(refused("filter()"));
 		expect(() => copy.nth(0)).toThrowError(refused("nth()"));
 		expect(() => copy.describe("d")).toThrowError(refused("describe()"));
+
+		registry.add("frames.toggleC").getByTestId("toggle-c");
+		await expect(registry.getNestedLocator("frames.toggleC")).toHaveText("Toggle C: Off");
 		expect(() => registry.verify()).not.toThrow();
+		// the next add ended the copy's registration: that is what a later call of it reports
+		expect(() => copy.nth(0)).toThrowError(
+			'nth() cannot apply to "frames": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.',
+		);
 	});
 
 	test("a copy below a registered ancestor fails verify with the first-segment message", async ({ page }) => {
