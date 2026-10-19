@@ -1,24 +1,33 @@
 /**
  * Deferred seeding of `sessionStorage` for an origin the page is not on.
  *
- * `SessionStorage.seed()` records the entries as pending for the origin in one registry per page. The
- * registry answers the next main-frame navigation that reaches the origin with a writer document, served
- * at the requested URL, whose script stores the entries and then continues the navigation, so the app's
- * first script already sees them. While a seed is pending, main-frame navigations to other origins are
- * fetched by Playwright with redirects disabled so that a server redirect towards the pending origin can
- * be turned into a client-side navigation the route sees; nothing is registered on a page that never
- * seeds, and everything is removed once the last pending seed has been applied.
+ * `SessionStorage.seed()` hands the entries to one registry per page. The registry adds a Playwright init script for
+ * each pending origin. The script runs in every new document of the page and stores the entries only in the main frame,
+ * on the origin, on the first arrival there, before the document's first script. When the main frame commits on the
+ * origin, the registry disposes of the script. Navigations are never intercepted. Nothing is registered on a page that
+ * never seeds, and everything is removed once the last seed has been applied and its document has had the chance to
+ * report a write the browser refused.
  */
-import type { APIResponse, Frame, Route } from "@playwright/test";
+import type { ConsoleMessage, Frame } from "@playwright/test";
 import { atCallSite } from "./callSite";
+
+/** Removes what `addInitScript` added. Playwright's `Disposable` satisfies it. */
+export type SeedDisposable = { dispose(): Promise<void> };
+
+/** Whether the current document has the Navigation API, and the browser's user agent for the error that says not. */
+export type NavigationSupport = { supported: boolean; userAgent: string };
 
 /** The subset of `Page` the registry uses. A real `Page` satisfies it; unit tests pass a fake. */
 export interface SeedPage {
-	route(url: (url: URL) => boolean, handler: (route: Route) => Promise<unknown> | unknown): Promise<unknown>;
-	unroute(url: (url: URL) => boolean, handler?: (route: Route) => Promise<unknown> | unknown): Promise<unknown>;
+	addInitScript(script: (arg: SeedScriptArg) => void, arg: SeedScriptArg): Promise<SeedDisposable>;
+	evaluate(pageFunction: () => NavigationSupport): Promise<NavigationSupport>;
 	on(event: "framenavigated", listener: (frame: Frame) => void): unknown;
+	on(event: "domcontentloaded", listener: () => void): unknown;
+	on(event: "console", listener: (message: ConsoleMessage) => void): unknown;
 	on(event: "close", listener: () => void): unknown;
 	off(event: "framenavigated", listener: (frame: Frame) => void): unknown;
+	off(event: "domcontentloaded", listener: () => void): unknown;
+	off(event: "console", listener: (message: ConsoleMessage) => void): unknown;
 	off(event: "close", listener: () => void): unknown;
 	mainFrame(): Frame;
 }
@@ -29,21 +38,20 @@ export type TestOutcome = { status: string; errors: readonly unknown[] };
 /** Reads the running test's outcome; `undefined` outside a test. `SessionStorage` injects `test.info()`. */
 export type ReadTestOutcome = () => TestOutcome | undefined;
 
-/** A seed waiting for the next main-frame navigation to its origin. */
+/** A seed waiting for the main frame's first arrival at its origin. */
 export type PendingSeed = {
 	/** Encoded entries, merged across `seed` calls with later values winning per key. */
 	entries: Record<string, string>;
-	/** Step title of the `seed` call that created the entry, for error messages. */
+	/** Step title of the first `seed` call for the origin, for error messages. */
 	title: string;
 	/** Stack frames of that `seed` call, so errors raised from listeners point at the test. */
 	site: Error;
-	/** The writer document has been served for `target`. */
-	fired: boolean;
-	/** The writer document has committed; its own replace request comes next and is let through. */
-	committed: boolean;
-	/** The URL the writer document was served at. */
-	target?: string;
+	/** Removes the init script that writes `entries`. */
+	disposable: SeedDisposable;
 };
+
+/** A seed whose document has committed and may still report a write the browser refused. */
+type AppliedSeed = { keys: string[]; title: string; site: Error };
 
 /** The origin of a URL, or `undefined` for URLs without one such as `about:blank`. */
 export const originOf = (url: string): string | undefined => {
@@ -56,160 +64,67 @@ export const originOf = (url: string): string | undefined => {
 	return origin === "null" ? undefined : origin;
 };
 
-/** `request.url()` never carries a fragment while `frame.url()` does; compare them without it. */
-export const withoutFragment = (url: string): string => {
-	const index = url.indexOf("#");
-	return index === -1 ? url : url.slice(0, index);
-};
+/** The start of the console message the init script logs when the browser refuses a write. */
+export const FAILURE_PREFIX = "pomwright-seed-failure:";
 
-const FORM_URLENCODED = "application/x-www-form-urlencoded";
-
-/** Whether a navigation can be re-issued by a document of POMWright's own: a GET, or a form POST. */
-export const reissuable = (method: string, contentType: string | undefined): boolean =>
-	method === "GET" || (method === "POST" && (contentType ?? "").toLowerCase().startsWith(FORM_URLENCODED));
-
-/**
- * The registrable domain used for `Sec-Fetch-Site: same-site`, approximated as the last two labels of
- * the host. There is no public suffix list here, so `a.co.uk` and `b.co.uk` count as the same site.
- */
-const registrableDomain = (hostname: string): string => {
-	const labels = hostname.split(".");
-	return labels.length <= 2 ? hostname : labels.slice(-2).join(".");
-};
-
-/** The `Sec-Fetch-Site` value the browser would send for a navigation to `url` from `referer`. */
-export const secFetchSite = (url: string, referer: string | undefined): string => {
-	if (referer === undefined || referer === "") {
-		return "none";
-	}
-	const target = originOf(url);
-	const source = originOf(referer);
-	if (target === undefined || source === undefined) {
-		return "cross-site";
-	}
-	if (target === source) {
-		return "same-origin";
-	}
-	const a = new URL(target);
-	const b = new URL(source);
-	return a.protocol === b.protocol && registrableDomain(a.hostname) === registrableDomain(b.hostname)
-		? "same-site"
-		: "cross-site";
+export type SeedScriptArg = {
+	/** The origin whose documents receive the entries. */
+	origin: string;
+	/** The encoded entries. */
+	entries: Record<string, string>;
+	/** `FAILURE_PREFIX`, passed in because the script is serialised and refers to nothing outside its body. */
+	prefix: string;
 };
 
 /**
- * Headers for the proxied fetch of a navigation: the browser's own, minus the conditional ones (a 304
- * handed to a fulfilled navigation has no body), plus the `Sec-Fetch-*` headers the browser adds after
- * interception and therefore never shows to a route.
+ * The init script. It runs in every new document of the page while a seed for `origin` waits and writes only in the
+ * main frame, on the origin, on the first arrival there: after a reload or a hop within the origin,
+ * `navigation.activation.from` is the previous document's entry, so a value the app wrote meanwhile is kept. A write
+ * the browser refuses is logged for the registry's `console` listener.
  */
-export const proxyHeaders = (url: string, requestHeaders: Record<string, string>): Record<string, string> => {
-	const headers: Record<string, string> = {};
-	for (const [name, value] of Object.entries(requestHeaders)) {
-		const lower = name.toLowerCase();
-		if (lower !== "if-none-match" && lower !== "if-modified-since") {
-			headers[lower] = value;
+export const seedScript = ({ origin, entries, prefix }: SeedScriptArg): void => {
+	if (window !== window.top || location.origin !== origin) {
+		return;
+	}
+	if (globalThis.navigation?.activation?.from) {
+		return;
+	}
+	try {
+		for (const [key, value] of Object.entries(entries)) {
+			sessionStorage.setItem(key, value);
 		}
+	} catch (error) {
+		console.error(`${prefix}${JSON.stringify({ origin, error: String(error) })}`);
 	}
-	headers["sec-fetch-mode"] = "navigate";
-	headers["sec-fetch-dest"] = "document";
-	headers["sec-fetch-site"] = secFetchSite(url, headers.referer);
-	return headers;
 };
 
-/** JSON for an inline script: `<` can never close the script and the line separators stay inside the literal. */
-export const escapeForScript = (value: unknown): string =>
-	JSON.stringify(value)
-		.replace(/</g, "\\u003c")
-		.replace(/\u2028/g, "\\u2028")
-		.replace(/\u2029/g, "\\u2029");
+const describeKeys = (keys: readonly string[]): string => keys.join(", ");
 
-/** UTF-8 so a re-submitted form encodes its fields as the original page did; no referrer, as `page.goto` sends none. */
-const HEAD = '<meta charset="utf-8"><meta name="referrer" content="no-referrer">';
-
-/** Where the writer document moves itself, without a request, before it continues the navigation. */
-const CONTINUE_PATH = "/.pomwright-seed-continue";
-
-/**
- * Continues the navigation. A target without a fragment of its own takes the document's, which the request never
- * carries, as the browser carries it over a redirect. The writer document sits at the target's own URL: a replace
- * from there with a fragment would only scroll, and without one WebKit does not tie it to the `goto` that waits, so
- * it first moves to `CONTINUE_PATH` with `history.replaceState`, a same-document change that makes no request.
- */
-const continueScript = (url: string, method: string, postData: string | null): string => {
-	const target = `var url = ${escapeForScript(url)}; if (url.indexOf("#") === -1) { url += location.hash; } `;
-	if (method === "GET") {
-		return (
-			`${target}if (url.split("#")[0] === location.href.split("#")[0]) { history.replaceState(null, "", ${escapeForScript(CONTINUE_PATH)}); } ` +
-			"location.replace(url);"
-		);
-	}
-	return (
-		`${target}var form = document.createElement("form"); form.method = "post"; form.acceptCharset = "utf-8"; form.action = url; ` +
-		`new URLSearchParams(${escapeForScript(postData ?? "")}).forEach(function (value, name) { ` +
-		'var input = document.createElement("input"); input.type = "hidden"; input.name = name; input.value = value; ' +
-		"form.appendChild(input); }); document.body.appendChild(form); form.submit();"
-	);
-};
-
-/**
- * The document that answers the hop: stores every entry, then continues the navigation, a GET with
- * `location.replace` and a form POST by re-submitting the same fields. A failed write is rendered into the
- * page under a telling title and the navigation is skipped, so a stalled test explains itself.
- */
-export const buildSeedDocument = (
-	entries: Record<string, string>,
-	url: string,
-	method: string,
-	postData: string | null,
-): string =>
-	`<!doctype html>${HEAD}<title>POMWright session storage seed</title><body><script>(function () { ` +
-	`var entries = ${escapeForScript(entries)}; ` +
-	"try { Object.keys(entries).forEach(function (key) { sessionStorage.setItem(key, entries[key]); }); } " +
-	'catch (error) { document.title = "POMWright seed failed"; document.body.textContent = ' +
-	'"POMWright could not write sessionStorage for " + location.origin + " (keys: " + Object.keys(entries).join(", ") + "): " + error; return; } ' +
-	`${continueScript(url, method, postData)} })();</script></body>`;
-
-/** The document that replaces a server redirect seen by the proxy: performs the same navigation itself. */
-export const buildRedirectDocument = (url: string, method: string, postData: string | null): string =>
-	`<!doctype html>${HEAD}<title>POMWright redirect</title><body><script>(function () { ${continueScript(
-		url,
-		method,
-		postData,
-	)} })();</script></body>`;
-
-const describeKeys = (entries: Record<string, string>): string => Object.keys(entries).join(", ");
-
-export const bypassError = (pending: PendingSeed, origin: string, url: string): Error =>
+export const noNavigationApiError = (title: string, origin: string, userAgent: string, site: Error): Error =>
 	atCallSite(
 		new Error(
-			`${pending.title}: the page navigated to ${url} but the pending seed for ${origin} was not applied; ` +
-				"the navigation was not intercepted: a service worker registered by the app answered it, or a route the " +
-				"test registered after seed() fulfilled it; the app ran without the entries. Fixes: set " +
-				'use: { serviceWorkers: "block" } in the Playwright config; seed before the app\'s first load in this ' +
-				"context; unregister the worker in the test before seeding; or let the test's own route call " +
-				"route.fallback() for that navigation",
+			`${title}: seed() needs the Navigation API (navigation.activation) to write only on the first arrival at ` +
+				`${origin}, and this browser has none (${userAgent}); use set() on the origin and reload instead`,
 		),
-		pending.site,
+		site,
 	);
 
-export const unsupportedNavigationError = (
-	pending: PendingSeed,
-	origin: string,
-	method: string,
-	contentType: string | undefined,
-): Error =>
+export const inFlightError = (title: string, origin: string, site: Error): Error =>
 	atCallSite(
 		new Error(
-			`${pending.title}: cannot re-issue a ${method} ${contentType ?? "(no content-type)"} navigation to ${origin}; ` +
-				`the app loaded without the entries. Only GET and ${FORM_URLENCODED} POST navigations can be seeded`,
+			`${title}: the page committed a document on ${origin} while seed() was registering, so the app may have ` +
+				"started without the entries; await that navigation before seeding, or seed before starting it",
 		),
-		pending.site,
+		site,
 	);
 
-export const proxyFailureError = (pending: PendingSeed, url: string, origin: string, cause: unknown): Error =>
+export const writeFailedError = (applied: AppliedSeed, origin: string, cause: string): Error =>
 	atCallSite(
-		new Error(`${pending.title}: could not fetch ${url} while a seed for ${origin} was pending`, { cause }),
-		pending.site,
+		new Error(
+			`${applied.title}: could not write sessionStorage for ${origin} (keys: ${describeKeys(applied.keys)}): ` +
+				`${cause}; the app loaded without the entries`,
+		),
+		applied.site,
 	);
 
 export const neverAppliedError = (pendings: readonly (readonly [string, PendingSeed])[]): Error => {
@@ -218,7 +133,7 @@ export const neverAppliedError = (pendings: readonly (readonly [string, PendingS
 		throw new Error("neverAppliedError needs at least one pending seed");
 	}
 	const details = pendings
-		.map(([origin, pending]) => `the seed for ${origin} (keys: ${describeKeys(pending.entries)})`)
+		.map(([origin, pending]) => `the seed for ${origin} (keys: ${describeKeys(Object.keys(pending.entries))})`)
 		.join(" and ");
 	return atCallSite(
 		new Error(
@@ -229,14 +144,13 @@ export const neverAppliedError = (pendings: readonly (readonly [string, PendingS
 	);
 };
 
-const isRedirect = (status: number): boolean => status >= 300 && status < 400;
-
 /** One per page, shared by every `SessionStorage` on it. See the module comment. */
 export class SeedRegistry {
 	private readonly pending = new Map<string, PendingSeed>();
-	private failure: Error | undefined;
-	/** One reference for `route` and `unroute`, which match the URL predicate by identity. */
-	private readonly matchAll = (_url: URL): boolean => true;
+	/** Applied seeds whose document may still report a refused write: until its DOMContentLoaded or the next commit. */
+	private readonly confirming = new Map<string, AppliedSeed>();
+	private navigationApiChecked = false;
+	private listening = false;
 
 	constructor(
 		private readonly page: SeedPage,
@@ -248,119 +162,129 @@ export class SeedRegistry {
 		return [...this.pending.keys()];
 	}
 
-	/** Throws a failure recorded by the route handler, once. Every helper method calls this first. */
-	throwIfFailed(): void {
-		if (this.failure !== undefined) {
-			const failure = this.failure;
-			this.failure = undefined;
-			throw failure;
-		}
-	}
-
-	/** Records entries for `origin`; the first pending seed on the page registers the route and listeners. */
+	/**
+	 * Registers the init script for `origin` with the entries merged into any pending ones, then disposes of the
+	 * previous script. Throws when the browser lacks the Navigation API, and when the main frame commits on the origin
+	 * while the script is being registered: that document may or may not have run it.
+	 */
 	async add(origin: string, entries: Record<string, string>, title: string, site: Error): Promise<void> {
-		const first = this.pending.size === 0;
-		const existing = this.pending.get(origin);
-		if (existing === undefined) {
-			this.pending.set(origin, { entries: { ...entries }, title, site, fired: false, committed: false });
-		} else {
-			Object.assign(existing.entries, entries);
+		await this.assertNavigationApi(origin, title, site);
+		const previous = this.pending.get(origin);
+		const merged = { ...previous?.entries, ...entries };
+		let committed = false;
+		const watch = (frame: Frame): void => {
+			if (frame === this.page.mainFrame() && originOf(frame.url()) === origin) {
+				committed = true;
+			}
+		};
+		this.page.on("framenavigated", watch);
+		let disposable: SeedDisposable;
+		try {
+			disposable = await this.page.addInitScript(seedScript, { origin, entries: merged, prefix: FAILURE_PREFIX });
+		} finally {
+			this.page.off("framenavigated", watch);
 		}
-		if (first) {
-			this.page.on("framenavigated", this.onNavigated);
-			this.page.on("close", this.onClose);
-			await this.page.route(this.matchAll, this.handler);
+		if (committed) {
+			await disposable.dispose();
+			throw inFlightError(title, origin, site);
 		}
+		this.pending.set(origin, {
+			entries: merged,
+			title: previous?.title ?? title,
+			site: previous?.site ?? site,
+			disposable,
+		});
+		this.listen();
+		await previous?.disposable.dispose();
 	}
 
-	private readonly handler = async (route: Route): Promise<void> => {
-		const request = route.request();
-		if (!request.isNavigationRequest() || request.frame() !== this.page.mainFrame()) {
-			await route.fallback();
+	/** Once per page: an evaluation in the current document, which works on `about:blank` too. */
+	private async assertNavigationApi(origin: string, title: string, site: Error): Promise<void> {
+		if (this.navigationApiChecked) {
 			return;
 		}
-		const url = request.url();
-		const origin = originOf(url);
-		if (origin === undefined) {
-			await route.fallback();
-			return;
-		}
-		const method = request.method();
-		const headers = request.headers();
-		const contentType = headers["content-type"];
-		const pending = this.pending.get(origin);
-
-		if (pending?.committed === true && url === pending.target) {
-			// The writer document's own replace: the seed is applied, let the real navigation through natively.
-			this.pending.delete(origin);
-			await route.fallback();
-			await this.teardownIfIdle();
-			return;
-		}
-		if (pending !== undefined) {
-			// The hop itself, or a retry after a hop that was cancelled before the writer committed.
-			if (!reissuable(method, contentType)) {
-				this.failure = unsupportedNavigationError(pending, origin, method, contentType);
-				await route.fallback();
-				return;
-			}
-			pending.fired = true;
-			pending.target = url;
-			pending.committed = false;
-			await route.fulfill({
-				contentType: "text/html",
-				body: buildSeedDocument(pending.entries, url, method, request.postData()),
-			});
-			return;
-		}
-
-		// Any other main-frame navigation while a seed is pending: fetch it with redirects disabled, so a
-		// server redirect towards a pending origin becomes a navigation the route sees.
-		let response: APIResponse;
+		const probe = () =>
+			this.page.evaluate(() => ({
+				supported: typeof globalThis.navigation?.activation === "object",
+				userAgent: navigator.userAgent,
+			}));
+		let support: NavigationSupport;
 		try {
-			response = await route.fetch({ maxRedirects: 0, timeout: 0, headers: proxyHeaders(url, headers) });
-		} catch (error) {
-			this.failure = proxyFailureError(this.anyPending(), url, this.pendingOrigins.join(", "), error);
-			await route.abort("failed");
+			support = await probe();
+		} catch {
+			// a navigation replaced the document during the evaluation; the next one runs in its successor
+			support = await probe();
+		}
+		if (!support.supported) {
+			throw noNavigationApiError(title, origin, support.userAgent, site);
+		}
+		this.navigationApiChecked = true;
+	}
+
+	private listen(): void {
+		if (this.listening) {
 			return;
 		}
-		const status = response.status();
-		const location = response.headers().location;
-		if (isRedirect(status) && location !== undefined) {
-			const keepMethod = status === 307 || status === 308;
-			if (keepMethod && !reissuable(method, contentType)) {
-				await route.fulfill({ response });
-				return;
-			}
-			const target = new URL(location, url).href;
-			await route.fulfill({
-				contentType: "text/html",
-				body: buildRedirectDocument(target, keepMethod ? method : "GET", keepMethod ? request.postData() : null),
-			});
+		this.listening = true;
+		this.page.on("framenavigated", this.onNavigated);
+		this.page.on("domcontentloaded", this.onDomContentLoaded);
+		this.page.on("console", this.onConsole);
+		this.page.on("close", this.onClose);
+	}
+
+	private teardownIfIdle(): void {
+		if (!this.listening || this.pending.size > 0 || this.confirming.size > 0) {
 			return;
 		}
-		await route.fulfill({ response });
-	};
+		this.listening = false;
+		this.page.off("framenavigated", this.onNavigated);
+		this.page.off("domcontentloaded", this.onDomContentLoaded);
+		this.page.off("console", this.onConsole);
+		this.page.off("close", this.onClose);
+	}
 
 	private readonly onNavigated = (frame: Frame): void => {
 		if (frame !== this.page.mainFrame()) {
 			return;
 		}
-		const url = withoutFragment(frame.url());
-		const origin = originOf(url);
+		// a document that could report a refused write has done so before the next commit
+		this.confirming.clear();
+		const origin = originOf(frame.url());
 		const pending = origin === undefined ? undefined : this.pending.get(origin);
-		if (pending === undefined || origin === undefined) {
+		if (origin !== undefined && pending !== undefined) {
+			this.pending.delete(origin);
+			this.confirming.set(origin, { keys: Object.keys(pending.entries), title: pending.title, site: pending.site });
+			// the committed document has already run the script; disposing keeps it from the next one
+			pending.disposable.dispose().catch(() => undefined);
+		}
+		this.teardownIfIdle();
+	};
+
+	private readonly onDomContentLoaded = (): void => {
+		// the script runs before the document parses, so its report arrives before this event
+		this.confirming.clear();
+		this.teardownIfIdle();
+	};
+
+	private readonly onConsole = (message: ConsoleMessage): void => {
+		const text = message.text();
+		if (!text.startsWith(FAILURE_PREFIX)) {
 			return;
 		}
-		if (pending.committed && new URL(url).pathname === CONTINUE_PATH) {
-			return; // the writer document moving off its URL before it continues (continueScript)
+		let report: { origin?: unknown; error?: unknown };
+		try {
+			report = JSON.parse(text.slice(FAILURE_PREFIX.length));
+		} catch {
+			return;
 		}
-		if (!pending.fired || url !== pending.target) {
-			const failure = this.failure ?? bypassError(pending, origin, frame.url());
-			this.failure = undefined;
-			throw failure; // thrown from a page listener: fails the running test at once
+		const origin = typeof report.origin === "string" ? report.origin : undefined;
+		const applied = origin === undefined ? undefined : this.confirming.get(origin);
+		if (origin === undefined || applied === undefined) {
+			return;
 		}
-		pending.committed = true;
+		this.confirming.delete(origin);
+		this.teardownIfIdle();
+		throw writeFailedError(applied, origin, String(report.error)); // thrown from a page listener: fails the test at once
 	};
 
 	private readonly onClose = (): void => {
@@ -368,32 +292,10 @@ export class SeedRegistry {
 		if (outcome === undefined || outcome.status !== "passed" || outcome.errors.length > 0) {
 			return;
 		}
-		if (this.failure !== undefined) {
-			const failure = this.failure;
-			this.failure = undefined;
-			throw failure;
-		}
 		if (this.pending.size > 0) {
 			throw neverAppliedError([...this.pending.entries()]);
 		}
 	};
-
-	private anyPending(): PendingSeed {
-		const first = this.pending.values().next();
-		if (first.done === true) {
-			throw new Error("SeedRegistry: no pending seed");
-		}
-		return first.value;
-	}
-
-	private async teardownIfIdle(): Promise<void> {
-		if (this.pending.size > 0) {
-			return;
-		}
-		await this.page.unroute(this.matchAll, this.handler);
-		this.page.off("framenavigated", this.onNavigated);
-		this.page.off("close", this.onClose);
-	}
 }
 
 const registries = new WeakMap<SeedPage, SeedRegistry>();
@@ -407,6 +309,3 @@ export const registryFor = (page: SeedPage, readTestOutcome: ReadTestOutcome): S
 	}
 	return registry;
 };
-
-/** The page's registry if a seed was ever recorded on it. */
-export const existingRegistryFor = (page: SeedPage): SeedRegistry | undefined => registries.get(page);

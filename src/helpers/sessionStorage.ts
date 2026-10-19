@@ -6,11 +6,11 @@
  * Playwright's contract: strings in, strings out, `null` for a missing key. A helper constructed with an
  * `origin` (every page object with a string `baseUrl`) refuses to touch another origin's storage, which is
  * unreachable without leaving the current document anyway. `seed` writes at once when the page is on the
- * origin and otherwise defers to the page's seed registry, which keeps the navigation's fragment.
+ * origin and otherwise defers to the page's seed registry, whose init script writes on the first arrival there.
  */
 import { type Page, test } from "@playwright/test";
 import { captureCallSite } from "./callSite";
-import { existingRegistryFor, originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSeed";
+import { originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSeed";
 
 /**
  * How a session storage key's value is stored as a string and read back: `stringify` on the way in, `parse` on the way
@@ -233,19 +233,12 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	}
 
 	/**
-	 * Runs `body` as a step, boxed so the report shows it at the line that called the helper; a recorded seed failure is
-	 * thrown first. Playwright takes a boxed step's location from the async stack after its first frame, so this helper
-	 * is not `async` (it would be that frame) and every method awaits it rather than returning it (which cuts the stack).
+	 * Runs `body` as a step, boxed so the report shows it at the line that called the helper. Playwright takes a boxed
+	 * step's location from the async stack after its first frame, so this helper is not `async` (it would be that frame)
+	 * and every method awaits it rather than returning it (which cuts the stack).
 	 */
 	private step<T>(method: string, body: () => Promise<T>): Promise<T> {
-		return test.step(
-			`${this.title(method)}:`,
-			async () => {
-				existingRegistryFor(this.page)?.throwIfFailed();
-				return body();
-			},
-			{ box: true },
-		);
+		return test.step(`${this.title(method)}:`, body, { box: true });
 	}
 
 	/** One call into `page.sessionStorage`; the browser's refusal on a document without an origin is explained. */
@@ -403,18 +396,19 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 
 	/**
 	 * Stores entries for an origin before the app's next load there, so the app's first script sees them, without
-	 * leaving the page the test is on. On the origin already, it writes at once. Elsewhere, the next navigation of the
-	 * main frame that reaches the origin (`goto`, a link, a script, a form POST, a server redirect) stores them and
-	 * continues, keeping its URL fragment. A seed that is still waiting when the page closes fails the test.
+	 * leaving the page the test is on. On the origin already, it writes at once. Elsewhere, an init script stores them
+	 * when the page's main frame first arrives at the origin, by any navigation (`goto`, a link, a script, a form POST, a
+	 * server redirect, a service worker's answer), and is removed once that document has run it. Navigations are never
+	 * intercepted. A seed that is still waiting when the page closes fails the test.
 	 *
 	 * @param key The key.
 	 * @param value The value: a string, or the type of the key's codec.
 	 * @param entries Several keys and values.
 	 * @param options `{ origin }`: the origin to seed. Defaults to the helper's origin, which a page object's helper has.
-	 * @throws When there is no origin (`Shop.SessionStorage.seed: an origin is required; pass { origin } or construct
-	 * the helper with one`); later, at the navigation or when the page closes, failing the test with the line of this
-	 * call in the stack, when a service worker or a later route answered the navigation, when a form POST cannot be
-	 * re-issued, or when the seed was never applied.
+	 * @throws At the call, when there is no origin (`Shop.SessionStorage.seed: an origin is required; pass { origin } or
+	 * construct the helper with one`), when the browser has no Navigation API, and when the page commits a document on
+	 * the origin while the seed is being registered; later, failing the test with the line of this call in the stack,
+	 * when the browser refuses the write (the storage quota) or when the page closes before the seed was applied.
 	 *
 	 * @example
 	 * ```ts
