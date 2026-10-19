@@ -10,15 +10,25 @@ const user: User = { name: "Ada", age: 36 };
 const userJson = JSON.stringify(user);
 
 // The fixture page renders what its first script saw (#startup), the current entries (#current), the
-// request method and posted fields, the Referer and Sec-Fetch headers the server received, and who
-// served the document. Locators auto-wait, so a read right after a navigation lands on the real page.
+// request method and posted fields, the Referer and Sec-Fetch headers the server received, the
+// navigation's type and document.referrer (#navigation), and who served the document.
 const readJson = async (page: Page, id: string) => JSON.parse((await page.locator(`#${id}`).textContent()) ?? "null");
 const startup = (page: Page) => readJson(page, "startup");
 const current = (page: Page) => readJson(page, "current");
 const headers = (page: Page) => readJson(page, "headers");
+const navigation = (page: Page) => readJson(page, "navigation");
 const servedBy = (page: Page) => page.locator("#served-by").textContent();
 const onSecondOrigin = (url: URL) => url.origin === B && url.pathname === "/teststorage";
 const storedItem = (page: Page, key: string) => page.evaluate((k) => sessionStorage.getItem(k), key);
+// a whole-page mock whose document snapshots its storage as the fixture page does
+const mock = (route: Route) =>
+	route.fulfill({
+		contentType: "text/html",
+		body:
+			"<!doctype html><script>window.__startup = JSON.stringify(Object.fromEntries(Object.entries(sessionStorage)));</script>" +
+			'<title>mocked</title><pre id="served-by">mock</pre><pre id="startup"></pre>' +
+			'<script>document.getElementById("startup").textContent = window.__startup;</script>',
+	});
 
 test.describe("set, get and clear", () => {
 	test("set stores strings as given and declared keys through their codec; the app reads them raw", async ({
@@ -195,7 +205,7 @@ test.describe("seed", () => {
 		trigger: (poc: TestStorage) => Promise<void>;
 		url: string;
 		method: "GET" | "POST";
-		posted?: Record<string, unknown>;
+		posted?: unknown;
 	}[] = [
 		{
 			name: "link",
@@ -247,13 +257,42 @@ test.describe("seed", () => {
 			url: `${B}/teststorage?hop=chain`,
 			method: "GET",
 		},
+		{
+			name: "multipart form POST",
+			trigger: (p) => p.getLocator("body.button@submitMultipart").click(),
+			url: `${B}/teststorage`,
+			method: "POST",
+			posted: { note: "a b", unicode: "åæø 🚀" },
+		},
+		{
+			name: "text/plain form POST",
+			trigger: (p) => p.getLocator("body.button@submitText").click(),
+			url: `${B}/teststorage`,
+			method: "POST",
+			posted: "note=a b\r\n",
+		},
 	];
+	// what the app received and saw, which a seed leaves exactly as it is without one
+	const observed = async (page: Page) => ({
+		headers: await headers(page),
+		navigation: await navigation(page),
+		method: await page.locator("#method").textContent(),
+		posted: await readJson(page, "posted"),
+		hash: await page.evaluate(() => location.hash),
+	});
 	for (const hop of hops) {
-		test(`a seed for the second origin is applied on a hop by ${hop.name}`, async ({
+		test(`a seed for the second origin is applied on a hop by ${hop.name}, which reaches the app as without a seed`, async ({
 			page,
 			testStorage,
 			testStorageSecond,
 		}) => {
+			// the baseline: the same hop without a seed
+			await testStorage.navigation.goto();
+			await hop.trigger(testStorage);
+			await page.waitForURL(onSecondOrigin);
+			expect(await startup(page)).toEqual({});
+			const baseline = await observed(page);
+
 			await testStorage.navigation.goto();
 			await testStorageSecond.sessionStorage.seed({ token: "from-A", user });
 			expect(page.url()).toBe(testStorage.fullUrl);
@@ -268,9 +307,7 @@ test.describe("seed", () => {
 			if (hop.posted !== undefined) {
 				expect(await readJson(page, "posted")).toEqual(hop.posted);
 			}
-			const received = await headers(page);
-			expect(received.referer).toBeNull();
-			expect(received["sec-fetch-site"]).toBe("same-origin");
+			expect(await observed(page)).toEqual(baseline);
 		});
 	}
 
@@ -287,49 +324,33 @@ test.describe("seed", () => {
 		await page.waitForURL(onSecondOrigin);
 		expect(await startup(page)).toEqual({ token: "abc" });
 		expect(await page.evaluate(() => history.length)).toBe(before + 1);
+		expect((await navigation(page)).type).toBe("navigate");
 
 		await page.goBack();
 		expect(page.url()).toBe(testStorage.fullUrl);
 	});
 
-	test("the proxy exists only while a seed is pending", async ({ page, testStorage }) => {
-		// A whole-page mock registered before the seed is the indicator: a proxied navigation performs the real
-		// request and never reaches it, a native navigation is answered by it.
+	test("a pending seed intercepts nothing: a whole-page mock registered before it still answers", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
 		const secondPage = (url: URL) => url.href === `${A}/teststorage?second=1`;
-		await page.route(secondPage, (route) =>
-			route.fulfill({
-				contentType: "text/html",
-				body: '<!doctype html><title>mocked</title><pre id="served-by">mock</pre>',
-			}),
-		);
+		await page.route(secondPage, mock);
 
-		// no seed: native, so the mock answers; a native 302 hop carries the browser's own Sec-Fetch-Site
 		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({ token: "x" });
 		await testStorage.getLocator("body.link@sameOrigin").click();
 		await page.waitForURL(secondPage);
 		expect(await servedBy(page)).toBe("mock");
-		await testStorage.navigation.goto();
-		await testStorage.getLocator("body.link@redirect302").click();
-		await page.waitForURL(onSecondOrigin);
-		expect((await headers(page))["sec-fetch-site"]).toBe("cross-site");
 
-		// pending: the same navigation is proxied, so the real page loads with the synthesised headers
 		await testStorage.navigation.goto();
-		await testStorage.sessionStorage.seed({ token: "x" }, { origin: B });
-		await testStorage.getLocator("body.link@sameOrigin").click();
-		await page.waitForURL(secondPage);
-		expect(await servedBy(page)).toBe("server");
-		expect((await headers(page))["sec-fetch-site"]).toBe("same-origin");
-
-		// the hop applies the seed; afterwards the mock answers again
 		await testStorage.getLocator("body.link@toSecondOrigin").click();
 		await page.waitForURL(onSecondOrigin);
 		expect(await startup(page)).toEqual({ token: "x" });
-		await page.goto(`${A}/teststorage?second=1`);
-		expect(await servedBy(page)).toBe("mock");
 	});
 
-	test("sub-resource requests and iframes pass through while a seed is pending, and the seed still fires", async ({
+	test("sub-resources and iframes are left alone while a seed is pending, even frames on the seeded origin, and the seed still applies", async ({
 		page,
 		testStorage,
 		testStorageSecond,
@@ -342,8 +363,11 @@ test.describe("seed", () => {
 		});
 		const secondFrame = page.frames().find((frame) => frame.url().startsWith(`${B}/teststorage/frame`));
 		expect(secondFrame).toBeDefined();
-		await secondFrame?.goto(`${B}/teststorage/frame?again=1`);
+		// a frame on the seeded origin, with srcdoc, about:blank and data: frames inside it: none of them is written to
+		await secondFrame?.goto(`${B}/teststorage/frame?nested=1`);
 		await expect(secondFrame?.locator("#frame-startup") ?? page.locator("#never")).toHaveText("{}");
+		expect(secondFrame?.childFrames()).toHaveLength(3);
+		expect(await secondFrame?.evaluate(() => sessionStorage.getItem("token"))).toBeNull();
 
 		await testStorage.getLocator("body.link@toSecondOrigin").click();
 		await page.waitForURL(onSecondOrigin);
@@ -433,69 +457,31 @@ test.describe("seed", () => {
 		expect(await startup(popup)).toEqual({});
 	});
 
-	test("a proxy failure is reported by the next call, pointing at the seed call; the seed still applies afterwards", async ({
-		page,
-		testStorage,
-		testStorageSecond,
-	}) => {
-		await testStorage.navigation.goto();
-		await testStorageSecond.sessionStorage.seed({ token: "later" });
-
-		await expect(page.goto("http://localhost:9999/nothing-listens-here")).rejects.toThrow();
-		let error: Error | undefined;
-		try {
-			await testStorage.sessionStorage.get();
-		} catch (caught) {
-			error = caught as Error;
-		}
-		expect(error?.message).toBe(
-			`TestStorageSecond.SessionStorage.seed: could not fetch http://localhost:9999/nothing-listens-here while a seed for ${B} was pending`,
-		);
-		expect(error?.stack).toContain("sessionStorage.spec.ts");
-		expect(error?.cause).toBeInstanceOf(Error);
-
-		// the aborted navigation leaves the tab on Chromium's error page, which can still be committing; once back on
-		// a real document the failure is not repeated
-		await expect(async () => {
-			await testStorage.navigation.goto();
-		}).toPass({ timeout: 5_000 });
-		expect(await testStorage.sessionStorage.get()).toEqual({});
-
-		await testStorageSecond.navigation.goto();
-		expect(await startup(page)).toEqual({ token: "later" });
-	});
-
-	test("whole-page mocks registered after seed are served, those registered before are bypassed, and API mocks are unaffected", async ({
+	test("whole-page mocks are served whether registered before or after seed, a mock of the seeded origin is seeded, and API mocks are unaffected", async ({
 		page,
 		testStorage,
 		testStorageSecond,
 	}) => {
 		const secondPage = (url: URL) => url.href === `${A}/teststorage?second=1`;
-		const mock = (route: Route) =>
-			route.fulfill({
-				contentType: "text/html",
-				body: '<!doctype html><title>mocked</title><pre id="served-by">mock</pre>',
-			});
+		const seededPage = (url: URL) => url.href === `${B}/teststorage?mocked=1`;
 		await testStorage.navigation.goto();
-		await page.route(secondPage, mock);
 		await page.route(
 			(url) => url.href === `${B}/teststorage/api`,
 			(route) => route.fulfill({ contentType: "application/json", body: '{"mocked":true}' }),
 		);
 		await testStorageSecond.sessionStorage.seed({ token: "t" });
+		await page.route(secondPage, mock);
+		await page.route(seededPage, mock);
 
 		await testStorage.getLocator("body.link@sameOrigin").click();
 		await page.waitForURL(secondPage);
-		expect(await servedBy(page)).toBe("server");
+		expect(await servedBy(page)).toBe("mock");
 		expect(await page.evaluate((url) => fetch(url).then((r) => r.json()), `${B}/teststorage/api`)).toEqual({
 			mocked: true,
 		});
 
-		await page.route(secondPage, mock);
-		await page.goto(`${A}/teststorage?second=1`);
+		await page.goto(`${B}/teststorage?mocked=1`);
 		expect(await servedBy(page)).toBe("mock");
-
-		await testStorageSecond.navigation.goto();
 		expect(await startup(page)).toEqual({ token: "t" });
 	});
 
@@ -602,17 +588,19 @@ test.describe("seed and the URL fragment", () => {
 	}
 
 	for (const target of [`${B}/teststorage`, `${B}/teststorage#section`]) {
-		test(`goto returns on the app's document, not before it, for ${target}`, async ({
+		test(`goto returns the app's response, on the app's document, for ${target}`, async ({
 			page,
 			testStorage,
 			testStorageSecond,
 		}) => {
 			for (let round = 0; round < 3; round++) {
 				await seedSecond(testStorage, testStorageSecond);
-				await page.goto(target);
+				const response = await page.goto(target);
 				// no auto-waiting here: these read whatever document goto returned on
 				expect(await page.title()).toBe("Session storage playground");
 				expect(page.url()).toBe(target);
+				expect(response?.status()).toBe(200);
+				expect(response?.headers()["x-served-by"]).toBe("server");
 			}
 		});
 	}
@@ -677,34 +665,20 @@ test.describe("iframes", () => {
 
 test.describe("service workers", () => {
 	const controlled = (page: Page) => page.waitForFunction(() => navigator.serviceWorker.controller !== null);
-	const unregister = (page: Page) =>
-		page.evaluate(async () => {
-			for (const registration of await navigator.serviceWorker.getRegistrations()) {
-				await registration.unregister();
-			}
-		});
 
-	test("a worker that answers navigations bypasses a pending seed, which fails the test at once", async ({
-		page,
-		testStorage,
-		testStorageSecond,
-	}) => {
-		test.fail(true, "the bypass must fail this test");
+	test("a page that a worker serves for a navigation is seeded", async ({ page, testStorage, testStorageSecond }) => {
 		await testStorageSecond.navigation.goto("/teststorage?worker=1");
 		await controlled(page);
 		await testStorage.navigation.goto();
-		await testStorageSecond.sessionStorage.seed({ token: "lost" });
+		await testStorageSecond.sessionStorage.seed({ token: "from-worker-page" });
 
 		await testStorage.getLocator("body.link@toSecondOrigin").click();
 		await page.waitForURL(onSecondOrigin);
-		await expect(page.locator("#served-by")).toHaveText("service-worker");
+		expect(await servedBy(page)).toBe("service-worker");
+		expect(await startup(page)).toEqual({ token: "from-worker-page" });
 	});
 
-	test("a worker that lets navigations through does not bypass the seed", async ({
-		page,
-		testStorage,
-		testStorageSecond,
-	}) => {
+	test("a worker that lets navigations through changes nothing", async ({ page, testStorage, testStorageSecond }) => {
 		await testStorageSecond.navigation.goto("/teststorage?worker=passthrough");
 		await controlled(page);
 		await testStorage.navigation.goto();
@@ -715,44 +689,128 @@ test.describe("service workers", () => {
 		expect(await servedBy(page)).toBe("server");
 		expect(await startup(page)).toEqual({ token: "kept" });
 	});
+});
 
-	test.describe("with serviceWorkers blocked", () => {
-		test.use({ serviceWorkers: "block" });
+test.describe("seed and the app's own navigations", () => {
+	const clearSecondOrigin = async (page: Page) => {
+		await page.goto(`${B}/teststorage`);
+		await page.evaluate(() => sessionStorage.clear());
+	};
 
-		test("the same flow seeds, because the worker never registers", async ({
+	for (const [mode, what, expected] of [
+		["reload", "reloads", { raced: "1", token: "app" }],
+		["replace", "replaces itself on the same origin", { raced: "1", token: "app" }],
+		["remove", "removes the seeded key and reloads", { raced: "1" }],
+	] as const) {
+		test(`the app's first script writes, then ${what}: the seed is not written again (10 rounds)`, async ({
 			page,
 			testStorage,
 			testStorageSecond,
 		}) => {
-			await testStorageSecond.navigation.goto("/teststorage?worker=1");
-			await expect(page.locator("#controlled")).toHaveText("no");
-			await testStorage.navigation.goto();
-			await testStorageSecond.sessionStorage.seed({ token: "blocked" });
-
-			await testStorage.getLocator("body.link@toSecondOrigin").click();
-			await page.waitForURL(onSecondOrigin);
-			expect(await servedBy(page)).toBe("server");
-			expect(await startup(page)).toEqual({ token: "blocked" });
+			for (let round = 0; round < 10; round++) {
+				await clearSecondOrigin(page);
+				await testStorage.navigation.goto();
+				await testStorageSecond.sessionStorage.seed({ token: "seeded" });
+				await page.goto(`${B}/teststorage/race?mode=${mode}`);
+				await expect.poll(() => startup(page)).toEqual(expected);
+			}
 		});
-	});
+	}
 
-	test("seeding on a fresh context before the app registers its worker works", async ({ page, testStorageSecond }) => {
-		await testStorageSecond.sessionStorage.seed({ token: "early" });
-		await testStorageSecond.navigation.goto("/teststorage?worker=1");
-		expect(await servedBy(page)).toBe("server");
-		expect(await startup(page)).toEqual({ token: "early" });
-	});
-
-	test("unregistering the worker in the test restores the seed", async ({ page, testStorage, testStorageSecond }) => {
-		await testStorageSecond.navigation.goto("/teststorage?worker=1");
-		await controlled(page);
-		await unregister(page);
+	test("the app writes, leaves for another origin and comes straight back: the seed is not written again", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		await clearSecondOrigin(page);
 		await testStorage.navigation.goto();
-		await testStorageSecond.sessionStorage.seed({ token: "restored" });
+		await testStorageSecond.sessionStorage.seed({ token: "seeded" });
+		await page.goto(`${B}/teststorage/race?mode=bounce`);
+		await page.waitForURL(`${B}/teststorage?after=bounce`);
+		await expect.poll(() => startup(page)).toEqual({ raced: "1", token: "app" });
+	});
+
+	test('with waitUntil: "commit", the committed document is the app\'s and already has the entries', async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({ token: "at-commit" });
+		await page.goto(`${B}/teststorage`, { waitUntil: "commit" });
+		expect(page.url()).toBe(`${B}/teststorage`);
+		expect(await storedItem(page, "token")).toBe("at-commit");
+	});
+
+	test("an arrival by goBack is seeded and keeps its navigation type", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		await testStorageSecond.navigation.goto();
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({ token: "back" });
+		await page.goBack();
+		expect(await startup(page)).toEqual({ token: "back" });
+		expect((await navigation(page)).type).toBe("back_forward");
+	});
+
+	test("a navigation to the origin that commits no document (204) leaves the page where it was and the seed waiting", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({ token: "later" });
+		const answered = page.waitForResponse(`${B}/teststorage/204`);
+		await page.evaluate((url) => {
+			location.href = url;
+		}, `${B}/teststorage/204`);
+		expect((await answered).status()).toBe(204);
+		expect(page.url()).toBe(testStorage.fullUrl);
+
+		// a goto, not a click: on Chromium, Playwright's actions keep waiting for the 204 "navigation", seed or not
+		await testStorageSecond.navigation.goto();
+		expect(await startup(page)).toEqual({ token: "later" });
+	});
+
+	test("a download from the origin leaves the page where it was and the seed waiting", async ({
+		page,
+		browserName,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		test.skip(browserName === "webkit", "WebKit opens the attachment as a document, with or without a seed");
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({ token: "later" });
+		const download = page.waitForEvent("download");
+		await page.evaluate((url) => {
+			location.href = url;
+		}, `${B}/teststorage/download`);
+		await download;
+		expect(page.url()).toBe(testStorage.fullUrl);
 
 		await testStorage.getLocator("body.link@toSecondOrigin").click();
 		await page.waitForURL(onSecondOrigin);
-		expect(await servedBy(page)).toBe("server");
-		expect(await startup(page)).toEqual({ token: "restored" });
+		expect(await startup(page)).toEqual({ token: "later" });
+	});
+
+	test("in a browser without the Navigation API, seed fails at the call", async ({ page, testStorage }) => {
+		await page.addInitScript(() => {
+			Reflect.deleteProperty(window, "navigation");
+			Object.defineProperty(window, "navigation", { value: undefined });
+		});
+		await testStorage.navigation.goto();
+		await expect(testStorage.sessionStorage.seed({ token: "x" }, { origin: B })).rejects.toThrow(
+			/^TestStorage\.SessionStorage\.seed: seed\(\) needs the Navigation API \(navigation\.activation\) to write only on the first arrival at http:\/\/127\.0\.0\.1:9000, and this browser has none \(.+\); use set\(\) on the origin and reload instead$/,
+		);
+	});
+
+	test("a write the browser refuses fails the test", async ({ page, testStorage, testStorageSecond }) => {
+		test.fail(true, "the refused write must fail this test; callSite.spec.ts checks the message and the stack");
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({ big: "x".repeat(12 * 1024 * 1024) });
+		await testStorageSecond.navigation.goto();
+		expect(await startup(page)).toEqual({});
 	});
 });

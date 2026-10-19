@@ -16,6 +16,7 @@ export type Paths =
 	| "body.method"
 	| "body.posted"
 	| "body.headers"
+	| "body.navigation"
 	| "body.controlled"
 	| "body.link@toSecondOrigin"
 	| "body.link@sameOrigin"
@@ -27,6 +28,8 @@ export type Paths =
 	| "body.button@submitToSecondOrigin"
 	| "body.button@submit303"
 	| "body.button@submit307"
+	| "body.button@submitMultipart"
+	| "body.button@submitText"
 	| "body.frame@sameOrigin"
 	| "body.frame@secondOrigin";
 
@@ -39,6 +42,7 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 	registry.add("body.method").getById("method");
 	registry.add("body.posted").getById("posted");
 	registry.add("body.headers").getById("headers");
+	registry.add("body.navigation").getById("navigation");
 	registry.add("body.controlled").getById("controlled");
 	registry.add("body.link@toSecondOrigin").getById("to-second-origin");
 	registry.add("body.link@sameOrigin").getById("same-origin");
@@ -50,6 +54,8 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 	registry.add("body.button@submitToSecondOrigin").getById("submit-to-second-origin");
 	registry.add("body.button@submit303").getById("submit-303");
 	registry.add("body.button@submit307").getById("submit-307");
+	registry.add("body.button@submitMultipart").getById("submit-multipart");
+	registry.add("body.button@submitText").getById("submit-text");
 	registry.add("body.frame@sameOrigin").getById("same-origin-frame");
 	registry.add("body.frame@secondOrigin").getById("second-origin-frame");
 }

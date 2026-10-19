@@ -2,9 +2,9 @@ import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@fixtures/testApp.fixtures";
 import { BrokenPage } from "./pageObject";
-import { seedLater } from "./sessionStorage";
+import { seedTooMuch } from "./sessionStorage";
 
-// An error raised after the consumer's line has run (the registry check right after construction, a pending seed)
+// An error raised after the consumer's line has run (the registry check right after construction, a seed's refused write)
 // points at that line, whatever the consumer's file is called; here the files are pageObject.ts and sessionStorage.ts.
 const firstFrame = (stack: string) => stack.split("\n").find((line) => line.trim().startsWith("at ")) ?? "";
 
@@ -36,29 +36,35 @@ test.describe("a page object's registry error", () => {
 	});
 });
 
-test("a pending seed's error points at the seed call in the consumer's sessionStorage.ts", async ({
-	page,
-	testStorage,
-	testStorageSecond,
-}) => {
-	await testStorage.navigation.goto();
-	await seedLater(testStorageSecond);
+test.describe("a seed's refused write", () => {
+	test.describe.configure({ mode: "serial" });
+	// thrown from a page listener, so the test cannot catch it: a hook hands it to the next test through a file
+	const stackFile = () =>
+		path.join(
+			test.info().project.outputDir,
+			`seed-call-site-${test.info().project.name}-${test.info().repeatEachIndex}.txt`,
+		);
 
-	// a navigation the seed's proxy cannot fetch is reported by the next call
-	await expect(page.goto("http://localhost:9999/nothing-listens-here")).rejects.toThrow();
-	let error: Error | undefined;
-	try {
-		await testStorage.sessionStorage.get();
-	} catch (caught) {
-		error = caught as Error;
-	}
-	expect(error?.message).toMatch(/^TestStorageSecond\.SessionStorage\.seed: could not fetch /);
-	expect(firstFrame(error?.stack ?? "")).toMatch(/[\\/]callSite[\\/]sessionStorage\.ts:\d+:\d+/);
+	test.afterEach(() => {
+		const [error] = test.info().errors;
+		if (error?.stack !== undefined) {
+			writeFileSync(stackFile(), error.stack);
+		}
+	});
 
-	// back on a real document, the seed still applies; waiting for it keeps the page open until it has
-	await expect(async () => {
+	test("fails the test once the app's document has committed", async ({ testStorage, testStorageSecond }) => {
+		test.fail(true, "the refused write fails this test");
 		await testStorage.navigation.goto();
-	}).toPass({ timeout: 5_000 });
-	await testStorageSecond.navigation.goto();
-	await expect.poll(() => testStorageSecond.sessionStorage.get("token")).toBe("later");
+		await seedTooMuch(testStorageSecond);
+		await testStorageSecond.navigation.goto();
+	});
+
+	test("points at the seed call in the consumer's sessionStorage.ts", () => {
+		const stack = readFileSync(stackFile(), "utf8");
+		rmSync(stackFile());
+		expect(stack.split("\n")[0]).toMatch(
+			/^Error: TestStorageSecond\.SessionStorage\.seed: could not write sessionStorage for http:\/\/127\.0\.0\.1:9000 \(keys: big\): .+; the app loaded without the entries$/,
+		);
+		expect(firstFrame(stack)).toMatch(/[\\/]callSite[\\/]sessionStorage\.ts:\d+:\d+/);
+	});
 });

@@ -318,12 +318,14 @@ app.get("/testnav/bounce", (_req, res) => {
   `);
 });
 
-// Session storage fixture (plan 1.5). GET and POST render the same page, whose first script snapshots
-// sessionStorage before anything else runs; the body shows that snapshot, the current entries, the
-// request method and posted fields, and the Referer and Sec-Fetch headers the server received. Links,
-// buttons and forms hop to the second origin (http://127.0.0.1:9000, the same server) by every kind of
-// navigation the seed must survive. Query flags: coop=1 and coep=1 add the isolation headers, frames=1
-// embeds /teststorage/frame from both origins, worker=1 and worker=passthrough register a service worker.
+// Session storage fixture (plans 1.5 and 15). GET and POST render the same page, whose first script snapshots
+// sessionStorage before anything else runs; the body shows that snapshot, the current entries, the request
+// method and posted fields (urlencoded, multipart or text/plain), the Referer and Sec-Fetch headers the
+// server received, and the navigation's type and document.referrer as the page saw them. Links, buttons and
+// forms hop to the second origin (http://127.0.0.1:9000, the same server) by every kind of navigation a seed
+// must reach. Query flags: coop=1 and coep=1 add the isolation headers, frames=1 embeds /teststorage/frame
+// from both origins, worker=1 and worker=passthrough register a service worker.
+const FIRST_ORIGIN = "http://localhost:9000";
 const SECOND_ORIGIN = "http://127.0.0.1:9000";
 /** @param {unknown} value */
 const escapeHtml = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
@@ -331,6 +333,39 @@ const STARTUP_SNAPSHOT =
 	"<script>window.__startup = JSON.stringify(Object.fromEntries(Object.entries(sessionStorage)));</script>";
 
 app.use(express.urlencoded({ extended: false }));
+app.use("/teststorage", express.text({ type: "text/plain" }));
+
+/**
+ * The fields of a multipart/form-data body, enough for the fixture's text fields.
+ * @param {string} raw
+ * @param {string} contentType
+ */
+const parseMultipart = (raw, contentType) => {
+	const boundary = /boundary=(.+)$/.exec(contentType)?.[1];
+	/** @type {Record<string, string>} */
+	const fields = {};
+	for (const part of boundary === undefined ? [] : raw.split(`--${boundary}`)) {
+		const field = /name="([^"]*)"\r\n\r\n([\s\S]*)\r\n$/.exec(part);
+		if (field?.[1] !== undefined && field[2] !== undefined) {
+			fields[field[1]] = field[2];
+		}
+	}
+	return fields;
+};
+app.use("/teststorage", (req, _res, next) => {
+	const contentType = req.get("content-type") ?? "";
+	if (req.method !== "POST" || !contentType.startsWith("multipart/form-data")) {
+		next();
+		return;
+	}
+	/** @type {Buffer[]} */
+	const chunks = [];
+	req.on("data", (chunk) => chunks.push(chunk));
+	req.on("end", () => {
+		req.body = parseMultipart(Buffer.concat(chunks).toString("utf8"), contentType);
+		next();
+	});
+});
 
 /**
  * @param {import("express").Request} req
@@ -372,6 +407,7 @@ const renderStoragePage = (req, res) => {
         <pre id="method">${escapeHtml(req.method)}</pre>
         <pre id="posted">${escapeHtml(JSON.stringify(req.body ?? {}))}</pre>
         <pre id="headers">${escapeHtml(JSON.stringify(headers))}</pre>
+        <pre id="navigation"></pre>
         <pre id="controlled"></pre>
         <nav style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
           <a id="to-second-origin" href="${SECOND_ORIGIN}/teststorage?hop=link">Second origin by link</a>
@@ -402,11 +438,21 @@ const renderStoragePage = (req, res) => {
             <input type="hidden" name="u" value="x y">
             <button id="submit-307" type="submit">POST then 307 to the second origin</button>
           </form>
+          <form id="post-multipart" method="post" enctype="multipart/form-data" action="${SECOND_ORIGIN}/teststorage">
+            <input type="hidden" name="note" value="a b">
+            <input type="hidden" name="unicode" value="åæø 🚀">
+            <button id="submit-multipart" type="submit">Second origin by multipart form POST</button>
+          </form>
+          <form id="post-text" method="post" enctype="text/plain" action="${SECOND_ORIGIN}/teststorage">
+            <input type="hidden" name="note" value="a b">
+            <button id="submit-text" type="submit">Second origin by text/plain form POST</button>
+          </form>
         </nav>
         ${frames}
         <script>
           document.getElementById('startup').textContent = window.__startup;
           document.getElementById('current').textContent = JSON.stringify(Object.fromEntries(Object.entries(sessionStorage)));
+          document.getElementById('navigation').textContent = JSON.stringify({ type: performance.getEntriesByType('navigation')[0]?.type ?? null, referrer: document.referrer });
           document.getElementById('controlled').textContent = navigator.serviceWorker && navigator.serviceWorker.controller ? 'yes' : 'no';
           document.getElementById('script-to-second-origin').addEventListener('click', () => { location.href = '${SECOND_ORIGIN}/teststorage?hop=script'; });
           document.getElementById('meta-to-second-origin').addEventListener('click', () => {
@@ -424,15 +470,22 @@ const renderStoragePage = (req, res) => {
 app.get("/teststorage", renderStoragePage);
 app.post("/teststorage", renderStoragePage);
 
-// A small page for the iframes: snapshots its own sessionStorage and can start a top-level hop.
-app.get("/teststorage/frame", (_req, res) => {
+// A small page for the iframes: snapshots its own sessionStorage and can start a top-level hop. nested=1 adds
+// srcdoc, about:blank and data: frames inside it, documents a seed's script must leave alone.
+app.get("/teststorage/frame", (req, res) => {
 	res.set("Cache-Control", "no-store");
+	const nested = req.query.nested
+		? `<iframe title="srcdoc frame" srcdoc="<p>srcdoc</p>"></iframe>
+        <iframe title="blank frame" src="about:blank"></iframe>
+        <iframe title="data frame" src="data:text/html,<p>data</p>"></iframe>`
+		: "";
 	res.send(`<!doctype html>
     <html>
       <head>${STARTUP_SNAPSHOT}<meta charset="utf-8"><title>Frame</title></head>
       <body>
         <pre id="frame-startup"></pre>
         <button id="hop-from-frame">Second origin from inside the frame</button>
+        ${nested}
         <script>
           document.getElementById('frame-startup').textContent = window.__startup;
           document.getElementById('hop-from-frame').addEventListener('click', () => { top.location.href = '${SECOND_ORIGIN}/teststorage?hop=frame'; });
@@ -474,6 +527,50 @@ app.post("/teststorage/login308", (_req, res) => {
 	res.redirect(308, `${SECOND_ORIGIN}/teststorage?hop=308`);
 });
 
+// The app's first script writes the seeded key (or removes it) and leaves at once: reload, replace on the same
+// origin, or bounce through a page on the first origin and back. The next document shows what it found.
+/** @type {Record<string, string>} */
+const RACE_ACTIONS = {
+	reload: "sessionStorage.setItem('token', 'app'); location.reload();",
+	replace: "sessionStorage.setItem('token', 'app'); location.replace('/teststorage?after=race');",
+	remove: "sessionStorage.removeItem('token'); location.reload();",
+	bounce: `sessionStorage.setItem('token', 'app'); location.replace('${FIRST_ORIGIN}/teststorage/bounce?to=' + encodeURIComponent('${SECOND_ORIGIN}/teststorage?after=bounce'));`,
+};
+app.get("/teststorage/race", (req, res) => {
+	const action = RACE_ACTIONS[String(req.query.mode)];
+	if (action === undefined) {
+		res.status(400).send("Bad mode");
+		return;
+	}
+	res.set("Cache-Control", "no-store");
+	res.send(`<!doctype html>
+    <html>
+      <head>${STARTUP_SNAPSHOT}<script>if (!sessionStorage.getItem('raced')) { sessionStorage.setItem('raced', '1'); ${action} }</script><title>Race</title></head>
+      <body><pre id="startup"></pre><script>document.getElementById('startup').textContent = window.__startup;</script></body>
+    </html>
+  `);
+});
+
+// A page that replaces itself with `to` as its first script runs.
+app.get("/teststorage/bounce", (req, res) => {
+	const to = String(req.query.to ?? "");
+	if (!isFixtureUrl(to)) {
+		res.status(400).send("Bad target");
+		return;
+	}
+	res.set("Cache-Control", "no-store");
+	res.send(`<!doctype html><script>location.replace(${JSON.stringify(to)});</script>`);
+});
+
+// Navigations that never commit a document: no content, and an attachment.
+app.get("/teststorage/204", (_req, res) => {
+	res.status(204).end();
+});
+app.get("/teststorage/download", (_req, res) => {
+	res.set("Content-Disposition", 'attachment; filename="seed.txt"');
+	res.send("not a document");
+});
+
 app.get("/teststorage/api", (_req, res) => {
 	res.set("Access-Control-Allow-Origin", "*");
 	res.json({ ok: true });
@@ -481,12 +578,13 @@ app.get("/teststorage/api", (_req, res) => {
 
 // A service worker that answers every navigation itself (an app-shell strategy), and one that lets
 // everything through. Both are allowed the whole origin as scope.
+// The page reaches the worker's source through JSON.stringify, not an inline script, so it needs no escaping.
 const SW_PAGE =
 	"<!doctype html><html><head>" +
-	STARTUP_SNAPSHOT.replace(/<\/script>/g, "<\\/script>") +
+	STARTUP_SNAPSHOT +
 	'<meta charset="utf-8"><meta name="served-by" content="service-worker"><title>Served by the worker</title></head>' +
 	'<body><pre id="served-by">service-worker</pre><pre id="startup"></pre>' +
-	"<script>document.getElementById('startup').textContent = window.__startup;<\\/script></body></html>";
+	"<script>document.getElementById('startup').textContent = window.__startup;</script></body></html>";
 
 app.get("/teststorage/sw.js", (_req, res) => {
 	res.set("Content-Type", "text/javascript");
