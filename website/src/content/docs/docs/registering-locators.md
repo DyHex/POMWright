@@ -153,10 +153,19 @@ and queries alike. To change a locator for one use, query it; see [Queries](/POM
 ## When locators are registered
 
 A page object registers its locators in `defineLocators()`, which runs once, right after the page object is
-constructed. For filters the order does not matter: a `has` or `hasNot` path may be registered after the filter that
-names it, and the check that runs after `defineLocators()` reports a name that is never registered (see
-[Verifying a registry](/POMWright/docs/verifying-registries/)). A path you reuse must be registered before the copy (see
-[Reusing locators](/POMWright/docs/reusing-locators/#reuse-by-path)).
+constructed. Every locator call on the page object runs it to the end first, so by the time a chain is resolved, every
+path is registered. Within `defineLocators()`, the order of the registrations matters for one thing only, and the
+difference is between a reference and a copy:
+
+- **A `has` or `hasNot` path is a reference.** The filter stores the path as written and looks it up each time a
+  chain that uses it is resolved: by `getLocator`, `getNestedLocator`, a query's `getLocator` and
+  `getNestedLocator`, and `verify()`. So it may be registered after the filter that names it, and it always resolves
+  to what is registered at that moment. The check that runs after `defineLocators()` is the first such resolution,
+  and it reports a name that is never registered (see [Verifying a registry](/POMWright/docs/verifying-registries/)).
+- **A reused path is copied.** `add(path, { reuse: "main.list.item" })` reads the record of `main.list.item` at that
+  call and registers a copy of it at once, which `filter`, `nth` and `describe` then narrow. So the path you reuse
+  must be registered first; otherwise the call throws `No locator schema registered for path "main.list.item".` (see
+  [Reusing locators](/POMWright/docs/reusing-locators/#reuse-by-path)).
 
 ## Reference
 

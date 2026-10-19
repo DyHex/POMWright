@@ -28,7 +28,8 @@
 > and 13 (the site, its CI job and deployment, the README) on 2026-10-17 (commits c84ddd4 to 84a550f and the ledger
 > commit); its pre-merge step C8 is pending. 14 (dependencies) executed on 2026-10-19. 15 (`seed` on `addInitScript`),
 > executed and committed on the same branch on 2026-10-19 (commits 7ad64e2 to 0724ec7 and the ledger commit), see
-> [PLAN-15-SEED-INIT-SCRIPT.md](PLAN-15-SEED-INIT-SCRIPT.md).
+> [PLAN-15-SEED-INIT-SCRIPT.md](PLAN-15-SEED-INIT-SCRIPT.md). 16 (a registration ends at the next call on the registry),
+> written and decided on 2026-10-19, see [PLAN-16-REGISTRATION-ENDS.md](PLAN-16-REGISTRATION-ENDS.md).
 
 ## Overview
 
@@ -314,6 +315,16 @@ preferred way to share a locator across locator modules; exporting a `createReus
 registry.add("common.listItem").getByRole("listitem");
 registry.add("main.list.lastItem", { reuse: "common.listItem" }).nth("last").describe("Last item");
 ```
+
+### A registration ends at the next call on the registry **[planned, plan 16]**
+
+In 2.x a registration kept in a variable could be given more steps at any time, after other registrations, after its
+path was resolved, even mid-test, and the registered locator changed with them. In 3.0.0 a registration ends at the
+next call on its registry (`add`, `getLocator`, `getNestedLocator`, `getLocatorSchema`, `verify`, or resolving a
+query), and a later `filter`, `nth`, `describe` or locator method on it throws:
+`nth() cannot apply to "item": its registration has ended; give a registration all its steps in its add(…) chain, or
+query the path for one use.` Steps given right after `add`, before the registry is called again, work as before. See
+[Upgrading from 2.x](https://dyhex.github.io/POMWright/docs/upgrading-from-2x/).
 
 ## Additions
 
