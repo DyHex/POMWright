@@ -22,22 +22,20 @@ titles, origin checks, typed values, and seeding before the app loads.
 - `get(keys)` returns every requested key with `null` when absent; `get()` returns the present entries. A literal
   `get([])` or `clear([])` no longer compiles; a computed empty list reads nothing or removes nothing (2.x read or
   cleared everything). Migration: a check for `undefined` becomes a check for `null`.
-- `setOnNextNavigation` is replaced by `seed(entries, { origin? })`. It intercepts the next navigation to the origin,
-  by `goto`, a link, a script redirect, a form POST or a server redirect, and stores the entries in the browser before
-  the app's document exists, so the app's first script sees them. It never leaves the page the test is on, so an
-  origin can be seeded with data learned on the previous one. Already on the origin, it writes at once. While a seed
-  is pending, and only then, navigations to other origins pass through Playwright so that server redirects can be
-  seen; a page that never seeds has nothing registered. A seed still pending when the page closes fails the test;
-  two page objects seeding the same origin merge; whole-page navigation mocks must be registered after `seed`.
+- `setOnNextNavigation` is replaced by `seed(entries, { origin? })`. Away from the origin, it adds an init script
+  that stores the entries when the page's main frame first arrives at the origin, by any navigation (`goto`, a link,
+  a script, a form POST, a server redirect, a page a service worker or a mock serves), before the app's first script
+  runs, and removes it once that document has run it, so a reload never overwrites what the app wrote. Navigations
+  are never intercepted: the app sees the same request, headers and history as without a seed. It never leaves the
+  page the test is on, so an origin can be seeded with data learned on the previous one. Already on the origin, it
+  writes at once. A page that never seeds has nothing registered; two page objects seeding the same origin merge. A
+  seed still pending when the page closes fails the test, as does a write the browser refuses; `seed` itself throws
+  in a browser without the Navigation API and when the page commits a document on the origin while it registers.
   Migration: `grep -rn 'setOnNextNavigation' --include=*.ts .` and rename to `seed`.
 - `waitForContext` is removed: an operation on a page without an origin fails at once with a message naming the
   fix. `reload` is removed: call `page.reload()`.
 - A page object's helper operates on that page object's origin and throws, naming both origins, when the page is on
   another one. A standalone helper without an origin operates on the current origin; its `seed` needs `{ origin }`.
-- Service workers: a worker registered by the app that answers navigations also answers a pending seed, and
-  Playwright's routes cannot see it. The test then fails at once with a message naming the fixes:
-  `serviceWorkers: "block"`, seeding before the app's first load in the context, or unregistering the worker in the
-  test.
 
 New exports: `json`, `Codec`, `SessionStorageSchema`, `StorageTypeFromOptions`.
 

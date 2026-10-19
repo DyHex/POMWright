@@ -11,12 +11,6 @@
   (`LoginPage: baseUrl must be a string or a RegExp; received undefined.`) instead of building a page object that never
   matched its page, passed `expectAnotherPage` and gave its session storage no origin. Migration: a page object built
   from an unset environment variable now fails at construction; set the variable.
-- `sessionStorage.seed` keeps the URL fragment of the navigation it seeds, directly and through a server redirect
-  (`#/orders/7`, `#access_token=…`): a hash-routed app opened on its default route and a login callback lost its
-  token. A redirect whose `Location` has a fragment of its own keeps that one.
-- On WebKit, `page.goto()` to an origin with a pending `seed` returns once the app's document has loaded, as on
-  Chromium and Firefox; it returned before, so `page.url()`, `page.title()` or `page.evaluate()` right after it read
-  POMWright's writer document or a document still loading.
 - A hand-made seed object passed to `add(path, { reuse })` is checked as every builder checks its first argument
   (`reuse requires a selector value for "<path>".`, `reuse requires a non-empty selector for "<path>".`) instead of
   registering an empty or missing value that failed at the first action.
