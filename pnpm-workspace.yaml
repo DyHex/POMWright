@@ -1,0 +1,4 @@
+# pnpm 10 and later run no dependency install script unless it is allowed here. esbuild, which tsup uses, needs its
+# own to put its binary in place.
+allowBuilds:
+  esbuild: true
