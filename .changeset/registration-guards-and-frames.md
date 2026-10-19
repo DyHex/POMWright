@@ -35,6 +35,13 @@ strategy's first argument is checked where it is written, `update` is a patch of
   strategies to call first.
 - A seeded registration whose override throws keeps the seeded definition instead of being unregistered. A throwing
   DSL call never changes the registry.
+- A registration ends at the next call on its registry (`add`, `getLocator`, `getNestedLocator`, `getLocatorSchema`,
+  `verify`, or resolving a query). In 2.x a registration kept in a variable could be given more steps at any time,
+  after other registrations, after its path was resolved, from a page object's method mid-test, and the registered
+  locator changed with them; a later step, locator method or seeded override of it now throws
+  (`nth() cannot apply to "item": its registration has ended; …`) and changes nothing. Migration:
+  `grep -rnE '((const|let) +\w+|this\.\w+) *= .*\badd\(' --include=*.ts .` and give each kept registration all its
+  steps before the registry is called again; a step for one use becomes a query.
 - `PageObject` verifies every registered path right after `defineLocators()`, so a mistyped `has`/`hasNot` path
   reference or a cycle fails at construction, with every failing path listed, instead of at the first action that
   resolves it. Registration itself is unchanged: forward references stay allowed.

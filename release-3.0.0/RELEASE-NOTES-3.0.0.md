@@ -29,7 +29,8 @@
 > commit); its pre-merge step C8 is pending. 14 (dependencies) executed on 2026-10-19. 15 (`seed` on `addInitScript`),
 > executed and committed on the same branch on 2026-10-19 (commits 7ad64e2 to 0724ec7 and the ledger commit), see
 > [PLAN-15-SEED-INIT-SCRIPT.md](PLAN-15-SEED-INIT-SCRIPT.md). 16 (a registration ends at the next call on the registry),
-> written and decided on 2026-10-19, see [PLAN-16-REGISTRATION-ENDS.md](PLAN-16-REGISTRATION-ENDS.md).
+> executed and committed on the same branch on 2026-10-19 (commits d2d4bed to ea7cacf and the ledger commits), see
+> [PLAN-16-REGISTRATION-ENDS.md](PLAN-16-REGISTRATION-ENDS.md).
 
 ## Overview
 
@@ -316,7 +317,7 @@ registry.add("common.listItem").getByRole("listitem");
 registry.add("main.list.lastItem", { reuse: "common.listItem" }).nth("last").describe("Last item");
 ```
 
-### A registration ends at the next call on the registry **[planned, plan 16]**
+### A registration ends at the next call on the registry **[done, plan 16]**
 
 In 2.x a registration kept in a variable could be given more steps at any time, after other registrations, after its
 path was resolved, even mid-test, and the registered locator changed with them. In 3.0.0 a registration ends at the

@@ -423,6 +423,14 @@ charset, the proxy's spec, error page and HTTPS rows, the URL fragment and WebKi
 | 2026-10-19 | One bullet in the `major` changeset `registration-guards-and-frames.md` and an *Upgrading from 2.x* item; no new changeset. Tests: unit tests for every ending call and every method, the cases that stay open, a page object; a new harness spec `add.registrationEnds.spec.ts`; `add.reuseExisting.spec.ts` L44 binds `add` and L180 asserts the any-frame refusal right after the reuse. Docs on *Principles*, *Registering locators*, *Reusing locators*, the *Registration* and *Error messages* API pages, *Upgrading from 2.x*, *Builders* and *Registry records*, and AGENTS.md. (16.6, 16.7) | 3.0.0 is unreleased and the change is a registration guard; the two harness tests rely on an unbound call and on a step after other registry calls (prototype, section 3 of the plan). |
 | 2026-10-19 | Reuse by path stays a copy. | Asked in the review: once a registration ends at the next registry call, a copy and a reference give the same locator; a reference would only add reusing a path registered later, at the cost of following references in records, resolution, `verify()` and queries, cycle detection, and an error at `verify()` instead of at the `add` line. |
 
+### Execution-time decisions (2026-10-19, plan 16)
+
+| Date | Decision | Why |
+| --- | --- | --- |
+| 2026-10-19 | The registry ends the open registration in `buildLocatorChain` as well as in its public methods, so a query's `getLocator` and `getNestedLocator` end it even for a query started before the `add`. Each of the ten locator methods checks first (the five text-like ones in `commitTextLike`), and `filter`, `nth` and `describe` in their shared `apply` helpers; `end()` is a member of the internal class only. | Every resolution goes through `buildLocatorChain`; the public types pick the strategy methods and the view, so `end()` is not public API (the API coverage check is unchanged). |
+| 2026-10-19 | The doc comments of the registration's methods carry a second `@throws` for an ended registration; `add`'s comment states the rule. The *Upgrading from 2.x* grep is `((const\|let) +\w+\|this\.\w+) *= .*\badd\(`, which finds a registration kept in a `this.` field too. | The plan's draft grep missed fields (it found 2 of the harness's 48 kept registrations; this one finds all, a field included). |
+| 2026-10-19 | The unit tests were shown failing against the code before step 1 (11 tests), the harness spec against the package before it (its three ending tests); the stay-open tests pass on both. | The plan's red-then-green steps. |
+
 ## Open questions
 
 None as of 2026-10-19. The one question raised for plan 1.3-1.4 (enforcement of type-level tests) was decided the

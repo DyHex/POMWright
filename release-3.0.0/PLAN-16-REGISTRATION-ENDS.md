@@ -12,6 +12,12 @@ every decision in section 9 taken as recommended**, and mirrored in [DECISIONS.m
 only add reusing a path registered later, at the cost of following references in records, resolution, `verify()` and
 queries, and of an error at `verify()` instead of at the `add` line).
 
+**Executed 2026-10-19**, one commit per step: d2d4bed (1, the runtime, its doc comments and the unit tests), 67189a1
+(2, the harness), ea7cacf (3, the docs and AGENTS.md), and the ledger commit for step 4 that carries this note; step 5
+(verification) records its result below. As executed: the five text-like locator methods check in `commitTextLike`;
+the *Upgrading from 2.x* grep also finds a registration kept in a `this.` field (section 7.4's draft did not); see
+DECISIONS.md's execution-time rows.
+
 Every claim below was checked on 2026-10-19 with Playwright 1.64.0 against packed builds, in a scratchpad clone, never
 in the working tree: the current behaviour against the working tree's code (HEAD 508ee28 plus the uncommitted RegExp
 fix), the design against a prototype of it in the clone. Line references are to the working tree.
