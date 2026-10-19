@@ -39,6 +39,8 @@ export type LocatorRegistrationPostDefinitionBuilder<
 	 * @returns The registration, for more steps.
 	 * @throws On a `frameLocator()` without a selector, which has no element:
 	 * `filter() cannot apply to "…": frameLocator() without a selector has no element to filter, index or describe; …`
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `filter() cannot apply to "…": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -56,6 +58,8 @@ export type LocatorRegistrationPostDefinitionBuilder<
 	 * @param index A number, `"first"` or `"last"`.
 	 * @returns The registration, for more steps.
 	 * @throws On a `frameLocator()` without a selector, which has no element.
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `nth() cannot apply to "…": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -72,6 +76,8 @@ export type LocatorRegistrationPostDefinitionBuilder<
 	 * @returns The registration, for more steps.
 	 * @throws When the description is not a string (from JavaScript):
 	 * `describe requires a string for "…"; pass "" to remove the description.`
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `describe() cannot apply to "…": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -105,6 +111,21 @@ export class LocatorRegistrationBuilder<
 	private readonly seededDefinition: boolean;
 	private overrideApplied = false;
 	private postDefinitionView?: LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	private ended = false;
+
+	/** Called by the registry at its next call: from then on every method of this registration throws. */
+	end(): void {
+		this.ended = true;
+	}
+
+	/** Checked first by every method, so a registration kept in a variable cannot change its path once it has ended. */
+	private ensureOpen(method: string): void {
+		if (this.ended) {
+			throw new Error(
+				`${method}() cannot apply to "${this.path}": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.`,
+			);
+		}
+	}
 
 	constructor(
 		private readonly registry: LocatorRegistryInternal<LocatorSchemaPathType>,
@@ -158,6 +179,8 @@ export class LocatorRegistrationBuilder<
 	 * @returns The registration, for more steps.
 	 * @throws On a `frameLocator()` without a selector, which has no element:
 	 * `filter() cannot apply to "…": frameLocator() without a selector has no element to filter, index or describe; …`
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `filter() cannot apply to "…": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -179,6 +202,8 @@ export class LocatorRegistrationBuilder<
 	 * @param index A number, `"first"` or `"last"`.
 	 * @returns The registration, for more steps.
 	 * @throws On a `frameLocator()` without a selector, which has no element.
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `nth() cannot apply to "…": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -199,6 +224,8 @@ export class LocatorRegistrationBuilder<
 	 * @returns The registration, for more steps.
 	 * @throws When the description is not a string (from JavaScript):
 	 * `describe requires a string for "…"; pass "" to remove the description.`
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `describe() cannot apply to "…": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -223,6 +250,8 @@ export class LocatorRegistrationBuilder<
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the role is missing (`getByRole requires a role value for "main.button@save".`) or empty
 	 * (`getByRole requires a non-empty role for "main.button@save".`).
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `getByRole() cannot apply to "main.button@save": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -246,6 +275,7 @@ export class LocatorRegistrationBuilder<
 		roleOrOptions?: RoleDefinition["role"] | RoleDefinition["options"] | OptionsPatch<RoleDefinition["options"]> | null,
 		options?: RoleDefinition["options"] | OptionsPatch<RoleDefinition["options"]> | null,
 	) {
+		this.ensureOpen("getByRole");
 		if (this.seededDefinition) {
 			return this.commitSeededOverride("role", "getByRole", roleOrOptions, options);
 		}
@@ -269,6 +299,8 @@ export class LocatorRegistrationBuilder<
 	 * @param options Playwright's `getByText` options: `exact`.
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the text is missing: `getByText requires a text value for "main.alert@error".`
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `getByText() cannot apply to "main.alert@error": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -313,6 +345,8 @@ export class LocatorRegistrationBuilder<
 	 * @param options Playwright's `getByLabel` options: `exact`.
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the text is missing: `getByLabel requires a text value for "main.form.input@email".`
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `getByLabel() cannot apply to "main.form.input@email": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -357,6 +391,8 @@ export class LocatorRegistrationBuilder<
 	 * @param options Playwright's `getByPlaceholder` options: `exact`.
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the text is missing: `getByPlaceholder requires a text value for "main.input@search".`
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `getByPlaceholder() cannot apply to "main.input@search": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -401,6 +437,8 @@ export class LocatorRegistrationBuilder<
 	 * @param options Playwright's `getByAltText` options: `exact`.
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the text is missing: `getByAltText requires a text value for "header.image@logo".`
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `getByAltText() cannot apply to "header.image@logo": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -445,6 +483,8 @@ export class LocatorRegistrationBuilder<
 	 * @param options Playwright's `getByTitle` options: `exact`.
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the text is missing: `getByTitle requires a text value for "main.icon@info".`
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `getByTitle() cannot apply to "main.icon@info": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -490,6 +530,8 @@ export class LocatorRegistrationBuilder<
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the selector is missing (`locator requires a selector value for "main.list".`) or empty
 	 * (`locator requires a non-empty selector for "main.list".`).
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `locator() cannot apply to "main.list": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -519,6 +561,7 @@ export class LocatorRegistrationBuilder<
 			| null,
 		options?: Parameters<Page["locator"]>[1] | OptionsPatch<Parameters<Page["locator"]>[1]> | null,
 	) {
+		this.ensureOpen("locator");
 		if (this.seededDefinition) {
 			return this.commitSeededOverride("locator", "locator", selectorOrOptions, options);
 		}
@@ -547,6 +590,8 @@ export class LocatorRegistrationBuilder<
 	 * @param selector The `<iframe>` element's selector; without it, the any-frame form.
 	 * @returns The registration, for `filter`, `nth` and `describe` steps; nothing for the any-frame form.
 	 * @throws When the selector is empty: `frameLocator requires a non-empty selector for "shell.frame".`
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `frameLocator() cannot apply to "shell.frame": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -565,6 +610,7 @@ export class LocatorRegistrationBuilder<
 	frameLocator(
 		selector?: Parameters<Page["locator"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> | undefined {
+		this.ensureOpen("frameLocator");
 		if (selector === undefined) {
 			if (this.seededDefinition) {
 				return this.commit({ type: "frameLocator" });
@@ -589,6 +635,8 @@ export class LocatorRegistrationBuilder<
 	 * @param testId The test id: a string or a RegExp.
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the test id is missing (from JavaScript): `getByTestId requires a testId value for "main.row@order".`
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `getByTestId() cannot apply to "main.row@order": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -604,6 +652,7 @@ export class LocatorRegistrationBuilder<
 	getByTestId(
 		testId?: Parameters<Page["getByTestId"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+		this.ensureOpen("getByTestId");
 		if (testId === undefined && this.seededDefinition) {
 			return this.commit({ type: "testId" });
 		}
@@ -623,6 +672,8 @@ export class LocatorRegistrationBuilder<
 	 * @param id The id as written, or a pattern.
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the id is empty or missing: `getById requires a non-empty id for "main.panel@settings".`
+	 * @throws After the registration has ended, at the next call on the registry:
+	 * `getById() cannot apply to "main.panel@settings": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -637,6 +688,7 @@ export class LocatorRegistrationBuilder<
 		...inherit: Seeded extends true ? [] : [never]
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getById(id?: string | RegExp): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
+		this.ensureOpen("getById");
 		if (id === undefined && this.seededDefinition) {
 			return this.commit({ type: "id" });
 		}
@@ -645,6 +697,7 @@ export class LocatorRegistrationBuilder<
 	}
 
 	private commitTextLike(type: TextLikeType, method: string, textOrOptions: unknown, options: unknown) {
+		this.ensureOpen(method);
 		if (this.seededDefinition) {
 			return this.commitSeededOverride(type, method, textOrOptions, options);
 		}
@@ -697,18 +750,21 @@ export class LocatorRegistrationBuilder<
 	private applyFilter(
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
 	) {
+		this.ensureOpen("filter");
 		this.ensureDefinition("filter");
 		this.steps.push({ kind: "filter", filter: copyFilter(filter) });
 		this.persist();
 	}
 
 	private applyIndex(index: IndexSelector) {
+		this.ensureOpen("nth");
 		this.ensureDefinition("nth");
 		this.steps.push({ kind: "index", index });
 		this.persist();
 	}
 
 	private applyDescription(description: LocatorDescription) {
+		this.ensureOpen("describe");
 		this.ensureDefinition("describe");
 		assertDescription(description, { method: "describe", path: this.path });
 		this.description = description;

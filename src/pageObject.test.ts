@@ -405,6 +405,34 @@ describe("failures", () => {
 	});
 });
 
+describe("a registration kept by a page object", () => {
+	class Keeping extends PageObject<Paths> {
+		private kept: { filter: (filter: { hasText: string }) => unknown } | undefined;
+		constructor(page: Page) {
+			super(page, BASE, "/login", { label: "Keeping" });
+		}
+		protected defineLocators() {
+			this.add("main").locator("main");
+			this.kept = this.add("main.button").getByRole("button");
+		}
+		narrow() {
+			return this.kept?.filter({ hasText: "Pay" });
+		}
+	}
+
+	it("ends with defineLocators() and its check: a step from a method afterwards throws and registers nothing", () => {
+		const { page, calls } = createStubPage();
+		const { instance, runCheck } = construct(() => new Keeping(page));
+		runCheck();
+		expect(() => instance.narrow()).toThrowError(
+			'filter() cannot apply to "main.button": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.',
+		);
+		calls.length = 0;
+		instance.getNestedLocator("main.button");
+		expect(calls.map((call) => call.method)).toEqual(["locator", "getByRole", "describe"]);
+	});
+});
+
 describe("the locators option", () => {
 	class Sparse extends PageObject<Paths> {
 		constructor(page: Page, strictChains?: boolean) {

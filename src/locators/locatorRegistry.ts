@@ -107,6 +107,15 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 
 	private readonly strictChains: boolean;
 
+	/** The registration the latest `add(path)` started; the next call on the registry ends it. */
+	private openRegistration: { end(): void } | undefined;
+
+	/** Ends the open registration, so a registration kept in a variable can no longer change its path. */
+	private endOpenRegistration(): void {
+		this.openRegistration?.end();
+		this.openRegistration = undefined;
+	}
+
 	constructor(
 		private readonly page: Page,
 		options?: LocatorRegistryOptions,
@@ -149,6 +158,10 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * seed from `createReusable` is registered at once; one call of the seed's own locator method may patch it first,
 	 * as `update()` patches, then `filter`, `nth` and `describe`.
 	 *
+	 * The registration ends at the next call on the registry (`add`, `getLocator`, `getNestedLocator`,
+	 * `getLocatorSchema`, `verify`, or resolving a query): a registration kept in a variable takes its steps before
+	 * then, and a later call of it throws, so a registered locator never changes once anything else has happened.
+	 *
 	 * @param path The dot-delimited path: no empty segment and no whitespace, checked at compile time and at run time.
 	 * @param options `{ reuse }`: a registered path (not this one) or a seed from `createReusable`.
 	 * @returns The registration: the ten locator methods, or after a reuse `filter`, `nth` and `describe`.
@@ -156,7 +169,8 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * (`A locator schema with the path "main" already exists. …`), when its first argument is missing or an empty
 	 * string where Playwright cannot use one (`locator requires a non-empty selector for "main.list".`), or when the
 	 * path breaks the path rules (`LocatorSchemaPath string cannot contain consecutive dots: main..list`); at `add`, when
-	 * a reused path is not registered (`No locator schema registered for path "common.button".`).
+	 * a reused path is not registered (`No locator schema registered for path "common.button".`). A method of a registration
+	 * that has ended throws: `nth() cannot apply to "main.list.item": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
@@ -187,6 +201,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 					RegistryPath<LocatorSchemaPathType>,
 					Extract<Reuse, ReusableLocator<LocatorSchemaPathType>>["type"]
 				> {
+		this.endOpenRegistration();
 		const options = args[0] as
 			| {
 					reuse?:
@@ -198,10 +213,12 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		const reuse = options?.reuse;
 
 		if (reuse === undefined) {
-			return new LocatorRegistrationBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>(
+			const builder = new LocatorRegistrationBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>(
 				this,
 				path as RegistryPath<LocatorSchemaPathType>,
-			) as never;
+			);
+			this.openRegistration = builder;
+			return builder as never;
 		}
 
 		if (typeof reuse === "string") {
@@ -211,10 +228,9 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			}
 			const sourceRecord = this.get(reuse as RegistryPath<LocatorSchemaPathType>);
 			// a registered record is a seed: its strategy, steps and description, then filter, nth and describe
-			return this.seededBuilder(
-				targetPath,
-				this.cloneRecordForReuse(sourceRecord, targetPath),
-			).viewAfterReuse() as never;
+			const builder = this.seededBuilder(targetPath, this.cloneRecordForReuse(sourceRecord, targetPath));
+			this.openRegistration = builder;
+			return builder.viewAfterReuse() as never;
 		}
 
 		if (Array.isArray(reuse)) {
@@ -245,7 +261,9 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			path as RegistryPath<LocatorSchemaPathType>,
 		);
 
-		return this.seededBuilder(path as RegistryPath<LocatorSchemaPathType>, reusedRecord) as never;
+		const builder = this.seededBuilder(path as RegistryPath<LocatorSchemaPathType>, reusedRecord);
+		this.openRegistration = builder;
+		return builder as never;
 	}
 
 	private seededBuilder(
@@ -426,6 +444,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	getLocatorSchema<Path extends LocatorSchemaPathType>(
 		path: LocatorSchemaPathArgument<Path>,
 	): LocatorQueryBuilder<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>> {
+		this.endOpenRegistration();
 		return new LocatorQueryBuilderInternal<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>>(
 			this,
 			path as Extract<Path, RegistryPath<LocatorSchemaPathType>>,
@@ -451,6 +470,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * ```
 	 */
 	verify(): void {
+		this.endOpenRegistration();
 		const failures: string[] = [];
 		for (const [path, record] of this.schemas) {
 			const problems: string[] = [];
@@ -504,6 +524,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * ```
 	 */
 	getLocator<Path extends LocatorSchemaPathType>(path: LocatorSchemaPathArgument<Path>): Locator {
+		this.endOpenRegistration();
 		const target = path as RegistryPath<LocatorSchemaPathType>;
 		validateLocatorSchemaPath(target);
 		return this.resolveRecord(target, this.get(target));
@@ -544,6 +565,8 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			resolvingPaths: Set<string>;
 		},
 	): Locator {
+		// every resolution, a query's included, is a call on the registry
+		this.endOpenRegistration();
 		const resolutionContext = context ?? this.createResolutionContext(path);
 		// the registered ancestors in chain order; an unregistered or skipped one is left out
 		const ancestors = expandSchemaPath(path)
