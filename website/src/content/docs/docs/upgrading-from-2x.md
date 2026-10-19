@@ -554,9 +554,8 @@ await loginPage.navigation.goto();
 ```
 
 A seed that has not been applied when the page closes fails the test: remove `seed` calls that no navigation to the
-origin follows, defensive ones in fixtures included, and seed in the test, right before the hop. Register a mock for a
-whole page after `seed`. An app whose service worker answers navigations needs one of the fixes on
-[Seeding session storage](/POMWright/docs/seeding-session-storage/#service-workers).
+origin follows, defensive ones in fixtures included, and seed in the test, before the hop. See
+[Seeding session storage](/POMWright/docs/seeding-session-storage/).
 
 ### `waitForContext` and `reload` are gone
 

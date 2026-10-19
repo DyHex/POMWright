@@ -149,10 +149,10 @@ The codec's error is the `cause`.
 ### seed()
 
 Stores entries for an origin before the app's next load there, so the app's first script sees them, without leaving
-the page the test is on. On the origin already, it writes at once. Elsewhere, the next navigation of the main frame
-that reaches the origin, by `goto`, a link, a script, a form POST, a server redirect or a chain of them, is answered
-with a document that stores the entries and continues the navigation, keeping its URL fragment; the app loads after
-it. See [seeding session storage](/POMWright/docs/seeding-session-storage/).
+the page the test is on. On the origin already, it writes at once. Elsewhere, an init script stores them when the
+page's main frame first arrives at the origin, by `goto`, a link, a script, a form POST, a server redirect or a chain
+of them, before the app's first script runs, and is removed once that document has run it. The navigation is never
+intercepted. See [seeding session storage](/POMWright/docs/seeding-session-storage/).
 
 **Usage**
 
@@ -182,11 +182,15 @@ await loginPage.navigation.goto(); // the app's first script already sees the to
 
 **Throws**
 
-At the call, without an origin; later, failing the test with this call's line in the stack, when the seed was
-bypassed or never applied:
+At the call, without an origin, in a browser without the Navigation API, and when the page commits a document on the
+origin while the seed is being registered; later, failing the test with this call's line in the stack, when the
+browser refuses the write or the page closes before the seed was applied:
 
 ```text
 Shop.SessionStorage.seed: an origin is required; pass { origin } or construct the helper with one
+Shop.SessionStorage.seed: the page committed a document on https://pay.example while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it
+Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation) to write only on the first arrival at https://pay.example, and this browser has none (Mozilla/5.0 …); use set() on the origin and reload instead
+Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
 ```
 

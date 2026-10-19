@@ -286,16 +286,16 @@ Shop.SessionStorage.constructor: origin must be an origin such as "https://app.e
 
 ```text
 Shop.SessionStorage.seed: an origin is required; pass { origin } or construct the helper with one
+Shop.SessionStorage.seed: the page committed a document on https://pay.example while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it
+Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation) to write only on the first arrival at https://pay.example, and this browser has none (Mozilla/5.0 …); use set() on the origin and reload instead
 ```
 
-At the call. The others fail the test later, at the navigation or when the page closes, with the line of the `seed`
-call in the stack:
+At the call. The others fail the test later, when the app's document loads or when the page closes, with the line of
+the `seed` call in the stack:
 
 ```text
+Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
-LoginPage.SessionStorage.seed: the page navigated to https://shop.example/orders but the pending seed for https://shop.example was not applied; the navigation was not intercepted: a service worker registered by the app answered it, or a route the test registered after seed() fulfilled it; the app ran without the entries. Fixes: set use: { serviceWorkers: "block" } in the Playwright config; seed before the app's first load in this context; unregister the worker in the test before seeding; or let the test's own route call route.fallback() for that navigation
-Shop.SessionStorage.seed: cannot re-issue a POST text/plain navigation to https://pay.example; the app loaded without the entries. Only GET and application/x-www-form-urlencoded POST navigations can be seeded
-Shop.SessionStorage.seed: could not fetch https://down.example/ while a seed for https://pay.example was pending
 ```
 
 See [what `seed` cannot do](/POMWright/docs/seeding-session-storage/#what-seed-cannot-do).

@@ -6,7 +6,7 @@ description: "How a deferred error points at the consumer's line, why frames are
 ## Errors raised later
 
 Two errors are raised after the call that caused them: the page object's scheduled check, after its constructor
-returned, and a seed's failure, at a navigation or when the page closes. Thrown with their own stack, they would point
+returned, and a seed's failure, when the app's document loads or when the page closes. Thrown with their own stack, they would point
 at a microtask or a Playwright event handler, not at the test. `src/helpers/callSite.ts` gives them the stack of the
 call instead:
 

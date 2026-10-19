@@ -6,11 +6,11 @@ description: "seed(): store entries for an origin before the app's next load the
 ## Introduction
 
 An app often reads session storage once, as it starts: a token, a feature flag, a basket. Writing the value after the
-app has loaded is too late, and Playwright's ways around that each have a cost:
-[`addInitScript`](https://playwright.dev/docs/api/class-page#page-add-init-script) runs before every load and
-overwrites what the app writes, and writing after a first load then reloading loads the app twice. `seed` stores the
-entries for an origin before the app's next load there, so the app's first script already sees them, and then gets out
-of the way.
+app has loaded is too late, and writing it after a first load then reloading loads the app twice. Playwright's
+[`addInitScript`](https://playwright.dev/docs/api/class-page#page-add-init-script) runs before the app's first script,
+but on every load until it is removed, so it would overwrite what the app writes. `seed` uses it for one arrival: it
+stores the entries for an origin before the app's next load there, so the app's first script already sees them, and
+then gets out of the way.
 
 ```ts
 import { test } from "./fixtures";
@@ -24,10 +24,11 @@ test("a returning customer", async ({ loginPage }) => {
 ## How it works
 
 When the page is already on the origin, `seed` writes at once; the app sees the entries the next time it reads
-storage, so reload or navigate if it reads only at startup. Otherwise the entries wait for the origin. The next
-navigation of the page's main frame that reaches it, by `goto`, a link, a script, a form POST, a server redirect or a
-chain of them, is answered with a small document of POMWright's own that stores the entries and continues the
-navigation; the app's document is loaded after that:
+storage, so reload or navigate if it reads only at startup. Otherwise the entries wait for the origin. POMWright adds an
+init script to the page that stores them when the page's main frame first arrives at the origin, before the app's first
+script runs, whatever takes the page there (`goto`, a link, a script, a form POST, a server redirect or a chain of
+them) and whatever answers (the server, a service worker, a route the test registered). Once that document has run the
+script, POMWright removes it:
 
 ```mermaid
 sequenceDiagram
@@ -36,18 +37,21 @@ sequenceDiagram
   participant Browser
   participant App as App at shop.example
   Test->>POMWright: seed({ token })
-  Note over POMWright: the entries wait for https://shop.example
+  POMWright->>Browser: an init script for https://shop.example
   Test->>Browser: a navigation to shop.example (goto, a link, a redirect, a form)
-  Browser->>POMWright: the request, through a route
-  POMWright-->>Browser: a document that stores the entries
-  Browser->>App: the same request, continued
-  App-->>Browser: the app, whose first script sees the entries
+  Browser->>App: the request, as without a seed
+  App-->>Browser: the app's document
+  Note over Browser: the init script stores the entries before the app's first script
+  Browser-->>POMWright: the main frame committed on shop.example
+  POMWright->>Browser: remove the init script
 ```
 
-The page the test is on is never left before that navigation, so an origin can be seeded with data the test learns on
-the previous one. The navigation keeps its URL fragment (`#/orders/7`, `#access_token=…`), and `page.goto` returns
-once the app's document has loaded, as without a seed. When the entries are applied, POMWright removes its route and
-listeners: a test that never seeds runs exactly as it would without POMWright.
+The script writes only on the first arrival at the origin. If the app writes a seeded key and then reloads, or moves to
+another page on the same origin, before the script is removed, the script leaves the app's value alone.
+
+The navigation itself is never intercepted. The page the test is on is never left before it, so an origin can be seeded
+with data the test learns on the previous one. When the entries are applied, POMWright removes its listeners: a test
+that never seeds runs exactly as it would without POMWright.
 
 ## Two patterns
 
@@ -67,7 +71,7 @@ test("a consent page on the identity provider", async ({ loginPage, page }) => {
 });
 ```
 
-When a value is learned on the way, seed the next origin right before the hop:
+When a value is learned on the way, seed the next origin before the hop:
 
 ```ts
 import { SessionStorage } from "pomwright";
@@ -83,68 +87,52 @@ test("a payment origin", async ({ loginPage, page }) => {
 });
 ```
 
-Seed as late as you can, right before the hop: while a seed waits, navigations of the main frame to other origins are
-fetched by Playwright and handed back to the browser, which is how a server redirect towards the seeded origin is
-seen. Sub-resources, API calls and iframes pass through untouched, and the moment the seed is applied this stops.
+Await `seed` before the action that starts the hop. A `seed` that is still registering when the page arrives at its
+origin fails, because that document may have loaded without the entries.
 
 ## What a seeded navigation looks like to the app
 
-POMWright's document occupies the target URL for a few milliseconds, then replaces itself with the real request.
-That request carries no `Referer` and `Sec-Fetch-Site: same-origin`, since a document on the origin issues it. A
-navigation fetched while a seed waits carries the browser's own `User-Agent`, cookies and client hints, and
-synthesised `Sec-Fetch-*` headers. A form POST is re-submitted with the same fields; a 307 or 308 redirect keeps its
-method and body.
+Exactly as without a seed: the same request with the same `Referer` and `Sec-Fetch-*` headers, the same method and
+body, the same history entry and navigation type, the same URL fragment. `page.goto` returns the app's response. With
+`waitUntil: "commit"`, the committed document is the app's and already has the entries.
 
 ## What `seed` cannot do
 
 | case | what happens |
 | --- | --- |
 | the seed is still waiting when the page closes | the test fails, naming the origin and the keys: remove the `seed` call, or navigate there before the test ends; do not seed in a fixture that some tests never use |
-| a service worker registered by the app answers the navigation | Playwright's routes never see it; the app loads without the entries and the test fails at once with the fixes (next section) |
-| a route the test registered after `seed` fulfils the navigation | the same failure; let that route call [`route.fallback()`](https://playwright.dev/docs/api/class-route#route-fallback) for it |
-| a whole-page mock registered before `seed`, for a navigation to another origin | bypassed while the seed waits: the real page loads. Register whole-page mocks after `seed`; API and sub-resource mocks are not affected |
-| a `multipart/form-data` or `text/plain` form POST to the origin | it cannot be re-issued; it passes through without the entries and the test fails, naming the method |
-| the hop opens a new tab | a new tab has its own session storage; the seed waits on and fails the test when the page closes |
-| `waitUntil: "commit"` | the committed document may still be POMWright's; wait for `load`, `domcontentloaded` or an element instead |
+| the hop opens a new tab | a new tab has its own session storage and does not run the page's init scripts; the seed waits on and fails the test when the page closes. Seed the new tab yourself with [`browserContext.addInitScript`](https://playwright.dev/docs/api/class-browsercontext#browser-context-add-init-script), or `set` the entries in it and reload it |
+| `seed` is called while the page is already loading a document on the origin | `seed` fails: that document may have loaded without the entries. Await the navigation first, or seed before starting it |
+| a browser without the [Navigation API](https://developer.mozilla.org/en-US/docs/Web/API/NavigationActivation/from) | `seed` fails at the call, before anything is registered: use `set` on the origin and reload instead. Every browser Playwright 1.64 ships has it |
+| the browser refuses the write (the storage quota) | the app loads without the entries and the test fails |
 
 Every one of these failures points at the line that called `seed`.
-
-## Service workers
-
-Playwright's routes do not see a navigation that a service worker answers. When the app has registered a worker that
-serves navigations itself, a waiting seed for that origin is bypassed and the test fails at once:
-
-```text
-LoginPage.SessionStorage.seed: the page navigated to https://shop.example/orders but the pending seed for https://shop.example was not applied; the navigation was not intercepted: a service worker registered by the app answered it, or a route the test registered after seed() fulfilled it; the app ran without the entries. Fixes: set use: { serviceWorkers: "block" } in the Playwright config; seed before the app's first load in this context; unregister the worker in the test before seeding; or let the test's own route call route.fallback() for that navigation
-```
-
-The fixes, and what each changes:
-
-- [`serviceWorkers: "block"`](https://playwright.dev/docs/api/class-testoptions#test-options-service-workers) in the
-  config or `test.use(…)`: the worker never registers, so what needs it (offline caching, push) is not exercised.
-- Seed before the app's first load in the browser context: a new context has no worker yet.
-- Unregister the worker in the test before seeding; the app registers it again on its next load.
-- When the worker must stay and the seed must come after the app has loaded, use `set` and reload the page instead.
 
 ## Several origins and frames
 
 Each origin's entries stay while the page is elsewhere: seed A and B, load A, let the app hop to B and back, and A
 still has what was seeded and written there. Nothing carries entries from one origin to another. A same-origin iframe
 shares the page's storage; a cross-site iframe of a seeded origin shares that origin's storage in Chromium and Firefox,
-while WebKit keeps it apart. A hop started from an iframe with `top.location` is a main-frame navigation and is seeded.
+while WebKit keeps it apart. The script writes only in the main frame, so an iframe on the seeded origin inside another
+page neither receives the entries nor uses up the seed. A hop started from an iframe with `top.location` is a main-frame
+navigation and is seeded.
 
 ## Errors
 
 ```text
 Shop.SessionStorage.seed: an origin is required; pass { origin } or construct the helper with one
+Shop.SessionStorage.seed: the page committed a document on https://pay.example while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it
+Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation) to write only on the first arrival at https://pay.example, and this browser has none (Mozilla/5.0 …); use set() on the origin and reload instead
+Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
-Shop.SessionStorage.seed: cannot re-issue a POST text/plain navigation to https://pay.example; the app loaded without the entries. Only GET and application/x-www-form-urlencoded POST navigations can be seeded
-Shop.SessionStorage.seed: could not fetch https://down.example/ while a seed for https://pay.example was pending
 ```
+
+The first three are thrown by the `seed` call; the last two fail the test later, when the app's document loads or when
+the page closes.
 
 ## Reference
 
 - [`SessionStorage.seed()`](/POMWright/api/class-sessionstorage/#seed)
+- [The seed registry](/POMWright/internal/seed-registry/), how it works inside
 - Playwright: [`page.sessionStorage`](https://playwright.dev/docs/api/class-page#page-session-storage),
-  [`page.route()`](https://playwright.dev/docs/api/class-page#page-route),
-  [Service workers](https://playwright.dev/docs/service-workers)
+  [`page.addInitScript()`](https://playwright.dev/docs/api/class-page#page-add-init-script)
