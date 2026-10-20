@@ -11,6 +11,14 @@ permissions:
   contents: read
   actions: read # checks.yaml reads the runs of this workflow to find the last green commit
 
+# One run at a time, in push order, so publish.yaml and pages.yaml, which start when a run succeeds, follow the order
+# of the commits: an older commit's run can never finish after a newer one's and deploy its site over the newer site.
+# A run that is waiting gives way to a newer push (GitHub keeps one waiting run per group); a running one is never
+# cancelled, so every run that starts finishes its checks.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   checks:
     uses: ./.github/workflows/checks.yaml

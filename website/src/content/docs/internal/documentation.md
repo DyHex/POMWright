@@ -44,7 +44,7 @@ render in the browser, so the build does not catch a syntax error in one: open t
 
 `.github/workflows/pages.yaml` builds the site the same way and deploys it to GitHub Pages, after `CI` succeeds on a
 push to `main`, from the commit that run tested, so the site follows `main` and never shows a commit whose checks
-failed. It is guarded as the publish workflow is, and can also be started by hand.
+failed. `CI` runs one push to `main` at a time, in order, so the deployments come in the order of the commits too. It is guarded as the publish workflow is, and can also be started by hand.
 
 ## How pages are written
 
