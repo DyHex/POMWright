@@ -12,7 +12,7 @@
   sites with:
 
   ```sh
-  grep -rnE 'getById\(\s*["'"'"'`](#|id=)' --include=*.ts .
+  grep -rnE 'getById\(\s*["'"'"'`](#|id=)' --include=*.ts --exclude-dir=node_modules .
   ```
 
 - RegExp ids are evaluated as regular expressions with their flags. In 2.x the regex source was matched as literal

@@ -279,7 +279,9 @@ export class PlaywrightReportLogger {
 	 *
 	 * @param testInfo The test's `TestInfo`.
 	 * @param format `{ locale, timeZone }` for the time and date in the names; the `log` fixture passes Playwright's
-	 * `locale` and `timezoneId`. Without it, the machine's are used.
+	 * `locale` and `timezoneId`. Each one left out is the project's `use.locale` or `use.timezoneId` from the config
+	 * (`testInfo.project.use`), and the machine's where the config sets none. A value set with `test.use()` reaches
+	 * only the fixtures, so a fixture of your own passes them to honour it.
 	 *
 	 * @example
 	 * ```ts
@@ -289,19 +291,21 @@ export class PlaywrightReportLogger {
 	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#attachlogstotest
 	 */
 	attachLogsToTest(testInfo: TestInfo, format?: { locale?: string; timeZone?: string }) {
+		const locale = format?.locale ?? testInfo.project?.use?.locale;
+		const timeZone = format?.timeZone ?? testInfo.project?.use?.timezoneId;
 		// the entries are in call order already
 		for (const log of this.sharedLogEntry) {
-			const printTime = log.timestamp.toLocaleTimeString(format?.locale, {
+			const printTime = log.timestamp.toLocaleTimeString(locale, {
 				hour: "2-digit",
 				minute: "2-digit",
 				second: "2-digit",
-				timeZone: format?.timeZone,
+				timeZone,
 			});
-			const printDate = log.timestamp.toLocaleDateString(format?.locale, {
+			const printDate = log.timestamp.toLocaleDateString(locale, {
 				day: "2-digit",
 				month: "2-digit",
 				year: "numeric",
-				timeZone: format?.timeZone,
+				timeZone,
 			});
 			const printLogLevel = `${log.logLevel.toUpperCase()}`;
 			const printPrefix = log.prefix ? `: [${log.prefix}]` : "";

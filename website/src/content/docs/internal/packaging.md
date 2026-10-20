@@ -41,3 +41,11 @@ The harness installs the tarball `pnpm pack` produced, extracted, so it tests wh
 manifest. Two compile-only files check the published types: `publicTypes.typecheck.ts`, every export and the types
 that must and must not compile, and `publicTypes.emit.ts`, which a project with `declaration: true` must be able to
 emit without annotations.
+
+## A build for testing before a release
+
+The version in `package.json` is the last release until changesets bumps it in the *Version Packages* pull request,
+so a tarball packed before then says so too. `pnpm pack:version 3.0.0-rc.1` builds and packs the package as npm would
+publish it, sets the given version in the packed `package.json` only, and writes `pomwright-3.0.0-rc.1.tgz` at the
+root. A project installs it as a `file:` dependency to try the build, and its lockfile and `npm ls` show which build it
+has. The script, `scripts/pack-version.sh`, is run by hand only; the harness and CI use `pack-build.sh`.

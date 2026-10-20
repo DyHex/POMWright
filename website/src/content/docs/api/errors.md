@@ -60,10 +60,11 @@ getById requires a non-empty id for "main.panel@settings".
 getByTestId requires a testId value for "main.row@order".
 ```
 
-Thrown by a locator method of `add`, a seeded `add`, `createReusable` (`createReusable.getByRole requires a role
-value.`, without a path), `update` and `replace`, when the first argument is missing (from JavaScript), is not a
-string or RegExp where one is needed, or is an empty string where Playwright cannot use one: `locator`,
-`frameLocator`, `getByRole` and `getById`. `getByText("")`, `getByTestId("")` and the other text methods store the
+Thrown by a locator method of `add`, `createReusable` (`createReusable.getByRole requires a role value.`, without a
+path) and `replace` when the first argument is missing (from JavaScript), and by those and by `update` and a seeded
+`add` when it is not a string or RegExp where one is needed, or is an empty string where Playwright cannot use one:
+`locator`, `frameLocator`, `getByRole` and `getById`. On `update` and a seeded `add` an omitted first argument keeps
+the registered one. `getByText("")`, `getByTestId("")` and the other text methods store the
 empty string, which Playwright matches. See [registering locators](/POMWright/docs/registering-locators/#the-first-argument).
 
 ### A registration that has ended

@@ -16,7 +16,8 @@ write instead, and the page that explains the concept. The 2.x documentation sta
 2. Run `tsc`. Removed and renamed APIs are compile errors: the items marked **compile error** say what to write
    instead.
 3. Search for the changes that still compile but behave differently, the items marked **compiles**. Each gives the
-   search.
+   search, run from the project's root; `--exclude-dir=node_modules` keeps out the installed packages, whose own
+   files (Playwright's and POMWright's type declarations among them) would otherwise fill the results.
 4. Run the suite. What is left fails with a message that names the fix: a URL the constructor rejects, a registration
    without its first argument, a locator reference that does not verify, a seed that was never applied. Those items
    are marked **fails at run time**.
@@ -40,7 +41,7 @@ projects alike; a deep import such as `pomwright/dist/index.js` fails with `ERR_
 everything from the root:
 
 ```sh
-grep -rn "pomwright/" --include=*.ts .
+grep -rn "pomwright/" --include=*.ts --exclude-dir=node_modules .
 ```
 
 See [Installation](/POMWright/docs/installation/).
@@ -54,7 +55,7 @@ broke on most real ids. 3.0.0 matches the string exactly and case-sensitively as
 spaces, quotes or a leading digit work, and `getById("#login")` looks for `id="#login"`. Find the prefixed calls:
 
 ```sh
-grep -rnE 'getById\(\s*["'"'"'`](#|id=)' --include=*.ts .
+grep -rnE 'getById\(\s*["'"'"'`](#|id=)' --include=*.ts --exclude-dir=node_modules .
 ```
 
 ```ts title="2.x" nocheck
@@ -80,7 +81,7 @@ flags. An unanchored pattern without special characters, such as `/btn-submit/`,
 ids:
 
 ```sh
-grep -rnE 'getById\(\s*/' --include=*.ts .
+grep -rnE 'getById\(\s*/' --include=*.ts --exclude-dir=node_modules .
 ```
 
 Review each pattern that contains `.`, `[`, `]`, `(`, `)`, `+`, `*`, `?`, `^`, `$` or `|`, or has flags: escape a
@@ -108,7 +109,7 @@ Review every `frameLocator(…)` registration followed by `.nth(`, `.filter(`, `
 takes effect. Telling frames apart by their ancestor segments is still the better way:
 
 ```sh
-grep -rn 'frameLocator(' --include=*.ts .
+grep -rn 'frameLocator(' --include=*.ts --exclude-dir=node_modules .
 ```
 
 `frameLocator()` without a selector is new: Playwright's any-frame locator. See [Frames](/POMWright/docs/frames/).
@@ -157,7 +158,7 @@ query.update().getByRole("button", { exact: null }); // removes exact
 ```
 
 ```sh
-grep -rn 'update(' --include=*.ts . | grep undefined
+grep -rn 'update(' --include=*.ts --exclude-dir=node_modules . | grep undefined
 ```
 
 See [Queries](/POMWright/docs/queries/).
@@ -171,16 +172,19 @@ first argument and drop the `null`. See [Queries](/POMWright/docs/queries/).
 
 ### Every strategy method needs its first argument
 
-**Fails at run time.** `add`, a seeded `add`, `createReusable`, `update` and `replace` throw at the call when the first
-argument is missing, or when it is an empty string for `locator`, `frameLocator` and `getByRole`, which Playwright
-cannot use. In 2.x such a registration was stored and failed later, or registered without its value. A page object
-then fails in its fixture:
+**Fails at run time.** `add`, `createReusable` and `replace` throw at the call when the first argument is missing.
+Every builder, `update` and a seeded `add` included, throws when it is an empty string for `locator`, `frameLocator`
+and `getByRole`, which Playwright cannot use, or, from JavaScript, not a value Playwright takes (`null`, a number or an
+object where a string belongs). In 2.x such a registration was stored and failed later, or registered without its
+value. A page object then fails in its fixture:
 
 ```text
 locator requires a non-empty selector for "main.list".
 getByRole requires a role value for "main.button@save".
 ```
 
+On `update` and a seeded `add`, leaving the first argument out still keeps the registered one, as in 2.x: the options
+alone, `update().getByRole({ name: "Cancel" })`, and no argument, `update().getByRole()`, are unaffected.
 `getByTestId("")`, `getByText("")` and the other text methods store the empty string, since Playwright matches elements
 with an empty attribute. See [Registering locators](/POMWright/docs/registering-locators/).
 
@@ -205,7 +209,7 @@ Find the registrations kept in variables, and give each all its steps before the
 meant for one use becomes a query:
 
 ```sh
-grep -rnE '((const|let) +\w+|this\.\w+) *= .*\badd\(' --include=*.ts .
+grep -rnE '((const|let) +\w+|this\.\w+) *= .*\badd\(' --include=*.ts --exclude-dir=node_modules .
 ```
 
 See [Registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change).
@@ -268,7 +272,7 @@ registry.add("table.row@total", { reuse: row.filter({ hasText: "Total" }) });
 ```
 
 ```sh
-grep -rn 'createReusable' --include=*.ts .
+grep -rn 'createReusable' --include=*.ts --exclude-dir=node_modules .
 ```
 
 See [Reusing locators](/POMWright/docs/reusing-locators/).
@@ -391,7 +395,7 @@ See [Page objects](/POMWright/docs/page-objects/#actions-after-navigation).
 named `PageObjectTypeOptions`. There is no alias; rename it in imports and constraints:
 
 ```sh
-grep -rn 'UrlTypeOptions' --include=*.ts .
+grep -rn 'UrlTypeOptions' --include=*.ts --exclude-dir=node_modules .
 ```
 
 See [TypeScript](/POMWright/docs/typescript/).
@@ -418,7 +422,7 @@ await loginPage.navigation.goto();
 ```
 
 ```sh
-grep -rn 'gotoThisPage(' --include=*.ts .
+grep -rn 'gotoThisPage(' --include=*.ts --exclude-dir=node_modules .
 ```
 
 See [URLs and navigation](/POMWright/docs/urls-and-navigation/#navigating).
@@ -459,6 +463,14 @@ export class LoginPage extends PageObject<"main"> {
     this.add("main").locator("main");
   }
 }
+```
+
+A `urlPath` that is a complete URL throws too. 2.x joined it to `baseUrl`, `https://shop.examplehttps://login.example`,
+a URL no browser reaches, so a page object with one never used its own URL; its origin belongs in `baseUrl`, with
+`""` or the rest of the URL as `urlPath`:
+
+```text
+LoginPage: urlPath must be "" or start with exactly one "/"; received "https://login.example".
 ```
 
 For two strings, `fullUrl` is `new URL(urlPath, baseUrl).href`, the form the browser reports: a page object for the
@@ -549,6 +561,19 @@ await accountPage.sessionStorage.set({ user: { name: "Ada", age: 36 } });
 const user = await accountPage.sessionStorage.get("user"); // { name: string; age: number } | null
 ```
 
+A leftover type argument does not point at this item. `set` and `get` still have a type parameter, for the key
+names, so TypeScript reads the old `<User>` as a key and reports, for the 2.x lines above:
+
+```text
+error TS2353: Object literal may only specify known properties, and 'user' does not exist in type 'EntriesFor<{ user: Codec<{ name: string; age: number; }>; }, User>'.
+error TS2344: Type 'User' does not satisfy the constraint 'string'.
+error TS2339: Property 'user' does not exist on type 'string | null'.
+```
+
+Delete the type argument and declare the key's codec. Find them with
+`grep -rnE '\.(get|set|seed)<' --include=*.ts --exclude-dir=node_modules .`. Keys with a codec and keys without one,
+which hold strings, mix in one call: `set({ user: { name: "Ada", age: 36 }, token: "abc" })`.
+
 Where the app parses a string key as JSON, as a storage layer that encodes everything does, declare `json<string>()`
 for that key to keep the quotes. See [Session storage](/POMWright/docs/session-storage/#codecs-for-structured-values).
 
@@ -584,7 +609,7 @@ is gone: on a page without an origin every call fails at once with a message tha
 first or use `seed`.
 
 ```sh
-grep -rnE 'setOnNextNavigation|waitForContext|reload: true' --include=*.ts .
+grep -rnE 'setOnNextNavigation|waitForContext|reload: true' --include=*.ts --exclude-dir=node_modules .
 ```
 
 See [Session storage](/POMWright/docs/session-storage/#the-methods).
@@ -614,9 +639,14 @@ update anything that looks for that title. See [Test steps](/POMWright/docs/test
 
 ### Log attachments keep what was logged
 
-**Compiles.** Attachment names use Playwright's `locale` and `timezoneId`, where 2.x always wrote them in `nb-NO`; set
-`use: { locale: "nb-NO" }` for the 2.x names, or pass a locale to `attachLogsToTest` in a fixture of your own. A
-message is attached exactly as written, where 2.x re-formatted one that parsed as JSON: pass
+**Compiles.** Attachment names use Playwright's `locale` and `timezoneId`, where 2.x always wrote them in `nb-NO`. For
+the 2.x names, set `use: { locale: "nb-NO" }` in the config. POMWright's `log` fixture passes the test's `locale` and
+`timezoneId`. A fixture of your own that calls `attachLogsToTest(testInfo)` gets the project's `use.locale` and
+`use.timezoneId` from the config; to follow `test.use()` as well, it passes them:
+`log.attachLogsToTest(testInfo, { locale, timeZone: timezoneId })`. Find such fixtures with
+`grep -rn 'attachLogsToTest(' --include=*.ts --exclude-dir=node_modules .`.
+
+A message is attached exactly as written, where 2.x re-formatted one that parsed as JSON: pass
 `JSON.stringify(data, null, 2)` for indented JSON. Further arguments are printed as `console.log` prints them, where 2.x
 wrote `[object Object]`. See [Logging to the report](/POMWright/docs/logging/).
 

@@ -21,11 +21,13 @@
 - `PlaywrightReportLogger` keeps the message and string arguments exactly as given: no trailing blank lines, no
   re-formatting of JSON messages. Other arguments are printed as `console.log` prints them instead of
   `[object Object]`. A message that is a JSON object or array is attached as `application/json`, anything else
-  (`"42"` included) as `text/plain`. Attachment names use Playwright's `locale` and `timezoneId` (the `log` fixture
-  passes them; `attachLogsToTest(testInfo, { locale, timeZone })` takes them) instead of a fixed `nb-NO`, so with no
-  config they read `08:19:55 AM 10/15/2026 - INFO : [TestCase]`. Entries are attached in call order, without sorting.
-  Migration: set `use: { locale: "nb-NO" }` for the 2.x names, or pass a locale to `attachLogsToTest` in a custom
-  fixture; pass `JSON.stringify(data, null, 2)` for pretty JSON or data nested deeper than two levels.
+  (`"42"` included) as `text/plain`. Attachment names use Playwright's `locale` and `timezoneId` instead of a fixed
+  `nb-NO`: the `log` fixture passes them, and `attachLogsToTest(testInfo)` called from a fixture of your own takes
+  the project's `use.locale` and `use.timezoneId` from the config, or `{ locale, timeZone }` as its second argument.
+  With no config they read `08:19:55 AM 10/15/2026 - INFO : [TestCase]`. Entries are attached in call order, without
+  sorting. Migration: set `use: { locale: "nb-NO" }` in the config for the 2.x names; a fixture of your own that
+  should also follow `test.use()` passes `{ locale, timeZone: timezoneId }` from its fixtures. Pass
+  `JSON.stringify(data, null, 2)` for pretty JSON or data nested deeper than two levels.
 - From JavaScript, `describe(null)` and `describe(undefined)` throw `describe requires a string for "<path>"; pass ""
   to remove the description.` instead of falling back to the path, and `nth(null)` and `nth(undefined)` reach
   Playwright's `nth`, which matches nothing, instead of being dropped, which matched every element. TypeScript rejected

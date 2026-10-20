@@ -131,8 +131,10 @@ export const test = base.extend<{ log: PlaywrightReportLogger }>({
 });
 ```
 
-`attachLogsToTest(testInfo, { locale, timeZone })` attaches the entries; without the second argument it uses the
-machine's locale and time zone.
+`attachLogsToTest(testInfo, { locale, timeZone })` attaches the entries. Without the second argument, or for a part
+of it left out, it uses the project's `use.locale` and `use.timezoneId` from the config (`testInfo.project.use`), and
+the machine's where the config sets none. A value set with `test.use()` reaches only the fixtures, so passing the
+`locale` and `timezoneId` fixtures, as above, also honours it.
 
 ## Reference
 

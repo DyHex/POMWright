@@ -84,8 +84,9 @@ export const test = base.extend<{ log: PlaywrightReportLogger }>({
 
   The locale and time zone of the time and date in the names, as `toLocaleTimeString` takes them; the `log` fixture
   passes Playwright's [`locale`](https://playwright.dev/docs/api/class-testoptions#test-options-locale) and
-  [`timezoneId`](https://playwright.dev/docs/api/class-testoptions#test-options-timezone-id). Without them, the
-  machine's.
+  [`timezoneId`](https://playwright.dev/docs/api/class-testoptions#test-options-timezone-id). Each one left out is the
+  project's `use.locale` or `use.timezoneId` from the config, or the machine's where the config sets none; a value set
+  with `test.use()` reaches only the fixtures.
 
 **Returns**
 

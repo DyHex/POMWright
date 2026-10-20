@@ -9,7 +9,7 @@ navigation helper waits the way Playwright does.
 
 - `gotoThisPage()` is removed. `goto()` without a target replaces it: it navigates to `fullUrl` and runs the
   post-navigation actions unless `{ runPostNavigationActions: false }`. `goto(target)` never runs the actions.
-  Migration: `grep -rn 'gotoThisPage(' --include=*.ts .` and drop `ThisPage`.
+  Migration: `grep -rn 'gotoThisPage(' --include=*.ts --exclude-dir=node_modules .` and drop `ThisPage`.
 - `NavigationOptions.waitForLoadState` is removed; `waitUntil` covers every method. POMWright no longer defaults
   `waitUntil` to `"load"` itself; an unset value means Playwright's own default. Migration: rename the option in
   `navOptions` and in per-call options.

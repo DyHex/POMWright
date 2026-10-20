@@ -31,7 +31,7 @@ titles, origin checks, typed values, and seeding before the app loads.
   writes at once. A page that never seeds has nothing registered; two page objects seeding the same origin merge. A
   seed still pending when the page closes fails the test, as does a write the browser refuses; `seed` itself throws
   in a browser without the Navigation API and when the page commits a document on the origin while it registers.
-  Migration: `grep -rn 'setOnNextNavigation' --include=*.ts .` and rename to `seed`.
+  Migration: `grep -rn 'setOnNextNavigation' --include=*.ts --exclude-dir=node_modules .` and rename to `seed`.
 - `waitForContext` is removed: an operation on a page without an origin fails at once with a message naming the
   fix. `reload` is removed: call `page.reload()`.
 - A page object's helper operates on that page object's origin and throws, naming both origins, when the page is on

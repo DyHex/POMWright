@@ -3,11 +3,12 @@ import { describe, expect, it } from "vitest";
 import { initialLogLevel, type LogEntry, type LogLevel, PlaywrightReportLogger } from "./playwrightReportLogger";
 
 // A TestInfo that records attachments; what the HTML report shows is covered by the integration specs.
-const setup = (level: LogLevel = "debug") => {
+const setup = (level: LogLevel = "debug", use: { locale?: string; timezoneId?: string } = {}) => {
 	const entries: LogEntry[] = [];
 	const log = new PlaywrightReportLogger({ current: level, initial: level }, entries, "TestCase");
 	const attachments: { name: string; contentType: string; body: string }[] = [];
 	const testInfo = {
+		project: { use },
 		attach: async (name: string, options: { contentType: string; body: Buffer }) => {
 			attachments.push({ name, contentType: options.contentType, body: options.body.toString() });
 		},
@@ -98,6 +99,32 @@ describe("attachments", () => {
 			"06:19:55 15.10.2026 - ERROR : [TestCase]",
 			"06:19:55 AM 10/15/2026 - WARN : [TestCase]",
 			"06:19:55 AM 10/15/2026 - ERROR : [TestCase]",
+		]);
+	});
+
+	it("are named in the project's configured locale and time zone when no format is given", () => {
+		const { log, entries, attachments, testInfo } = setup("debug", { locale: "nb-NO", timezoneId: "UTC" });
+		log.warn("x");
+		for (const entry of entries) {
+			entry.timestamp = new Date(Date.UTC(2026, 9, 15, 6, 19, 55));
+		}
+		log.attachLogsToTest(testInfo);
+		expect(attachments.map((attachment) => attachment.name)).toEqual(["06:19:55 15.10.2026 - WARN : [TestCase]"]);
+	});
+
+	it("take each part of a given format over the project's, and the project's for a part left out", () => {
+		const { log, entries, attachments, testInfo } = setup("debug", { locale: "nb-NO", timezoneId: "Asia/Tokyo" });
+		log.warn("x");
+		for (const entry of entries) {
+			entry.timestamp = new Date(Date.UTC(2026, 9, 15, 6, 19, 55));
+		}
+		log.attachLogsToTest(testInfo, { locale: "en-US", timeZone: "UTC" });
+		log.attachLogsToTest(testInfo, { locale: "en-US" });
+		log.attachLogsToTest(testInfo, { timeZone: "UTC" });
+		expect(attachments.map((attachment) => attachment.name)).toEqual([
+			"06:19:55 AM 10/15/2026 - WARN : [TestCase]",
+			"03:19:55 PM 10/15/2026 - WARN : [TestCase]",
+			"06:19:55 15.10.2026 - WARN : [TestCase]",
 		]);
 	});
 
