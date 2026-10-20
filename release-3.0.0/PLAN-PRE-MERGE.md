@@ -222,4 +222,10 @@ Nothing is pushed without your word. The file is never deleted by the assistant 
 
 ## 10. Execution note
 
-Empty until the plan runs: one line per step, with its commit.
+Executed 2026-10-20, one commit per step, each naming the plan and the step in its message (`git log --grep
+PLAN-PRE-MERGE`); a commit before step 1 recorded the agreement and decision 8.5. Preconditions: PR #46 green on its
+last push (a909cbb, every check); nothing added to the folder since the audit.
+
+- Step 1: `pages.yaml` runs on `workflow_run` after `CI` on `main` plus `workflow_dispatch`, its build job guarded as
+  `publish.yaml`'s and checking out the CI run's `head_sha`; the header comment states it. actionlint 1.7.12 (release
+  checksum verified, in the scratchpad) reports nothing over every workflow.
