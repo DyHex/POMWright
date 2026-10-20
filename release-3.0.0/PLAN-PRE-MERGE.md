@@ -236,3 +236,21 @@ last push (a909cbb, every check); nothing added to the folder since the audit.
   site is built from the commit the green `CI` run tested, that the workflow is guarded as Publish is and can be run
   by hand. `website/` and the README hold no "pre-release", "banner", "noindex" or the branch name (the two "banner"
   hits are the ARIA role and a path name in examples).
+- Step 4 found nothing to fix, so it has no commit of its own (its line is in step 5's): `pnpm format` and `pnpm lint`
+  clean; 688 unit tests with no type errors; `pnpm build`; `pnpm pack-test --reporter=line` 1403 passed and 1 skipped
+  (the download on WebKit) on chromium, firefox and webkit, with both type checks, the snippet check (207 checked, 12
+  `nocheck`) and the coverage check (0 problems); `pnpm docs:build` with every link valid; actionlint as in step 1.
+  The packaging probes, against the harness's tarball in scratchpad projects installed with npm: the tarball holds
+  `dist/index.js`, `index.d.ts`, `index.mjs`, `index.d.mts`, the README, the licence, the changelog and
+  `package.json`, nothing else; on Node 20.20.2 and 24.19.0 `require` loads `dist/index.js` and `import` loads
+  `dist/index.mjs`, with the same seven names and one `PageObject`, `test` and `SessionStorage`, a deep import fails
+  with `ERR_PACKAGE_PATH_NOT_EXPORTED` and `pomwright/package.json` reads `>=20`; a consumer file compiles with
+  TypeScript 6.0.3 under `node10` (with `ignoreDeprecations`), `node16`, `nodenext` (CommonJS and ESM, reading
+  `index.d.ts` and `index.d.mts`) and `bundler`, its `@ts-expect-error` on a wrong path consumed; attw 0.18.5 "No
+  problems found" for `pomwright` and `pomwright/package.json` in every mode (0.18.2 failed to read the tarball);
+  Playwright's runner passes a page-object spec with the `log` fixture in a CommonJS and a `"type": "module"`
+  project on Node 20 and 24; npm 10.8.2 on Node 18.20.8 (downloaded to the scratchpad, checksum verified) warns
+  `EBADENGINE` for `pomwright` (`>=20`), as for `@playwright/test` and `playwright`.
+- Step 5: the audit repeated over the folder as it stood found nothing new (the only additions since the audit were
+  this plan's own decisions; 8.1 and 8.2 go into AGENTS.md in step 6); the folder's 29 other tracked files removed
+  with `git rm -r`, this plan kept (8.5), the two empty untracked handover folders deleted (8.3).
