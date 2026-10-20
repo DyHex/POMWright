@@ -3,6 +3,10 @@ title: The page object lifecycle
 description: "Why defineLocators() runs after the constructor, the scheduled check, the registry facade, sticky failures and the construction site."
 ---
 
+A page object registers its locators in `defineLocators()`, a method of the subclass. This page explains when that
+method runs, why it cannot run in the constructor, and how a mistake in it is reported. How to write a page object is on
+[Page objects](/POMWright/docs/page-objects/).
+
 ## Not in the constructor
 
 A subclass's fields and constructor body run after `super(...)` returns. If `PageObject`'s constructor called
@@ -60,5 +64,19 @@ use of the page object, which throws the kept error again.
 ## No shared definition between instances
 
 Each page object defines its own registry. A definition may depend on the instance, a locale or a variant passed to
-the constructor, so sharing it between instances would be wrong for some page objects, and defining is cheap: about a
-microsecond per path.
+the constructor, so sharing it between instances would be wrong for some page objects, and defining is cheap: a few
+microseconds per path (see [Performance](/POMWright/internal/performance/)).
+
+## Alternatives weighed
+
+- **Defining at the first locator call only.** It would move every registry mistake to the first use, often inside a
+  test, and never check a page object a test does not use.
+- **An explicit `init()` or a static `create()`.** Boilerplate in every fixture, and a forgotten call fails silently.
+- **Defining in the constructor, with a warning in the docs.** The definition would still read `undefined` for every
+  value the subclass sets, and nothing would report it.
+- **A getter for `locatorRegistry`.** It would run the definition on any read, and a subclass that declares the member
+  again fails to compile (TS2610).
+
+The lifecycle state is an ECMAScript `#private` member, `#locators`, rather than a TypeScript `private` one: `PageObject`
+is the class users extend, and a TypeScript-private name is a real property that a subclass member of the same name
+would collide with.

@@ -3,6 +3,10 @@ title: Tests and checks
 description: "Unit tests in type-check mode, the harness against the packed package, the type probes, the documentation checks, and the CI jobs."
 ---
 
+POMWright is checked in four layers: unit tests of the source, the harness against the packed package in three
+browsers, type checks of the published declarations and of the documentation's examples, and CI, which runs them for
+every change. This page explains what each layer covers and why it is there.
+
 ## Unit tests
 
 `pnpm test:unit` runs vitest over the tests beside the source, `src/**/*.test.ts`, in seconds. Vitest runs in

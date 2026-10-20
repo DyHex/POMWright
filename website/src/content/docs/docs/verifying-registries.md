@@ -44,7 +44,8 @@ mistakes, a duplicate path or an empty selector, throw earlier, at the call that
 What it does not check: whether a selector parses (Playwright parses it at the first action), whether an element
 exists, whether a locator is unique, a query's changes, and a path in the union that is never registered and never
 resolved, such as a slot no page object fills (see [Locator modules](/POMWright/docs/locator-modules/#shared-slots)).
-It never touches the page, and it costs about a microsecond per path.
+It never touches the page, and it costs a few microseconds per path (see
+[Performance](/POMWright/internal/performance/)).
 
 ## In a page object
 

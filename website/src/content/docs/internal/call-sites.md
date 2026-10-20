@@ -3,11 +3,14 @@ title: Call sites
 description: "How a deferred error points at the consumer's line, why frames are never filtered by file name, and how the helpers' steps report the test's line."
 ---
 
+A test's report is only as useful as the line it points at. This page explains how an error raised after the call that
+caused it still points at the test's line, and how the helpers' report steps do the same.
+
 ## Errors raised later
 
 Two errors are raised after the call that caused them: the page object's scheduled check, after its constructor
-returned, and a seed's failure, when the app's document loads or when the page closes. Thrown with their own stack, they would point
-at a microtask or a Playwright event handler, not at the test. `src/helpers/callSite.ts` gives them the stack of the
+returned, and a seed's failure, when the app's document loads or when the page closes. Thrown with their own stack,
+they would point at a microtask or a Playwright event handler, not at the test. `src/helpers/callSite.ts` gives them the stack of the
 call instead:
 
 - `captureCallSite(boundary)` creates an `Error` at the call and lets V8's `Error.captureStackTrace` cut its stack at
@@ -34,3 +37,11 @@ methods open their step through one helper:
   the async stack, and the step shows no location.
 
 The unit tests in `src/helpers/stepLocations.test.ts` check the option, the titles and the non-async helper.
+
+## Alternatives weighed
+
+- **Dropping stack frames by file name.** An earlier version of these helpers dropped every frame of a file named like
+  POMWright's own, so a consumer's `pageObject.ts` or `sessionStorage.ts` lost its frame and the report pointed at the
+  caller's caller.
+- **A step `location` computed from the call site.** `{ box: true }` gives the same report location without parsing a
+  stack, and keeps the steps inside the helper's step.

@@ -48,3 +48,40 @@
 		);
 	}
 }
+
+/*
+ * A results table beside its chart, on Internal → Performance. The table takes the width it needs; the chart sits beside
+ * it when there is room for at least 20rem, and below it otherwise.
+ */
+.table-and-chart {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem 1.5rem;
+	align-items: flex-start;
+}
+
+.table-and-chart > table {
+	flex: 1 1 max-content;
+	max-width: 100%;
+}
+
+.table-and-chart > :not(table) {
+	flex: 1 1 20rem;
+	min-width: 0;
+	max-width: 36rem;
+	margin-top: 0;
+}
+
+/* Two charts of one table side by side, each at least 18rem wide. */
+.table-and-chart > .chart-pair {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	max-width: none;
+}
+
+.chart-pair > * {
+	flex: 1 1 18rem;
+	min-width: 0;
+	margin-top: 0;
+}

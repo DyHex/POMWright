@@ -3,6 +3,10 @@ title: The seed registry
 description: "How seed() stores entries before the app's first script: one registry per page, an init script per origin written only on the first arrival and removed at the commit, and the failures."
 ---
 
+`seed()` stores session storage entries for an origin the page is not on yet, so the app finds them when it starts
+there. This page explains how it does that without touching the navigation, and when it fails. How to use it is on
+[Seeding session storage](/POMWright/docs/seeding-session-storage/).
+
 ## The problem
 
 An app that reads session storage as it starts must find the entries there before its first script runs. Writing
@@ -21,6 +25,18 @@ same origin registers a script with the merged entries, later values winning, th
 The first pending seed registers four listeners: `framenavigated`, `domcontentloaded`, `console` and `close`. When
 nothing is pending and no applied document can still report a failure, all four are removed: a page that never seeds,
 or has applied its seeds, runs exactly as without POMWright.
+
+The seed for one origin goes through these states:
+
+```mermaid
+stateDiagram-v2
+  [*] --> pending: seed, away from the origin
+  pending --> pending: another seed merges its entries
+  pending --> confirming: the main frame commits on the origin
+  confirming --> [*]: DOMContentLoaded, or the next commit
+  confirming --> failed: the script reports a refused write
+  pending --> failed: the page closes after a passing test
+```
 
 ## The script
 

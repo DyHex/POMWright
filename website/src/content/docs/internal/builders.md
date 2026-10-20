@@ -5,7 +5,9 @@ description: "The registration, the seeded builder, the query and its skip flags
 
 Everything `add`, `getLocatorSchema`, `update`, `replace` and `createReusable` return is a builder: an object whose
 methods record what you chain and return the next step. Builders are synchronous and not thenable: there is nothing
-to `await`, as with Playwright's own locator methods.
+to `await`, as with Playwright's own locator methods. This page explains how each builder keeps its state and when it
+writes; how to use them is on [Registering locators](/POMWright/docs/registering-locators/),
+[Queries](/POMWright/docs/queries/) and [Reusing locators](/POMWright/docs/reusing-locators/).
 
 ## The registration
 
@@ -15,6 +17,17 @@ type, so TypeScript offers the right methods at each step:
 - before a locator method, only the ten locator methods (`LocatorRegistrationPreDefinitionBuilder`);
 - after one, only `filter`, `nth` and `describe`: the locator method returns a small view object with those three,
   whose methods record a step and return the view again.
+
+A registration goes through three states. A locator method registers the record, each step (`filter`, `nth`,
+`describe`) replaces it, and the next call on the registry ends the registration, after which every method of it throws:
+
+```mermaid
+stateDiagram-v2
+  [*] --> open: add
+  open --> registered: a locator method
+  registered --> ended: the next registry call
+  open --> ended: the next registry call
+```
 
 The builder writes the registry on every call: the first call registers, later ones replace the record, so the record
 grows with the chain. A chain has no end the builder can see, so the registry ends it: it keeps the registration the

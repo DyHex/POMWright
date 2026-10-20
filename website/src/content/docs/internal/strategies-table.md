@@ -3,11 +3,28 @@ title: The strategy table
 description: "STRATEGIES: one row per locator strategy, read by every check, copy, patch and resolution, and how a strategy is added."
 ---
 
+Every builder offers the same ten locator methods, and every one of them must check, copy, patch and resolve a
+definition the same way for a given strategy. The strategy table is where those per-strategy facts live, so that one
+rule is written once. Which methods exist and what they take is on
+[Registering locators](/POMWright/docs/registering-locators/#the-ten-methods).
+
 ## One row per strategy
 
 POMWright's ten locator methods differ in a few facts: the Playwright method, the name of the first argument, whether
 there are options, whether an empty string is a value Playwright matches. Those facts live in one table, `STRATEGIES`
-in `src/locators/utils.ts`, one row per strategy:
+in `src/locators/utils.ts`, one row per strategy. The row of `getByRole`:
+
+```js
+role: {
+  method: "getByRole",
+  primary: "role",
+  options: true,
+  allowEmpty: false,
+  create: (target, definition) => target.getByRole(definition.role, definition.options),
+},
+```
+
+The fields:
 
 | row field | what it says | example, `role` |
 | --- | --- | --- |

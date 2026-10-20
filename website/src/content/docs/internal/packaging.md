@@ -3,6 +3,10 @@ title: Packaging
 description: "One CommonJS build, an ESM entry that re-exports it, the exports map, and declarations built from type aliases."
 ---
 
+How POMWright is built decides what a project can import and whether a test run holds one copy of it or two. This page
+explains the build, the package's entry points and its declarations. How to install and import POMWright is on
+[Installation](/POMWright/docs/installation/).
+
 ## One build, two entries
 
 `pnpm build` runs tsup on `index.ts`, which writes one CommonJS build, `dist/index.js`, and its declarations,

@@ -68,6 +68,7 @@ export const topics = [
 			"internal",
 			"internal/registry-records",
 			"internal/resolution",
+			"internal/performance",
 			"internal/strategies-table",
 			"internal/builders",
 			"internal/page-object-lifecycle",

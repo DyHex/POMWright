@@ -3,6 +3,10 @@ title: URL matching
 description: "How baseUrl and urlPath are checked, how fullUrl is composed, and how UrlMatcher tests the origin and the rest of a URL apart."
 ---
 
+A page object knows its own URL, so its navigation helper can go there and wait for it. This page explains how the URL
+parts are checked, how `fullUrl` is made, and how a page whose URL varies is matched. How to set a page object's URL is
+on [URLs and navigation](/POMWright/docs/urls-and-navigation/).
+
 ## The checks
 
 A page object's `baseUrl` and `urlPath` are each a string or a RegExp. The constructor checks the strings with the
@@ -43,3 +47,14 @@ provides, and a base such as `/identity-provider/` matches any host that contain
 Playwright's `waitForURL`, `toHaveURL` and `route` accept a URL predicate, so the matcher is passed to them as it is.
 The navigation helper builds a matcher for every page object, a string `fullUrl` included, and waits with it: a page
 is matched in the form the browser reports, so `/søk` matches the percent-encoded URL the browser shows.
+
+## Alternatives weighed
+
+- **One composed RegExp** with a filler between the parts. The base would have to match up to the exact character
+  where the path begins, so a base such as `/identity-provider/` would never match.
+- **A `RegExp` subclass** as `fullUrl`. Playwright sends a RegExp to the browser as its source and flags, so the
+  subclass's own matching would never run.
+- **An option to ignore the query.** One rule, identical to Playwright's `toHaveURL`, keeps `expectThisPage` and
+  `expectAnotherPage` exact opposites; a page whose query varies has a RegExp path instead.
+- **Literal types for the URL parts.** They catch only a malformed literal, which the constructor check catches at the
+  same moment, and they make every value from the environment need a cast.
