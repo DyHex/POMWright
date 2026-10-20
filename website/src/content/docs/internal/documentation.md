@@ -43,7 +43,8 @@ title by a component of its own; an Expressive Code plugin hides an example's co
 render in the browser, so the build does not catch a syntax error in one: open the page.
 
 `.github/workflows/pages.yaml` builds the site the same way and deploys it to GitHub Pages, after `CI` succeeds on a
-push to `main`, so the site follows `main`.
+push to `main`, from the commit that run tested, so the site follows `main` and never shows a commit whose checks
+failed. It is guarded as the publish workflow is, and can also be started by hand.
 
 ## How pages are written
 

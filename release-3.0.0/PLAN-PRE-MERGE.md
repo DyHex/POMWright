@@ -232,3 +232,7 @@ last push (a909cbb, every check); nothing added to the folder since the audit.
 - Step 2: `Banner.astro` deleted, its `components` entry and the `noindex` `head` entry removed from `astro.config.mjs`
   with their comments; `pnpm docs:build` passes with every link valid, and none of the 53 pages of `website/dist` holds
   `class="prerelease"` or `name="robots"`.
+- Step 3: *Documentation* and *Tests and checks* already described the deployment from `main`; they now say that the
+  site is built from the commit the green `CI` run tested, that the workflow is guarded as Publish is and can be run
+  by hand. `website/` and the README hold no "pre-release", "banner", "noindex" or the branch name (the two "banner"
+  hits are the ARIA role and a path name in examples).
