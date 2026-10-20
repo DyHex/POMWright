@@ -248,7 +248,7 @@ add("list").locator(null);
 // @ts-expect-error a seed's own factory keeps Playwright's option types
 registry.createReusable.getByRole("button", null);
 
-// PageObjectOptions and LocatorRegistryOptions name what a domain base class forwards (plan 10, R1)
+// PageObjectOptions and LocatorRegistryOptions name what a domain base class forwards
 const registryOptions: LocatorRegistryOptions = { strictChains: true };
 abstract class DomainPage<P extends string> extends PageObject<P> {
 	protected constructor(page: Page, urlPath: string, options?: PageObjectOptions) {
@@ -266,7 +266,7 @@ class DomainLogin extends DomainPage<Paths> {
 // @ts-expect-error locators takes the registry options
 const wrongOptions: PageObjectOptions = { locators: { strictChains: "yes" } };
 
-// every seeded override accepts no argument and keeps the seed's definition, as update() does (plan 10, R12)
+// every seeded override accepts no argument and keeps the seed's definition, as update() does
 add("main", { reuse: roleSeed }).getByRole().nth(0);
 add("main", { reuse: textSeed }).getByText();
 add("main", { reuse: locatorSeed }).locator();
@@ -277,7 +277,7 @@ add("list").getByRole();
 // @ts-expect-error unseeded add still requires the first argument
 add("list").getByTestId();
 
-// a seeded builder held in a variable takes its one override before or after steps (plan 10, R8)
+// a seeded builder held in a variable takes its one override before or after steps
 const held = add("main", { reuse: roleSeed });
 held.nth(0);
 held.getByRole({ name: "Cancel" });

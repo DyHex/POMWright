@@ -10,5 +10,5 @@
   `"main.form.button.save": strictChains requires every ancestor to be registered; "main.form" and "main.form.button"
   are not.` A page object checks it right after `defineLocators()`; a standalone registry when it calls `verify()`.
   The option is a boolean, `false` by default; without it nothing changes, and an unregistered segment stays a name
-  that groups paths and is left out of the chain (analysis 3.4). `skip` and `unskip` work in both modes; under the
+  that groups paths and is left out of the chain. `skip` and `unskip` work in both modes; under the
   option an any-frame `frameLocator()` is a root path. No migration.

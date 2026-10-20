@@ -264,10 +264,11 @@ changing anything. Repo-specific facts here override generic defaults. Last revi
 
 ## 6. The 3.0.0 workflow
 
-Everything for the release lives in [release-3.0.0/](release-3.0.0/). The folder is temporary. At release the notes
-become the basis for the changelog entry and announcement. Plans 11 to 13 (`PLAN-5-DOCS.md`) redo the documentation as a
-Starlight site in `website/`, and their pre-merge step C8 copies the folder's Markdown to the maintainer's vault and
-deletes it from the repository.
+Everything for the release lives in [release-3.0.0/](release-3.0.0/). The folder is temporary: nothing in it is kept.
+What a consumer needs is in the changesets (the changelog entry), the code, its tests, the doc comments and the site;
+the reasons behind the design are on the site's Internal pages, and what remains to do after 3.0.0 is in section 7.
+Plans 11 to 13 (`PLAN-5-DOCS.md`) redo the documentation as a Starlight site in `website/`, and the last plan,
+`PLAN-PRE-MERGE.md` (plan 13's step C8), deletes the folder from the repository before the merge.
 
 | File | Role |
 | --- | --- |
@@ -312,7 +313,7 @@ Rules:
   its job condition also requires a push run on `main` in this repository. Pull requests run the same jobs through
   `PR`, which Publish does not listen to. CI runs only for pull requests (drafts included) and `main`. The gate job
   `build` of `pr.yaml` and `main.yaml` is `main`'s required status check. The published package is rebuilt by
-  `pnpm run release`, not taken from the CI artifact (left for after 3.0.0).
+  `pnpm run release`, not taken from the CI artifact (see *After 3.0.0* below).
 - `pages.yaml` deploys the documentation site. From C8 it runs after `CI` succeeds on a push to `main`, guarded as
   `publish.yaml` is, so every merge updates the site once its checks have passed; since nothing reaches `main` before it
   is ready to release, the site is ahead of npm only until the Version Packages pull request is merged.
@@ -325,6 +326,28 @@ Rules:
   `.changeset/strict-chains.md` and `.changeset/page-object-options.md` (`minor`) and
   `.changeset/quality-review-fixes.md`, `.changeset/helper-step-locations.md` and `.changeset/doc-comments.md`
   (`patch`).
+- Before a release, outside CI, the packaging probes run against the packed tarball in a scratchpad project: the packed
+  file list (`dist/index.js` and `dist/index.d.ts` from tsup, `dist/index.mjs` and `dist/index.d.mts` from
+  `scripts/write-esm-entry.mjs`, nothing else in `dist`); Node 20 and 24 loading `index.js` for `require` and
+  `index.mjs` for `import` with one shared `PageObject`; TypeScript under `node10`, `node16`, `nodenext` and `bundler`
+  resolution; attw (`@arethetypeswrong/cli`, downloaded, never a dependency) reporting no problem; Playwright's runner in
+  a CommonJS and a `"type": "module"` project; npm's `EBADENGINE` warning on Node 18.
+- After 3.0.0, each as a change of its own:
+  - the release tooling: `@changesets/cli` 3, `@changesets/changelog-github` 1 and `changesets/action` v2 move
+    together (action v2 refuses CLI 2; CLI 3 needs Node 22.11 and pnpm 10 or later). Action v2 renames `publish` to
+    `publish-script`, takes the token as `github-token`, and no longer writes `.npmrc` from `NPM_TOKEN`, so npm
+    authentication moves to npm Trusted Publishing (OIDC, configured by the package owner on npmjs.com for
+    `publish.yaml`, which also gives provenance without `NPM_CONFIG_PROVENANCE`). It cannot be tried without publishing,
+    so it is proven on the first patch release after 3.0.0;
+  - TypeScript 7, once it ships a compiler API (tsup's declaration build and the two doc checks use it);
+  - Node 26 in CI and for contributors once it is LTS; the floor job stays on the `engines` floor;
+  - publishing the tarball CI tested instead of rebuilding it in `publish.yaml` (two builds of one commit are
+    byte-identical today, but the published bytes are not the tested bytes; closing it changes how changesets
+    publishes);
+  - possibly a browser-context-wide `seed` option for hops that open a new tab (non-breaking; today the docs show
+    `browserContext.addInitScript` as the workaround).
+  Considered and not planned: a scheduled workflow that tests the latest release against each new Playwright release
+  (GitHub has no event for another repository's releases), and linting Markdown (biome does not process `.md`).
 
 ## 8. Do not
 
@@ -378,24 +401,43 @@ Rules:
   overload carries the full comment; a type a chain hovers (the view after a locator method, `NavigationFor`) carries
   comments on its own members. A decorator at the start of a comment line is read as a JSDoc tag, so `@step`'s comment
   has no example block.
-- API pages follow playwright.dev's class pages: a summary with one example, then the members as `###` headings,
-  alphabetical within their group, each with **Usage**, **Arguments**, **Returns** and **Throws**; a type of the page has
-  a `## Name` section. Internal pages state what a part is for, how it works and why, with the files involved and no
-  line numbers, and link `AGENTS.md` rather than copy it.
+- Principles: mirror Playwright in the docs as in the code (explain each feature as the Playwright feature it builds on
+  plus what POMWright adds, use Playwright's names, link playwright.dev for what Playwright owns instead of restating
+  it); teach the recommended path first (chains, page objects as fixtures, reuse by path, `update` before `replace`) and
+  document a decided contract as decided; one home per fact (a rule is explained on its concept page and linked
+  elsewhere; the API page and the doc comment state it briefly and link there); show, then explain (a short example,
+  the rule, the edge cases last); say what fails and how (concept pages show the common errors, API pages and doc
+  comments every one per member, *Error messages* all of them).
+- API pages follow playwright.dev's class pages: a summary with one example, then *Type parameters*, *Constructor*,
+  *Methods* (or *Methods to implement*) and *Properties*, the members as `###` headings, alphabetical within their
+  group, each with **Usage**, **Arguments** (name, type, *(optional)*, nested options indented), **Returns** and
+  **Throws** (the real messages); a type of the page has a `## Name` section; types link to their API page or to
+  playwright.dev. Internal pages state what a part is for, how it works and why, including the alternatives that were
+  rejected and the reason, with the files involved and no line numbers, and link `AGENTS.md` rather than copy it. The
+  reasons behind a design live on the Internal pages; a change of design updates them.
 - The code and its tests decide what the docs say. Every chain, description and message a page shows is copied from a
   probe against the build (section 3); where a rendered string hides an option, the stored record is read instead. A
   change to a message, a rendering or a mechanism greps `website/` for the old text and updates the pages with it, and a
   consumer-facing change updates the page that describes it.
-- Page shapes follow playwright.dev (`PLAN-5-DOCS.md` section 2.4). Getting started pages: *Introduction*, "You will
-  learn", examples that grow, *What's next*. Concept pages open with the Playwright concept beneath them and say what
-  POMWright adds, and close with a *Reference* list; a Mermaid diagram where one explains better than prose, checked
-  against the code. Every page is Markdown with a `title` and a quoted `description`; links within the site are
-  root-absolute with the base and anchor (`/POMWright/docs/<page>/#<heading>`). Plain sentences, one idea each, no
-  "simply" or "just", American spelling.
+- Page shapes follow playwright.dev. Getting started pages: *Introduction*, "You will learn", short sections whose
+  example grows from the last, *What's next*; one page, one outcome. Concept pages open with the Playwright concept
+  beneath them, linked, and say what POMWright adds; then a small fixture (the HTML and the registry or page object the
+  page's examples use), sections from the common case to the edge cases, `:::note` asides only for traps, and a closing
+  *Reference* list (POMWright's API pages, then Playwright's). Every page is Markdown (`.md`; MDX only where a component
+  earns it, as on the home page) with a `title` and a quoted `description`; links within the site are root-absolute
+  with the base and anchor (`/POMWright/docs/<page>/#<heading>`), links to Playwright go to playwright.dev's current
+  pages. Plain sentences, one idea each, no marketing, no "simply" or "just", American spelling. No "Added in" markers
+  on 3.0.0 pages; from the first 3.x addition on, a new member or option carries one.
+- Diagrams are Mermaid, where one explains better than prose, each checked against the code: a sentence before it says
+  what it shows, at most about a dozen nodes, the theme's colours (the charts of *Internal → Performance* set their two
+  series colours, which the light theme would otherwise draw too pale), and text around it that says the same, so a
+  reader of the text loses nothing.
 - Examples: page objects reach tests as Playwright fixtures (only *Your first page object* creates one in its test);
-  the example app in `website/snippets/` is importable from every page (`./login.page`, `./fixtures`, …); TypeScript
-  with two-space indentation, `*.example` hosts and descriptive paths; a rendered chain or message goes in a comment or
-  a `text` block.
+  the example app in `website/snippets/` is importable from every page (`./login.page`, `./fixtures`, …), and a page
+  that needs its own version of an app file defines a block with the same title; code that is not test code (a
+  `defineLocators()`, a locator module, a query in a page object's method) is shown as such; TypeScript with two-space
+  indentation, `*.example` hosts and descriptive paths; a rendered chain or message goes in a comment or a `text`
+  block.
 - `scripts/check-doc-snippets.mjs` compiles every `ts` block, one project per page with the example app, against the
   installed package with the harness's options and `declaration: true`, in `test/.doc-snippets/`. `title="name.ts"`
   makes a block a file the page's other blocks import; lines up to `// ---cut---` are compiled but hidden on the site
@@ -413,7 +455,8 @@ Rules:
   (a semicolon in a sequence message, or parentheses in an unquoted edge label, break it).
 - Deployment: `pages.yaml` builds `website/` exactly as the `site` job does and deploys `website/dist` to GitHub Pages
   (the `github-pages` environment; Pages' source is "GitHub Actions").
-- **Pre-merge (plan 13's C8), when the user says the branch is ready for `main`**:
+- **Pre-merge (plan 13's C8, in detail in `release-3.0.0/PLAN-PRE-MERGE.md`), when the user says the branch is ready
+  for `main`**:
   1. `pages.yaml`: replace the `push` trigger of the 3.0.0 branch with `workflow_run` on `CI` for `main` (completed),
      keep `workflow_dispatch`, guard the build job as `publish.yaml` guards its job (success, a push, `main`, this
      repository, or a manual run), and check out the CI run's `head_sha`, so the deployed commit is the one CI tested;
@@ -421,8 +464,7 @@ Rules:
   2. Remove the pre-release banner (`website/src/components/Banner.astro` and its `components` entry in
      `astro.config.mjs`) and the `noindex` `head` entry; build the site and confirm neither is on any page.
   3. Re-read `internal/documentation.md` and `tests-and-checks.md` against the switched workflow.
-  4. Copy the Markdown of `release-3.0.0/` (not `handover-plan-*` or `PLAN-5-DOCS-samples/`) to
-     `/home/magdys/jottacloud/knowledgeVault/POMWright/release-3.0.0/`, delete the folder from the repository, and
-     rewrite this file without it: section 6, the repository map's row, and every rule that cites a plan, the
-     analysis or `DECISIONS.md`.
-  5. The user then removes the branch from the `github-pages` environment's deployment branches.
+  4. Run the full verification and the packaging probes of section 7 on chromium, firefox and webkit.
+  5. Delete `release-3.0.0/` from the repository, keeping nothing, and rewrite this file without it: section 6, the
+     repository map's row, and every rule that cites a plan, the analysis or `DECISIONS.md`.
+  6. The user then removes the branch from the `github-pages` environment's deployment branches.

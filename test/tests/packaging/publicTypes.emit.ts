@@ -45,7 +45,7 @@ export class Steps {
 	}
 }
 
-// a domain base class that forwards the constructor options by name (plan 10, R1)
+// a domain base class that forwards the constructor options by name
 export abstract class DomainPage<P extends string> extends PageObject<P> {
 	protected constructor(page: Page, urlPath: string, options?: PageObjectOptions) {
 		super(page, "https://app.example", urlPath, options);

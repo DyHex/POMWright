@@ -36,4 +36,4 @@ and fixtures are written as before.
 ### Fixes
 
 - `defineLocators()` and `pageActionsToPerformAfterNavigation()` see the page object's constructor arguments, fields
-  and constructor-body assignments instead of `undefined` (analysis 1.7).
+  and constructor-body assignments instead of `undefined`.

@@ -118,8 +118,9 @@ Every failure carries the line of the `seed` call, captured when it was called (
 
 ## Why not a route
 
-Up to plan 15, `seed` answered the navigation with a document of POMWright's own that wrote the entries and then
-continued the navigation, through a `page.route`. It was chosen when `addInitScript` could not be removed. A route sees
+An earlier design of 3.0.0, never released, had `seed` answer the navigation with a document of POMWright's own that
+wrote the entries and then continued the navigation, through a `page.route`. It was chosen when `addInitScript` could
+not be removed. A route sees
 only what Playwright intercepts, so it needed a proxy for server redirects, synthesised `Sec-Fetch-*` headers, a
 re-submitted form for POSTs (multipart and `text/plain` could not be), a fragment carried over by hand, and a detour so
 that WebKit's `goto` waited for the app. Service workers and the test's own mocks bypassed it, and the app saw a

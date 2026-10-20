@@ -19,4 +19,9 @@ The package now declares its entry points and its Node floor, mirroring how `@pl
 ### Fixes
 
 - The `license` field is the SPDX id `Apache-2.0` instead of `Apache 2.0`, and `repository.url` is in the form npm
-  expects, so npm no longer rewrites it on publish (analysis section 4).
+  expects, so npm no longer rewrites it on publish.
+
+### Publishing
+
+- Releases are published with npm provenance: npm shows, for each published version, the GitHub Actions run and the
+  commit that built it, and `npm audit signatures` verifies it.

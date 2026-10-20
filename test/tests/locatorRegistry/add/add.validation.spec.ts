@@ -114,7 +114,7 @@ test("frameLocator: an empty selector is rejected, a missing one is the any-fram
 	expect(internal.get("a").definition).toEqual({ type: "frameLocator" });
 });
 
-test("getById: an empty string is rejected, as plan 1.1-1.2 decided", async ({ page }) => {
+test("getById: an empty string is rejected", async ({ page }) => {
 	const registry = createRegistry(page);
 	expect(() => registry.add("a").getById("")).toThrowError('getById requires a non-empty id for "a".');
 	expect(() => registry.add("a").getById(undefined as never)).toThrowError('getById requires a non-empty id for "a".');

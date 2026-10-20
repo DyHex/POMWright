@@ -19,7 +19,7 @@
 
 ### Fixes
 
-- Variants derived from one seed no longer share steps or a description (analysis 3.8).
+- Variants derived from one seed no longer share steps or a description.
 - A reuse value that is neither a registered path nor a seed (`{ reuse: null }` from JavaScript) throws `reuse
   requires a registered path or a seed from createReusable for "<path>".` instead of a `TypeError`.
 - A first argument Playwright cannot take, from JavaScript (`null`, a number, an object, a RegExp for a role,
@@ -38,5 +38,5 @@
 ### Internal
 
 - The ten locator strategies are described once, in one table that locator creation, the clone, the seeded override,
-  `update` and `replace` read; a strategy without its builder method is a compile error (analysis 3.1).
-- The debug-step record of the chain builder, built and never read, is removed (analysis section 2).
+  `update` and `replace` read; a strategy without its builder method is a compile error.
+- The debug-step record of the chain builder, built and never read, is removed.

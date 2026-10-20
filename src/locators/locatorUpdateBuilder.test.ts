@@ -346,7 +346,7 @@ describe("replace from JavaScript", () => {
 	});
 
 	it("still installs the any-frame form without a selector, on an ancestor without steps", () => {
-		// on the query's own path it throws since plan 10 (R7): the any-frame form has no terminal form
+		// on the query's own path it throws: the any-frame form has no terminal form
 		const { registry } = createRegistry();
 		expect(() => registry.getLocatorSchema("form.button").replace("form").frameLocator()).not.toThrow();
 	});

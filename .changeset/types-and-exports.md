@@ -30,8 +30,6 @@
 ### Fixes
 
 - The query builder's internal `applyUpdate` and `applyReplacement`, which skip the argument checks, are no longer
-  reachable through its types after a chained call (analysis 1.9b).
+  reachable through its types after a chained call.
 - The type-level path check rejects the same whitespace as the runtime check, U+FEFF included, and the whitespace
-  error shows each character but the plain space as an escape (`main\u00A0.form`) instead of printing it invisibly
-  (analysis 1.9c).
-- Analysis 1.9a and 1.9d, above.
+  error shows each character but the plain space as an escape (`main\u00A0.form`) instead of printing it invisibly.

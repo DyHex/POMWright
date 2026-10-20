@@ -57,10 +57,9 @@ strategy's first argument is checked where it is written, `update` is a patch of
 
 ### Fixes
 
-- Steps on frame segments are no longer dropped (analysis 1.6, 3.2).
-- A registration, seed, update or replacement without its first argument no longer registers and fails later
-  (analysis 1.8).
-- `update(x, undefined)` no longer wipes the registered options (analysis 1.8).
+- Steps on frame segments are no longer dropped.
+- A registration, seed, update or replacement without its first argument no longer registers and fails later.
+- `update(x, undefined)` no longer wipes the registered options.
 - `filter`, `nth` and `describe` before a strategy are compile errors with a runtime message that says what to call
-  first (analysis 1.9e).
-- A seeded registration is no longer unregistered by a wrong-type override (analysis 1.10).
+  first.
+- A seeded registration is no longer unregistered by a wrong-type override.

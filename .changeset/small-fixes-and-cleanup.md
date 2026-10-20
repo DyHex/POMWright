@@ -35,15 +35,15 @@
 
 - A caller's options or filter object changed after `add()`, `filter()` or `createReusable`, a RegExp it passed
   rewritten with `compile()`, or a seed's step after `add(path, { reuse })`, no longer changes the registered locator:
-  builders store copies, RegExps included (analysis 1.10).
+  builders store copies, RegExps included.
 - A static method decorated with `@step` is titled by its class instead of `Function`, and a bare `@step` on a static
-  method compiled with `experimentalDecorators` is no longer left unwrapped (analysis 1.10).
+  method compiled with `experimentalDecorators` is no longer left unwrapped.
 - An array or a `filter`-only object in `has`/`hasNot` is reported as an unsupported filter reference instead of
-  Playwright's `Inner "has" locator must belong to the same frame.` (analysis 1.10).
+  failing with Playwright's `Inner "has" locator must belong to the same frame.` message.
 - The duplicate-registration message shows a `Locator` in a step as Playwright prints it (`locator('b')`) instead of
-  its internals (analysis 1.10).
+  its internals.
 - The sub-path error adds `It is a segment of that path, but no locator schema is registered for it.` when the
-  sub-path is an unregistered segment of the query's path (analysis 1.10).
+  sub-path is an unregistered segment of the query's path.
 - A page object's registry error and a never-applied `seed` point at the consumer's line even when the consumer's file
   is named `pageObject.ts` or `sessionStorage.ts`.
 
@@ -51,4 +51,4 @@
 
 - Unreachable branches in the registry and the query builder are removed; `getLocator` resolves a copy of the record
   without building a query builder (about twice as fast); a nested resolution copies each segment once instead of
-  twice; `seed` and `PageObject` share one call-site helper (analysis sections 1.10 and 2).
+  twice; `seed` and `PageObject` share one call-site helper.

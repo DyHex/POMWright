@@ -260,7 +260,7 @@ app.get("/testids", (_req, res) => {
   `);
 });
 
-// Navigation fixture for the PageObject navigation helper (plan 1.3-1.4). Links and buttons
+// Navigation fixture for the PageObject navigation helper. Links and buttons
 // navigate to the same path with a query, a hash, or a trailing slash, to an item page whose
 // path has a dynamic segment, to another page, and (after a delay) to a page that bounces back.
 app.get("/testnav", (_req, res) => {
@@ -318,7 +318,7 @@ app.get("/testnav/bounce", (_req, res) => {
   `);
 });
 
-// Session storage fixture (plans 1.5 and 15). GET and POST render the same page, whose first script snapshots
+// Session storage fixture. GET and POST render the same page, whose first script snapshots
 // sessionStorage before anything else runs; the body shows that snapshot, the current entries, the request
 // method and posted fields (urlencoded, multipart or text/plain), the Referer and Sec-Fetch headers the
 // server received, and the navigation's type and document.referrer as the page saw them. Links, buttons and
