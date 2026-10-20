@@ -1,11 +1,13 @@
 # POMWright
 
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/DyHex/POMWright/main.yaml?label=CI%20on%20main)
-[![NPM Version](https://img.shields.io/npm/v/pomwright)](https://www.npmjs.com/package/pomwright)
-![NPM Downloads](https://img.shields.io/npm/dt/pomwright)
-![GitHub License](https://img.shields.io/github/license/DyHex/POMWright)
-[![NPM dev or peer Dependency Version](https://img.shields.io/npm/dependency-version/pomwright/peer/%40playwright%2Ftest)](https://www.npmjs.com/package/playwright)
-[![Static Badge](https://img.shields.io/badge/created%40-ICE-ffcd00)](https://www.ice.no/)
+[![CI on main](https://img.shields.io/github/actions/workflow/status/DyHex/POMWright/main.yaml?branch=main&label=CI%20on%20main)](https://github.com/DyHex/POMWright/actions/workflows/main.yaml)
+[![Docs](https://img.shields.io/badge/docs-dyhex.github.io%2FPOMWright-2ea44f)](https://dyhex.github.io/POMWright/)
+[![npm version](https://img.shields.io/npm/v/pomwright)](https://www.npmjs.com/package/pomwright)
+[![npm downloads](https://img.shields.io/npm/d18m/pomwright)](https://www.npmjs.com/package/pomwright)
+[![Playwright peer dependency](https://img.shields.io/npm/dependency-version/pomwright/peer/%40playwright%2Ftest)](https://www.npmjs.com/package/@playwright/test)
+[![Node version](https://img.shields.io/node/v/pomwright)](https://nodejs.org/)
+[![License](https://img.shields.io/github/license/DyHex/POMWright)](https://github.com/DyHex/POMWright/blob/main/LICENSE)
+[![Created at ICE](https://img.shields.io/badge/created%40-ICE-ffcd00)](https://www.ice.no/)
 
 POMWright is a TypeScript library for [Playwright Test](https://playwright.dev/) that organises a suite's locators
 and page objects. You register one locator per dot-delimited path, such as `main.form@login.button@login`, with
