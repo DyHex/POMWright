@@ -1,12 +1,12 @@
 {
 	"name": "pomwright",
 	"version": "2.1.0",
-	"description": "POMWright is a complementary test framework for Playwright written in TypeScript.",
+	"description": "A TypeScript library for Playwright Test that organises a suite's locators and page objects.",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/DyHex/POMWright.git"
 	},
-	"homepage": "https://github.com/DyHex/POMWright#readme",
+	"homepage": "https://dyhex.github.io/POMWright/",
 	"bugs": {
 		"url": "https://github.com/DyHex/POMWright/issues"
 	},

@@ -15,8 +15,6 @@ Playwright's own methods, and POMWright builds the Playwright locator chain from
 A page object registers its locators and checks them as it is created, so a mistake in a locator fails the fixture
 before the test body runs.
 
-**Documentation: https://dyhex.github.io/POMWright/**
-
 ## What it adds to Playwright
 
 - **Locator chains from paths.** Playwright recommends chaining locators, so that each element is found inside the one
