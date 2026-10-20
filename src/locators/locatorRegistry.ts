@@ -170,12 +170,12 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * string where Playwright cannot use one (`locator requires a non-empty selector for "main.list".`), or when the
 	 * path breaks the path rules (`LocatorSchemaPath string cannot contain consecutive dots: main..list`); at `add`, when
 	 * a reused path is not registered (`No locator schema registered for path "common.button".`). A method of a registration
-	 * that has ended throws: `nth() cannot apply to "main.list.item": its registration has ended; …`
+	 * that has ended throws: `nth() cannot apply to "main.list.items": its registration has ended; …`
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("main.list.item").getByRole("listitem").filter({ hasText: "Open" }).nth(0);
-	 * registry.add("main.list.item@last", { reuse: "main.list.item" }).describe("Last open item");
+	 * registry.add("main.list.items@open").getByRole("listitem").filter({ hasText: "Open" });
+	 * registry.add("main.list.item@lastOpen", { reuse: "main.list.items@open" }).nth("last").describe("Last open item");
 	 * ```
 	 */
 	add<
@@ -430,12 +430,12 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 *
 	 * @param path A registered path.
 	 * @returns The query, a `LocatorQueryBuilder`.
-	 * @throws When the path is not registered: `No locator schema registered for path "main.list.item".`
+	 * @throws When the path is not registered: `No locator schema registered for path "main.list.items".`
 	 *
 	 * @example
 	 * ```ts
 	 * const lastOpenOrder = registry
-	 *   .getLocatorSchema("main.list.item")
+	 *   .getLocatorSchema("main.list.items")
 	 *   .filter({ hasText: "Open" })
 	 *   .nth("last")
 	 *   .getNestedLocator();
@@ -460,13 +460,13 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 *
 	 * @throws When a path fails, every failing path with its reason:
 	 * `Locator registry verification failed for 1 of 2 paths:` followed by
-	 * `"list.item": No locator schema registered for path "list.titel".`
+	 * `"list.items": No locator schema registered for path "list.items.title".`
 	 *
 	 * @example
 	 * ```ts
 	 * registry.add("list").locator("ul");
-	 * registry.add("list.item").getByRole("listitem").filter({ has: "list.item.title" });
-	 * registry.verify(); // "list.item": No locator schema registered for path "list.item.title".
+	 * registry.add("list.items").getByRole("listitem").filter({ has: "list.items.title" });
+	 * registry.verify(); // "list.items": No locator schema registered for path "list.items.title".
 	 * ```
 	 */
 	verify(): void {
@@ -516,12 +516,12 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 *
 	 * @param path A registered path.
 	 * @returns A Playwright `Locator`.
-	 * @throws When the path is not registered: `No locator schema registered for path "main.list.item".`
+	 * @throws When the path is not registered: `No locator schema registered for path "main.list.items".`
 	 *
 	 * @example
 	 * ```ts
-	 * const item = registry.getLocator("main.list.item"); // locator('li') with its steps, no ancestors
-	 * await expect(page.locator("section").filter({ has: item })).toHaveCount(1);
+	 * const items = registry.getLocator("main.list.items"); // locator('li') with its steps, no ancestors
+	 * await expect(page.locator("section").filter({ has: items })).toHaveCount(1);
 	 * ```
 	 */
 	getLocator<Path extends LocatorSchemaPathType>(path: LocatorSchemaPathArgument<Path>): Locator {
@@ -538,7 +538,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 *
 	 * @param path A registered path.
 	 * @returns A Playwright `Locator`.
-	 * @throws When the path is not registered: `No locator schema registered for path "main.list.item".`
+	 * @throws When the path is not registered: `No locator schema registered for path "main.list.items".`
 	 *
 	 * @example
 	 * ```ts

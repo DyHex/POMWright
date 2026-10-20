@@ -146,24 +146,119 @@ offers its own paths, and how to share one locator between modules.
 
 ## A folder layout
 
-One layout that keeps each page's code together:
+One layout for a suite that tests one application, here the shop. The page objects follow the application's URL paths,
+so the folder of a page object says where the page is, and the tests follow the page objects:
 
 ```text
-playwright.config.ts
-fixtures.ts                  page objects as fixtures (Page objects in tests)
+fixtures/
+  automatic/                         fixtures that run for every test ({ auto: true })
+  expects/                           expect, extended with matchers of your own
+  shop/
+    shop.fixtures.ts                 the shop's page objects as fixtures
+  fixtures.ts                        the test every spec imports: the folders above, merged
 page-objects/
-  shop.page.ts               the site's base class
-  common.locators.ts         locators every page shares: header, footer
-  login/
-    login.locators.ts
-    login.page.ts
-  account/
-    account.locators.ts
-    account.page.ts
+  common/
+    helpers/
+    page-components/
+      dialog/
+        dialog.consent.locators.ts
+        dialog.newsletter.locators.ts
+      common.locators.ts             locators every page shares, all common locator files merged
+      footer.locators.ts
+      header.locators.ts
+    utils/
+    shop.page.ts                     the shop's abstract base page object class (POC)
+  pages/
+    account/
+      history/
+        history.locators.ts
+        history.page.ts              /account/history POC
+      account.locators.ts
+      account.page.ts                /account POC
+    login/
+      login.locators.ts
+      login.page.ts                  /login POC
+    home.locators.ts
+    home.page.ts                     https://shop.example/ POC
 tests/
-  login.spec.ts
-  account.spec.ts
+  account/
+    history/
+      history.spec.ts                tests for the specific page
+    account.spec.ts
+  features/
+    wishlist.spec.ts                 a feature that spans several pages
+  login/
+    login.spec.ts
+  home.spec.ts
+playwright.config.ts
 ```
+
+- `fixtures/` hands the page objects to the tests: the page objects are fixtures in a file of their own, `automatic/`
+  holds the fixtures that run for every test, and `expects/` Playwright's `expect` with matchers of your own.
+  `fixtures.ts` combines them with `mergeTests` and `mergeExpects` and exports the `test` and `expect` every spec
+  imports (see [fixtures from several files](/POMWright/docs/page-objects-in-tests/#fixtures-from-several-files)).
+- `common/` holds what every page shares: the base class (see
+  [a base class for your site](/POMWright/docs/organising-a-project/#a-base-class-for-your-site)), the locator modules
+  of the parts every page has, in `page-components/`, with the dialogs in a folder of their own, and the helpers and
+  utilities. The base class registers `common.locators.ts`, as
+  [Locator modules](/POMWright/docs/locator-modules/#locators-every-page-shares-in-a-base-class) shows.
+- `pages/` has one folder per URL path, each with a page's locator module and page object; a page below another, such
+  as the order history below the account page, is a folder inside the other's.
+- `tests/` follows the page objects: a page's tests sit at the same place as its page object, and `features/` holds the
+  tests of a feature that spans several pages.
+
+### Several applications
+
+A suite that tests several applications, here the shop and a customer portal, gives each application the layout above
+one level down, in a folder of its own: its page objects, its tests and its fixtures. `tests/e2e/` holds the flows
+that cross applications:
+
+```text
+fixtures/
+  automatic/
+  expects/
+  portal/
+    portal.fixtures.ts
+  shop/
+    shop.fixtures.ts
+  fixtures.ts                          the test every spec imports: the folders above, merged
+page-objects/
+  common/                              utils, helpers and locators every application shares
+  portal/
+    common/
+      helpers/
+      page-components/
+      utils/
+      portal.page.ts                   the portal's base class
+    pages/
+      …
+  shop/
+    common/
+      helpers/
+      page-components/
+      utils/
+      shop.page.ts                     the shop's base class
+    pages/
+      account/
+        history/
+      login/
+      home.locators.ts
+      home.page.ts                     https://shop.example/
+tests/
+  e2e/
+    order-to-invoice.spec.ts           a flow across the shop and the portal
+  portal/
+    …
+  shop/
+    account/
+      history/
+    features/
+    login/
+    home.spec.ts
+playwright.config.ts
+```
+
+Each application has its own base class, with its own origin, so its page objects resolve their URLs against it.
 
 ## What's next
 

@@ -7,14 +7,14 @@ description: "The log fixture and PlaywrightReportLogger: levels that rise on a 
 
 Playwright's report shows a test's steps, errors and [attachments](https://playwright.dev/docs/api/class-testinfo#test-info-attach).
 POMWright's `log` fixture adds a logger whose entries become attachments of the test that logged them, one per entry,
-in the order they were logged. It is part of POMWright's `test` (see
-[Page objects in tests](/POMWright/docs/page-objects-in-tests/#pomwrights-test-and-the-log-fixture)).
+in the order they were logged. It is part of POMWright's `test`, and so of every fixture file that extends it, such
+as the one below (see [Page objects in tests](/POMWright/docs/page-objects-in-tests/#pomwrights-test-and-the-log-fixture)).
 
 ```ts
-import { test } from "pomwright";
+import { test } from "./fixtures";
 
-test("checkout", async ({ log, page }) => {
-  await page.goto("https://shop.example/checkout");
+test("checkout", async ({ log, checkoutPage }) => {
+  await checkoutPage.navigation.goto();
   log.warn("the basket was empty; added the test product");
 });
 ```

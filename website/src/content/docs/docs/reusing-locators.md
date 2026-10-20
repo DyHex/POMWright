@@ -23,21 +23,21 @@ description if it has one of its own. `filter`, `nth` and `describe` narrow the 
 import type { LocatorRegistry } from "pomwright";
 
 type Paths =
-  | "common.listItem"
-  | "common.error@invalidPassword"
+  | "shared.list.items"
+  | "shared.error@invalidPassword"
   | "main.list"
-  | "main.list.lastItem"
+  | "main.list.item@last"
   | "main.form.error@invalidPassword";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
-registry.add("common.listItem").getByRole("listitem");
-registry.add("common.error@invalidPassword").getByText("Invalid password");
+registry.add("shared.list.items").getByRole("listitem");
+registry.add("shared.error@invalidPassword").getByText("Invalid password");
 
 registry.add("main.list").locator("ul");
-registry.add("main.list.lastItem", { reuse: "common.listItem" }).nth("last").describe("Last item");
+registry.add("main.list.item@last", { reuse: "shared.list.items" }).nth("last").describe("Last item");
 // locator('ul').getByRole('listitem').last(), described "Last item"
 
-registry.add("main.form.error@invalidPassword", { reuse: "common.error@invalidPassword" });
+registry.add("main.form.error@invalidPassword", { reuse: "shared.error@invalidPassword" });
 // getByText('Invalid password'), described "main.form.error@invalidPassword"
 ```
 
@@ -59,11 +59,11 @@ base do not affect each other:
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"table.row" | "table.row@first" | "table.row@last">;
+declare const registry: LocatorRegistry<"table.rows" | "table.row@first" | "table.row@last">;
 // ---cut---
 const row = registry.createReusable.locator("tr");
 
-registry.add("table.row", { reuse: row }); // locator('tr')
+registry.add("table.rows", { reuse: row }); // locator('tr')
 registry.add("table.row@first", { reuse: row.nth(0) }); // locator('tr').first()
 registry.add("table.row@last", { reuse: row.nth("last") }); // locator('tr').last()
 ```
@@ -79,22 +79,25 @@ deletes, an omitted value keeps the seed's. `filter`, `nth` and `describe` follo
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"card.title" | "card.link" | "card.anyHeading">;
+declare const registry: LocatorRegistry<"card.heading@summary" | "card.links" | "card.headings">;
 // ---cut---
 const heading = registry.createReusable.getByRole("heading", { level: 2 });
 
-registry.add("card.title", { reuse: heading }).getByRole({ name: "Summary" });
+registry.add("card.heading@summary", { reuse: heading }).getByRole({ name: "Summary" });
 // getByRole('heading', { name: 'Summary', level: 2 })
-registry.add("card.link", { reuse: heading }).getByRole("link", null);
+registry.add("card.links", { reuse: heading }).getByRole("link", null);
 // getByRole('link'): the role replaced, the options cleared
-registry.add("card.anyHeading", { reuse: heading }).getByRole({ level: null });
+registry.add("card.headings", { reuse: heading }).getByRole({ level: null });
 // getByRole('heading'): the level deleted
 ```
 
-The seed's strategy decides which method is offered: on a role seed, `locator(…)` is a compile error, and from
-JavaScript it throws `The locator definition for "card.text" must use the "role" strategy when reusing a locator.` A
-second change throws too: `A locator definition for "card.title" was already provided from reuse; only one matching
-override is allowed.`
+The seed's strategy decides which method is offered: on a role seed, `locator(…)` is a compile error. From
+JavaScript, another strategy's method throws, and so does a second change:
+
+```text
+The locator definition for "card.text@summary" must use the "role" strategy when reusing a locator.
+A locator definition for "card.heading@summary" was already provided from reuse; only one matching override is allowed.
+```
 
 When you keep the registration in a variable, the one change may come before or after its `filter`, `nth` and
 `describe` calls, until the registry is called again (see
@@ -105,12 +108,12 @@ they were given:
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"card.title@first">;
+declare const registry: LocatorRegistry<"card.heading@summary">;
 const heading = registry.createReusable.getByRole("heading", { level: 2 });
 // ---cut---
-const firstTitle = registry.add("card.title@first", { reuse: heading });
-firstTitle.filter({ hasText: "Summary" }).nth(0);
-firstTitle.getByRole({ name: "Summary" });
+const summaryHeading = registry.add("card.heading@summary", { reuse: heading });
+summaryHeading.filter({ hasText: "Summary" }).nth(0);
+summaryHeading.getByRole({ name: "Summary" });
 // getByRole('heading', { name: 'Summary', level: 2 }).filter({ hasText: 'Summary' }).first(),
 // as getByRole({ name: "Summary" }).filter({ hasText: "Summary" }).nth(0) in one chain
 ```
@@ -122,14 +125,14 @@ A seed has a type, `ReusableLocator<Paths, Strategy>`, so a module can hand one 
 ```ts title="headings.locators.ts"
 import type { LocatorRegistry, ReusableLocator } from "pomwright";
 
-export type Paths = "card" | "card.title";
+export type Paths = "card" | "card.heading@summary";
 
 export const headingSeed = (registry: LocatorRegistry<Paths>): ReusableLocator<Paths, "role"> =>
   registry.createReusable.getByRole("heading", { level: 2 });
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("card").locator("article");
-  registry.add("card.title", { reuse: headingSeed(registry) }).getByRole({ name: "Summary" });
+  registry.add("card.heading@summary", { reuse: headingSeed(registry) }).getByRole({ name: "Summary" });
 }
 ```
 

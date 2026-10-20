@@ -42,12 +42,12 @@ A function that returns a query or a seed names it:
 ```ts
 import type { FilterDefinition, LocatorQueryBuilder, LocatorRegistry } from "pomwright";
 
-type Paths = "list" | "list.item" | "list.item.badge";
+type Paths = "list" | "list.items" | "list.items.badge";
 
-export const lastItem = (registry: LocatorRegistry<Paths>): LocatorQueryBuilder<Paths, "list.item"> =>
-  registry.getLocatorSchema("list.item").nth("last");
+export const lastItem = (registry: LocatorRegistry<Paths>): LocatorQueryBuilder<Paths, "list.items"> =>
+  registry.getLocatorSchema("list.items").nth("last");
 
-export const withBadge: FilterDefinition<Paths> = { has: "list.item.badge" };
+export const withBadge: FilterDefinition<Paths> = { has: "list.items.badge" };
 ```
 
 ## Paths in a generic base class

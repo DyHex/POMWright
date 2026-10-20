@@ -33,10 +33,10 @@ The examples on this page use this page:
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"orders" | "orders.item@open">;
+declare const registry: LocatorRegistry<"section@orders" | "section@orders.item@open">;
 // ---cut---
-registry.add("orders").locator("section").filter({ hasText: "Orders" });
-registry.add("orders.item@open").getByRole("listitem").filter({ hasText: "Open" });
+registry.add("section@orders").locator("section").filter({ hasText: "Orders" });
+registry.add("section@orders.item@open").getByRole("listitem").filter({ hasText: "Open" });
 // locator('section').filter({ hasText: 'Orders' }).getByRole('listitem').filter({ hasText: 'Open' })
 ```
 
@@ -124,9 +124,9 @@ goes on a query instead, which leaves the registry as it is:
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"list" | "list.item">;
+declare const registry: LocatorRegistry<"list" | "list.items">;
 // ---cut---
-const order = registry.getLocatorSchema("list.item").filter({ hasText: "#1042" }).getNestedLocator();
+const order = registry.getLocatorSchema("list.items").filter({ hasText: "#1042" }).getNestedLocator();
 ```
 
 See [Queries](/POMWright/docs/queries/). A step on a [frame segment](/POMWright/docs/frames/) applies to the

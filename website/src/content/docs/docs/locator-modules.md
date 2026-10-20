@@ -13,9 +13,10 @@ into a larger registry while it only offers its own paths.
 Modules are a design choice, not a requirement: a page object can register every locator in its own
 `defineLocators()`. Moving the paths and the registrations into a module keeps the page object small, with only its
 actions, and lets other page objects use the same locators. A module takes a few lines to write and need not belong to
-any page: a header, a navigation bar or a cookie dialog can be a module of its own (see
+any page: a header, a navigation bar or a cookie consent dialog can be a module of its own (see
 [locators every page shares](/POMWright/docs/locator-modules/#locators-every-page-shares-in-a-base-class)). A module
-is a plain function, so what it takes is up to you: the registry, and whatever else its definitions need, such as a locale or the page (see
+is a plain function, so what it takes is up to you: the registry, and whatever else its definitions need, such as a
+locale or the page (see
 [passing state](/POMWright/docs/locator-modules/#passing-state-to-a-module) and
 [passing the page](/POMWright/docs/locator-modules/#passing-the-page-to-a-module)).
 
@@ -62,12 +63,33 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 }
 ```
 
+```ts title="dialog.consent.locators.ts"
+import type { LocatorRegistry } from "pomwright";
+
+export type Paths = "dialog@consent" | "dialog@consent.button@accept";
+
+export function defineLocators<ExternalPaths extends string = never>(
+  registry: LocatorRegistry<Paths | ExternalPaths>,
+): void;
+
+export function defineLocators(registry: LocatorRegistry<Paths>) {
+  registry.add("dialog@consent").getByRole("dialog", { name: "Cookies" });
+  registry.add("dialog@consent.button@accept").getByRole("button", { name: "Accept all" });
+}
+```
+
+The path starts with what the element is, `dialog`, and says which one after the `@`, as the other paths do. Every
+dialog of the site gets a path of that form (`dialog@consent`, `dialog@newsletter`, …) and a module of its own,
+`dialog.<name>.locators.ts`, so typing `getNestedLocator("dialog` lists the paths of every dialog a page object knows,
+and the dialog modules sit side by side in their folder.
+
 ```ts title="common.locators.ts"
 import type { LocatorRegistry } from "pomwright";
+import { defineLocators as addConsentDialog, type Paths as ConsentDialog } from "./dialog.consent.locators";
 import { defineLocators as addFooter, type Paths as Footer } from "./footer.locators";
 import { defineLocators as addHeader, type Paths as Header } from "./header.locators";
 
-export type Paths = Header | Footer | "main" | "main.heading";
+export type Paths = Header | Footer | ConsentDialog | "main" | "main.heading";
 
 export function defineLocators<ExternalPaths extends string = never>(
   registry: LocatorRegistry<Paths | ExternalPaths>,
@@ -76,6 +98,7 @@ export function defineLocators<ExternalPaths extends string = never>(
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   addHeader(registry);
   addFooter(registry);
+  addConsentDialog(registry);
   registry.add("main").locator("main");
   // "main.heading" is a slot: each page registers its own (see Shared slots)
 }
@@ -118,66 +141,30 @@ error. A module is called once per page object, every time a page object is cons
 
 The locators every page of a site shares, and the methods that use them, can live in the site's
 [base class](/POMWright/docs/organising-a-project/#a-base-class-for-your-site), so that every page object gets them
-without registering anything. The shared locators are modules of their own, such as the header and footer above and a
-cookie dialog, composed into one module for the site:
-
-```ts title="cookieDialog.locators.ts"
-import type { LocatorRegistry } from "pomwright";
-
-export type Paths = "cookieDialog" | "cookieDialog.button@accept";
-
-export function defineLocators<ExternalPaths extends string = never>(
-  registry: LocatorRegistry<Paths | ExternalPaths>,
-): void;
-
-export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("cookieDialog").getByRole("dialog", { name: "Cookies" });
-  registry.add("cookieDialog.button@accept").getByRole("button", { name: "Accept all" });
-}
-```
-
-```ts title="site.locators.ts"
-import type { LocatorRegistry } from "pomwright";
-import { defineLocators as addCookieDialog, type Paths as CookieDialog } from "./cookieDialog.locators";
-import { defineLocators as addFooter, type Paths as Footer } from "./footer.locators";
-import { defineLocators as addHeader, type Paths as Header } from "./header.locators";
-
-export type Paths = Header | Footer | CookieDialog;
-
-export function defineLocators<ExternalPaths extends string = never>(
-  registry: LocatorRegistry<Paths | ExternalPaths>,
-): void;
-
-export function defineLocators(registry: LocatorRegistry<Paths>) {
-  addHeader(registry);
-  addFooter(registry);
-  addCookieDialog(registry);
-}
-```
-
-The base class implements `defineLocators()` once: it registers the site's locators, then calls a method of its own in
-which each page registers its locators. Its methods work on the site's locators:
+without registering anything. Instead of each page's module calling the common module, as `login.locators.ts` does
+above, the base class implements `defineLocators()` once: it registers the common module, then calls a method of its
+own in which each page registers its locators. Its methods work on the common locators:
 
 ```ts title="shop.page.ts"
 import type { Page } from "@playwright/test";
 import { PageObject } from "pomwright";
-import { defineLocators as addSite, type Paths as SitePaths } from "./site.locators";
+import { defineLocators as addCommon, type Paths as CommonPaths } from "./common.locators";
 
-export abstract class ShopPage<Paths extends string> extends PageObject<Paths | SitePaths> {
+export abstract class ShopPage<Paths extends string> extends PageObject<Paths | CommonPaths> {
   protected constructor(page: Page, urlPath: string) {
     super(page, "https://shop.example", urlPath);
   }
 
   protected defineLocators(): void {
-    addSite(this.locatorRegistry);
+    addCommon(this.locatorRegistry);
     this.definePageLocators();
   }
 
-  /** Registers the page's own locators; the site's are registered already. */
+  /** Registers the page's own locators; the common ones are registered already. */
   protected abstract definePageLocators(): void;
 
   async acceptCookies() {
-    await this.getNestedLocator("cookieDialog.button@accept").click();
+    await this.getNestedLocator("dialog@consent.button@accept").click();
   }
 
   async openHelp() {
@@ -186,13 +173,13 @@ export abstract class ShopPage<Paths extends string> extends PageObject<Paths | 
 }
 ```
 
-A page object then registers only its own locators, and its union names only its own paths:
+A page object then registers only its own locators, and fills the common module's slot, `main.heading`:
 
 ```ts
 import type { Page } from "@playwright/test";
 import { ShopPage } from "./shop.page";
 
-type Paths = "main" | "main.list@orders" | "main.list@orders.items";
+type Paths = "main.list@orders" | "main.list@orders.items";
 
 export class OrdersPage extends ShopPage<Paths> {
   constructor(page: Page) {
@@ -200,31 +187,35 @@ export class OrdersPage extends ShopPage<Paths> {
   }
 
   protected definePageLocators(): void {
-    this.add("main").locator("main");
+    this.add("main.heading").getByRole("heading", { name: "Orders" });
     this.add("main.list@orders").getByRole("list", { name: "Orders" });
     this.add("main.list@orders.items").getByRole("listitem");
   }
 }
 ```
 
-`ShopPage` hands `PageObject` the page's paths and the site's, `Paths | SitePaths`, so `ordersPage.acceptCookies()`
-works in every test, and `ordersPage.getNestedLocator("header.link@help")` resolves too. The site's locators are
-registered for every page object and checked with its own; a page that registers one of them again fails with
-`OrdersPage: defineLocators() failed: A locator schema with the path "header" already exists.`
+`ShopPage` hands `PageObject` the page's paths and the common ones, `Paths | CommonPaths`, so the page's union names
+only its own paths, `ordersPage.acceptCookies()` works in every test, and
+`ordersPage.getNestedLocator("header.link@help")` resolves too. The common locators are registered for every page
+object and checked with its own. A page that registers one of them again fails:
+
+```text
+OrdersPage: defineLocators() failed: A locator schema with the path "main" already exists.
+```
 
 A page that keeps its locators in a module of its own passes `this.locatorRegistry` to it from `definePageLocators()`.
-That registry also holds the site's paths, so the module either has the overload of [a module](/POMWright/docs/locator-modules/#a-module), or lists
-the site's paths in its own union, as it must anyway to reuse one of them or name one in a `has` filter. The site's
-locators are registered first, so they can be reused:
+That registry also holds the common paths, so the module either has the overload of
+[a module](/POMWright/docs/locator-modules/#a-module), or lists the common paths in its own union, as it must anyway to
+reuse one of them or name one in a `has` filter. The common locators are registered first, so they can be reused:
 
 ```ts title="checkout.locators.ts"
 import type { LocatorRegistry } from "pomwright";
-import type { Paths as SitePaths } from "./site.locators";
+import type { Paths as CommonPaths } from "./common.locators";
 
-export type Paths = SitePaths | "main" | "main.section@payment" | "main.section@payment.link@help";
+export type Paths = CommonPaths | "main.section@payment" | "main.section@payment.link@help";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("main").locator("main");
+  registry.add("main.heading").getByRole("heading", { name: "Checkout" });
   registry.add("main.section@payment").getByRole("region", { name: "Payment" });
   registry.add("main.section@payment.link@help", { reuse: "header.link@help" });
 }
@@ -351,14 +342,14 @@ copy:
 ```ts title="shared.locators.ts"
 import type { LocatorRegistry } from "pomwright";
 
-export type Paths = "shared.listItem" | "shared.alert";
+export type Paths = "shared.list.items" | "shared.alert";
 
 export function defineLocators<ExternalPaths extends string = never>(
   registry: LocatorRegistry<Paths | ExternalPaths>,
 ): void;
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("shared.listItem").getByRole("listitem");
+  registry.add("shared.list.items").getByRole("listitem");
   registry.add("shared.alert").getByRole("alert");
 }
 ```
@@ -367,15 +358,21 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 import type { LocatorRegistry } from "pomwright";
 import { defineLocators as addShared, type Paths as Shared } from "./shared.locators";
 
-export type Paths = Shared | "main" | "main.orders" | "main.orders.item" | "main.orders.lastItem" | "main.error";
+export type Paths =
+  | Shared
+  | "main"
+  | "main.list@orders"
+  | "main.list@orders.items"
+  | "main.list@orders.item@last"
+  | "main.alert@order";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   addShared(registry);
   registry.add("main").locator("main");
-  registry.add("main.orders").getByRole("list", { name: "Orders" });
-  registry.add("main.orders.item", { reuse: "shared.listItem" });
-  registry.add("main.orders.lastItem", { reuse: "shared.listItem" }).nth("last").describe("Last order");
-  registry.add("main.error", { reuse: "shared.alert" }).filter({ hasText: "Order" });
+  registry.add("main.list@orders").getByRole("list", { name: "Orders" });
+  registry.add("main.list@orders.items", { reuse: "shared.list.items" });
+  registry.add("main.list@orders.item@last", { reuse: "shared.list.items" }).nth("last").describe("Last order");
+  registry.add("main.alert@order", { reuse: "shared.alert" }).filter({ hasText: "Order" });
 }
 ```
 
@@ -401,17 +398,17 @@ so the module also compiles with `declaration: true`, as a page-object package b
 ```ts title="list.locators.ts"
 import type { LocatorQueryBuilder, LocatorRegistry, ReusableLocator } from "pomwright";
 
-export type Paths = "list" | "list.item";
+export type Paths = "list" | "list.items";
 
 export const rowSeed = (registry: LocatorRegistry<Paths>): ReusableLocator<Paths, "role"> =>
   registry.createReusable.getByRole("listitem");
 
-export const lastRow = (registry: LocatorRegistry<Paths>): LocatorQueryBuilder<Paths, "list.item"> =>
-  registry.getLocatorSchema("list.item").nth("last");
+export const lastRow = (registry: LocatorRegistry<Paths>): LocatorQueryBuilder<Paths, "list.items"> =>
+  registry.getLocatorSchema("list.items").nth("last");
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("list").locator("ul");
-  registry.add("list.item", { reuse: rowSeed(registry) });
+  registry.add("list.items", { reuse: rowSeed(registry) });
 }
 ```
 

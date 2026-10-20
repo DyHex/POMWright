@@ -44,7 +44,7 @@ export type LocatorRegistrationPostDefinitionBuilder<
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("main.list.item").getByRole("listitem").filter({ hasText: "Open" });
+	 * registry.add("main.list.items@open").getByRole("listitem").filter({ hasText: "Open" });
 	 * registry.add("main.section@orders").locator("section").filter({ has: "main.section.heading@orders" });
 	 * ```
 	 */
@@ -184,7 +184,7 @@ export class LocatorRegistrationBuilder<
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("main.list.item").getByRole("listitem").filter({ hasText: "Open" });
+	 * registry.add("main.list.items@open").getByRole("listitem").filter({ hasText: "Open" });
 	 * registry.add("main.section@orders").locator("section").filter({ has: "main.section.heading@orders" });
 	 * ```
 	 */
@@ -597,8 +597,8 @@ export class LocatorRegistrationBuilder<
 	 * ```ts
 	 * registry.add("shell.frame@payment").frameLocator("iframe#payment");
 	 * registry.add("shell.frame@payment.button@pay").getByRole("button", { name: "Pay" });
-	 * registry.add("consent").frameLocator();
-	 * registry.add("consent.button@accept").getByRole("button", { name: "Accept" });
+	 * registry.add("anyFrame").frameLocator();
+	 * registry.add("anyFrame.button@accept").getByRole("button", { name: "Accept" });
 	 * ```
 	 */
 	frameLocator(): Seeded extends true

@@ -83,7 +83,7 @@ import { PageObject } from "pomwright";
 export class AccountPage extends PageObject<"main"> {
   constructor(page: Page) {
     super(page, "https://shop.example", "/account", {
-      label: "AccountPage",
+      label: "Account",
       navOptions: { waitUntil: "domcontentloaded" },
     });
   }

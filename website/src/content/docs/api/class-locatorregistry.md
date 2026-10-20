@@ -19,14 +19,14 @@ export type Paths =
   | "main.form@login"
   | "main.form@login.button@login"
   | "main.list"
-  | "main.list.item";
+  | "main.list.items";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").locator("main");
   registry.add("main.form@login").getByRole("form", { name: "Log in" });
   registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
   registry.add("main.list").locator("ul");
-  registry.add("main.list.item").getByRole("listitem");
+  registry.add("main.list.items").getByRole("listitem");
 }
 ```
 
@@ -63,7 +63,7 @@ import type { Paths } from "./shop.locators";
 
 declare const registry: LocatorRegistry<Paths | "main.list.item@last">;
 // ---cut---
-registry.add("main.list.item@last", { reuse: "main.list.item" }).nth("last");
+registry.add("main.list.item@last", { reuse: "main.list.items" }).nth("last");
 ```
 
 **Arguments**
@@ -100,7 +100,7 @@ The duplicate message goes on with the existing and the attempted locator. `add`
 reused path is not registered, or when the value is neither a path nor a seed (from JavaScript):
 
 ```text
-No locator schema registered for path "main.list.item".
+No locator schema registered for path "main.list.items".
 reuse requires a registered path or a seed from createReusable for "main.list.item@last".
 ```
 
@@ -121,8 +121,8 @@ import type { Paths } from "./shop.locators";
 declare const page: Page;
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
-const item = registry.getLocator("main.list.item"); // getByRole('listitem')
-await expect(page.locator("section").filter({ has: item })).toHaveCount(1);
+const items = registry.getLocator("main.list.items"); // getByRole('listitem')
+await expect(page.locator("section").filter({ has: items })).toHaveCount(1);
 ```
 
 **Arguments**
@@ -138,7 +138,7 @@ await expect(page.locator("section").filter({ has: item })).toHaveCount(1);
 **Throws**
 
 ```text
-No locator schema registered for path "main.list.item".
+No locator schema registered for path "main.list.items".
 ```
 
 ### getLocatorSchema()
@@ -155,7 +155,7 @@ import type { Paths } from "./shop.locators";
 
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
-const lastItem = registry.getLocatorSchema("main.list.item").nth("last").getNestedLocator();
+const lastItem = registry.getLocatorSchema("main.list.items").nth("last").getNestedLocator();
 // locator('main').locator('ul').getByRole('listitem').last()
 ```
 
@@ -172,7 +172,7 @@ const lastItem = registry.getLocatorSchema("main.list.item").nth("last").getNest
 **Throws**
 
 ```text
-No locator schema registered for path "main.list.item".
+No locator schema registered for path "main.list.items".
 ```
 
 ### getNestedLocator()
@@ -206,7 +206,7 @@ await registry.getNestedLocator("main.form@login.button@login").click();
 **Throws**
 
 ```text
-No locator schema registered for path "main.list.item".
+No locator schema registered for path "main.list.items".
 ```
 
 A segment that cannot be resolved throws as `verify()` reports it, for example a `has` path that is not registered.
@@ -228,9 +228,9 @@ import { createRegistryWithAccessors } from "pomwright";
 
 declare const page: Page;
 // ---cut---
-const { registry } = createRegistryWithAccessors<"list" | "list.item" | "list.item.title">(page);
+const { registry } = createRegistryWithAccessors<"list" | "list.items" | "list.items.title">(page);
 registry.add("list").locator("ul");
-registry.add("list.item").getByRole("listitem").filter({ has: "list.item.title" });
+registry.add("list.items").getByRole("listitem").filter({ has: "list.items.title" });
 registry.verify();
 ```
 
@@ -244,7 +244,7 @@ Every failing path, with its reason:
 
 ```text
 Locator registry verification failed for 1 of 2 paths:
-  "list.item": No locator schema registered for path "list.item.title".
+  "list.items": No locator schema registered for path "list.items.title".
 ```
 
 ---

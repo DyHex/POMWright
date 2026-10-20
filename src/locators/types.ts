@@ -221,7 +221,7 @@ export type ReusableLocator<
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("main.list.item@open", { reuse: row.filter({ hasText: "Open" }) });
+	 * registry.add("main.list.items@open", { reuse: row.filter({ hasText: "Open" }) });
 	 * ```
 	 */
 	filter(
@@ -262,7 +262,7 @@ export type FilterLocatorReference<
  *
  * @example
  * ```ts
- * export const withBadge: FilterDefinition<Paths> = { has: "list.item.badge" };
+ * export const withBadge: FilterDefinition<Paths> = { has: "list.items.badge" };
  * ```
  *
  * @see https://dyhex.github.io/POMWright/api/types/#filterdefinition

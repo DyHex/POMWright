@@ -60,7 +60,7 @@ whichever single frame holds them. See [frames](/POMWright/docs/frames/).
 import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<
-  "shell" | "shell.frame@payment" | "shell.frame@payment.button@pay" | "consent" | "consent.button@accept"
+  "shell" | "shell.frame@payment" | "shell.frame@payment.button@pay" | "anyFrame" | "anyFrame.button@accept"
 >;
 // ---cut---
 registry.add("shell").locator("div.shell");
@@ -68,8 +68,8 @@ registry.add("shell.frame@payment").frameLocator("iframe#payment");
 registry.add("shell.frame@payment.button@pay").getByRole("button", { name: "Pay" });
 // locator('div.shell').locator('iframe#payment').contentFrame().getByRole('button', { name: 'Pay' })
 
-registry.add("consent").frameLocator();
-registry.add("consent.button@accept").getByRole("button", { name: "Accept" });
+registry.add("anyFrame").frameLocator();
+registry.add("anyFrame.button@accept").getByRole("button", { name: "Accept" });
 // frameLocator().getByRole('button', { name: 'Accept' })
 ```
 
@@ -94,7 +94,7 @@ An any-frame segment that is not the first segment of its chain fails [`verify()
 and every resolution through it:
 
 ```text
-frameLocator() without a selector must be the first segment of the chain; "shell.consent" has the ancestor "shell".
+frameLocator() without a selector must be the first segment of the chain; "shell.anyFrame" has the ancestor "shell".
 ```
 
 ### getByAltText()
@@ -481,12 +481,12 @@ reused.
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"main" | "main.list" | "main.list.item" | "main.list.item@last">;
+declare const registry: LocatorRegistry<"main" | "main.list" | "main.list.items@open" | "main.list.item@lastOpen">;
 // ---cut---
 registry.add("main").locator("main");
 registry.add("main.list").locator("ul");
-registry.add("main.list.item").getByRole("listitem").filter({ hasText: "Open" });
-registry.add("main.list.item@last", { reuse: "main.list.item" }).nth("last").describe("Last open item");
+registry.add("main.list.items@open").getByRole("listitem").filter({ hasText: "Open" });
+registry.add("main.list.item@lastOpen", { reuse: "main.list.items@open" }).nth("last").describe("Last open item");
 // locator('main').locator('ul').getByRole('listitem').filter({ hasText: 'Open' }).last()
 ```
 

@@ -36,8 +36,8 @@ import {
  *
  * @example
  * ```ts
- * export const lastRow = (registry: LocatorRegistry<Paths>): LocatorQueryBuilder<Paths, "list.item"> =>
- *   registry.getLocatorSchema("list.item").nth("last");
+ * export const lastRow = (registry: LocatorRegistry<Paths>): LocatorQueryBuilder<Paths, "list.items"> =>
+ *   registry.getLocatorSchema("list.items").nth("last");
  * ```
  *
  * @see https://dyhex.github.io/POMWright/api/class-locatorquerybuilder/
@@ -139,7 +139,7 @@ export class LocatorQueryBuilderInternal<
 	 * @throws When `subPath` is not a registered segment of the chain (`"main.button@save" is not a valid sub-path of
 	 * "main.list.item".`), when it is skipped in this query (`filter() cannot apply to "main.list": it is skipped in this
 	 * query; call unskip("main.list") first.`), or when it is a `frameLocator()` without a selector, which has no element
-	 * (`filter() cannot apply to "consent": frameLocator() without a selector has no element to filter, index or
+	 * (`filter() cannot apply to "anyFrame": frameLocator() without a selector has no element to filter, index or
 	 * describe; …`).
 	 *
 	 * @example
@@ -222,7 +222,7 @@ export class LocatorQueryBuilderInternal<
 	 * @throws When `subPath` is not a registered segment of the chain (`"main.button@save" is not a valid sub-path of
 	 * "main.list.item".`), when it is skipped in this query (`nth() cannot apply to "main.list": it is skipped in this
 	 * query; call unskip("main.list") first.`), or when it is a `frameLocator()` without a selector, which has no element
-	 * (`nth() cannot apply to "consent": frameLocator() without a selector has no element to filter, index or describe;
+	 * (`nth() cannot apply to "anyFrame": frameLocator() without a selector has no element to filter, index or describe;
 	 * …`).
 	 *
 	 * @example

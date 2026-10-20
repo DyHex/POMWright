@@ -137,7 +137,7 @@ registry.getLocatorSchema("main.list.item").filter("main.list", { hasText: "Open
 On a `frameLocator()` without a selector, which has no element:
 
 ```text
-filter() cannot apply to "consent": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
+filter() cannot apply to "anyFrame": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
 ```
 
 ### getLocator()
@@ -222,7 +222,7 @@ The registered `nth(0)` of `main.list.item` stays unless cleared: `nth("last")` 
 On a `frameLocator()` without a selector, which has no element:
 
 ```text
-nth() cannot apply to "consent": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
+nth() cannot apply to "anyFrame": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
 ```
 
 ### replace()

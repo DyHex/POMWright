@@ -77,13 +77,13 @@ When a value is learned on the way, seed the next origin before the hop:
 import { SessionStorage } from "pomwright";
 import { test } from "./fixtures";
 
-test("a payment origin", async ({ loginPage, page }) => {
+test("a payment origin", async ({ checkoutPage, page }) => {
   const payment = new SessionStorage(page, { label: "Payment", origin: "https://pay.example" });
 
-  await loginPage.navigation.goto();
-  const orderId = (await page.getByTestId("order-id").textContent()) ?? "";
+  await checkoutPage.navigation.goto();
+  const orderId = await checkoutPage.orderId();
   await payment.seed({ orderId }); // the page stays on shop.example
-  await page.getByRole("button", { name: "Pay" }).click(); // the app sends the browser to pay.example
+  await checkoutPage.pay(); // the app sends the browser to pay.example
 });
 ```
 

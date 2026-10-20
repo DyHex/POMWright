@@ -84,7 +84,6 @@ Tests receive it as a Playwright fixture:
 
 ```ts
 // login.spec.ts
-import { expect } from "@playwright/test";
 import { test as base } from "pomwright";
 import { LoginPage } from "./login.page";
 
@@ -94,10 +93,10 @@ const test = base.extend<{ loginPage: LoginPage }>({
   },
 });
 
-test("a registered customer can log in", async ({ loginPage, page }) => {
+test("a registered customer can log in", async ({ loginPage }) => {
   await loginPage.navigation.goto();
   await loginPage.logIn("ada@shop.example", "correct horse");
-  await expect(page).toHaveURL("https://shop.example/account");
+  await loginPage.navigation.expectAnotherPage(); // the login page sends the customer on
 });
 ```
 

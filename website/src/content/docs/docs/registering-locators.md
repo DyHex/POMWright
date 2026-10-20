@@ -43,11 +43,11 @@ A registration resolves to what Playwright's method returns:
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"cart" | "cart.total">;
+declare const registry: LocatorRegistry<"cart" | "cart.text@total">;
 // ---cut---
 registry.add("cart").locator("section.cart", { hasText: "Total" });
 // locator('section.cart').filter({ hasText: 'Total' })
-registry.add("cart.total").getByText("Total", { exact: true });
+registry.add("cart.text@total").getByText("Total", { exact: true });
 // getByText('Total', { exact: true })
 ```
 
@@ -60,10 +60,10 @@ After the method you can chain the steps Playwright chains after a locator, in a
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"main.list.item">;
+declare const registry: LocatorRegistry<"main.list.item@last">;
 // ---cut---
 registry
-  .add("main.list.item")
+  .add("main.list.item@last")
   .getByRole("listitem", { name: /Row/ })
   .filter({ hasText: "Row" })
   .nth("last")
@@ -109,15 +109,15 @@ A path holds one locator. Registering it again throws at the second method call 
 one and the attempted one:
 
 ```text
-A locator schema with the path "list.item" already exists.
+A locator schema with the path "list.items" already exists.
 Existing and attempted schemas: {
   "existing": {
-    "locatorSchemaPath": "list.item",
+    "locatorSchemaPath": "list.items",
     "definition": { "type": "locator", "selector": "li" },
     "steps": [{ "kind": "filter", "filter": { "has": "locator('b')" } }]
   },
   "attempted": {
-    "locatorSchemaPath": "list.item",
+    "locatorSchemaPath": "list.items",
     "definition": { "type": "locator", "selector": "li" },
     "steps": []
   }
@@ -136,13 +136,13 @@ nothing:
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"form.button">;
+declare const registry: LocatorRegistry<"form.button@save">;
 // ---cut---
 const options = { name: "Save" };
-registry.add("form.button").getByRole("button", options);
+registry.add("form.button@save").getByRole("button", options);
 options.name = "Cancel";
 
-registry.getLocator("form.button"); // getByRole('button', { name: 'Save' })
+registry.getLocator("form.button@save"); // getByRole('button', { name: 'Save' })
 ```
 
 The copy reaches every value you pass. A RegExp is copied too, whether it is the first argument, an option or a filter

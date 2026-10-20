@@ -131,9 +131,9 @@ also take a registered path. See [filters and indices](/POMWright/docs/filters-a
 ```ts
 import type { FilterDefinition } from "pomwright";
 
-type Paths = "list" | "list.item" | "list.item.badge";
+type Paths = "list" | "list.items" | "list.items.badge";
 
-export const withBadge: FilterDefinition<Paths> = { has: "list.item.badge" };
+export const withBadge: FilterDefinition<Paths> = { has: "list.items.badge" };
 ```
 
 ### has

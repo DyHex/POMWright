@@ -19,8 +19,8 @@ the same facts as the API pages.
   compiles it against the installed package with the harness's options and `declaration: true`. A block with
   `title="name.ts"` is that file, which the page's other blocks import; lines up to `// ---cut---` are compiled but not
   shown; a `nocheck` block is skipped and listed (only the 2.x code on *Upgrading from 2.x*); a deliberate error is
-  shown with `// @ts-expect-error`, which the check enforces. The example app in `website/snippets/`, a login page
-  object and its fixtures on `shop.example`, can be imported from every page.
+  shown with `// @ts-expect-error`, which the check enforces. The example app in `website/snippets/`, four page
+  objects on `shop.example` and their fixtures, can be imported from every page.
 - **The API is complete.** `scripts/check-api-coverage.mjs` reads the installed declarations and fails on an export
   without a page or section, a member without a heading, or a doc comment without a summary or a `@param`.
 - **Links resolve.** Links within the site are root-absolute with the base, `/POMWright/docs/<page>/`, and the site

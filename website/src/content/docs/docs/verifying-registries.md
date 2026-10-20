@@ -19,20 +19,20 @@ you call `registry.verify()`.
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"list" | "list.item" | "list.titel" | "menu" | "menu.item">;
+declare const registry: LocatorRegistry<"list" | "list.items" | "list.titel" | "menu" | "menu.items">;
 // ---cut---
 registry.add("list").locator("ul");
-registry.add("list.item").getByRole("listitem").filter({ has: "list.titel" }); // never registered
+registry.add("list.items").getByRole("listitem").filter({ has: "list.titel" }); // never registered
 registry.add("menu").locator("nav");
-registry.add("menu.item").locator("li").filter({ has: "menu.item" }); // refers to itself
+registry.add("menu.items").locator("li").filter({ has: "menu.items" }); // refers to itself
 
 registry.verify();
 ```
 
 ```text
 Locator registry verification failed for 2 of 4 paths:
-  "list.item": No locator schema registered for path "list.titel".
-  "menu.item": Detected cyclic filter reference while resolving "menu.item": "menu.item".
+  "list.items": No locator schema registered for path "list.titel".
+  "menu.items": Detected cyclic filter reference while resolving "menu.items": "menu.items".
 ```
 
 Each path is resolved on its own, as `getLocator` resolves it, which evaluates its `has` and `hasNot` references: a

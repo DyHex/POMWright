@@ -12,7 +12,7 @@ steps.
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"table" | "table.row@first" | "table.row@open" | "table.row@lastOpen">;
+declare const registry: LocatorRegistry<"table" | "table.row@first" | "table.rows@open" | "table.row@lastOpen">;
 // ---cut---
 registry.add("table").locator("table");
 
@@ -21,7 +21,7 @@ const openRow = row.filter({ hasText: "Open" });
 
 registry.add("table.row@first", { reuse: row.nth(0) });
 // locator('table').locator('tr').first()
-registry.add("table.row@open", { reuse: openRow });
+registry.add("table.rows@open", { reuse: openRow });
 // locator('table').locator('tr').filter({ hasText: 'Open' })
 registry.add("table.row@lastOpen", { reuse: openRow.nth("last").describe("Last open row") });
 // locator('table').locator('tr').filter({ hasText: 'Open' }).last()

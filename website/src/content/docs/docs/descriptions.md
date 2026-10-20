@@ -47,11 +47,11 @@ So a report stays readable, and a failure's call log still shows the chain Playw
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"main.submit">;
+declare const registry: LocatorRegistry<"main.button@submit">;
 // ---cut---
-registry.add("main.submit").getByRole("button", { name: "Submit" }).describe("Primary submit button");
+registry.add("main.button@submit").getByRole("button", { name: "Submit" }).describe("Primary submit button");
 
-registry.getLocator("main.submit").description(); // "Primary submit button"
+registry.getLocator("main.button@submit").description(); // "Primary submit button"
 ```
 
 On a query it replaces the registered description or the path for that one use, and leaves the registry as it is:
@@ -59,9 +59,9 @@ On a query it replaces the registered description or the path for that one use, 
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"main.submit">;
+declare const registry: LocatorRegistry<"main.button@submit">;
 // ---cut---
-registry.getLocatorSchema("main.submit").describe("Submit after editing").getLocator();
+registry.getLocatorSchema("main.button@submit").describe("Submit after editing").getLocator();
 ```
 
 A seed and a path reuse carry an explicit description to the paths they are registered at; without one, the new path
@@ -75,14 +75,14 @@ That is the quickest way to see what a path resolves to:
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"main.submit">;
+declare const registry: LocatorRegistry<"main.button@submit">;
 // ---cut---
-registry.getLocatorSchema("main.submit").describe("").getLocator().toString();
+registry.getLocatorSchema("main.button@submit").describe("").getLocator().toString();
 // getByRole('button', { name: 'Submit' })
 ```
 
 The argument is a string. From JavaScript, `describe(null)` or `describe(undefined)` throws:
-`describe requires a string for "main.submit"; pass "" to remove the description.`
+`describe requires a string for "main.button@submit"; pass "" to remove the description.`
 
 ## Chaining further
 

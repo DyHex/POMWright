@@ -28,10 +28,10 @@ export type Paths =
   | "main.input@search"
   | "main.image@card"
   | "main.icon@help"
-  | "main.list"
+  | "main.list@items"
   | "main.frame@payment"
   | "main.frame@payment.button@confirm"
-  | "main.row@item"
+  | "main.rows@cart"
   | "main.panel@summary";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
@@ -42,10 +42,10 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main.input@search").getByPlaceholder("Search");
   registry.add("main.image@card").getByAltText("Card logo");
   registry.add("main.icon@help").getByTitle("Help");
-  registry.add("main.list").locator("ul", { hasText: "Items" });
+  registry.add("main.list@items").locator("ul", { hasText: "Items" });
   registry.add("main.frame@payment").frameLocator("iframe#payment");
   registry.add("main.frame@payment.button@confirm").getByRole("button", { name: "Confirm" });
-  registry.add("main.row@item").getByTestId("cart-row");
+  registry.add("main.rows@cart").getByTestId("cart-row");
   registry.add("main.panel@summary").getById("summary");
 }
 ```
@@ -66,7 +66,7 @@ getByRole requires a role value for "main.button@pay".
 ```
 
 An empty string is rejected in both modes where Playwright cannot use one, as at registration:
-`locator requires a non-empty selector for "main.list".`
+`locator requires a non-empty selector for "main.list@items".`
 
 ### frameLocator()
 
@@ -253,9 +253,9 @@ import type { Paths } from "./checkout.locators";
 
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
-registry.getLocatorSchema("main.row@item").update().getByTestId("cart-item").getNestedLocator();
+registry.getLocatorSchema("main.rows@cart").update().getByTestId("cart-item").getNestedLocator();
 // locator('main').getByTestId('cart-item')
-registry.getLocatorSchema("main.row@item").replace().getByTestId(/cart-/).getNestedLocator();
+registry.getLocatorSchema("main.rows@cart").replace().getByTestId(/cart-/).getNestedLocator();
 // locator('main').getByTestId(/cart-/)
 ```
 
@@ -321,11 +321,11 @@ import type { Paths } from "./checkout.locators";
 
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
-registry.getLocatorSchema("main.list").update().locator({ hasText: "Cart" }).getNestedLocator();
+registry.getLocatorSchema("main.list@items").update().locator({ hasText: "Cart" }).getNestedLocator();
 // locator('main').locator('ul').filter({ hasText: 'Cart' })
-registry.getLocatorSchema("main.list").update().locator("ol", null).getNestedLocator();
+registry.getLocatorSchema("main.list@items").update().locator("ol", null).getNestedLocator();
 // locator('main').locator('ol')
-registry.getLocatorSchema("main.list").replace().locator("ol.cart").getNestedLocator();
+registry.getLocatorSchema("main.list@items").replace().locator("ol.cart").getNestedLocator();
 // locator('main').locator('ol.cart')
 ```
 

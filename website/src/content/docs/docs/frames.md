@@ -14,7 +14,7 @@ it resolve inside the frame.
 ```mermaid
 flowchart TD
   section["checkout.section@payment<br/>getByRole('region', { name: 'Payment' })"] -->|inside| iframe["checkout.section@payment.frame<br/>locator('iframe'), the iframe element"]
-  iframe -->|"contentFrame()"| field["checkout.section@payment.frame.cardNumber<br/>getByLabel('Card number')"]
+  iframe -->|"contentFrame()"| field["checkout.section@payment.frame.input@cardNumber<br/>getByLabel('Card number')"]
 ```
 
 The examples on this page use a checkout page with a payment iframe:
@@ -26,15 +26,15 @@ export type Paths =
   | "checkout"
   | "checkout.section@payment"
   | "checkout.section@payment.frame"
-  | "checkout.section@payment.frame.cardNumber"
-  | "checkout.section@payment.frame.pay";
+  | "checkout.section@payment.frame.input@cardNumber"
+  | "checkout.section@payment.frame.button@pay";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("checkout").locator("main");
   registry.add("checkout.section@payment").getByRole("region", { name: "Payment" });
   registry.add("checkout.section@payment.frame").frameLocator("iframe");
-  registry.add("checkout.section@payment.frame.cardNumber").getByLabel("Card number");
-  registry.add("checkout.section@payment.frame.pay").getByRole("button", { name: "Pay" });
+  registry.add("checkout.section@payment.frame.input@cardNumber").getByLabel("Card number");
+  registry.add("checkout.section@payment.frame.button@pay").getByRole("button", { name: "Pay" });
 }
 ```
 
@@ -48,7 +48,7 @@ import type { Paths } from "./checkout.locators";
 
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
-await registry.getNestedLocator("checkout.section@payment.frame.cardNumber").fill("4242 4242 4242 4242");
+await registry.getNestedLocator("checkout.section@payment.frame.input@cardNumber").fill("4242 4242 4242 4242");
 // locator('main').getByRole('region', { name: 'Payment' }).locator('iframe').contentFrame().getByLabel('Card number')
 ```
 
@@ -73,12 +73,12 @@ to the `<iframe>` element, before the frame is entered:
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-type Paths = "widgets" | "widgets.frame@second" | "widgets.frame@second.go" | "widgets.frame@visible";
+type Paths = "widgets" | "widgets.frame@second" | "widgets.frame@second.button@go" | "widgets.frame@visible";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.add("widgets").locator(".widgets");
 registry.add("widgets.frame@second").frameLocator("iframe").nth(1);
-registry.add("widgets.frame@second.go").getByRole("button", { name: "Go" });
+registry.add("widgets.frame@second.button@go").getByRole("button", { name: "Go" });
 // locator('.widgets').locator('iframe').nth(1).contentFrame().getByRole('button', { name: 'Go' })
 
 registry.add("widgets.frame@visible").frameLocator("iframe").filter({ visible: true }).nth("last");
@@ -103,12 +103,12 @@ resolve in whichever single frame holds them, the main frame included, without l
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"anyFrame" | "anyFrame.consent">;
+declare const registry: LocatorRegistry<"anyFrame" | "anyFrame.button@accept">;
 // ---cut---
 registry.add("anyFrame").frameLocator();
-registry.add("anyFrame.consent").getByRole("button", { name: "Accept" });
+registry.add("anyFrame.button@accept").getByRole("button", { name: "Accept" });
 
-await registry.getNestedLocator("anyFrame.consent").click();
+await registry.getNestedLocator("anyFrame.button@accept").click();
 // frameLocator().getByRole('button', { name: 'Accept' })
 ```
 

@@ -133,7 +133,7 @@ them for every path:
 
 ```text
 Locator registry verification failed for 1 of 2 paths:
-  "list.item": No locator schema registered for path "list.titel".
+  "list.items": No locator schema registered for path "list.titel".
 ```
 
 ### A path that is not registered
@@ -169,8 +169,8 @@ From JavaScript. Pass a Playwright `Locator` or a registered path.
 ### The any-frame `frameLocator()` in the wrong place
 
 ```text
-frameLocator() without a selector must be the first segment of the chain; "shell.consent" has the ancestor "shell".
-frameLocator() without a selector does not point to a particular iframe; "consent" cannot be resolved on its own, filtered or indexed; resolve a path inside it.
+frameLocator() without a selector must be the first segment of the chain; "shell.anyFrame" has the ancestor "shell".
+frameLocator() without a selector does not point to a particular iframe; "anyFrame" cannot be resolved on its own, filtered or indexed; resolve a path inside it.
 ```
 
 The any-frame segment must be the first registered segment of its chain, and it has no element of its own: resolve a
@@ -208,7 +208,7 @@ update("main.button@save") cannot change the strategy from "role" to "locator"; 
 ```text
 replace() cannot apply to "main.frame@payment": it is the path this query resolves, and frameLocator() without a selector has no element to resolve to; replace an ancestor instead.
 replace() cannot apply to "main.list": it has filter or nth steps, and frameLocator() without a selector takes none; call clearSteps("main.list") first.
-filter() cannot apply to "consent": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
+filter() cannot apply to "anyFrame": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
 ```
 
 The any-frame form has no element: it cannot be the query's own path, carry steps, or be filtered or indexed.
