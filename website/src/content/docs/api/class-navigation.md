@@ -1,12 +1,12 @@
 ---
-title: NavigationFor
-description: "A page object's navigation helper: goto, expectThisPage and expectAnotherPage, their options, and the UrlMatcher of a page whose URL varies."
+title: Navigation
+description: "A page object's navigation helper, of the type NavigationFor: goto, expectThisPage and expectAnotherPage, their options, and the UrlMatcher of a page whose URL varies."
 ---
 
 Every page object has a navigation helper, `navigation`, built from its `baseUrl` and `urlPath`. Its type,
-`NavigationFor<BaseUrl, FullUrl>`, follows the page object's URL types: `goto()` without a target exists only when
-`fullUrl` is a string, and on a RegExp `baseUrl` `goto(target)` takes an absolute URL only. Each method is one
-Playwright call, with Playwright's waits and timeouts, and a step of the report at the line that called it.
+[`NavigationFor<BaseUrl, FullUrl>`](#navigationfor), follows the page object's URL types: `goto()` without a target
+exists only when `fullUrl` is a string, and on a RegExp `baseUrl` `goto(target)` takes an absolute URL only. Each method
+is one Playwright call, with Playwright's waits and timeouts, and a step of the report at the line that called it.
 
 ```ts
 import { test } from "./fixtures";
@@ -23,7 +23,24 @@ Guide: [URLs and navigation](/POMWright/docs/urls-and-navigation/).
 
 ---
 
-## Methods
+## NavigationFor
+
+The type of a page object's `navigation`, from its `baseUrl` type and its `fullUrl` type. A page object with string
+URLs has a `NavigationFor<string, string>`. Name the type to take the helper as a parameter:
+
+```ts
+import type { NavigationFor } from "pomwright";
+import { test } from "./fixtures";
+
+async function openAndLeave(navigation: NavigationFor<string, string>) {
+  await navigation.goto();
+  await navigation.expectAnotherPage();
+}
+
+test("the login page redirects", async ({ loginPage }) => {
+  await openAndLeave(loginPage.navigation);
+});
+```
 
 ### expectAnotherPage()
 

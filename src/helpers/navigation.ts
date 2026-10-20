@@ -52,7 +52,7 @@ type GotoTarget<BaseUrl> = BaseUrl extends string ? string : AbsoluteUrl;
  * await loginPage.navigation.expectAnotherPage();
  * ```
  *
- * @see https://dyhex.github.io/POMWright/api/class-navigation/
+ * @see https://dyhex.github.io/POMWright/api/class-navigation/#navigationfor
  */
 export type NavigationFor<BaseUrl, FullUrl> = {
 	/**
