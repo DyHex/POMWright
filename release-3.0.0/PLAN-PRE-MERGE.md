@@ -229,3 +229,6 @@ last push (a909cbb, every check); nothing added to the folder since the audit.
 - Step 1: `pages.yaml` runs on `workflow_run` after `CI` on `main` plus `workflow_dispatch`, its build job guarded as
   `publish.yaml`'s and checking out the CI run's `head_sha`; the header comment states it. actionlint 1.7.12 (release
   checksum verified, in the scratchpad) reports nothing over every workflow.
+- Step 2: `Banner.astro` deleted, its `components` entry and the `noindex` `head` entry removed from `astro.config.mjs`
+  with their comments; `pnpm docs:build` passes with every link valid, and none of the 53 pages of `website/dist` holds
+  `class="prerelease"` or `name="robots"`.

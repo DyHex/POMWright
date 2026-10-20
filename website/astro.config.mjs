@@ -21,11 +21,7 @@ export default defineConfig({
 			editLink: { baseUrl: "https://github.com/DyHex/POMWright/edit/main/website/" },
 			components: {
 				SiteTitle: "./src/components/SiteTitle.astro",
-				// pre-release: remove before the merge to main, with the component and the head entry below
-				Banner: "./src/components/Banner.astro",
 			},
-			// pre-release: keeps search engines from listing the docs of a version npm does not serve yet
-			head: [{ tag: "meta", attrs: { name: "robots", content: "noindex" } }],
 			customCss: ["./src/styles/custom.css"],
 			expressiveCode: { plugins: [pluginCut()] },
 			plugins: [starlightSidebarTopics(topics), starlightLinksValidator()],
