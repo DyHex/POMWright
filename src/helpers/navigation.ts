@@ -56,9 +56,8 @@ type GotoTarget<BaseUrl> = BaseUrl extends string ? string : AbsoluteUrl;
  */
 export type NavigationFor<BaseUrl, FullUrl> = {
 	/**
-	 * Waits until the browser is on this page, the URL matching `fullUrl` and the load state reached, with one
-	 * `page.waitForURL`; then runs the actions of `pageActionsToPerformAfterNavigation()`. Returns at once, after the
-	 * load state, when the page is already there.
+	 * Waits until the browser is on this page, with one `page.waitForURL`, then runs the actions of
+	 * `pageActionsToPerformAfterNavigation()`.
 	 *
 	 * @param options `waitUntil`, `timeout` and `runPostNavigationActions`; each defaults to the page object's
 	 * `navOptions`.
@@ -69,12 +68,12 @@ export type NavigationFor<BaseUrl, FullUrl> = {
 	 * ```ts
 	 * await ordersPage.navigation.expectThisPage();
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-navigation/#expectthispage
 	 */
 	expectThisPage(options?: ThisPageOptions): Promise<void>;
 	/**
-	 * Waits until the browser has left this page, with one `page.waitForURL` for any URL that does not match `fullUrl`,
-	 * and the load state of the page it moved to; then fails at once if the URL is back on this page, which catches a
-	 * redirect that bounced back.
+	 * Waits until the browser has left this page, with one `page.waitForURL`, and fails if it came straight back.
 	 *
 	 * @param options `waitUntil` and `timeout`; each defaults to the page object's `navOptions`.
 	 * @throws When the browser stays, or comes straight back:
@@ -85,6 +84,8 @@ export type NavigationFor<BaseUrl, FullUrl> = {
 	 * ```ts
 	 * await loginPage.navigation.expectAnotherPage();
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-navigation/#expectanotherpage
 	 */
 	expectAnotherPage(options?: NavigationOptions): Promise<void>;
 	/**
@@ -102,6 +103,8 @@ export type NavigationFor<BaseUrl, FullUrl> = {
 	 * ```ts
 	 * await loginPage.navigation.goto("/account");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-navigation/#goto
 	 */
 	goto(target: GotoTarget<BaseUrl>, options?: NavigationOptions): Promise<void>;
 } & (FullUrl extends string
@@ -118,6 +121,8 @@ export type NavigationFor<BaseUrl, FullUrl> = {
 			 * ```ts
 			 * await loginPage.navigation.goto();
 			 * ```
+			 *
+			 * @see https://dyhex.github.io/POMWright/api/class-navigation/#goto
 			 */
 			goto(options?: ThisPageOptions): Promise<void>;
 		}

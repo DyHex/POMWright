@@ -3,10 +3,8 @@ title: LocatorQueryBuilder
 description: "What getLocatorSchema(path) returns; a private copy of a path's chain to change for one use, then resolve."
 ---
 
-`getLocatorSchema(path)` returns a `LocatorQueryBuilder`: a copy of the path's chain (every registered segment with
-its definition, steps and description) that you change for one use and then resolve. Its methods change this query
-and return it, so they chain; nothing they do reaches the registry, and every `getLocatorSchema` call starts a new,
-independent copy.
+`getLocatorSchema(path)` returns a `LocatorQueryBuilder`: a private copy of the path's chain that you change for one
+use and then resolve. Its methods change this query and return it; the registry never changes.
 
 The examples on this page use this registry:
 
@@ -76,8 +74,8 @@ registry.getLocatorSchema("main.list.item").clearSteps("main.list").getNestedLoc
 
 ### describe()
 
-Sets the description of the resolved locator for this query, replacing the registered one or the path; `""` removes
-it, so the locator prints as its chain. See [descriptions](/POMWright/docs/descriptions/).
+Sets the description of the resolved locator for this query; `""` removes it. See
+[the description](/POMWright/docs/queries/#the-description-describe).
 
 **Usage**
 
@@ -202,8 +200,7 @@ registry.getLocatorSchema("main.list.item").clearSteps().nth(2).getNestedLocator
 // locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').nth(2)
 ```
 
-The registered `nth(0)` of `main.list.item` stays unless cleared: `nth("last")` without `clearSteps()` resolves to
-`….locator('li').first().last()`, the first element.
+The registered `nth(0)` stays unless cleared; see [steps](/POMWright/docs/queries/#steps-filter-nth-clearsteps).
 
 **Arguments**
 
@@ -227,10 +224,9 @@ nth() cannot apply to "anyFrame": frameLocator() without a selector has no eleme
 
 ### replace()
 
-Replaces a segment's definition with one of any strategy, for this query. Returns an
-[update builder](/POMWright/api/class-locatorupdatebuilder/) whose ten methods take the arguments of Playwright's own
-methods (the first argument required, Playwright's option types) and return this query. The segment's steps and
-description stay.
+Replaces a segment's definition for this query with one of any strategy, with Playwright's arguments; its steps and
+description stay. Returns an [update builder](/POMWright/api/class-locatorupdatebuilder/). See
+[a new definition](/POMWright/docs/queries/#a-new-definition-replace).
 
 **Usage**
 
@@ -266,8 +262,8 @@ without a selector on a segment that has steps.
 
 ### skip()
 
-Leaves an ancestor out of the chain when this query resolves, as if it had no locator. Nothing is deleted:
-`unskip()` brings it back exactly as it was.
+Leaves an ancestor out of the chain when this query resolves; `unskip()` brings it back as it was. See
+[leaving an ancestor out](/POMWright/docs/queries/#leaving-an-ancestor-out-skip-and-unskip).
 
 **Usage**
 
@@ -337,10 +333,9 @@ unskip() cannot unskip "main.list": it is not skipped in this query.
 
 ### update()
 
-Patches a segment's definition for this query, keeping its strategy. Returns an
-[update builder](/POMWright/api/class-locatorupdatebuilder/) whose method for the registered strategy takes a patch
-in [JSON Merge Patch](https://www.rfc-editor.org/rfc/rfc7386) form: a value replaces, `null` deletes, an omitted value
-keeps what is registered. The segment's steps and description stay.
+Patches a segment's definition for this query and keeps its strategy; its steps and description stay. Returns an
+[update builder](/POMWright/api/class-locatorupdatebuilder/). See
+[patching a definition](/POMWright/docs/queries/#patching-a-definition-update).
 
 **Usage**
 

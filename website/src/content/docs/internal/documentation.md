@@ -22,7 +22,9 @@ the same facts as the API pages.
   shown with `// @ts-expect-error`, which the check enforces. The example app in `website/snippets/`, four page
   objects on `shop.example` and their fixtures, can be imported from every page.
 - **The API is complete.** `scripts/check-api-coverage.mjs` reads the installed declarations and fails on an export
-  without a page or section, a member without a heading, or a doc comment without a summary or a `@param`.
+  without a page or section, a member without a heading, a doc comment without a summary or a `@param`, a method or
+  class property without a `@see` to its heading, and a link to the site whose page or heading does not exist. So an
+  editor's hover always links the member's API entry, which links the Docs section.
 - **Links resolve.** Links within the site are root-absolute with the base, `/POMWright/docs/<page>/`, and the site
   build fails on a link or an anchor that does not exist.
 

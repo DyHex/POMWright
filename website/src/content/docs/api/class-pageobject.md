@@ -37,16 +37,17 @@ Guide: [your first page object](/POMWright/docs/first-page-object/),
 
 `Paths extends string`
 
-The union of the page object's locator paths. Every path is checked against it where it is written, and against the
-path rules (no empty segment, no whitespace) at compile time and at runtime.
+The union of the page object's locator paths. TypeScript checks every path passed to the locator methods against it,
+and against [the rules of a path](/POMWright/docs/locator-paths/#the-rules-of-a-path), which POMWright checks again at
+runtime. See [what a path is](/POMWright/docs/locator-paths/#what-a-path-is).
 
 ### Options
 
 `Options extends` [`PageObjectTypeOptions`](/POMWright/api/types/#pageobjecttypeoptions) *(optional)*
 
-Types only, no runtime value: whether `baseUrl` and `urlPath` are strings or RegExps (both default to `string`) and the
-type of the session storage schema. A RegExp in either part makes `fullUrl` a [`UrlMatcher`](/POMWright/api/class-navigation/#urlmatcher)
-and removes `goto()` without a target.
+Types only: whether `baseUrl` and `urlPath` are RegExps (both default to `string`), and the type of the session storage
+schema. See [pages whose URL varies](/POMWright/docs/urls-and-navigation/#pages-whose-url-varies) and
+[session storage through a page object](/POMWright/docs/session-storage/#through-a-page-object).
 
 ```ts
 import type { Page } from "@playwright/test";
@@ -71,8 +72,8 @@ export class OrderPage extends PageObject<"main", { urlPathType: RegExp; storage
 
 ### new PageObject()
 
-Called from the subclass constructor as `super(...)`; the constructor is `protected`. It validates the URL parts,
-creates the registry and the helpers, and schedules `defineLocators()`. It does not call `defineLocators()` itself.
+Called from the subclass constructor as `super(...)`; the constructor is `protected`. It checks the URL parts, creates
+the registry and the helpers, and schedules `defineLocators()`.
 
 **Usage**
 
@@ -102,15 +103,14 @@ export class AccountPage extends PageObject<"main"> {
 
 - `baseUrl` string | RegExp
 
-  The origin of the page: a string `scheme://host[:port]`, with or without a trailing slash and nothing after it
-  (`https://shop.example`, `http://localhost:9000`), or a RegExp tested against the URL's origin. Declare a RegExp in
-  `Options` (`baseUrlType: RegExp`).
+  The origin, such as `https://shop.example`, or a RegExp tested against the URL's origin (declare
+  `baseUrlType: RegExp` in `Options`). See
+  [baseUrl and urlPath](/POMWright/docs/urls-and-navigation/#baseurl-and-urlpath).
 
 - `urlPath` string | RegExp
 
-  The page's own path: `""` for the origin itself, or a string that starts with exactly one `/` (`/login`,
-  `/orders?tab=open`), or a RegExp tested against the rest of the URL (path, query and hash). Declare a RegExp in
-  `Options` (`urlPathType: RegExp`).
+  The page's path: `""` or a string that starts with one `/`, such as `/login`, or a RegExp tested against the rest of
+  the URL (declare `urlPathType: RegExp` in `Options`).
 
 - `options` [PageObjectOptions](/POMWright/api/types/#pageobjectoptions) *(optional)*
   - `label` string *(optional)*
@@ -134,7 +134,7 @@ export class AccountPage extends PageObject<"main"> {
 
 **Throws**
 
-When a URL part is not what it must be, before anything else is created:
+When a URL part is not what it must be:
 
 ```text
 LoginPage: baseUrl must be an origin such as "https://example.com" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "localhost:9000".
@@ -150,12 +150,9 @@ LoginPage: urlPath must be "" or start with exactly one "/"; received "login".
 
 `protected abstract`
 
-Registers the page object's locators with `this.add(path)`. Implement it in every page object.
-
-It runs once per page object: right after the code that called `new` has finished (in a fixture, before the test
-body), or at the first locator call on the page object if that comes earlier. Because it runs after the constructor,
-it can use the subclass's constructor arguments, parameter properties and fields. Right after it, the registry is
-[verified](/POMWright/docs/verifying-registries/).
+Registers the page object's locators with `this.add(path)`. Implement it in every page object. It runs once, right
+after the constructor, so it can use the subclass's constructor arguments and fields, and the registry is verified
+after it. See [when defineLocators() runs](/POMWright/docs/page-objects/#when-definelocators-runs).
 
 **Usage**
 
@@ -183,10 +180,8 @@ export class LoginPage extends PageObject<"main" | "main.button@login"> {
 
 **Throws**
 
-An error thrown inside `defineLocators()`, or by the verification after it, is reported with the page object's
-label and the original error as `cause`, and its stack points at the line that constructed the page object. The page
-object keeps the error: every later locator call on it throws it again, and `defineLocators()` never runs a second
-time.
+An error inside `defineLocators()` or from the verification after it, labelled with the page object and kept for
+every later locator call; see [how a mistake is reported](/POMWright/docs/page-objects/#how-a-mistake-is-reported).
 
 ```text
 LoginPage: defineLocators() failed: A locator schema with the path "main" already exists. …
@@ -199,8 +194,8 @@ LoginPage: Locator registry verification failed for 1 of 5 paths:
 `protected`, optional
 
 Returns the actions to run after `navigation.goto()` without a target and after `navigation.expectThisPage()`, such as
-waiting for a spinner to go away. It is called each time the actions run, so it can read the page object's current
-state. Omit it when there are none.
+waiting for a spinner to go away. See
+[actions after navigation](/POMWright/docs/page-objects/#actions-after-navigation).
 
 **Usage**
 
@@ -257,9 +252,9 @@ The `baseUrl` the page object was constructed with.
 
 ### fullUrl
 
-The page object's URL. For a string `baseUrl` and `urlPath` it is `new URL(urlPath, baseUrl).href`, the form the
-browser reports (`https://shop.example/` for an empty path, `https://shop.example/s%C3%B8k` for `/søk`); when either
-part is a RegExp, it is a matcher that tests the origin and the rest of a URL separately.
+The page object's URL: `new URL(urlPath, baseUrl).href` for two strings, a
+[`UrlMatcher`](/POMWright/api/class-navigation/#urlmatcher) when either part is a RegExp. See
+[fullUrl](/POMWright/docs/urls-and-navigation/#fullurl).
 
 **Usage**
 
@@ -326,9 +321,8 @@ module](/POMWright/docs/locator-modules/): `defineLocators(this.locatorRegistry)
 
 ### navigation
 
-The navigation helper: `goto()` to this page, `goto(target)` to any page resolved against `baseUrl`,
-`expectThisPage()` and `expectAnotherPage()`. Which forms exist depends on the URL types. See
-[`Navigation`](/POMWright/api/class-navigation/).
+The navigation helper: `goto()`, `expectThisPage()` and `expectAnotherPage()`. See
+[`NavigationFor`](/POMWright/api/class-navigation/).
 
 **Type**
 
@@ -344,8 +338,9 @@ The Playwright page the page object was constructed with.
 
 ### sessionStorage
 
-The session storage helper, labelled with `label` and typed by the schema. With a string `baseUrl` it works on that
-origin only, and `seed()` needs no origin argument. See [`SessionStorage`](/POMWright/api/class-sessionstorage/).
+The session storage helper for the page object's origin, typed by the schema. See
+[`SessionStorage`](/POMWright/api/class-sessionstorage/) and
+[through a page object](/POMWright/docs/session-storage/#through-a-page-object).
 
 **Type**
 

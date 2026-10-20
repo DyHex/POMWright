@@ -3,12 +3,10 @@ title: Registration
 description: "What add(path) returns: the ten locator methods with Playwright's arguments, then filter, nth and describe; the forms after { reuse }."
 ---
 
-`add(path)` returns a registration: the ten locator methods, one of which registers the path. After it come the steps
-Playwright chains after a locator, `filter`, `nth` and `describe`, applied every time the path is resolved, in the order
-chained. The registration is used in one statement and not kept, so POMWright does not export its type; TypeScript
-offers the steps only after a locator method. It ends at the next call on the registry (`add`, `getLocator`,
-`getNestedLocator`, `getLocatorSchema`, `verify`, or resolving a query); a registration kept in a variable takes its
-steps before then, and every method of it throws after.
+`add(path)` returns a registration: the ten locator methods, one of which registers the path, then the steps
+`filter`, `nth` and `describe`. Its type is not exported. It ends at the next call on the registry, after which every
+method of it throws; see
+[registered locators do not change](/POMWright/docs/registering-locators/#registered-locators-do-not-change).
 
 ```ts
 import type { LocatorRegistry } from "pomwright";
@@ -47,12 +45,10 @@ registration; the fourth a locator method of a registration kept in a variable a
 
 ### frameLocator()
 
-Registers a frame segment. With a selector, the segment is the `<iframe>` element, `locator(selector)` with any steps,
-and the paths below it resolve inside the frame through
-[`contentFrame()`](https://playwright.dev/docs/api/class-locator#locator-content-frame); as the last segment of a path
-it resolves to the element. Without a selector it is Playwright's any-frame
-[`page.frameLocator()`](https://playwright.dev/docs/api/class-page#page-frame-locator): the paths below it resolve in
-whichever single frame holds them. See [frames](/POMWright/docs/frames/).
+Registers a frame segment: with a selector, the `<iframe>` element, whose descendants resolve inside the frame; without
+one, Playwright's any-frame [`page.frameLocator()`](https://playwright.dev/docs/api/class-page#page-frame-locator). See
+[frames](/POMWright/docs/frames/) and
+[any frame](/POMWright/docs/frames/#any-frame-framelocator-without-a-selector).
 
 **Usage**
 
@@ -77,8 +73,8 @@ registry.add("anyFrame.button@accept").getByRole("button", { name: "Accept" });
 
 - `selector` string *(optional)*
 
-  The `<iframe>` element's selector. Without it, the any-frame form: it must be the first segment of its chain, takes
-  no steps, cannot be resolved on its own, and returns nothing to chain.
+  The `<iframe>` element's selector. Without it, the any-frame form, which must be the first segment of its chain and
+  takes no steps.
 
 **Returns**
 
@@ -127,9 +123,8 @@ An empty string is a value Playwright matches and is stored as given.
 
 ### getById()
 
-Registers a locator by the `id` attribute, which Playwright has no method for. A string matches the id exactly and
-case-sensitively, as `[id="…"]`, so ids with `.`, `:`, spaces or quotes work as written; a RegExp is tested against each
-element's id, with its flags. See [locating by id](/POMWright/docs/locating-by-id/).
+Registers a locator by the `id` attribute, which Playwright has no method for: a string as written, a RegExp with its
+flags. See [locating by id](/POMWright/docs/locating-by-id/).
 
 **Usage**
 
@@ -380,9 +375,8 @@ filter() needs a locator strategy first for "main.list.item"; call getByRole, ge
 
 ### describe()
 
-Sets the description Playwright shows for the resolved locator in the trace viewer and the HTML report, instead of the
-path, as [`locator.describe()`](https://playwright.dev/docs/api/class-locator#locator-describe) does; `""` removes it,
-so the locator shows as its chain. It applies where this path is resolved, not where it is an ancestor. See
+Sets the description of the resolved locator, instead of the path, as
+[`locator.describe()`](https://playwright.dev/docs/api/class-locator#locator-describe) does; `""` removes it. See
 [descriptions](/POMWright/docs/descriptions/).
 
 **Usage**
@@ -411,9 +405,8 @@ describe requires a string for "main.list.item@first"; pass "" to remove the des
 
 ### filter()
 
-Adds a [`locator.filter()`](https://playwright.dev/docs/api/class-locator#locator-filter) step. `has` and `hasNot` also
-take a registered path, resolved to that path's own locator, without its ancestors, because Playwright looks for it
-inside each element being filtered. See [filters and indices](/POMWright/docs/filters-and-indices/).
+Adds a [`locator.filter()`](https://playwright.dev/docs/api/class-locator#locator-filter) step; `has` and `hasNot` also
+take a registered path. See [filters](/POMWright/docs/filters-and-indices/#filters-filter).
 
 **Usage**
 
@@ -474,9 +467,8 @@ registry.add("main.list.item@last").getByRole("listitem").nth("last");
 
 ### A registered path
 
-The path is a copy of the reused one: its locator, its steps and an explicit description. `filter`, `nth` and
-`describe` narrow the copy, after the copied steps; there is no locator method, so the copy keeps the locator it
-reused.
+The path is a copy of the reused one, which `filter`, `nth` and `describe` narrow; there is no locator method. See
+[reuse by path](/POMWright/docs/reusing-locators/#reuse-by-path).
 
 ```ts
 import type { LocatorRegistry } from "pomwright";
@@ -492,10 +484,9 @@ registry.add("main.list.item@lastOpen", { reuse: "main.list.items@open" }).nth("
 
 ### A seed
 
-The seed is registered as it is. The first call may be the seed's own locator method, which patches it as
-[`update()`](/POMWright/api/class-locatorquerybuilder/#update) does: a given first argument replaces the seed's, the
-options merge key by key, a `null` key deletes one, a lone `null` clears them, and no argument keeps the seed. Then
-`filter`, `nth` and `describe`.
+The seed is registered as it is. Its own locator method may patch it once, as
+[`update()`](/POMWright/api/class-locatorupdatebuilder/) does, then come `filter`, `nth` and `describe`. See
+[changing a seed's options](/POMWright/docs/reusing-locators/#changing-a-seeds-options).
 
 ```ts
 import type { LocatorRegistry } from "pomwright";
@@ -517,6 +508,4 @@ The locator definition for "main.button@cancel" must use the "role" strategy whe
 A locator definition for "main.link@help" was already provided from reuse; only one matching override is allowed.
 ```
 
-The first for another locator method than the seed's; the second for a second call of it on a registration kept in a
-variable (chained, TypeScript no longer offers the method). A kept registration takes its override before the registry
-is called again, as every registration takes its steps.
+The first for another strategy's method, the second for a second change on a registration kept in a variable.

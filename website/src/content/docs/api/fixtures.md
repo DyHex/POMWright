@@ -46,11 +46,9 @@ export const test = base.extend<PageObjects>({
 
 ### log
 
-A [`PlaywrightReportLogger`](/POMWright/api/class-playwrightreportlogger/) named `TestCase`, one per test. It records
-`warn` and `error` entries on a test's first run and every level on a retry. When the test ends, its entries are
-attached to the test, one attachment per entry in call order, named with the time and date in Playwright's
-[`locale`](https://playwright.dev/docs/api/class-testoptions#test-options-locale) and
-[`timezoneId`](https://playwright.dev/docs/api/class-testoptions#test-options-timezone-id).
+A [`PlaywrightReportLogger`](/POMWright/api/class-playwrightreportlogger/) named `TestCase`, one per test, whose entries
+are attached to the test when it ends. It records `warn` and `error` on a test's first run and every level on a retry;
+see [levels](/POMWright/docs/logging/#levels).
 
 **Usage**
 

@@ -31,8 +31,9 @@ export type LocatorRegistrationPostDefinitionBuilder<
 	Path extends RegistryPath<LocatorSchemaPathType>,
 > = {
 	/**
-	 * Adds a `locator.filter()` step after the steps before it: Playwright's filter options, where `has` and `hasNot`
-	 * also take a registered path, resolved to that path's own locator without its ancestors.
+	 * Adds a `locator.filter()` step after the steps before it; `has` and `hasNot` also take a registered path.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#filter
 	 *
 	 * @param filter `hasText`, `hasNotText`, `has`, `hasNot` and `visible`, as Playwright's `locator.filter()` takes
 	 * them.
@@ -65,12 +66,14 @@ export type LocatorRegistrationPostDefinitionBuilder<
 	 * ```ts
 	 * registry.add("main.list.item@first").getByRole("listitem").nth("first");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#nth
 	 */
 	nth: (index: IndexSelector) => LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	/**
-	 * Sets the description Playwright shows for the resolved locator in the trace viewer and the HTML report, instead of
-	 * the path; `""` removes it, so the locator shows as its chain. It applies where this path is resolved, not where it
-	 * is an ancestor.
+	 * Sets the description of the resolved locator, instead of the path, as `locator.describe()` does; `""` removes it.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#describe
 	 *
 	 * @param description A string; `""` removes the description.
 	 * @returns The registration, for more steps.
@@ -171,8 +174,9 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Adds a `locator.filter()` step after the steps before it: Playwright's filter options, where `has` and `hasNot`
-	 * also take a registered path, resolved to that path's own locator without its ancestors.
+	 * Adds a `locator.filter()` step after the steps before it; `has` and `hasNot` also take a registered path.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#filter
 	 *
 	 * @param filter `hasText`, `hasNotText`, `has`, `hasNot` and `visible`, as Playwright's `locator.filter()` takes
 	 * them.
@@ -209,6 +213,8 @@ export class LocatorRegistrationBuilder<
 	 * ```ts
 	 * registry.add("main.list.item@first").getByRole("listitem").nth("first");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#nth
 	 */
 	nth(index: IndexSelector): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path> {
 		this.applyIndex(index);
@@ -216,9 +222,9 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Sets the description Playwright shows for the resolved locator in the trace viewer and the HTML report, instead of
-	 * the path; `""` removes it, so the locator shows as its chain. It applies where this path is resolved, not where it
-	 * is an ancestor.
+	 * Sets the description of the resolved locator, instead of the path, as `locator.describe()` does; `""` removes it.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#describe
 	 *
 	 * @param description A string; `""` removes the description.
 	 * @returns The registration, for more steps.
@@ -242,8 +248,7 @@ export class LocatorRegistrationBuilder<
 	 * An empty role is rejected; which strings are roles is Playwright's own type.
 	 *
 	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
-	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
-	 * `null` clears them, and no argument keeps the seed as it is.
+	 * does.
 	 *
 	 * @param role The ARIA role, as Playwright's type lists them.
 	 * @param options Playwright's `getByRole` options, such as `name`, `exact` and `level`.
@@ -257,6 +262,8 @@ export class LocatorRegistrationBuilder<
 	 * ```ts
 	 * registry.add("main.button@save").getByRole("button", { name: "Save" });
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbyrole
 	 */
 	getByRole(
 		role: RoleDefinition["role"],
@@ -292,8 +299,7 @@ export class LocatorRegistrationBuilder<
 	 * An empty string is a value Playwright matches and is stored as given.
 	 *
 	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
-	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
-	 * `null` clears them, and no argument keeps the seed as it is.
+	 * does.
 	 *
 	 * @param text The text: a string, matched as a case-insensitive substring unless `exact: true`, or a RegExp.
 	 * @param options Playwright's `getByText` options: `exact`.
@@ -306,6 +312,8 @@ export class LocatorRegistrationBuilder<
 	 * ```ts
 	 * registry.add("main.alert@error").getByText(/failed/i);
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbytext
 	 */
 	getByText(
 		text: Parameters<Page["getByText"]>[0],
@@ -338,8 +346,7 @@ export class LocatorRegistrationBuilder<
 	 * or `aria-label`. An empty string is a value Playwright matches and is stored as given.
 	 *
 	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
-	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
-	 * `null` clears them, and no argument keeps the seed as it is.
+	 * does.
 	 *
 	 * @param text The label text: a string or a RegExp.
 	 * @param options Playwright's `getByLabel` options: `exact`.
@@ -352,6 +359,8 @@ export class LocatorRegistrationBuilder<
 	 * ```ts
 	 * registry.add("main.form.input@email").getByLabel("Email", { exact: true });
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbylabel
 	 */
 	getByLabel(
 		text: Parameters<Page["getByLabel"]>[0],
@@ -384,8 +393,7 @@ export class LocatorRegistrationBuilder<
 	 * An empty string is a value Playwright matches and is stored as given.
 	 *
 	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
-	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
-	 * `null` clears them, and no argument keeps the seed as it is.
+	 * does.
 	 *
 	 * @param text The placeholder text: a string or a RegExp.
 	 * @param options Playwright's `getByPlaceholder` options: `exact`.
@@ -398,6 +406,8 @@ export class LocatorRegistrationBuilder<
 	 * ```ts
 	 * registry.add("main.input@search").getByPlaceholder("Search");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbyplaceholder
 	 */
 	getByPlaceholder(
 		text: Parameters<Page["getByPlaceholder"]>[0],
@@ -430,8 +440,7 @@ export class LocatorRegistrationBuilder<
 	 * text. An empty string is a value Playwright matches and is stored as given.
 	 *
 	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
-	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
-	 * `null` clears them, and no argument keeps the seed as it is.
+	 * does.
 	 *
 	 * @param text The alt text: a string or a RegExp.
 	 * @param options Playwright's `getByAltText` options: `exact`.
@@ -444,6 +453,8 @@ export class LocatorRegistrationBuilder<
 	 * ```ts
 	 * registry.add("header.image@logo").getByAltText("Shop logo");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbyalttext
 	 */
 	getByAltText(
 		text: Parameters<Page["getByAltText"]>[0],
@@ -476,8 +487,7 @@ export class LocatorRegistrationBuilder<
 	 * An empty string is a value Playwright matches and is stored as given.
 	 *
 	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
-	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
-	 * `null` clears them, and no argument keeps the seed as it is.
+	 * does.
 	 *
 	 * @param text The title text: a string or a RegExp.
 	 * @param options Playwright's `getByTitle` options: `exact`.
@@ -490,6 +500,8 @@ export class LocatorRegistrationBuilder<
 	 * ```ts
 	 * registry.add("main.icon@info").getByTitle("More information");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbytitle
 	 */
 	getByTitle(
 		text: Parameters<Page["getByTitle"]>[0],
@@ -522,8 +534,7 @@ export class LocatorRegistrationBuilder<
 	 * An empty selector is rejected: Playwright cannot parse it.
 	 *
 	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
-	 * patches: a given first argument replaces the seed's, the options merge key by key, a `null` key deletes one, a lone
-	 * `null` clears them, and no argument keeps the seed as it is.
+	 * does.
 	 *
 	 * @param selector A CSS or other Playwright selector.
 	 * @param options Playwright's `locator` options, such as `hasText` and `has`.
@@ -537,6 +548,8 @@ export class LocatorRegistrationBuilder<
 	 * ```ts
 	 * registry.add("main.list").locator("ul.orders");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#locator
 	 */
 	locator(
 		selector: Parameters<Page["locator"]>[0],
@@ -578,20 +591,20 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Registers a frame segment. With a selector, the segment is the `<iframe>` element, `locator(selector)` with any
-	 * steps, and the paths below it resolve inside the frame through `contentFrame()`; as the last segment of a path it
-	 * resolves to the element. Without a selector it is Playwright's any-frame `page.frameLocator()`: the paths below it
-	 * resolve in whichever single frame holds them, the main frame included. The any-frame form must be the first segment
-	 * of its chain, takes no steps, cannot be resolved on its own, and returns nothing to chain.
+	 * Registers a frame segment: with a selector, the `<iframe>` element, whose descendants resolve inside the frame;
+	 * without one, Playwright's any-frame `page.frameLocator()`, which must be the first segment of its chain and takes no
+	 * steps.
 	 *
 	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
-	 * patches: a given argument replaces the seed's, and no argument keeps the seed as it is.
+	 * does.
 	 *
 	 * @param selector The `<iframe>` element's selector; without it, the any-frame form.
 	 * @returns The registration, for `filter`, `nth` and `describe` steps; nothing for the any-frame form.
 	 * @throws When the selector is empty: `frameLocator requires a non-empty selector for "shell.frame".`
 	 * @throws After the registration has ended, at the next call on the registry:
 	 * `frameLocator() cannot apply to "shell.frame": its registration has ended; …`
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#framelocator
 	 *
 	 * @example
 	 * ```ts
@@ -630,7 +643,7 @@ export class LocatorRegistrationBuilder<
 	 * `testIdAttribute` names. An empty string is a value Playwright matches (`data-testid=""`) and is stored as given.
 	 *
 	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
-	 * patches: a given argument replaces the seed's, and no argument keeps the seed as it is.
+	 * does.
 	 *
 	 * @param testId The test id: a string or a RegExp.
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
@@ -642,6 +655,8 @@ export class LocatorRegistrationBuilder<
 	 * ```ts
 	 * registry.add("main.row@order").getByTestId("order-row");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbytestid
 	 */
 	getByTestId(
 		testId: Seeded extends true ? Parameters<Page["getByTestId"]>[0] | undefined : Parameters<Page["getByTestId"]>[0],
@@ -661,19 +676,19 @@ export class LocatorRegistrationBuilder<
 	}
 
 	/**
-	 * Registers a locator by the `id` attribute, which Playwright has no method for. A string matches the id exactly and
-	 * case-sensitively, as `[id="…"]`, so ids with `.`, `:`, `[`, spaces or quotes work as written; there is no `#` or
-	 * `id=` prefix. A RegExp is tested against each element's id with its flags; an unanchored pattern matches part of
-	 * the id, so anchor it with `^` and `$` to match all of it.
+	 * Registers a locator by the `id` attribute, which Playwright has no method for: a string as written, without a `#`, a
+	 * RegExp with its flags.
 	 *
 	 * When the path was added with a seed (`{ reuse: seed }`), this call is optional and patches the seed as `update()`
-	 * patches: a given argument replaces the seed's, and no argument keeps the seed as it is.
+	 * does.
 	 *
 	 * @param id The id as written, or a pattern.
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the id is empty or missing: `getById requires a non-empty id for "main.panel@settings".`
 	 * @throws After the registration has ended, at the next call on the registry:
 	 * `getById() cannot apply to "main.panel@settings": its registration has ended; …`
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbyid
 	 *
 	 * @example
 	 * ```ts

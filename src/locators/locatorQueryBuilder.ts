@@ -28,11 +28,9 @@ import {
 } from "./utils";
 
 /**
- * A query, what `getLocatorSchema(path)` returns: a private copy of the path's chain, every registered segment with
- * its locator, steps and description, to change for one use and then resolve. Its methods change this query and return
- * it, so they chain; nothing reaches the registry, and every `getLocatorSchema` call starts a new copy. A method that
- * takes a `subPath` works on that segment of the chain, the path itself or a registered ancestor; without one it works
- * on the path itself.
+ * A query, what `getLocatorSchema(path)` returns: a private copy of the path's chain to change for one use and then
+ * resolve. Its methods change this query and return it; the registry never changes. A method that takes a `subPath`
+ * works on that segment of the chain, the path itself or a registered ancestor; without one, on the path itself.
  *
  * @example
  * ```ts
@@ -89,10 +87,10 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Patches a segment's locator for this query and keeps its strategy. Returns an update builder whose method for the
-	 * registered strategy takes a patch in JSON Merge Patch form: a given value replaces, `null` deletes (`{ name: null
-	 * }` one option, a lone `null` every option), and an omitted value keeps what is registered. The segment's steps and
+	 * Patches a segment's locator for this query and keeps its strategy, in JSON Merge Patch form; its steps and
 	 * description stay.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorquerybuilder/#update
 	 *
 	 * @param subPath The segment: the query's path or one of its registered ancestors. Defaults to the query's path.
 	 * @returns An update builder whose methods return this query.
@@ -147,6 +145,8 @@ export class LocatorQueryBuilderInternal<
 	 * registry.getLocatorSchema("main.list.item").filter({ hasText: "#1042" }).getNestedLocator();
 	 * registry.getLocatorSchema("main.list.item").filter("main.list", { hasText: "Open" }).getNestedLocator();
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorquerybuilder/#filter
 	 */
 	filter(
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
@@ -194,6 +194,8 @@ export class LocatorQueryBuilderInternal<
 	 * ```ts
 	 * registry.getLocatorSchema("main.list.item").clearSteps().nth("last").getNestedLocator();
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorquerybuilder/#clearsteps
 	 */
 	clearSteps(): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
 	clearSteps<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
@@ -229,6 +231,8 @@ export class LocatorQueryBuilderInternal<
 	 * ```ts
 	 * registry.getLocatorSchema("main.list.item").nth(2).getNestedLocator();
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorquerybuilder/#nth
 	 */
 	nth(index: IndexSelector): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>;
 	nth<SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>>(
@@ -256,8 +260,7 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Sets the description of the locator this query resolves, replacing the registered one or the path; `""` removes it,
-	 * so the locator shows as its chain in the trace viewer and the HTML report.
+	 * Sets the description of the locator this query resolves; `""` removes it.
 	 *
 	 * @param description A string; `""` removes the description.
 	 * @returns This query.
@@ -268,6 +271,8 @@ export class LocatorQueryBuilderInternal<
 	 * ```ts
 	 * registry.getLocatorSchema("main.list.item").describe("First order").getNestedLocator();
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorquerybuilder/#describe
 	 */
 	describe(description: LocatorDescription): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring> {
 		assertDescription(description, { method: "describe", path: this.path });
@@ -285,9 +290,10 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Replaces a segment's locator for this query with one of any strategy. Returns an update builder whose ten methods
-	 * take the arguments of Playwright's own methods, the first argument required. The segment's steps and description
-	 * stay.
+	 * Replaces a segment's locator for this query with one of any strategy, with Playwright's arguments; its steps and
+	 * description stay.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorquerybuilder/#replace
 	 *
 	 * @param subPath The segment: the query's path or one of its registered ancestors. Defaults to the query's path.
 	 * @returns An update builder whose methods return this query.
@@ -342,8 +348,8 @@ export class LocatorQueryBuilderInternal<
 	}
 
 	/**
-	 * Leaves an ancestor out of the chain when this query resolves, as if it had no locator. Nothing is deleted: `unskip`
-	 * brings it back exactly as it was. Until then, `update`, `replace`, `filter`, `nth` and `clearSteps` on it throw.
+	 * Leaves an ancestor out of the chain when this query resolves; `unskip` brings it back as it was. Until then,
+	 * `update`, `replace`, `filter`, `nth` and `clearSteps` on it throw.
 	 *
 	 * @param subPath A registered ancestor of the query's path; the path itself cannot be skipped.
 	 * @returns This query.
@@ -355,6 +361,8 @@ export class LocatorQueryBuilderInternal<
 	 * ```ts
 	 * registry.getLocatorSchema("main.list.item").skip("main.list").getNestedLocator();
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorquerybuilder/#skip
 	 */
 	skip<SubPath extends SkippablePaths<LocatorSchemaPathType, LocatorSubstring>>(
 		subPath: SubPath,
@@ -384,6 +392,8 @@ export class LocatorQueryBuilderInternal<
 	 * ```ts
 	 * query.unskip("main.list").getNestedLocator();
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorquerybuilder/#unskip
 	 */
 	unskip<SubPath extends SkippablePaths<LocatorSchemaPathType, LocatorSubstring>>(
 		subPath: SubPath,
@@ -406,6 +416,8 @@ export class LocatorQueryBuilderInternal<
 	 * ```ts
 	 * const item = registry.getLocatorSchema("main.list.item").nth("last").getLocator();
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorquerybuilder/#getlocator
 	 */
 	getLocator(): Locator {
 		return this.registry.buildLocatorChain(
@@ -429,6 +441,8 @@ export class LocatorQueryBuilderInternal<
 	 * ```ts
 	 * await registry.getLocatorSchema("main.list.item").filter({ hasText: "Open" }).getNestedLocator().click();
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorquerybuilder/#getnestedlocator
 	 */
 	getNestedLocator(): Locator {
 		return this.registry.buildLocatorChain(

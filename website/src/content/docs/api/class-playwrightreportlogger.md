@@ -56,10 +56,9 @@ const log = new PlaywrightReportLogger({ current: "warn", initial: "warn" }, ent
 
 ### attachLogsToTest()
 
-Attaches the recorded entries to the test, one attachment per entry in call order, each body exactly as logged:
-`application/json` when the message is a JSON object or array, `text/plain` otherwise. Each name is the time, the
-date, the level and the logger's name. The `log` fixture calls it when the test ends; call it in a fixture of your
-own.
+Attaches the recorded entries to the test, one attachment per entry in call order, named with the time, the date, the
+level and the logger's name. The `log` fixture calls it when the test ends; call it in a fixture of your own. See
+[your own fixture](/POMWright/docs/logging/#your-own-fixture).
 
 **Usage**
 
@@ -221,10 +220,8 @@ log.setLogLevel("debug"); // from here on, everything for this test
 
 ### warn()
 
-Records a `warn` entry when the current level is `warn` or lower. The message and every further string are attached
-exactly as written; any other value as `console.log` prints it (Node's `util.inspect`); the parts are separated by a
-blank line. Data nested deeper than two levels prints as `[Object]`; pass `JSON.stringify(data, null, 2)` for all of
-it.
+Records a `warn` entry when the current level is `warn` or lower: strings as written, any other value as `console.log`
+prints it. See [what is attached](/POMWright/docs/logging/#what-is-attached).
 
 **Usage**
 

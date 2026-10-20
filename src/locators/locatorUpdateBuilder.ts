@@ -167,6 +167,8 @@ export class LocatorUpdateBuilderInternal<
 	 * query.update().getByRole({ name: "Cancel" });
 	 * query.update().getByRole("button", null); // clears every option
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbyrole
 	 */
 	getByRole(
 		...args: ArgsFor<
@@ -193,6 +195,8 @@ export class LocatorUpdateBuilderInternal<
 	 * ```ts
 	 * query.replace().getByText(/Updated/, { exact: false });
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbytext
 	 */
 	getByText(
 		...args: ArgsFor<
@@ -219,6 +223,8 @@ export class LocatorUpdateBuilderInternal<
 	 * ```ts
 	 * query.update().getByLabel({ exact: true });
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbylabel
 	 */
 	getByLabel(
 		...args: ArgsFor<
@@ -245,6 +251,8 @@ export class LocatorUpdateBuilderInternal<
 	 * ```ts
 	 * query.update().getByPlaceholder("Search orders");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbyplaceholder
 	 */
 	getByPlaceholder(
 		...args: ArgsFor<
@@ -271,6 +279,8 @@ export class LocatorUpdateBuilderInternal<
 	 * ```ts
 	 * query.replace().getByAltText("Shop logo");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbyalttext
 	 */
 	getByAltText(
 		...args: ArgsFor<
@@ -297,6 +307,8 @@ export class LocatorUpdateBuilderInternal<
 	 * ```ts
 	 * query.update().getByTitle({ exact: true });
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbytitle
 	 */
 	getByTitle(
 		...args: ArgsFor<
@@ -323,6 +335,8 @@ export class LocatorUpdateBuilderInternal<
 	 * ```ts
 	 * query.replace().locator("ul > li", { hasText: /Order/ });
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#locator
 	 */
 	locator(
 		...args: ArgsFor<
@@ -350,6 +364,8 @@ export class LocatorUpdateBuilderInternal<
 	 * ```ts
 	 * query.replace("shell.frame@payment").frameLocator("iframe#payment");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#framelocator
 	 */
 	frameLocator(...args: UpdateArgsWithoutOptions<Parameters<Page["locator"]>[0]>) {
 		return this.commitPrimary("frameLocator", args[0]);
@@ -369,6 +385,8 @@ export class LocatorUpdateBuilderInternal<
 	 * ```ts
 	 * query.replace().getByTestId("order-row");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbytestid
 	 */
 	getByTestId(
 		...args: ArgsFor<
@@ -394,6 +412,8 @@ export class LocatorUpdateBuilderInternal<
 	 * ```ts
 	 * query.replace().getById("order-1042");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbyid
 	 */
 	getById(...args: ArgsFor<Mode, [id: string | RegExp], UpdateArgsWithoutOptions<string | RegExp>>) {
 		return this.commitPrimary("id", args[0]);

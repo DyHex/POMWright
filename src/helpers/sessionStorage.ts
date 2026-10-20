@@ -29,6 +29,8 @@ export type Codec<T> = {
 	 *
 	 * @param raw The string as stored.
 	 * @returns The value.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#parse
 	 */
 	parse(raw: string): T;
 	/**
@@ -36,6 +38,8 @@ export type Codec<T> = {
 	 *
 	 * @param value The value given to `set` or `seed`.
 	 * @returns The string to store.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#stringify
 	 */
 	stringify(value: T): string;
 };
@@ -187,10 +191,8 @@ const isNoOriginError = (error: unknown): error is Error =>
 	error instanceof Error && /SecurityError|Access is denied|The operation is insecure/.test(error.message);
 
 /**
- * Playwright's `page.sessionStorage` with what a test suite adds: one call for several keys, a step in the report for
- * every call, at the line that made it, an origin check, per-key codecs, and `seed`, which stores entries before the
- * app's next load on an origin. Values are strings, stored and read exactly as given, unless the schema declares a
- * codec for the key. Every page object has one, `sessionStorage`.
+ * Playwright's `page.sessionStorage` with batches, report steps, an origin check, per-key codecs and `seed`. Values are
+ * strings unless the schema declares a codec for the key. Every page object has one, `sessionStorage`.
  *
  * @example
  * ```ts
@@ -218,6 +220,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * `get` and `clear` touch. Without it the helper works on whatever origin the page is on.
 	 * @param options.schema Codecs by key, for keys that hold structured values.
 	 * @throws When `origin` is not an origin: `Shop.SessionStorage.constructor: origin must be an origin such as …`
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#new-sessionstorage
 	 */
 	constructor(
 		private readonly page: Page,
@@ -296,6 +300,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * await storage.set("token", "abc");
 	 * await storage.set({ token: "abc", locale: "nb" });
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#set
 	 */
 	set<K extends string>(key: K, value: Decoded<S, K>): Promise<void>;
 	set<E extends Record<string, unknown>>(entries: EntriesFor<S, E>): Promise<void>;
@@ -324,6 +330,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * const token = await storage.get("token"); // "abc", or null
 	 * const entries = await storage.get(["token", "locale"]); // { token: "abc", locale: null }
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#get
 	 */
 	get(): Promise<AllEntries<S>>;
 	get<K extends string>(key: K): Promise<Decoded<S, K> | null>;
@@ -377,6 +385,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * await storage.clear("token");
 	 * await storage.clear(); // everything
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#clear
 	 */
 	clear(): Promise<void>;
 	clear(key: string): Promise<void>;
@@ -396,10 +406,10 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 
 	/**
 	 * Stores entries for an origin before the app's next load there, so the app's first script sees them, without
-	 * leaving the page the test is on. On the origin already, it writes at once. Elsewhere, an init script stores them
-	 * when the page's main frame first arrives at the origin, by any navigation (`goto`, a link, a script, a form POST, a
-	 * server redirect, a service worker's answer), and is removed once that document has run it. Navigations are never
-	 * intercepted. A seed that is still waiting when the page closes fails the test.
+	 * leaving the page the test is on; on the origin already, it writes at once. A seed that is still waiting when the
+	 * page closes fails the test.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#seed
 	 *
 	 * @param key The key.
 	 * @param value The value: a string, or the type of the key's codec.

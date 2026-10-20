@@ -4,13 +4,8 @@ description: "Playwright's page.sessionStorage with batches, report steps, an or
 ---
 
 `SessionStorage` is Playwright's [`page.sessionStorage`](https://playwright.dev/docs/api/class-page#page-session-storage)
-with what a test suite adds: one call for several keys, a step in the report for every call, at the line that made it
-(`Shop.SessionStorage.set:`), an origin check, per-key codecs, and [`seed`](#seed), which stores entries before the
-app's next load on an origin. Values are strings, stored and read exactly as given, unless the schema declares a
-[codec](#codec) for the key.
-
-Every page object has one, `sessionStorage`, labelled with the page object's label, belonging to the origin of its
-string `baseUrl`, and typed by its schema. You can also create one:
+with batches, report steps, an origin check, per-key [codecs](#codec) and [`seed`](#seed). Values are strings unless the
+schema declares a codec for the key. Every page object has one, `sessionStorage`; you can also create one:
 
 ```ts
 import type { Page } from "@playwright/test";
@@ -149,10 +144,8 @@ The codec's error is the `cause`.
 ### seed()
 
 Stores entries for an origin before the app's next load there, so the app's first script sees them, without leaving
-the page the test is on. On the origin already, it writes at once. Elsewhere, an init script stores them when the
-page's main frame first arrives at the origin, by `goto`, a link, a script, a form POST, a server redirect or a chain
-of them, before the app's first script runs, and is removed once that document has run it. The navigation is never
-intercepted. See [seeding session storage](/POMWright/docs/seeding-session-storage/).
+the page the test is on; on the origin already, it writes at once. See
+[how it works](/POMWright/docs/seeding-session-storage/#how-it-works).
 
 **Usage**
 
@@ -275,9 +268,8 @@ Turns the value into the string to store. It must return a string.
 
 ## json
 
-`json<T>()`: the JSON codec, `JSON.stringify` in and `JSON.parse` out. `T` types the key; the parsed value is not
-checked against it, exactly as `JSON.parse(…) as T`. For a string key that the app reads as JSON, `json<string>()`
-stores the quotes it expects.
+`json<T>()`: the JSON codec, `JSON.stringify` in and `JSON.parse` out. `T` types the key and is not checked against the
+parsed value. See [codecs for structured values](/POMWright/docs/session-storage/#codecs-for-structured-values).
 
 **Returns**
 

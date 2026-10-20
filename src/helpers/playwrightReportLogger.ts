@@ -59,6 +59,8 @@ export class PlaywrightReportLogger {
 	 * ```ts
 	 * const log = new PlaywrightReportLogger({ current: "warn", initial: "warn" }, [], "TestCase");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#new-playwrightreportlogger
 	 */
 	constructor(
 		private sharedLogLevel: { current: LogLevel; initial: LogLevel },
@@ -79,6 +81,8 @@ export class PlaywrightReportLogger {
 	 * ```ts
 	 * this.log = log.getNewChildLogger("CheckoutPage");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#getnewchildlogger
 	 */
 	getNewChildLogger(prefix: string): PlaywrightReportLogger {
 		return new PlaywrightReportLogger(this.sharedLogLevel, this.sharedLogEntry, `${this.contextName} -> ${prefix}`);
@@ -107,9 +111,10 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Records a `debug` entry when the current level is `debug` or lower. The message and every further string
-	 * are attached exactly as written; any other value as `console.log` prints it (Node's `util.inspect`), each part
-	 * separated by a blank line. For data nested deeper than two levels, pass `JSON.stringify(data, null, 2)`.
+	 * Records a `debug` entry when the current level is `debug` or lower. Strings are attached as written, any other
+	 * value as `console.log` prints it.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#debug
 	 *
 	 * @param message The message.
 	 * @param args Further values to attach after the message.
@@ -125,9 +130,10 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Records an `info` entry when the current level is `info` or lower. The message and every further string
-	 * are attached exactly as written; any other value as `console.log` prints it (Node's `util.inspect`), each part
-	 * separated by a blank line. For data nested deeper than two levels, pass `JSON.stringify(data, null, 2)`.
+	 * Records an `info` entry when the current level is `info` or lower. Strings are attached as written, any other
+	 * value as `console.log` prints it.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#info
 	 *
 	 * @param message The message.
 	 * @param args Further values to attach after the message.
@@ -143,9 +149,10 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Records a `warn` entry when the current level is `warn` or lower. The message and every further string
-	 * are attached exactly as written; any other value as `console.log` prints it (Node's `util.inspect`), each part
-	 * separated by a blank line. For data nested deeper than two levels, pass `JSON.stringify(data, null, 2)`.
+	 * Records a `warn` entry when the current level is `warn` or lower. Strings are attached as written, any other
+	 * value as `console.log` prints it.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#warn
 	 *
 	 * @param message The message.
 	 * @param args Further values to attach after the message.
@@ -161,9 +168,10 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Records an `error` entry when the current level is `error` or lower. The message and every further string
-	 * are attached exactly as written; any other value as `console.log` prints it (Node's `util.inspect`), each part
-	 * separated by a blank line. For data nested deeper than two levels, pass `JSON.stringify(data, null, 2)`.
+	 * Records an `error` entry when the current level is `error` or lower. Strings are attached as written, any other
+	 * value as `console.log` prints it.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#error
 	 *
 	 * @param message The message.
 	 * @param args Further values to attach after the message.
@@ -188,6 +196,8 @@ export class PlaywrightReportLogger {
 	 * ```ts
 	 * log.setLogLevel("debug"); // from here on, everything for this test
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#setloglevel
 	 */
 	setLogLevel(level: LogLevel) {
 		this.sharedLogLevel.current = level;
@@ -197,6 +207,8 @@ export class PlaywrightReportLogger {
 	 * Returns the level entries are recorded at.
 	 *
 	 * @returns The current level.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#getcurrentloglevel
 	 */
 	getCurrentLogLevel(): LogLevel {
 		return this.sharedLogLevel.current;
@@ -206,6 +218,8 @@ export class PlaywrightReportLogger {
 	 * Returns the current level's position in `["debug", "info", "warn", "error"]`, `0` for `debug`.
 	 *
 	 * @returns The index.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#getcurrentloglevelindex
 	 */
 	getCurrentLogLevelIndex(): number {
 		return this.logLevels.indexOf(this.sharedLogLevel.current);
@@ -214,6 +228,8 @@ export class PlaywrightReportLogger {
 	/**
 	 * Sets the level back to the one the test started with: `warn` on a first run of the `log` fixture, `debug` on a
 	 * retry.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#resetloglevel
 	 */
 	resetLogLevel() {
 		this.sharedLogLevel.current = this.sharedLogLevel.initial;
@@ -224,6 +240,8 @@ export class PlaywrightReportLogger {
 	 *
 	 * @param level The level to compare with.
 	 * @returns `true` when it is the current level.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#iscurrentloglevel
 	 */
 	isCurrentLogLevel(level: LogLevel): boolean {
 		return this.sharedLogLevel.current === level;
@@ -240,6 +258,8 @@ export class PlaywrightReportLogger {
 	 * ```ts
 	 * if (log.isLogLevelEnabled("debug")) log.debug("cart", await cart.textContent());
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#isloglevelenabled
 	 */
 	public isLogLevelEnabled(level: LogLevel): boolean {
 		const logLevelIndex = this.logLevels.indexOf(level);
@@ -265,6 +285,8 @@ export class PlaywrightReportLogger {
 	 * ```ts
 	 * log.attachLogsToTest(testInfo, { locale, timeZone: timezoneId });
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#attachlogstotest
 	 */
 	attachLogsToTest(testInfo: TestInfo, format?: { locale?: string; timeZone?: string }) {
 		// the entries are in call order already

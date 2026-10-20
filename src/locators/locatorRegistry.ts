@@ -94,8 +94,9 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	/**
 	 * Makes seeds: a locator strategy with its arguments, then `filter`, `nth` and `describe` steps, registered under
 	 * no path. `add(path, { reuse: seed })` registers a seed at a path. A seed is a value, as a Playwright `Locator` is:
-	 * its `filter`, `nth` and `describe` return a new seed and leave it as it was. To share a locator between locator
-	 * modules, reusing a registered path (`{ reuse: "common.button" }`) is usually simpler.
+	 * its `filter`, `nth` and `describe` return a new seed and leave it as it was.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#createreusable
 	 *
 	 * @example
 	 * ```ts
@@ -147,20 +148,11 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	}
 
 	/**
-	 * Registers a locator at a path. `add(path)` is followed by one of the ten locator methods, which take Playwright's
-	 * arguments (`getByRole`, `getByText`, `getByLabel`, `getByPlaceholder`, `getByAltText`, `getByTitle`, `locator`,
-	 * `frameLocator`, `getByTestId`, and `getById`, which Playwright lacks), and then any `filter`, `nth` and
-	 * `describe` steps, applied in the order chained. The path is registered by the locator method; one path has one
-	 * locator.
+	 * Registers a locator at a path: `add(path)`, one of the ten locator methods with Playwright's arguments, then any
+	 * `filter`, `nth` and `describe` steps. With `{ reuse }`, a copy of a registered path or a seed from `createReusable`
+	 * is registered at once. The registration ends at the next call on the registry; a later call of it throws.
 	 *
-	 * With `{ reuse: "other.path" }` the path is registered at once as a copy of that registered path (its locator, its
-	 * steps and an explicit description), and `filter`, `nth` and `describe` narrow the copy. With `{ reuse: seed }`, a
-	 * seed from `createReusable` is registered at once; one call of the seed's own locator method may patch it first,
-	 * as `update()` patches, then `filter`, `nth` and `describe`.
-	 *
-	 * The registration ends at the next call on the registry (`add`, `getLocator`, `getNestedLocator`,
-	 * `getLocatorSchema`, `verify`, or resolving a query): a registration kept in a variable takes its steps before
-	 * then, and a later call of it throws, so a registered locator never changes once anything else has happened.
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#add
 	 *
 	 * @param path The dot-delimited path: no empty segment and no whitespace, checked at compile time and at run time.
 	 * @param options `{ reuse }`: a registered path (not this one) or a seed from `createReusable`.
@@ -423,10 +415,10 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	}
 
 	/**
-	 * Starts a query of a path: a private copy of its chain (every registered segment with its locator, steps and
-	 * description) to change for one use with `filter`, `nth`, `clearSteps`, `describe`, `update`, `replace`, `skip`
-	 * and `unskip`, then resolve with `getNestedLocator()` or `getLocator()`. The registry never changes, and every call
-	 * starts a new copy.
+	 * Starts a query of a path: a private copy of its chain to change for one use and then resolve. The registry never
+	 * changes.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#getlocatorschema
 	 *
 	 * @param path A registered path.
 	 * @returns The query, a `LocatorQueryBuilder`.
@@ -452,11 +444,10 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	}
 
 	/**
-	 * Checks every registered path once, without touching the page, and reports every failure in one error: a `has` or
-	 * `hasNot` path that is not registered, a cycle of such references, an unsupported reference value, and a
-	 * `frameLocator()` without a selector that is not the first segment of its chain. With `strictChains`, every
-	 * ancestor of every path must be registered too. A page object calls it right after `defineLocators()`; a
-	 * standalone registry calls it after registering its locators.
+	 * Checks every registered path once, without touching the page, and reports every failure in one error. A page object
+	 * calls it after `defineLocators()`; a standalone registry calls it after registering its locators.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#verify
 	 *
 	 * @throws When a path fails, every failing path with its reason:
 	 * `Locator registry verification failed for 1 of 2 paths:` followed by
@@ -509,10 +500,10 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	}
 
 	/**
-	 * Resolves the locator registered for a path alone: its locator and its own steps, without its ancestors, described
-	 * by the path. For chains you build yourself, for filters (`filter({ has: registry.getLocator(path) })`) and for every
-	 * match on the page at once; act on one element with `getNestedLocator`, whose chain keeps finding the right element
-	 * when the page gains a similar one.
+	 * Resolves the locator registered for a path alone, with its own steps and without its ancestors, described by the
+	 * path: for chains you build yourself, filters and every match on the page at once.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#getlocator
 	 *
 	 * @param path A registered path.
 	 * @returns A Playwright `Locator`.
@@ -532,9 +523,10 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	}
 
 	/**
-	 * Resolves a path to the chain of its registered segments, first to last, each with its steps, described by the
-	 * path: the locator to act on and assert against. An unregistered segment is left out of the chain, and a
-	 * `frameLocator(selector)` segment enters its frame for the segments after it.
+	 * Resolves a path to the chain of its registered segments, each with its steps, described by the path: the locator to
+	 * act on and assert against.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#getnestedlocator
 	 *
 	 * @param path A registered path.
 	 * @returns A Playwright `Locator`.

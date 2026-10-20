@@ -223,6 +223,8 @@ export type ReusableLocator<
 	 * ```ts
 	 * registry.add("main.list.items@open", { reuse: row.filter({ hasText: "Open" }) });
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#filter
 	 */
 	filter(
 		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
@@ -237,6 +239,8 @@ export type ReusableLocator<
 	 * ```ts
 	 * registry.add("main.list.item@last", { reuse: row.nth("last") });
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#nth
 	 */
 	nth(index: IndexSelector): ReusableLocator<LocatorSchemaPathType, Type>;
 	/**
@@ -247,6 +251,8 @@ export type ReusableLocator<
 	 * @returns A new seed.
 	 * @throws When the description is not a string (from JavaScript):
 	 * `createReusable.describe requires a string; pass "" to remove the description.`
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#describe
 	 */
 	describe(description: LocatorDescription): ReusableLocator<LocatorSchemaPathType, Type>;
 };

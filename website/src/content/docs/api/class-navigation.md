@@ -27,9 +27,9 @@ Guide: [URLs and navigation](/POMWright/docs/urls-and-navigation/).
 
 ### expectAnotherPage()
 
-Waits until the browser has left this page: one [`page.waitForURL()`](https://playwright.dev/docs/api/class-page#page-wait-for-url)
-for any URL that does not match `fullUrl`, and the load state of the page it moved to. Then fails at once if the URL
-is back on this page, which catches a redirect that bounced back.
+Waits until the browser has left this page, with one
+[`page.waitForURL()`](https://playwright.dev/docs/api/class-page#page-wait-for-url), and fails if it came straight back.
+See [navigating](/POMWright/docs/urls-and-navigation/#navigating).
 
 **Usage**
 
@@ -58,9 +58,9 @@ OrdersPage: left "https://shop.example/orders" but returned to it; found "https:
 
 ### expectThisPage()
 
-Waits until the browser is on this page: one `page.waitForURL()` for a URL that matches `fullUrl`, and the load state.
-When the URL already matches, it returns once the load state is reached. Then runs the page object's
-[actions after navigation](/POMWright/api/class-pageobject/#pageactionstoperformafternavigation).
+Waits until the browser is on this page, with one `page.waitForURL()`, then runs the page object's
+[actions after navigation](/POMWright/api/class-pageobject/#pageactionstoperformafternavigation). See
+[navigating](/POMWright/docs/urls-and-navigation/#navigating).
 
 **Usage**
 
@@ -87,14 +87,14 @@ await loginPage.navigation.expectThisPage({ runPostNavigationActions: false, wai
 OrdersPage: expected URL "https://shop.example/orders"; found "https://shop.example/orders?tab=1" (page.waitForURL: Timeout 15000ms exceeded.)
 ```
 
-A page's identity is its exact URL: `/orders?tab=1` is not `/orders`. Playwright's error is the `cause`.
+Playwright's error is the `cause`.
 
 ### goto()
 
-Without a target, navigates to this page, `fullUrl`, with [`page.goto()`](https://playwright.dev/docs/api/class-page#page-goto),
-then runs the page object's actions after navigation. With a target, navigates there, resolving a relative target
-against `baseUrl` exactly as Playwright resolves one against
-[`baseURL`](https://playwright.dev/docs/api/class-testoptions#test-options-base-url), and never runs the actions.
+Navigates with [`page.goto()`](https://playwright.dev/docs/api/class-page#page-goto): without a target to `fullUrl`,
+then runs the actions after navigation; with a target to that URL, resolved against `baseUrl` as Playwright resolves
+one against [`baseURL`](https://playwright.dev/docs/api/class-testoptions#test-options-base-url), without the actions.
+See [navigating](/POMWright/docs/urls-and-navigation/#navigating).
 
 **Usage**
 
@@ -137,7 +137,8 @@ AccountPage: goto("/account") needs an absolute URL because baseUrl is a RegExp.
 ## NavigationOptions
 
 The options of every navigation method, and the type of a page object's `navOptions`. Each option comes from the call,
-then from `navOptions`, then from Playwright; POMWright sets no default of its own.
+then from `navOptions`, then from Playwright; see
+[options and timeouts](/POMWright/docs/urls-and-navigation/#options-and-timeouts).
 
 ### timeout
 
@@ -166,9 +167,8 @@ The options of `goto()` without a target and of `expectThisPage()`: `timeout` an
 
 ## UrlMatcher
 
-The `fullUrl` of a page object whose `baseUrl` or `urlPath` is a RegExp. It tests the two parts of a URL separately:
-the origin against the base, and the rest, path, query and hash, against the path, each as written, with its own
-flags; a string part must match exactly. It is a URL predicate, which
+The `fullUrl` of a page object whose `baseUrl` or `urlPath` is a RegExp: a URL predicate that tests the origin against
+the base and the rest of the URL against the path, which
 [`page.waitForURL()`](https://playwright.dev/docs/api/class-page#page-wait-for-url),
 [`toHaveURL()`](https://playwright.dev/docs/api/class-pageassertions#page-assertions-to-have-url) and
 [`page.route()`](https://playwright.dev/docs/api/class-page#page-route) take.

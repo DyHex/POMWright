@@ -3,11 +3,10 @@ title: ReusableLocator
 description: "A seed from createReusable: a locator with its steps and description, registered under no path; a value whose filter, nth and describe return new seeds."
 ---
 
-A seed is a locator with its arguments, its `filter` and `nth` steps and a description, registered under no path.
+A seed is a locator with its arguments, steps and description, registered under no path.
 [`registry.createReusable`](/POMWright/api/class-locatorregistry/#createreusable) makes one, and
 `add(path, { reuse: seed })` registers it at a path. A seed is a value, as a Playwright `Locator` is: `filter`, `nth`
-and `describe` return a new seed and leave the one they were called on as it was, so variants of one seed never share
-steps.
+and `describe` return a new seed.
 
 ```ts
 import type { LocatorRegistry } from "pomwright";
@@ -35,21 +34,9 @@ A function that returns a seed names its type, `ReusableLocator<Paths, Strategy>
 
 ## createReusable
 
-`registry.createReusable` has the ten locator methods of [the registration](/POMWright/api/class-registrationbuilder/),
-with the same arguments, each returning a seed:
-
-| method | seed of |
-| --- | --- |
-| `getByRole(role, options?)` | Playwright's [`getByRole()`](https://playwright.dev/docs/api/class-page#page-get-by-role) |
-| `getByText(text, options?)` | [`getByText()`](https://playwright.dev/docs/api/class-page#page-get-by-text) |
-| `getByLabel(text, options?)` | [`getByLabel()`](https://playwright.dev/docs/api/class-page#page-get-by-label) |
-| `getByPlaceholder(text, options?)` | [`getByPlaceholder()`](https://playwright.dev/docs/api/class-page#page-get-by-placeholder) |
-| `getByAltText(text, options?)` | [`getByAltText()`](https://playwright.dev/docs/api/class-page#page-get-by-alt-text) |
-| `getByTitle(text, options?)` | [`getByTitle()`](https://playwright.dev/docs/api/class-page#page-get-by-title) |
-| `locator(selector, options?)` | [`locator()`](https://playwright.dev/docs/api/class-page#page-locator) |
-| `frameLocator(selector)` | a frame segment; the selector is required, since the any-frame form takes no steps |
-| `getByTestId(testId)` | [`getByTestId()`](https://playwright.dev/docs/api/class-page#page-get-by-test-id) |
-| `getById(id)` | an `id` locator, as [`getById()`](/POMWright/api/class-registrationbuilder/#getbyid) |
+`registry.createReusable` has the ten [locator methods](/POMWright/api/class-registrationbuilder/#locator-methods) of
+the registration, with the same arguments, each returning a seed. `frameLocator(selector)` requires its selector, since
+the any-frame form takes no steps.
 
 Each throws at the call when its first argument is missing (from JavaScript), or is an empty string where Playwright
 cannot use one:
@@ -60,7 +47,7 @@ createReusable.locator requires a non-empty selector.
 createReusable.getById requires a non-empty id.
 ```
 
-A path registered from a seed may patch the seed's own locator once, before its steps; see
+A path registered from a seed may patch the seed's own locator once; see
 [after `{ reuse }`](/POMWright/api/class-registrationbuilder/#a-seed).
 
 ---
@@ -69,8 +56,8 @@ A path registered from a seed may patch the seed's own locator once, before its 
 
 ### describe()
 
-Returns a new seed with a description; this seed is unchanged. A path registered from it shows the description
-instead of the path, in the trace viewer and the HTML report.
+Returns a new seed with a description; this seed is unchanged. A path registered from it is described by it instead of
+the path; see [descriptions](/POMWright/docs/descriptions/).
 
 **Usage**
 

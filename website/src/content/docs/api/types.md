@@ -11,10 +11,9 @@ imported from `pomwright` with `import type`. Guide: [TypeScript](/POMWright/doc
 ## PageObjectTypeOptions
 
 The second type argument of [`PageObject`](/POMWright/api/class-pageobject/), types only: whether `baseUrl` and
-`urlPath` are RegExps, and the session storage schema. With two string parts, `fullUrl` is a string and every
-navigation method exists. With a RegExp in either part, `fullUrl` is a
-[`UrlMatcher`](/POMWright/api/class-navigation/#urlmatcher), `goto()` without a target does not exist, and on a RegExp
-`baseUrl` `goto(target)` takes an absolute URL only.
+`urlPath` are RegExps, and the session storage schema. See
+[pages whose URL varies](/POMWright/docs/urls-and-navigation/#pages-whose-url-varies) and
+[the URL types](/POMWright/docs/typescript/#the-url-types).
 
 ```ts
 import type { Page } from "@playwright/test";
@@ -126,7 +125,7 @@ The codecs of the session storage keys that hold structured values, typed by `Op
 
 `FilterDefinition<Paths>`: the argument of `filter`, Playwright's
 [`locator.filter()`](https://playwright.dev/docs/api/class-locator#locator-filter) options, where `has` and `hasNot`
-also take a registered path. See [filters and indices](/POMWright/docs/filters-and-indices/).
+also take a registered path. See [filters](/POMWright/docs/filters-and-indices/#filters-filter).
 
 ```ts
 import type { FilterDefinition } from "pomwright";
@@ -141,7 +140,7 @@ export const withBadge: FilterDefinition<Paths> = { has: "list.items.badge" };
 `Locator | Paths` *(optional)*
 
 Keeps the elements that contain this one. A registered path resolves to that path's own locator, without its
-ancestors, because Playwright looks for it inside each element being filtered. A path that is not registered, and a
+ancestors; see [filters](/POMWright/docs/filters-and-indices/#filters-filter). A path that is not registered, and a
 cycle of such paths, fail [`verify()`](/POMWright/api/class-locatorregistry/#verify).
 
 ### hasNot
@@ -186,13 +185,13 @@ Argument of type 'string' is not assignable to parameter of type 'LocatorSchemaP
 ```
 
 A wide `string` is not checked by the type; the same rules are checked at run time for every path. See
-[paths and the registry](/POMWright/docs/locator-paths/).
+[the rules of a path](/POMWright/docs/locator-paths/#the-rules-of-a-path).
 
 ## LocatorSchemaPathArgument
 
 `LocatorSchemaPathArgument<Path>`: the type of the path parameter of `add` and the resolving methods, the path itself
-when it is well formed. A helper in a base class that is generic in its paths takes its path with it, so a misspelt
-path is a compile error where the helper is called; a parameter typed with the plain union does not compile there.
+when it is well formed. A helper in a base class that is generic in its paths takes its path with it; see
+[paths in a generic base class](/POMWright/docs/typescript/#paths-in-a-generic-base-class).
 
 ```ts
 import { type LocatorSchemaPathArgument, PageObject } from "pomwright";

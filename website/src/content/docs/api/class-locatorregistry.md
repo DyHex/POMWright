@@ -39,9 +39,9 @@ Guides: [paths and the registry](/POMWright/docs/locator-paths/),
 
 ### add()
 
-Registers a locator at a path. `add(path)` is followed by one of the ten locator methods, which take Playwright's
-arguments, and then by any `filter`, `nth` and `describe` steps, applied in the order chained. The locator method
-registers the path; a path has one locator. See [the registration](/POMWright/api/class-registrationbuilder/).
+Registers a locator at a path: `add(path)`, one of the ten locator methods, then any `filter`, `nth` and `describe`
+steps. See [the registration](/POMWright/api/class-registrationbuilder/) and
+[registering locators](/POMWright/docs/registering-locators/).
 
 **Usage**
 
@@ -54,8 +54,8 @@ declare const registry: LocatorRegistry<Paths | "main.list.item@open">;
 registry.add("main.list.item@open").getByRole("listitem").filter({ hasText: "Open" }).nth(0);
 ```
 
-With `{ reuse }`, the path is registered at once, as a copy of a registered path or from a seed of
-[`createReusable`](#createreusable):
+With `{ reuse }`, a copy of a registered path or a seed is registered at once; see
+[reusing locators](/POMWright/docs/reusing-locators/):
 
 ```ts
 import type { LocatorRegistry } from "pomwright";
@@ -70,15 +70,14 @@ registry.add("main.list.item@last", { reuse: "main.list.items" }).nth("last");
 
 - `path` string
 
-  A path of the registry's union. No empty segment and no whitespace, checked where it is written and again at run
-  time.
+  A path of the registry's union, following [the rules of a path](/POMWright/docs/locator-paths/#the-rules-of-a-path).
 
 - `options` Object *(optional)*
   - `reuse` string | [ReusableLocator](/POMWright/api/class-reusablelocator/)
 
-    A registered path other than `path`, copied with its locator, its steps and an explicit description; or a seed.
-    After a path, `filter`, `nth` and `describe` narrow the copy. After a seed, one call of the seed's own locator
-    method may patch it first, as [`update()`](/POMWright/api/class-locatorquerybuilder/#update) patches.
+    A registered path other than `path`, or a seed from [`createReusable`](#createreusable). See
+    [reuse by path](/POMWright/docs/reusing-locators/#reuse-by-path) and
+    [changing a seed's options](/POMWright/docs/reusing-locators/#changing-a-seeds-options).
 
 **Returns**
 
@@ -106,10 +105,9 @@ reuse requires a registered path or a seed from createReusable for "main.list.it
 
 ### getLocator()
 
-Resolves the locator registered for a path alone: its locator and its own steps, without its ancestors, described by
-the path. Use it for chains you build yourself, for filters and for every match on the page at once; act on one element
-with [`getNestedLocator()`](#getnestedlocator), whose chain keeps finding the right element when the page gains a
-similar one. See [resolving locators](/POMWright/docs/resolving-locators/#a-locator-without-its-ancestors-getlocator).
+Resolves the locator registered for a path alone, with its own steps and without its ancestors, described by the path:
+for chains you build yourself, filters and every match on the page at once. See
+[a locator without its ancestors](/POMWright/docs/resolving-locators/#a-locator-without-its-ancestors-getlocator).
 
 **Usage**
 
@@ -143,9 +141,8 @@ No locator schema registered for path "main.list.items".
 
 ### getLocatorSchema()
 
-Starts a query of a path: a private copy of its chain, every registered segment with its locator, steps and
-description, to change for one use and then resolve. The registry never changes, and every call starts a new copy.
-See [`LocatorQueryBuilder`](/POMWright/api/class-locatorquerybuilder/).
+Starts a query of a path: a private copy of its chain to change for one use and then resolve. See
+[`LocatorQueryBuilder`](/POMWright/api/class-locatorquerybuilder/) and [queries](/POMWright/docs/queries/).
 
 **Usage**
 
@@ -177,9 +174,9 @@ No locator schema registered for path "main.list.items".
 
 ### getNestedLocator()
 
-Resolves a path to the chain of its registered segments, first to last, each with its steps, described by the path:
-the locator to act on and assert against. A segment that is not registered is left out of the chain, and a
-`frameLocator(selector)` segment enters its frame for the segments after it.
+Resolves a path to the chain of its registered segments, each with its steps, described by the path: the locator to
+act on and assert against. See
+[chaining every segment](/POMWright/docs/resolving-locators/#chaining-every-segment-getnestedlocator).
 
 **Usage**
 
@@ -213,12 +210,9 @@ A segment that cannot be resolved throws as `verify()` reports it, for example a
 
 ### verify()
 
-Checks every registered path once, without touching the page, and reports every failure in one error: a `has` or
-`hasNot` path that is not registered, a cycle of such references, an unsupported reference value, and a
-`frameLocator()` without a selector that is not the first segment of its chain. With
-[`strictChains`](#strictchains), every ancestor of every path must be registered too. A page object calls it right
-after `defineLocators()`; a standalone registry calls it once its locators are registered. See
-[verifying a registry](/POMWright/docs/verifying-registries/).
+Checks every registered path once, without touching the page, and reports every failure in one error. A page object
+calls it after `defineLocators()`; a standalone registry calls it once its locators are registered. See
+[what it finds](/POMWright/docs/verifying-registries/#what-it-finds).
 
 **Usage**
 
@@ -253,10 +247,9 @@ Locator registry verification failed for 1 of 2 paths:
 
 ### createReusable
 
-Makes seeds: a locator with its arguments, then `filter`, `nth` and `describe` steps, registered under no path.
-`add(path, { reuse: seed })` registers a seed. A seed is a value, as a Playwright `Locator` is: its methods return a
-new seed. To share a locator between [locator modules](/POMWright/docs/locator-modules/), reusing a registered path
-is usually simpler. See [`ReusableLocator`](/POMWright/api/class-reusablelocator/).
+Makes seeds: locators registered under no path until `add(path, { reuse: seed })` registers one. See
+[`ReusableLocator`](/POMWright/api/class-reusablelocator/) and
+[seeds](/POMWright/docs/reusing-locators/#seeds-createreusable).
 
 **Usage**
 
@@ -278,8 +271,8 @@ registry.add("main.heading@orders", { reuse: heading.filter({ hasText: "Orders" 
 ## createRegistryWithAccessors
 
 `createRegistryWithAccessors<Paths>(page, options?)` creates a registry on a page, without a page object, and returns
-it with its `add`, `getLocator`, `getNestedLocator` and `getLocatorSchema` as functions of their own. Pass the path
-union as the type argument, and call `registry.verify()` once the locators are registered.
+it with its `add`, `getLocator`, `getNestedLocator` and `getLocatorSchema` as functions of their own. Call
+`registry.verify()` once the locators are registered. See [the registry](/POMWright/docs/locator-paths/#the-registry).
 
 **Usage**
 
@@ -325,9 +318,8 @@ The options of a registry: the second argument of `createRegistryWithAccessors`,
 
 `boolean` *(optional)*
 
-`true` makes [`verify()`](#verify) require every ancestor of every registered path to be registered too, naming each
-one that is not. Defaults to `false`, where an unregistered segment is a name that groups paths and is left out of the
-chain.
+`true` makes [`verify()`](#verify) require every ancestor of every registered path to be registered too. Defaults to
+`false`. See [strictChains](/POMWright/docs/verifying-registries/#strictchains-every-ancestor-registered).
 
 ```text
 "main.form.button.save": strictChains requires every ancestor to be registered; "main.form" and "main.form.button" are not.

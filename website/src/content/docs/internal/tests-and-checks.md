@@ -28,7 +28,8 @@ specs that use page objects or import `pomwright` test the packed package.
 3. `scripts/check-doc-snippets.mjs`: every TypeScript example of the documentation, compiled against the installed
    package (see [documentation](/POMWright/internal/documentation/)).
 4. `scripts/check-api-coverage.mjs`: every export of the installed declarations has an API page or section, every
-   member a heading on it, and every export and member a doc comment with a summary and its parameters.
+   member a heading on it, every export and member a doc comment with a summary and its parameters, every method and
+   class property a `@see` to its heading, and every link to the site a page and heading that exist.
 
 ## CI
 

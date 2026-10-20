@@ -67,8 +67,8 @@ export class Checkout {
 
 ## Returns
 
-- A method decorator. The method must return a Promise, as an `async` method does: `test.step` always returns one and
-  runs its body later, so a method that returned a plain value would hand its caller a Promise. TypeScript rejects it:
+- A method decorator, for a method that returns a Promise, as an `async` method does. TypeScript rejects any other (see
+  [only methods that return a Promise](/POMWright/docs/test-steps/#only-methods-that-return-a-promise)):
 
 ```text
 @step decorates methods that return a Promise: make the method async

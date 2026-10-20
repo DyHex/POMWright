@@ -15,6 +15,9 @@ changes, and the segment keeps its steps and description.
 - **`replace`** installs a locator of any strategy, with the arguments of Playwright's own method: the first argument
   required, Playwright's options.
 
+See [patching a definition](/POMWright/docs/queries/#patching-a-definition-update) and
+[a new definition](/POMWright/docs/queries/#a-new-definition-replace).
+
 The examples on this page use this registry, and print each chain without its description:
 
 ```ts title="checkout.locators.ts"
@@ -237,8 +240,7 @@ registry.getLocatorSchema("main.button@pay").replace().getByRole("link", { name:
 
 - `options` Object *(optional)*
 
-  Playwright's options, such as `name`, `exact` and `level`. In `update` mode a patch: `{ exact: null }` deletes one
-  option, a lone `null` deletes them all, and with only options (`getByRole({ name: "Pay now" })`) the role stays.
+  Playwright's options, such as `name`, `exact` and `level`; in `update` mode a patch, where `null` deletes.
 
 ### getByTestId()
 

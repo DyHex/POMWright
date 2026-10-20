@@ -349,7 +349,7 @@ Rules:
   changing the branch-protection rule with it (every pull request would be blocked for non-admins).
 - Write a chain, description or message into the docs without reading it from a probe, or change one in the code
   without updating the pages that show it (section 9).
-- Add an export or a public member without its doc comment and its heading on an API page (section 9).
+- Add an export or a public member without its doc comment, its `@see` and its heading on an API page (section 9).
 - Add the site's dependencies to the root `package.json`, or build the site in a harness job.
 - Merge to `main` with the pre-release banner, the `noindex` meta, or `pages.yaml` triggered by the 3.0.0 branch
   (section 9, C8).
@@ -365,7 +365,10 @@ Rules:
 - The doc comments in `src/` are the API reference in the editor, written from the same facts as the API pages: every
   export and every public or protected member has a summary, `@param` for each parameter (nested options as
   `@param options.label`), `@returns` where the type does not say it, `@throws` with the real message, an `@example`,
-  and on an export `@see` with its API page. An overload without a comment shows its method's first one, so the first
+  and a `@see` with its API page: on an export the page, on every method, every property of a class and every
+  constructor its own heading (`https://dyhex.github.io/POMWright/api/class-sessionstorage/#set`), the methods of what
+  `add(path)` and `createReusable` return included; a field of an option or data type needs none. The API entry, not
+  the hover, links the Docs section. An overload without a comment shows its method's first one, so the first
   overload carries the full comment; a type a chain hovers (the view after a locator method, `NavigationFor`) carries
   comments on its own members. A decorator at the start of a comment line is read as a JSDoc tag, so `@step`'s comment
   has no example block.
@@ -397,8 +400,10 @@ Rules:
 - `scripts/check-api-coverage.mjs` reads the installed declarations (`.pack/pomwright/dist/index.d.ts`, the extracted
   tarball in CI; a path argument overrides it) and fails on an export without an API page (its `title`) or a `## Name`
   section, a public or protected member without a `### member` heading on that page, or an export, member or
-  constructor without a summary or a `@param` for each parameter. A union, a conditional type or a tuple has no members
-  to check. A Mermaid diagram renders in the browser, so the build does not catch its syntax: render the page and look
+  constructor without a summary or a `@param` for each parameter, an export, method, class property or constructor
+  without a `@see` (the methods of what `add(path)` and `createReusable` return too), and a
+  `https://dyhex.github.io/POMWright/` URL in the declarations whose page or heading does not exist in
+  `website/src/content/docs`. A union, a conditional type or a tuple has no members to check. A Mermaid diagram renders in the browser, so the build does not catch its syntax: render the page and look
   (a semicolon in a sequence message, or parentheses in an unquoted edge label, break it).
 - Deployment: `pages.yaml` builds `website/` exactly as the `site` job does and deploys `website/dist` to GitHub Pages
   (the `github-pages` environment; Pages' source is "GitHub Actions").

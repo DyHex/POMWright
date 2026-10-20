@@ -15,9 +15,8 @@ import {
 
 /**
  * The second type argument of `PageObject`, types only: whether `baseUrl` and `urlPath` are RegExps, and the session
- * storage schema. With two string parts, `fullUrl` is a string and every navigation method exists. With a RegExp in
- * either part, `fullUrl` is a `UrlMatcher`, `goto()` without a target does not exist, and on a RegExp `baseUrl`
- * `goto(target)` takes an absolute URL only.
+ * storage schema. A RegExp in either part makes `fullUrl` a `UrlMatcher`
+ * (https://dyhex.github.io/POMWright/docs/urls-and-navigation/#pages-whose-url-varies).
  *
  * @example
  * ```ts
@@ -115,7 +114,8 @@ export type PageObjectOptions<Options extends PageObjectTypeOptions = { baseUrlT
  * has finished, or at the first locator call if that comes earlier. A mistake fails there, labelled with the page
  * object's name.
  *
- * @typeParam LocatorSchemaPathType - `Paths`: the union of the page object's locator paths.
+ * @typeParam LocatorSchemaPathType - `Paths`: the union of the page object's locator paths, checked against the path
+ * rules at compile time and at runtime (https://dyhex.github.io/POMWright/docs/locator-paths/#the-rules-of-a-path).
  * @typeParam Options - `PageObjectTypeOptions`: whether `baseUrl` and `urlPath` are RegExps, and the session storage
  * schema. Types only.
  *
@@ -141,11 +141,23 @@ export abstract class PageObject<
 	LocatorSchemaPathType extends string,
 	Options extends PageObjectTypeOptions = { baseUrlType: string; urlPathType: string },
 > {
-	/** The Playwright page the page object was constructed with. */
+	/**
+	 * The Playwright page the page object was constructed with.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#page
+	 */
 	readonly page: Page;
-	/** The `baseUrl` the page object was constructed with: an origin string, or a RegExp tested against the origin. */
+	/**
+	 * The `baseUrl` the page object was constructed with: an origin string, or a RegExp tested against the origin.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#baseurl
+	 */
 	readonly baseUrl: BaseUrlTypeFromOptions<Options>;
-	/** The `urlPath` the page object was constructed with: `""`, a path string, or a RegExp tested against the rest. */
+	/**
+	 * The `urlPath` the page object was constructed with: `""`, a path string, or a RegExp tested against the rest.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#urlpath
+	 */
 	readonly urlPath: UrlPathTypeFromOptions<Options>;
 	/**
 	 * The page object's URL. For a string `baseUrl` and `urlPath` it is `new URL(urlPath, baseUrl).href`, the form the
@@ -156,24 +168,36 @@ export abstract class PageObject<
 	 * ```ts
 	 * await expect(page).toHaveURL(loginPage.fullUrl);
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#fullurl
 	 */
 	readonly fullUrl: FullUrlTypeFromOptions<Options>;
-	/** The name in the page object's step titles and error messages: the `label` option, or the class name. */
+	/**
+	 * The name in the page object's step titles and error messages: the `label` option, or the class name.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#label
+	 */
 	readonly label: string;
 	/**
 	 * The session storage helper, labelled with `label` and typed by the `sessionStorage.schema` option. With a string
 	 * `baseUrl` it touches only that origin's storage, and `seed()` needs no origin.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#sessionstorage
 	 */
 	readonly sessionStorage: SessionStorage<StorageTypeFromOptions<Options>>;
 	/**
 	 * The navigation helper: `goto()` to this page, `goto(target)` to a URL resolved against `baseUrl`,
 	 * `expectThisPage()` and `expectAnotherPage()`. `goto()` without a target exists only when `fullUrl` is a string.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#navigation
 	 */
 	public readonly navigation: NavigationFor<BaseUrlTypeFromOptions<Options>, FullUrlTypeFromOptions<Options>>;
 	/**
 	 * The page object's registry, for code that takes one, such as a locator module:
 	 * `defineLocators(this.locatorRegistry)`. Every method except `createReusable` runs `defineLocators()` first if it
 	 * has not run yet.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#locatorregistry
 	 */
 	protected readonly locatorRegistry: LocatorRegistry<LocatorSchemaPathType>;
 	/**
@@ -184,16 +208,22 @@ export abstract class PageObject<
 	 * ```ts
 	 * this.add("main.button@login").getByRole("button", { name: "Log in" });
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#add
 	 */
 	public readonly add: AddAccessor<LocatorSchemaPathType>;
 	/**
 	 * Resolves the locator registered for a path alone, with its own steps and without its ancestors: for chains you
 	 * build yourself, for filters and for every match on the page at once. Act on one element with `getNestedLocator`.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#getlocator
 	 */
 	public readonly getLocator: GetLocatorAccessor<LocatorSchemaPathType>;
 	/**
 	 * Starts a query of a path: a private copy of its chain to change for one use (`filter`, `nth`, `update`, `replace`,
 	 * `skip`, …) and then resolve. The registry never changes.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#getlocatorschema
 	 */
 	public readonly getLocatorSchema: GetLocatorSchemaAccessor<LocatorSchemaPathType>;
 	/**
@@ -204,6 +234,8 @@ export abstract class PageObject<
 	 * ```ts
 	 * await this.getNestedLocator("main.button@login").click();
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#getnestedlocator
 	 */
 	public readonly getNestedLocator: GetNestedLocatorAccessor<LocatorSchemaPathType>;
 	// ECMAScript-private, so that no name is reserved in subclasses
@@ -226,6 +258,8 @@ export abstract class PageObject<
 	 * to be registered.
 	 * @throws When a URL part is not what it must be, for example
 	 * `LoginPage: urlPath must be "" or start with exactly one "/"; received "login".`
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#new-pageobject
 	 */
 	protected constructor(
 		page: Page,
@@ -331,13 +365,12 @@ export abstract class PageObject<
 	}
 
 	/**
-	 * Registers the page object's locators with `this.add(path)`. Every page object implements it.
+	 * Registers the page object's locators with `this.add(path)`. Every page object implements it. Runs once, right after
+	 * the constructor, so it can use the subclass's constructor arguments and fields; the registry is verified after it,
+	 * and an error in either is labelled with the page object (`LoginPage: defineLocators() failed: …`) and thrown again
+	 * by every later locator call.
 	 *
-	 * Runs once: right after the code that called `new` has finished, or at the first locator call if that comes
-	 * earlier, so it can use the subclass's constructor arguments, fields and constructor assignments. Every registered
-	 * path is checked right after it. An error in either is thrown again by every later locator call, labelled
-	 * (`LoginPage: defineLocators() failed: …`, `LoginPage: Locator registry verification failed for 1 of 2 paths: …`)
-	 * with the original as `cause` and the line that constructed the page object in its stack.
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#definelocators
 	 *
 	 * @example
 	 * ```ts
@@ -367,6 +400,8 @@ export abstract class PageObject<
 	 *   ];
 	 * }
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#pageactionstoperformafternavigation
 	 */
 	protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {
 		return [];
