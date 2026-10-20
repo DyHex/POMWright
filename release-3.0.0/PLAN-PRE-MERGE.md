@@ -5,7 +5,8 @@ Working document, kept in `release-3.0.0/` beside the plans it closes. It turns 
 forgotten while other work comes first. File links are relative to this folder.
 
 Written 2026-10-19, revised 2026-10-20: nothing in `release-3.0.0/` is kept, so the folder is deleted instead of moved
-to the vault, after an audit (section 3) moved what was recorded only there into the repository. **Awaiting review.**
+to the vault, after an audit (section 3) moved what was recorded only there into the repository. **Agreed 2026-10-20**, every
+decision as recommended; not executed.
 Runs last: after the improvements to the documentation site, which are made one at a time as the user names them,
 without a plan; after every fix that the 3.0.0 test on one 2.1.0 consumer project brings up, each through a plan of its
 own numbered before this one in [PLANS.md](PLANS.md); and only when the user says the branch is ready for `main`.
@@ -36,7 +37,7 @@ All of these hold before step 1 starts:
    their own plans; this plan adds nothing to the library.
 3. Section 3's audit is repeated for whatever was added to `release-3.0.0/` after 2026-10-20 (a plan of the consumer
    test, a decision row): anything a later reader needs is moved to the code, its tests, the doc comments, the site,
-   the changesets or AGENTS.md before step 5 deletes the folder.
+   the changesets or AGENTS.md before step 5 deletes the folder's other files.
 4. The user says the branch is ready for `main`.
 5. Draft PR #46 is green on its last push, and the working tree is clean apart from this plan's own changes.
 
@@ -141,14 +142,15 @@ webkit (a pull request runs chromium only; firefox and webkit would otherwise fi
 tarball in a scratchpad project (the file list, Node 20 and 24 with one shared copy, the four TypeScript resolution
 modes, attw, the runner in CommonJS and ESM projects, the Node 18 warning). A fix found here is a commit of this step.
 
-### Step 5. `release-3.0.0/` is deleted
+### Step 5. `release-3.0.0/` is deleted, all but this plan
 
 1. Repeat the audit of precondition 3 one last time over the folder as it stands.
-2. `git rm -r release-3.0.0`, and delete the two empty untracked handover folders with it (decision 8.3). Nothing is
-   copied anywhere; git history keeps every file.
+2. `git rm -r` every tracked file of `release-3.0.0/` except this plan, `PLAN-PRE-MERGE.md`, and delete the two empty
+   untracked handover folders (decision 8.3). Nothing is copied anywhere; git history keeps every file.
+3. This plan stays: the user deletes it, and with it the folder, before the merge (decision 8.5).
 
 No ledger is updated before the deletion: PLANS.md, DECISIONS.md and the release notes go with the folder, and this
-plan's execution is recorded in its commits.
+plan's execution is recorded in its commits and, for each step, in a line of section 10 below.
 
 ### Step 6. AGENTS.md without the folder
 
@@ -169,7 +171,8 @@ Rewrite every reference of section 4's table so that each rule still holds on it
   plan has carried out.
 
 A final `grep` for `release-3.0.0`, `PLAN-`, `DECISIONS`, `RELEASE-NOTES`, `C8`, `plan <n>`, `analysis <n>` and review
-ids such as `R7` over the repository, `docs/` and `CHANGELOG.md` excluded (frozen), finds nothing.
+ids such as `R7` over the repository, `docs/` and `CHANGELOG.md` excluded (frozen) and this plan excluded (the user
+deletes it), finds nothing.
 
 ### Step 7. Memory and hand-over
 
@@ -178,16 +181,17 @@ closed and `release-3.0.0/` is gone, kept nowhere; the notes that point at the v
 
 ## 6. After the steps: the merge and the release (yours)
 
-1. Push the branch on your word; PR #46 out of draft once it is green.
-2. Merge PR #46. `CI` runs on `main` with all three browsers; when it succeeds, `pages.yaml` deploys the site from that
+1. Delete `release-3.0.0/PLAN-PRE-MERGE.md`, and with it the folder, yourself (8.5), and commit that.
+2. Push the branch on your word; PR #46 out of draft once it is green.
+3. Merge PR #46. `CI` runs on `main` with all three browsers; when it succeeds, `pages.yaml` deploys the site from that
    commit and `publish.yaml` opens the *Version Packages* pull request.
-3. Check the site: no banner, no `noindex`, the edit links reach `main`. The assistant can check it on request, as in
+4. Check the site: no banner, no `noindex`, the edit links reach `main`. The assistant can check it on request, as in
    plan 13's step C3.
-4. Merge *Version Packages*: Publish releases 3.0.0 to npm with provenance; the changelog entry starts with
+5. Merge *Version Packages*: Publish releases 3.0.0 to npm with provenance; the changelog entry starts with
    `documentation-site-and-upgrade-guide`. Until then the site documents a version npm does not serve yet, which the
    merge order keeps to the time between the two merges.
-5. Remove the 3.0.0 branch from the `github-pages` environment's deployment branches.
-6. Then the work of AGENTS.md section 7's *After 3.0.0*, starting with the release tooling on the first patch release.
+6. Remove the 3.0.0 branch from the `github-pages` environment's deployment branches.
+7. Then the work of AGENTS.md section 7's *After 3.0.0*, starting with the release tooling on the first patch release.
 
 ## 7. Versioning
 
@@ -195,21 +199,27 @@ No changeset: nothing a consumer installs changes. The banner and `noindex` were
 
 ## 8. Decisions
 
-- [ ] 8.1 **Section 6 after 3.0.0.** (a) **Recommended:** keep the workflow for future work, in general terms: a
+- [x] 8.1 **Section 6 after 3.0.0.** (a) **Recommended:** keep the workflow for future work, in general terms: a
   `release-<version>/` working folder while a release is planned, plan first and one item at a time, a decisions log
   and release notes in that folder while it exists, an audit like section 3 and the folder deleted before the merge.
   (b) Drop section 6; keep only "commits only when asked" and "verified claims only" in section 5. (c) Something else
-  you describe.
-- [ ] 8.2 **Where a new dev dependency is recorded.** (a) **Recommended:** in the plan or the commit that adds it, with
+  you describe. Agreed 2026-10-20: (a).
+- [x] 8.2 **Where a new dev dependency is recorded.** (a) **Recommended:** in the plan or the commit that adds it, with
   its reason, and in the working folder's decisions log while one exists. (b) In a `DEPENDENCIES.md` of its own at the
-  root.
-- [ ] 8.3 **The untracked handover folders.** (a) **Recommended:** deleted with the folder in step 5; both are empty.
-  (b) You remove them yourself before step 5.
-- [ ] 8.4 **Firefox and webkit before the merge.** (a) **Recommended:** step 4 runs all three locally, as above. (b)
-  Rely on `CI` after the merge, which blocks Publish, not the merge.
+  root. Agreed 2026-10-20: (a).
+- [x] 8.3 **The untracked handover folders.** (a) **Recommended:** deleted with the folder in step 5; both are empty.
+  (b) You remove them yourself before step 5. Agreed 2026-10-20: (a).
+- [x] 8.4 **Firefox and webkit before the merge.** (a) **Recommended:** step 4 runs all three locally, as above. (b)
+  Rely on `CI` after the merge, which blocks Publish, not the merge. Agreed 2026-10-20: (a).
+- [x] 8.5 **This plan's own file.** The assistant does not delete `PLAN-PRE-MERGE.md`; step 5 leaves it, and the user
+  deletes it, and the then-empty `release-3.0.0/`, before the merge. The user's instruction, 2026-10-20.
 
 ## 9. Execution order
 
 One commit per step that changes the repository (1 to 6), the message style of `git log`, the body ending with
-"Plan: release-3.0.0/PLAN-PRE-MERGE.md, execution step N." and the `Co-Authored-By` trailer; steps 5 and 6 name the
-plan as it was, since the file is gone by then. Step 7 has no commit. Nothing is pushed without your word.
+"Plan: release-3.0.0/PLAN-PRE-MERGE.md, execution step N." and the `Co-Authored-By` trailer. Step 7 has no commit.
+Nothing is pushed without your word. The file is never deleted by the assistant (8.5).
+
+## 10. Execution note
+
+Empty until the plan runs: one line per step, with its commit.

@@ -435,9 +435,21 @@ charset, the proxy's spec, error page and HTTPS rows, the URL fragment and WebKi
 | 2026-10-19 | The unit tests were shown failing against the code before step 1 (11 tests), the harness spec against the package before it (its three ending tests); the stay-open tests pass on both. | The plan's red-then-green steps. |
 | 2026-10-19 | Step 5 found nothing to fix: lint clean, 688 unit tests with no type errors, `pnpm pack-test` 1403 passed and 1 skipped (the download on WebKit) on chromium, firefox and webkit with both type checks, the snippet check (193) and the coverage check (0 problems), the site build with every link valid. | Recorded so the ledger shows the step ran. |
 
+## The last plan: before the merge ([PLAN-PRE-MERGE.md](PLAN-PRE-MERGE.md))
+
+Agreed 2026-10-20, every decision as recommended; executed when the user says the branch is ready for `main`.
+
+| Date | Decision | Why |
+| --- | --- | --- |
+| 2026-10-20 | AGENTS.md section 6 becomes the workflow for future work, in general terms: a `release-<version>/` working folder while a release is planned, plan first and one item at a time, a decisions log and release notes in that folder while it exists, an audit like the plan's section 3, and the folder deleted before the merge. Rejected: dropping section 6. (8.1) | The way of working outlives 3.0.0; its 3.0.0 specifics go with the folder. |
+| 2026-10-20 | A new dev dependency is recorded in the plan or the commit that adds it, with its reason, and in the working folder's decisions log while one exists. Rejected: a `DEPENDENCIES.md` at the root. (8.2) | No standing file to keep current between releases; the reason travels with the change. |
+| 2026-10-20 | The empty untracked `handover-plan-10/` and `handover-plan-11/` are deleted with the folder in step 5. (8.3) | Both are empty. |
+| 2026-10-20 | Step 4 runs the harness on chromium, firefox and webkit locally before the merge. Rejected: relying on `CI` after the merge. (8.4) | A pull request runs chromium only; a firefox- or webkit-only failure would otherwise first show on `main` and block Publish. |
+| 2026-10-20 | Step 5 deletes every file of `release-3.0.0/` except `PLAN-PRE-MERGE.md`; the assistant never deletes that plan, and the user deletes it, with the then-empty folder, before the merge. (8.5) | The user's instruction. |
+
 ## Open questions
 
-None as of 2026-10-19. The one question raised for plan 1.3-1.4 (enforcement of type-level tests) was decided the
+None as of 2026-10-20. The one question raised for plan 1.3-1.4 (enforcement of type-level tests) was decided the
 same day and is in the plan's table above; every question raised in the plan 1.5 review was decided on 2026-10-09
 and 2026-10-10; every question raised in the plan 1.6-1.8 review (frames, the empty-string rule, `update`
 semantics, verification, the floor) was decided on 2026-10-12; every question raised in the plan 1.7 review (when the
@@ -452,4 +464,4 @@ the triage left to the plan after the recommended one was disproved, was decided
 plans 11 to 13 (the split, the API reference, deployment, diagrams, hovers, the pre-release banner, the changesets) was
 decided on 2026-10-16. Every question raised in the review of plan 15 (several seeds, recorded failures, header
 assertions, the remaining window, the changesets, AGENTS.md, `SeedPage`) was decided on 2026-10-19. Every decision of
-plan 16 was taken as recommended on 2026-10-19.
+plan 16 was taken as recommended on 2026-10-19, and every decision of the last plan on 2026-10-20.

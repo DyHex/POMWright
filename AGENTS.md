@@ -268,7 +268,8 @@ Everything for the release lives in [release-3.0.0/](release-3.0.0/). The folder
 What a consumer needs is in the changesets (the changelog entry), the code, its tests, the doc comments and the site;
 the reasons behind the design are on the site's Internal pages, and what remains to do after 3.0.0 is in section 7.
 Plans 11 to 13 (`PLAN-5-DOCS.md`) redo the documentation as a Starlight site in `website/`, and the last plan,
-`PLAN-PRE-MERGE.md` (plan 13's step C8), deletes the folder from the repository before the merge.
+`PLAN-PRE-MERGE.md` (plan 13's step C8), deletes the folder's other files before the merge; the user deletes that plan
+last.
 
 | File | Role |
 | --- | --- |
@@ -465,6 +466,7 @@ Rules:
      `astro.config.mjs`) and the `noindex` `head` entry; build the site and confirm neither is on any page.
   3. Re-read `internal/documentation.md` and `tests-and-checks.md` against the switched workflow.
   4. Run the full verification and the packaging probes of section 7 on chromium, firefox and webkit.
-  5. Delete `release-3.0.0/` from the repository, keeping nothing, and rewrite this file without it: section 6, the
-     repository map's row, and every rule that cites a plan, the analysis or `DECISIONS.md`.
+  5. Delete `release-3.0.0/` from the repository, keeping nothing, except `PLAN-PRE-MERGE.md`, which the user deletes
+     before the merge (never the assistant); rewrite this file without the folder: section 6, the repository map's row,
+     and every rule that cites a plan, the analysis or `DECISIONS.md`.
   6. The user then removes the branch from the `github-pages` environment's deployment branches.
