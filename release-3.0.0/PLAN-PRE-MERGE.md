@@ -254,3 +254,14 @@ last push (a909cbb, every check); nothing added to the folder since the audit.
 - Step 5: the audit repeated over the folder as it stood found nothing new (the only additions since the audit were
   this plan's own decisions; 8.1 and 8.2 go into AGENTS.md in step 6); the folder's 29 other tracked files removed
   with `git rm -r`, this plan kept (8.5), the two empty untracked handover folders deleted (8.3).
+- Step 6: AGENTS.md rewritten without the folder: the revision line; section 1's release line; the repository map
+  without the folder's row, the banner and C8 (the `website/` and workflows rows); section 3's probe standard; section
+  5 without "(plan 16)" and with the contract-change and dev-dependency rules of 8.2; section 6 as *Release work*, the
+  workflow for future releases (8.1), with the audit and the deletion as its rule 7 and a pointer to the 3.0.0 folder
+  in git history (`git show 08bdcac^:release-3.0.0/DECISIONS.md`); section 7's `pages.yaml` bullet as it runs; the
+  do-nots without the release-notes citation and the analysis rule, and one on the released site's deployment in
+  place of the pre-merge one; section 9 without the plan citation and the pre-merge checklist, its deployment bullet
+  naming the trigger. The final `grep` over the repository (`docs/`, `CHANGELOG.md` and this plan excluded) finds
+  nothing but, in AGENTS.md, the history pointer and the generic `PLAN-<items>-<slug>.md` and `DECISIONS.md` names of
+  the future workflow, which section 6 describes on purpose. `pnpm lint` clean; `pnpm docs:build` passes.
+- Step 7: the memory notes updated; no commit. What is left is yours: section 6.

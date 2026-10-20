@@ -1,8 +1,8 @@
 # AGENTS.md
 
 Persistent context and working rules for AI agents and humans contributing to POMWright. Read it fully before
-changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-19, after plan 15 (`seed` on
-`addInitScript`) was executed; plan 13's pre-merge step C8, now its own plan, is pending.
+changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-20, when the 3.0.0
+release work was finished and its working folder removed before the merge.
 
 ## 1. What POMWright is
 
@@ -26,7 +26,8 @@ changing anything. Repo-specific facts here override generic defaults. Last revi
   types, `PlaywrightReportLogger` with `LogEntry` and `LogLevel`, `step`, `NavigationFor`, `NavigationOptions`,
   `ThisPageOptions` and `UrlMatcher`. Everything else under `src/` is internal even when it carries an `export`
   keyword, so renaming or deleting it is not by itself a breaking change.
-- Published version: 2.1.0. The next release is 3.0.0, a major. Section 6 describes how that work is organised.
+- Published version: 2.1.0. The next release is 3.0.0, a major, whose changes are the pending changesets (section 7).
+  Section 6 describes how release work is organised.
 
 ## 2. Repository map
 
@@ -38,12 +39,11 @@ changing anything. Repo-specific facts here override generic defaults. Last revi
 | `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts` (`SessionStorage`: `page.sessionStorage` with batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `seed`), `sessionStorageSeed.ts` (the seed registry, one per page: an init script per pending origin that writes only in the main frame, on the origin, on the first arrival, disposed at the main frame's commit there; the Navigation API check, the commit-during-registration check, the refused-write and never-applied failures), `callSite.ts` (`captureCallSite(boundary)` and `atCallSite`: a later error pointed at the consumer's call, for `seed` and the page-object check), `playwrightReportLogger.ts` (messages kept as given, other arguments as `console.log` prints them, one attachment per entry in call order, names in Playwright's `locale` and `timezoneId`), `stepDecorator.ts` (`@step`, for methods that return a Promise). | yes |
 | `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject` (constructor options `label`, `navOptions`, `sessionStorage`, `locators: { strictChains }`): `defineLocators()` and `verify()` run once, right after construction (a check scheduled with `queueMicrotask`) or at the first locator call, through a facade on `locatorRegistry`; labelled, sticky errors with the construction site; the optional actions hook, evaluated per run. The `test` fixture that provides `log`. | yes |
 | `test/` | Standalone pnpm project that installs the packed package from `.pack/pomwright` and runs Playwright against it. Section 4. | yes |
-| `website/` | The documentation site's content (section 9): `src/content/docs/docs/`, the Docs section (24 pages: Getting started, Principles, one page per concept, *Upgrading from 2.x*); `src/content/docs/api/`, the API reference (14 pages, one per class or group, `errors` and the index); `src/content/docs/internal/`, how POMWright works (13 pages, `performance` among them); `snippets/`, the docs' example app (`login.page.ts`, `account.page.ts`, `orders.page.ts`, `checkout.page.ts`, `fixtures.ts`) that every page's examples import. Around them the Starlight site, a pnpm project of its own (`package.json`, `pnpm-lock.yaml`, exact versions): `astro.config.mjs` (base `/POMWright`, the link check, Mermaid, the pre-release banner and `noindex` until C8), `sidebar.mjs` (the three sections), `plugins/expressive-code-cut.mjs` (hides an example's `// ---cut---` prelude), `src/components/` (`SiteTitle.astro`, the sections as tabs; `Banner.astro`, pre-release), `src/styles/custom.css`, `src/content/docs/index.mdx` (the home page). | yes |
+| `website/` | The documentation site's content (section 9): `src/content/docs/docs/`, the Docs section (24 pages: Getting started, Principles, one page per concept, *Upgrading from 2.x*); `src/content/docs/api/`, the API reference (14 pages, one per class or group, `errors` and the index); `src/content/docs/internal/`, how POMWright works (13 pages, `performance` among them); `snippets/`, the docs' example app (`login.page.ts`, `account.page.ts`, `orders.page.ts`, `checkout.page.ts`, `fixtures.ts`) that every page's examples import. Around them the Starlight site, a pnpm project of its own (`package.json`, `pnpm-lock.yaml`, exact versions): `astro.config.mjs` (base `/POMWright`, the link check, Mermaid, the edit links to `main`), `sidebar.mjs` (the three sections), `plugins/expressive-code-cut.mjs` (hides an example's `// ---cut---` prelude), `src/components/SiteTitle.astro` (the sections as tabs), `src/styles/custom.css`, `src/content/docs/index.mdx` (the home page). | yes |
 | `docs/v2/` | Frozen 2.x reference. | no |
 | `docs/v1/`, `docs/v1-to-v2-migration/` | Archived. | no |
-| `release-3.0.0/` | Working folder for the 3.0.0 release: analysis, numbered plans, release notes, decisions log. Section 6. | yes |
 | `.changeset/` | Changesets config. `CHANGELOG.md` is generated from changesets at release time. | config only |
-| `.github/workflows/` | `checks.yaml` (reusable): `changes`, `lint` (always), `package` (unit tests, build and pack once, the tarball as a run artifact) and `harness` (the browsers the caller passes, each at the Playwright pin and at the latest 1.x, each testing that tarball), and with the `node-floor` input, which `pr.yaml` and `main.yaml` set, `harness-node-floor` (chromium at the pin on Node 20, the `engines` floor); every third-party action is pinned to a commit with its version in a comment, kept current by `.github/dependabot.yml` (monthly, grouped), which also proposes the npm versions of the root, `test/` and `website/`, never `@playwright/test`; `changes` (`scripts/ci-changes.sh`) compares with the last green commit of the branch (the newest commit whose run of the same workflow succeeded) and, on a pull request, with its base, never with the previous push alone (which would let a docs-only push turn a red run green), and outputs `code` (a change outside `website/` that is not `*.md`) and `site` (`code` or a change under `website/`); `package` runs on either, `harness` on `code`, and `site` on `site`: the tarball installed into `test/`, the snippet and coverage checks, the site's frozen install and build on Node 24. `pr.yaml` (`PR`) runs it for every pull request, draft or not, with the harness on chromium only; `main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit; both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs the changesets action after `CI` succeeds on a push to `main`, guarded by its job condition, and publishes with npm provenance (`id-token: write`, `NPM_CONFIG_PROVENANCE`). `pages.yaml` builds `website/` and deploys it to GitHub Pages (`https://dyhex.github.io/POMWright/`): until C8 on every push to the 3.0.0 branch, from C8 after `CI` succeeds on a push to `main`; both by `workflow_dispatch` too. | yes |
+| `.github/workflows/` | `checks.yaml` (reusable): `changes`, `lint` (always), `package` (unit tests, build and pack once, the tarball as a run artifact) and `harness` (the browsers the caller passes, each at the Playwright pin and at the latest 1.x, each testing that tarball), and with the `node-floor` input, which `pr.yaml` and `main.yaml` set, `harness-node-floor` (chromium at the pin on Node 20, the `engines` floor); every third-party action is pinned to a commit with its version in a comment, kept current by `.github/dependabot.yml` (monthly, grouped), which also proposes the npm versions of the root, `test/` and `website/`, never `@playwright/test`; `changes` (`scripts/ci-changes.sh`) compares with the last green commit of the branch (the newest commit whose run of the same workflow succeeded) and, on a pull request, with its base, never with the previous push alone (which would let a docs-only push turn a red run green), and outputs `code` (a change outside `website/` that is not `*.md`) and `site` (`code` or a change under `website/`); `package` runs on either, `harness` on `code`, and `site` on `site`: the tarball installed into `test/`, the snippet and coverage checks, the site's frozen install and build on Node 24. `pr.yaml` (`PR`) runs it for every pull request, draft or not, with the harness on chromium only; `main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit; both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs the changesets action after `CI` succeeds on a push to `main`, guarded by its job condition, and publishes with npm provenance (`id-token: write`, `NPM_CONFIG_PROVENANCE`). `pages.yaml` builds `website/` and deploys it to GitHub Pages (`https://dyhex.github.io/POMWright/`) after `CI` succeeds on a push to `main`, guarded as `publish.yaml` is and building the commit that run tested, or by `workflow_dispatch`. | yes |
 | `pack-build.sh`, `pack-extract.sh`, `pack-test.sh`, `playwright.base.ts` | Build and pack the tarball and extract it into `.pack/pomwright`; the extraction; run the harness (section 3); shared Playwright config. | yes |
 | `scripts/` | `write-esm-entry.mjs` (part of `pnpm build`), `check-doc-snippets.mjs` (compiles the docs' TypeScript examples) and `check-api-coverage.mjs` (the API reference and the doc comments against the installed declarations), both part of `pnpm typecheck` (section 9), `benchmark.mjs` (`pnpm bench`, the tables of *Internal → Performance*), `ci-last-green.sh`, `ci-changes.sh` and `ci-playwright-version.sh` (the decisions of `checks.yaml`; `ci-last-green.sh` reads the runs API through `gh`, the other two run locally as they are). | yes |
 | `vitest.config.ts` | Unit-test discovery limited to `src/**/*.test.ts`, node environment, so Playwright specs are never picked up; typecheck mode on, so `expectTypeOf` and `// @ts-expect-error` assertions are enforced, in `src/**/*.test.ts` and in the type-only `src/**/*.test-d.ts`. | yes |
@@ -103,8 +103,8 @@ changing anything. Repo-specific facts here override generic defaults. Last revi
   (one version for `tsc`; it rewrites both manifests and lockfiles, so restore them after a local try);
   `PLAYWRIGHT_INSTALL_ARGS` (CI passes `--with-deps <browser>`).
 - Verify runtime claims empirically before writing them into a plan or doc. `@playwright/test` 1.64.0 is installed
-  under `test/node_modules`; a short Node script that launches chromium from there is the standard probe. Every
-  claim in the analysis was verified that way. Keep that standard. Four pitfalls: the helper methods are wrapped in
+  under `test/node_modules`; a short Node script that launches chromium from there is the standard probe, and every
+  runtime claim in a plan, a page or a doc comment is checked that way. Four pitfalls: the helper methods are wrapped in
   `test.step` and cannot be driven outside the Playwright runner, so runner behaviour (listener errors, `test.info()`
   in teardown) is probed with a temporary spec in `test/tests/` that is deleted after the run; a script that imports
   `dist/index.mjs` must load chromium from the root package (`createRequire` of `./package.json`), otherwise
@@ -179,8 +179,8 @@ changing anything. Repo-specific facts here override generic defaults. Last revi
   the definition it re-registers from, and every read (`getLocator`, `getNestedLocator`, `getLocatorSchema`, `verify`,
   `has` paths) works on a clone of the record; each `getLocatorSchema` call is a new, independent clone. A
   registration ends at the next call on its registry (`add`, `getLocator`, `getNestedLocator`, `getLocatorSchema`,
-  `verify`, a resolution): the registry ends the open one, and every method of an ended registration throws first
-  (plan 16), so a registration kept in a variable cannot change its path once anything else has happened.
+  `verify`, a resolution): the registry ends the open one, and every method of an ended registration throws first,
+  so a registration kept in a variable cannot change its path once anything else has happened.
 - `skip(subPath)` is a flag on the query: it leaves an ancestor out of the chain and deletes nothing, and
   `unskip(subPath)` restores it exactly as it was. The terminal path cannot be skipped (types and runtime);
   `update`, `replace`, `filter`, `nth` and `clearSteps` on a skipped segment throw, as do a second `skip` and a
@@ -258,49 +258,45 @@ changing anything. Repo-specific facts here override generic defaults. Last revi
   `expectAnotherPage` are one `page.waitForURL` each. POMWright sets no timeout or `waitUntil` default of its own.
 - Descriptive path names in docs and tests. No anonymous segments.
 - `// biome-ignore` only with a one-line justification. No `try/catch` around imports.
-- Prefer behaviour-preserving refactors. A contract change (anything a documented 2.x behaviour relies on) goes
-  through a plan and the decisions log, never in silently.
-- No new runtime dependencies. A new dev dependency needs a line in `release-3.0.0/DECISIONS.md`.
+- Prefer behaviour-preserving refactors. A contract change (anything documented behaviour relies on) goes through a
+  plan (section 6), never in silently.
+- No new runtime dependencies. A new dev dependency is recorded, with its reason, in the plan or the commit that adds
+  it, and in the working folder's decisions log while one exists (section 6).
 
-## 6. The 3.0.0 workflow
+## 6. Release work
 
-Everything for the release lives in [release-3.0.0/](release-3.0.0/). The folder is temporary: nothing in it is kept.
-What a consumer needs is in the changesets (the changelog entry), the code, its tests, the doc comments and the site;
-the reasons behind the design are on the site's Internal pages, and what remains to do after 3.0.0 is in section 7.
-Plans 11 to 13 (`PLAN-5-DOCS.md`) redo the documentation as a Starlight site in `website/`, and the last plan,
-`PLAN-PRE-MERGE.md` (plan 13's step C8), deletes the folder's other files before the merge; the user deletes that plan
-last.
+How a release is planned and carried out. 3.0.0 was prepared this way; its working folder was removed before the
+merge, and git history keeps it (`git show 08bdcac^:release-3.0.0/DECISIONS.md`, and the analysis, plans and release
+notes beside it), for the rare question that the code, the tests, the site and this file do not answer.
 
-| File | Role |
-| --- | --- |
-| `POMWRIGHT-2.1.0-ANALYSIS.md` | Source-verified findings numbered 1.1 to 1.10, 2, 3.1 to 3.8, 4, 5. Each has `Fix / Skip / Discuss` boxes and a `Notes:` block. Section 6 is the working order. |
-| `PLAN-<items>-<slug>.md` | One plan per analysis item or tightly coupled pair, numbered after the items it covers. `PLAN-1.1-1.2-GETBYID.md` (executed 2026-10-06), `PLAN-1.3-1.4-URL-NAVIGATION.md` (executed 2026-10-08), `PLAN-1.5-SESSION-STORAGE.md` (executed 2026-10-10), `PLAN-1.6-1.8-REGISTRATION-AND-FRAMES.md` (executed 2026-10-13), `PLAN-1.7-PAGEOBJECT-LIFECYCLE.md` (executed 2026-10-13), `PLAN-4-PACKAGING-TOOLING-CI.md` (executed 2026-10-14), `PLAN-1.9-TYPES-AND-EXPORTS.md` (executed 2026-10-14), `PLAN-1.10-2-SMALL-FIXES.md` (executed 2026-10-15), `PLAN-3-STRUCTURE.md` (executed 2026-10-16), `PLAN-10-QUALITY-REVIEW.md` (plan 10, the quality review, executed 2026-10-16) and `PLAN-5-DOCS.md` Parts A, B and C (plan 11, the Docs section, executed 2026-10-16; plan 12, the doc comments, the API and Internal sections, and plan 13, the site, CI, deployment and the README, executed 2026-10-17), `PLAN-14-DEPENDENCIES.md` (executed 2026-10-19) and `PLAN-15-SEED-INIT-SCRIPT.md` (`seed` on `addInitScript`, executed 2026-10-19) are done, one commit per execution step each. What remains is plan 13's pre-merge step C8 (section 9), now `PLAN-PRE-MERGE.md`, run when the user says the branch is ready for `main`. |
-| `PLANS.md` | The ordered list of remaining plans with the analysis items each covers and its status. Updated when a plan is written, split, or executed. |
-| `RELEASE-NOTES-3.0.0.md` | Consumer-facing notes. Only what is done or committed to by a plan in this folder, each item with a status marker. Never a copy of the analysis. |
-| `DECISIONS.md` | Current decisions across all plans, big and small, with date and reason. A reversed decision is replaced, not kept; git history has the rest. Open questions at the bottom. |
+While a release is planned, its working documents live in a `release-<version>/` folder at the root: the findings it
+works from when there are any (an analysis, a review), one plan per item or tightly coupled pair
+(`PLAN-<items>-<slug>.md`), `PLANS.md` (the ordered plans and their status), `DECISIONS.md` (the decisions in force,
+each with date and reason; a reversed one is replaced, and open questions are at the bottom) and the release notes
+(consumer-facing, only what is done or committed to by a plan, each item marked *planned* or *done*). The folder is
+temporary.
 
 Rules:
 
-1. **Plan first, one item at a time.** Before touching code for an analysis item, write the plan file and stop for
-   review. Execute only after explicit confirmation, and only the ticked decisions. The existing plan shows the
-   expected shape: intended contract, verified current behaviour with line references, options with a
-   recommendation, implementation steps, tests, docs, changeset, versioning, decisions checklist, execution order.
-2. **Verified claims only.** Every runtime or type claim in a plan is backed by a probe or a test run and cites the
-   exact file and line.
-3. **Keep the three ledgers current.** When a plan is agreed: add its decisions to `DECISIONS.md` and its
-   consumer-facing items to `RELEASE-NOTES-3.0.0.md` as *planned*. When it is executed: tick `Fix` or `Skip` with
-   notes in the analysis, flip the release-note items to *done*, and append any execution-time decisions.
-4. **Docs are written in `website/src/content/docs/`** (section 9). `docs/v2` is frozen. README and CHANGELOG keep
-   linking to v2 until plan 13 rewrites the README.
-5. **Links inside `release-3.0.0/` are relative to that folder**, for example `../src/locators/utils.ts#L64`, so
-   they stay clickable in VS Code.
-6. **3.0.0 is one major.** Breaking changes from any plan ride it; there are no intermediate 2.x releases from this
-   work. Each consumer-facing change still gets its own changeset (`major` for breaking, `minor` or `patch`
-   otherwise); changesets collapse them into the single 3.0.0 entry.
-7. **The docs site is plans 11 to 13.** A Starlight site on GitHub Pages in `website/`, set up last (plan 13), with
-   the README rewritten after it. While it is deployed from this branch it carries a pre-release banner and `noindex`;
-   C8 removes both and switches the deploy trigger to `main` before the merge. Replaces the 2026-10-06 rule that the
-   site was release work outside every plan.
+1. **Plan first, one item at a time.** Before touching code for an item, write the plan file and stop for review.
+   Execute only after explicit confirmation, and only the ticked decisions. A plan has the intended contract, the
+   verified current behaviour with file and line references, options with a recommendation, implementation steps,
+   tests, docs, changeset, versioning, a decisions checklist and the execution order.
+2. **Verified claims only.** Every runtime or type claim in a plan is backed by a probe or a test run (section 3) and
+   cites the exact file and line.
+3. **Keep the ledgers current.** When a plan is agreed: add its decisions to the decisions log and its consumer-facing
+   items to the release notes as *planned*. When it is executed: flip them to *done* and append any execution-time
+   decisions.
+4. **Docs are written in `website/src/content/docs/`** (section 9). `docs/v2` is frozen.
+5. **Links inside the working folder are relative to it**, for example `../src/locators/utils.ts#L64`, so they stay
+   clickable in VS Code.
+6. **Breaking changes ride one major.** There are no intermediate releases of a major's work. Each consumer-facing
+   change still gets its own changeset (`major` for breaking, `minor` or `patch` otherwise), which the release
+   collapses into one changelog entry; the changesets, not the release notes, are what consumers read.
+7. **Nothing of the folder is kept.** Before the merge, an audit reads every file of the folder and moves what a later
+   reader needs into the code, its tests, the doc comments, the site (the reasons behind a design on the Internal
+   pages), the changesets or this file (work left for later into section 7); no reference to the folder, a plan, a
+   finding or a decision number stays outside it. Then the folder is deleted.
 8. **Commits only when asked.** Never commit on your own. When the user asks for one commit per execution step,
    commit exactly those steps, name the plan and step in the message, and leave everything else uncommitted.
 
@@ -315,9 +311,10 @@ Rules:
   `PR`, which Publish does not listen to. CI runs only for pull requests (drafts included) and `main`. The gate job
   `build` of `pr.yaml` and `main.yaml` is `main`'s required status check. The published package is rebuilt by
   `pnpm run release`, not taken from the CI artifact (see *After 3.0.0* below).
-- `pages.yaml` deploys the documentation site. From C8 it runs after `CI` succeeds on a push to `main`, guarded as
-  `publish.yaml` is, so every merge updates the site once its checks have passed; since nothing reaches `main` before it
-  is ready to release, the site is ahead of npm only until the Version Packages pull request is merged.
+- `pages.yaml` deploys the documentation site after `CI` succeeds on a push to `main`, guarded as `publish.yaml` is,
+  from the commit that run tested, so every merge updates the site once its checks have passed; since nothing reaches
+  `main` before it is ready to release, the site is ahead of npm only until the Version Packages pull request is
+  merged.
 - Pending 3.0.0 changesets so far: `.changeset/documentation-site-and-upgrade-guide.md` (`major`, the first item of the
   3.0.0 entry: changesets orders each bump type by file name), `.changeset/getbyid-verbatim-ids-and-regex.md`,
   `.changeset/url-composition-and-navigation.md`, `.changeset/session-storage-on-webstorage.md`,
@@ -356,7 +353,7 @@ Rules:
 - Commit `dist/`, `.pack/`, `*.tgz`, `test/node_modules`, or Playwright reports.
 - Change the Playwright peer range or the `test/` pin without a decision.
 - Treat `dist/` or `.pack/` as source when counting, grepping, or reasoning about behaviour.
-- Reintroduce behaviour listed as removed in `RELEASE-NOTES-3.0.0.md`, such as `#` and `id=` prefix handling in
+- Reintroduce behaviour that 3.0.0 removed: `#` and `id=` prefix handling in
   `getById`, JSON-encoding every session storage value, `setOnNextNavigation`, dropping steps on frame segments, a
   cross-strategy `update` with a per-type cache, explicit `undefined` as the option-clearing value, the rollback
   of a failed seeded override, a call to `defineLocators()` or `pageActionsToPerformAfterNavigation()` from the
@@ -372,7 +369,6 @@ Rules:
   its registry was called again, or filter stack frames by file name (section 5).
 - Re-export a class as a public type, return `this` from a public builder step, or hide internals with `@internal`
   and `stripInternal` (section 5).
-- Re-derive findings that are already in the analysis. Cite the item number instead.
 - Commit without being asked.
 - Reintroduce a `file:` tarball dependency, a second build in a harness job, or sudo in the harness scripts.
 - Let `CI` (`main.yaml`) run on pull requests, remove the publish guard, or rename the gate job `build` without
@@ -381,14 +377,14 @@ Rules:
   without updating the pages that show it (section 9).
 - Add an export or a public member without its doc comment, its `@see` and its heading on an API page (section 9).
 - Add the site's dependencies to the root `package.json`, or build the site in a harness job.
-- Merge to `main` with the pre-release banner, the `noindex` meta, or `pages.yaml` triggered by the 3.0.0 branch
-  (section 9, C8).
+- Deploy the site from anything but a green `CI` run on `main` or a manual run, or give the released site a
+  pre-release banner or a `noindex` meta.
 
 ## 9. Documentation
 
 - The documentation is the Starlight site in `website/`, served at `https://dyhex.github.io/POMWright/`, with its
   content in `website/src/content/docs/`, in three sections: `docs/` to learn, `api/` to look up, `internal/` to
-  understand (`release-3.0.0/PLAN-5-DOCS.md`). The 2.x docs are linked at the tag,
+  understand. The 2.x docs are linked at the tag,
   `https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2`. The README says what POMWright is, shows one example, and
   links the site rather than repeating it; its examples are compiled by hand when they change, since the snippet check
   reads only the site.
@@ -455,18 +451,5 @@ Rules:
   `website/src/content/docs`. A union, a conditional type or a tuple has no members to check. A Mermaid diagram renders in the browser, so the build does not catch its syntax: render the page and look
   (a semicolon in a sequence message, or parentheses in an unquoted edge label, break it).
 - Deployment: `pages.yaml` builds `website/` exactly as the `site` job does and deploys `website/dist` to GitHub Pages
-  (the `github-pages` environment; Pages' source is "GitHub Actions").
-- **Pre-merge (plan 13's C8, in detail in `release-3.0.0/PLAN-PRE-MERGE.md`), when the user says the branch is ready
-  for `main`**:
-  1. `pages.yaml`: replace the `push` trigger of the 3.0.0 branch with `workflow_run` on `CI` for `main` (completed),
-     keep `workflow_dispatch`, guard the build job as `publish.yaml` guards its job (success, a push, `main`, this
-     repository, or a manual run), and check out the CI run's `head_sha`, so the deployed commit is the one CI tested;
-     actionlint it.
-  2. Remove the pre-release banner (`website/src/components/Banner.astro` and its `components` entry in
-     `astro.config.mjs`) and the `noindex` `head` entry; build the site and confirm neither is on any page.
-  3. Re-read `internal/documentation.md` and `tests-and-checks.md` against the switched workflow.
-  4. Run the full verification and the packaging probes of section 7 on chromium, firefox and webkit.
-  5. Delete `release-3.0.0/` from the repository, keeping nothing, except `PLAN-PRE-MERGE.md`, which the user deletes
-     before the merge (never the assistant); rewrite this file without the folder: section 6, the repository map's row,
-     and every rule that cites a plan, the analysis or `DECISIONS.md`.
-  6. The user then removes the branch from the `github-pages` environment's deployment branches.
+  (the `github-pages` environment, which allows `main`; Pages' source is "GitHub Actions"), after `CI` succeeds on a
+  push to `main`, from the commit that run tested.
