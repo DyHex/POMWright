@@ -1,0 +1,42 @@
+# Keeps the commit pins of the GitHub Actions in .github/workflows and the npm dev dependencies of the root, test/ and
+# website/ current: one grouped pull request a month each, which CI checks like any other. @playwright/test is left
+# alone: its root and test/ pins are the peer floor, which moves only by decision, together with peerDependencies.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+  - package-ecosystem: npm
+    directory: /website
+    schedule:
+      interval: monthly
+    groups:
+      website:
+        patterns:
+          - "*"
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    ignore:
+      - dependency-name: "@playwright/test"
+    groups:
+      root:
+        patterns:
+          - "*"
+  - package-ecosystem: npm
+    directory: /test
+    schedule:
+      interval: monthly
+    ignore:
+      - dependency-name: "@playwright/test"
+      - dependency-name: pomwright
+    groups:
+      harness:
+        patterns:
+          - "*"

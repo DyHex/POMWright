@@ -1,0 +1,87 @@
+/* The header shows the three sections on wide screens; the sidebar's topic list stays for the phone menu. */
+@media (min-width: 50rem) {
+	.starlight-sidebar-topics {
+		display: none;
+	}
+}
+
+/*
+ * A wider text column on pages with a sidebar: 60rem instead of Starlight's 45rem. Starlight splits the space left over
+ * evenly between the gap left of the text and the right sidebar, so both shrink to make room. The right sidebar, the
+ * table of contents, may narrow to 15rem instead of the left sidebar's 18.75rem. The two rules below are Starlight's own
+ * (TwoColumnContent.astro) with that minimum; pages without a sidebar, such as the home page, keep their 67.5rem.
+ */
+:root {
+	--pomwright-toc-min-width: 15rem;
+}
+
+:root[data-has-sidebar] {
+	--sl-content-width: 60rem;
+}
+
+@media (min-width: 72rem) {
+	.right-sidebar-container {
+		width: max(
+			var(--pomwright-toc-min-width),
+			calc(var(--sl-sidebar-width) + (100% - var(--sl-content-width) - var(--sl-sidebar-width)) / 2)
+		);
+	}
+
+	/*
+	 * The table of contents fills that column and wraps inside it. Its panel is fixed, so Starlight's `width: 100%` is
+	 * the viewport's: this is the column's width in viewport terms, (viewport - content) / 2. Starlight sizes the
+	 * contents for its 18.75rem minimum (PageSidebar.astro); here they fill the panel instead.
+	 */
+	.right-sidebar {
+		width: max(var(--pomwright-toc-min-width), calc((100% - var(--sl-content-width)) / 2));
+	}
+
+	.right-sidebar-panel .sl-container {
+		width: auto;
+		max-width: none;
+	}
+
+	[data-has-sidebar][data-has-toc] .main-pane {
+		width: min(
+			calc(100% - var(--pomwright-toc-min-width)),
+			calc(var(--sl-content-width) + (100% - var(--sl-content-width) - var(--sl-sidebar-width)) / 2)
+		);
+	}
+}
+
+/*
+ * A results table beside its chart, on Internal → Performance. The table takes the width it needs; the chart sits beside
+ * it when there is room for at least 20rem, and below it otherwise.
+ */
+.table-and-chart {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem 1.5rem;
+	align-items: flex-start;
+}
+
+.table-and-chart > table {
+	flex: 1 1 max-content;
+	max-width: 100%;
+}
+
+.table-and-chart > :not(table) {
+	flex: 1 1 20rem;
+	min-width: 0;
+	max-width: 36rem;
+	margin-top: 0;
+}
+
+/* Two charts of one table side by side, each at least 18rem wide. */
+.table-and-chart > .chart-pair {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	max-width: none;
+}
+
+.chart-pair > * {
+	flex: 1 1 18rem;
+	min-width: 0;
+	margin-top: 0;
+}

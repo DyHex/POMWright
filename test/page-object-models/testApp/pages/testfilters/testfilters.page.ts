@@ -11,10 +11,6 @@ export default class TestFiltersV2 extends TestApp<Paths> {
 		defineLocators(this.locatorRegistry);
 	}
 
-	protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {
-		return [];
-	}
-
 	async expectThisPage() {
 		await test.step(`Expect Page: ${this.urlPath}`, async () => {
 			await this.page.waitForURL(this.fullUrl);

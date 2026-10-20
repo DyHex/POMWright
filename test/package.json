@@ -4,19 +4,18 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"start": "node ./server.js",
-		"postinstall": "npx -y only-allow pnpm && npx playwright install-deps"
+		"start": "node ./server.js"
 	},
 	"keywords": [],
 	"devDependencies": {
-		"@playwright/test": "1.62.1",
+		"@playwright/test": "1.64.0",
 		"@types/express": "^5.0.3",
-		"@types/node": "^24.5.2",
-		"express": "^5.1.0",
-		"pomwright": "file:../pomwright-test-build.tgz"
+		"@types/node": "^24.19.2",
+		"express": "^5.3.0",
+		"pomwright": "file:../.pack/pomwright"
 	},
 	"dependencies": {
-		"dotenv": "^17.2.2"
+		"dotenv": "^18.0.8"
 	},
-	"packageManager": "pnpm@9.12.0"
+	"packageManager": "pnpm@12.14.0"
 }

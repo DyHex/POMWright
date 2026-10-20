@@ -1,32 +1,8 @@
 import type { FrameLocator, Locator, Page } from "@playwright/test";
-// All Unicode characters with White_Space=Yes (UAX #44)
-// Kept in one place so TS and runtime stay conceptually aligned. No trolling in tests allowed.
-export type UnicodeWhitespaceChar =
-	| "\u0009" // CHARACTER TABULATION: "\t"
-	| "\u000A" // LINE FEED: "\n"
-	| "\u000B" // LINE TABULATION: "\v"
-	| "\u000C" // FORM FEED: "\f"
-	| "\u000D" // CARRIAGE RETURN: "\r"
-	| "\u0020" // SPACE: " "
-	| "\u0085" // NEXT LINE: ""
-	| "\u00A0" // NO-BREAK SPACE: " "
-	| "\u1680" // OGHAM SPACE MARK: " "
-	| "\u2000" // EN QUAD: " "
-	| "\u2001" // EM QUAD: " "
-	| "\u2002" // EN SPACE: " "
-	| "\u2003" // EM SPACE: " "
-	| "\u2004" // THREE-PER-EM SPACE: " "
-	| "\u2005" // FOUR-PER-EM SPACE: " "
-	| "\u2006" // SIX-PER-EM SPACE: " "
-	| "\u2007" // FIGURE SPACE: " "
-	| "\u2008" // PUNCTUATION SPACE: " "
-	| "\u2009" // THIN SPACE: " "
-	| "\u200A" // HAIR SPACE: " "
-	| "\u2028" // LINE SEPARATOR: vscode says no
-	| "\u2029" // PARAGRAPH SEPARATOR: vscode says no
-	| "\u202F" // NARROW NO-BREAK SPACE: " "
-	| "\u205F" // MEDIUM MATHEMATICAL SPACE: " "
-	| "\u3000"; // IDEOGRAPHIC SPACE: "　"
+import type { LOCATOR_SCHEMA_PATH_WHITESPACE } from "./utils";
+
+/** A character the path check rejects; the same list drives the runtime check in `validateLocatorSchemaPath`. */
+export type UnicodeWhitespaceChar = (typeof LOCATOR_SCHEMA_PATH_WHITESPACE)[number];
 
 export type LocatorSchemaPathError<S extends string, Reason extends string> = [
 	"Invalid locator schema path",
@@ -34,6 +10,19 @@ export type LocatorSchemaPathError<S extends string, Reason extends string> = [
 	S,
 ];
 
+/**
+ * The path rules as a type: `S` itself when it is a well-formed path (not empty, no leading, trailing or consecutive
+ * `.`, no whitespace), otherwise a tuple naming the rule it breaks, which TypeScript shows in the error. A wide
+ * `string` is not checked here; the runtime check applies to every path.
+ *
+ * @example
+ * ```ts
+ * type Checked = LocatorSchemaPathFormat<"main..list">;
+ * // ["Invalid locator schema path", "String can't contain consecutive '.'", "main..list"]
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/types/#locatorschemapathformat
+ */
 export type LocatorSchemaPathFormat<S extends string> = string extends S
 	? // If S is a wide string (not a literal union), don't try to deeply validate
 		S
@@ -62,8 +51,6 @@ type _LocatorSchemaPathFormat<
 				: _LocatorSchemaPathFormat<Original, Tail, false, false>
 		: never;
 
-export type LocatorSchemaPathErrors<Paths extends string> = Exclude<LocatorSchemaPathFormat<Paths>, Paths>;
-
 export type LocatorSchemaPathValid<Path extends string> = Path extends unknown
 	? LocatorSchemaPathFormat<Path> extends Path
 		? Path
@@ -71,9 +58,6 @@ export type LocatorSchemaPathValid<Path extends string> = Path extends unknown
 	: never;
 
 export type RegistryPath<LocatorSchemaPathType extends string> = LocatorSchemaPathType &
-	LocatorSchemaPathValid<LocatorSchemaPathType>;
-
-export type ValidLocatorPath<LocatorSchemaPathType extends string> = LocatorSchemaPathType &
 	LocatorSchemaPathValid<LocatorSchemaPathType>;
 
 export type ExtractSubPaths<Path extends string> = Path extends `${infer Head}.${infer Tail}`
@@ -86,9 +70,6 @@ export type LocatorChainPaths<
 > = LocatorSubstring extends string
 	? Extract<LocatorSchemaPathType, LocatorSubstring | ExtractSubPaths<LocatorSubstring>>
 	: never;
-
-export type LocatorSchemaPathAlias<LocatorSchemaPathType extends string> = LocatorSchemaPathType &
-	LocatorSchemaPathValid<LocatorSchemaPathType>;
 
 export type RoleDefinition = {
 	type: "role";
@@ -132,9 +113,16 @@ export type LocatorDefinition = {
 	options?: Parameters<Page["locator"]>[1];
 };
 
+/**
+ * A frame segment. With a selector it is the `<iframe>` element (`locator(selector)` plus the
+ * segment's steps, so the selector is `locator`'s argument) whose descendants resolve inside the
+ * frame through `contentFrame()`; without a selector it is Playwright's any-frame
+ * `page.frameLocator()`, valid only as the first segment of a chain, with no steps and no terminal
+ * form.
+ */
 export type FrameLocatorDefinition = {
 	type: "frameLocator";
-	selector: Parameters<Page["frameLocator"]>[0];
+	selector?: Parameters<Page["locator"]>[0];
 };
 
 export type TestIdDefinition = {
@@ -172,72 +160,156 @@ export type LocatorStrategyDefinitionPatch =
 	| { type: "id"; id?: IdDefinition["id"] };
 
 export type PlaywrightFilterDefinition = NonNullable<Parameters<Locator["filter"]>[0]>;
-export type ResolvedFilterDefinition = PlaywrightFilterDefinition;
 export type LocatorDescription = Parameters<Locator["describe"]>[0];
 
 export type LocatorStep<
 	LocatorSchemaPathType extends string = string,
-	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+	AllowedPaths extends string = RegistryPath<LocatorSchemaPathType>,
 > =
 	| { kind: "filter"; filter: FilterDefinition<LocatorSchemaPathType, AllowedPaths> }
-	| { kind: "index"; index: IndexSelector | null };
+	| { kind: "index"; index: IndexSelector };
 
+/**
+ * The definition of each strategy, looked up by its name. An indexed access keeps `ReusableLocator`
+ * covariant in its strategy, which `Extract<…, { type: Type }>` does not.
+ */
+export type LocatorDefinitionByType = {
+	role: RoleDefinition;
+	text: TextDefinition;
+	label: LabelDefinition;
+	placeholder: PlaceholderDefinition;
+	altText: AltTextDefinition;
+	title: TitleDefinition;
+	locator: LocatorDefinition;
+	frameLocator: FrameLocatorDefinition;
+	testId: TestIdDefinition;
+	id: IdDefinition;
+};
+
+/**
+ * A seed, from `registry.createReusable`: a locator strategy with its arguments, its `filter` and `nth` steps and a
+ * description, registered under no path. `add(path, { reuse: seed })` registers it at a path. A seed is a value, as a
+ * Playwright `Locator` is: `filter`, `nth` and `describe` return a new seed and leave this one as it was. `Strategy`
+ * narrows the seed to one strategy (`"role"`, `"text"`, `"label"`, `"placeholder"`, `"altText"`, `"title"`,
+ * `"locator"`, `"frameLocator"`, `"testId"`, `"id"`); the default accepts a seed of any.
+ *
+ * @example
+ * ```ts
+ * export const headingSeed = (registry: LocatorRegistry<Paths>): ReusableLocator<Paths, "role"> =>
+ *   registry.createReusable.getByRole("heading", { level: 2 });
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/
+ */
 export type ReusableLocator<
-	LocatorSchemaPathType extends string = string,
-	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+	LocatorSchemaPathType extends string,
 	Type extends LocatorStrategyDefinition["type"] = LocatorStrategyDefinition["type"],
 > = {
-	type: Type;
-	definition: Extract<LocatorStrategyDefinition, { type: Type }>;
-	steps: LocatorStep<LocatorSchemaPathType, AllowedPaths>[];
-	description?: LocatorDescription;
+	/** The seed's strategy: `"role"`, `"text"`, `"label"`, `"placeholder"`, `"altText"`, `"title"`, `"locator"`, …. */
+	readonly type: Type;
+	/** A copy of the seed's locator: its strategy and arguments, such as `{ type: "role", role: "button" }`. */
+	readonly definition: LocatorDefinitionByType[Type];
+	/** A copy of the seed's `filter` and `nth` steps, in the order they were added. */
+	readonly steps: LocatorStep<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>[];
+	/** The seed's description, or `undefined` when it has none; a path registered from it then shows its own path. */
+	readonly description: LocatorDescription | undefined;
+	/**
+	 * Returns a new seed with a `locator.filter()` step added; this seed is unchanged, as a Playwright `Locator` is.
+	 *
+	 * @param filter Playwright's filter options; `has` and `hasNot` also take a registered path.
+	 * @returns A new seed.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("main.list.items@open", { reuse: row.filter({ hasText: "Open" }) });
+	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#filter
+	 */
+	filter(
+		filter: FilterDefinition<RegistryPath<LocatorSchemaPathType>, RegistryPath<LocatorSchemaPathType>>,
+	): ReusableLocator<LocatorSchemaPathType, Type>;
+	/**
+	 * Returns a new seed with an index step added; this seed is unchanged.
+	 *
+	 * @param index A number, `"first"` or `"last"`.
+	 * @returns A new seed.
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("main.list.item@last", { reuse: row.nth("last") });
+	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#nth
+	 */
+	nth(index: IndexSelector): ReusableLocator<LocatorSchemaPathType, Type>;
+	/**
+	 * Returns a new seed with a description; this seed is unchanged. A path registered from it shows the description
+	 * instead of the path.
+	 *
+	 * @param description A string; `""` removes the description.
+	 * @returns A new seed.
+	 * @throws When the description is not a string (from JavaScript):
+	 * `createReusable.describe requires a string; pass "" to remove the description.`
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#describe
+	 */
+	describe(description: LocatorDescription): ReusableLocator<LocatorSchemaPathType, Type>;
 };
 
 export type FilterLocatorReference<
 	LocatorSchemaPathType extends string,
-	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+	AllowedPaths extends string = RegistryPath<LocatorSchemaPathType>,
 > = Locator | AllowedPaths;
 
+/**
+ * The argument of `filter`: Playwright's `locator.filter()` options (`hasText`, `hasNotText`, `has`, `hasNot`,
+ * `visible`), where `has` and `hasNot` also take a registered path.
+ *
+ * @example
+ * ```ts
+ * export const withBadge: FilterDefinition<Paths> = { has: "list.items.badge" };
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/types/#filterdefinition
+ */
 export type FilterDefinition<
 	LocatorSchemaPathType extends string,
-	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
-> =
-	| PlaywrightFilterDefinition
-	| (Omit<PlaywrightFilterDefinition, "has" | "hasNot"> & {
-			has?: PlaywrightFilterDefinition["has"] | FilterLocatorReference<LocatorSchemaPathType, AllowedPaths>;
-			hasNot?: PlaywrightFilterDefinition["hasNot"] | FilterLocatorReference<LocatorSchemaPathType, AllowedPaths>;
-	  });
-
-export type FilterPatch<
-	LocatorSchemaPathType extends string,
-	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
-> =
-	| FilterDefinition<LocatorSchemaPathType, AllowedPaths>[]
-	| {
-			append?:
-				| FilterDefinition<LocatorSchemaPathType, AllowedPaths>
-				| FilterDefinition<LocatorSchemaPathType, AllowedPaths>[];
-			replace?:
-				| FilterDefinition<LocatorSchemaPathType, AllowedPaths>
-				| FilterDefinition<LocatorSchemaPathType, AllowedPaths>[];
-			clear?: boolean;
-	  };
+	AllowedPaths extends string = RegistryPath<LocatorSchemaPathType>,
+> = Omit<PlaywrightFilterDefinition, "has" | "hasNot"> & {
+	/**
+	 * Keeps the elements that contain this one: a Playwright `Locator`, or a registered path, resolved to that path's
+	 * own locator without its ancestors, since Playwright looks for it inside each element being filtered.
+	 */
+	has?: FilterLocatorReference<LocatorSchemaPathType, AllowedPaths>;
+	/** Keeps the elements that do not contain this one: a Playwright `Locator`, or a registered path, as for `has`. */
+	hasNot?: FilterLocatorReference<LocatorSchemaPathType, AllowedPaths>;
+};
 
 export type LocatorBuilderTarget = Page | Locator | FrameLocator;
 
 export type LocatorSchemaRecord<
 	LocatorSchemaPathType extends string = string,
-	AllowedPaths extends string = LocatorSchemaPathAlias<LocatorSchemaPathType>,
+	AllowedPaths extends string = RegistryPath<LocatorSchemaPathType>,
 > = {
-	locatorSchemaPath: LocatorSchemaPathAlias<LocatorSchemaPathType>;
+	locatorSchemaPath: RegistryPath<LocatorSchemaPathType>;
 	definition: LocatorStrategyDefinition;
 	steps?: LocatorStep<LocatorSchemaPathType, AllowedPaths>[];
 	description?: LocatorDescription;
 };
 
+/**
+ * JSON Merge Patch over a Playwright options object: a provided key replaces, `null` deletes the
+ * key, an absent or `undefined` key leaves it alone.
+ */
+export type OptionsPatch<Options> = { [Key in keyof NonNullable<Options>]?: NonNullable<Options>[Key] | null };
+
 type LocatorUpdateFor<Definition extends LocatorStrategyDefinition> = { type: Definition["type"] } & Partial<
-	Omit<Definition, "type">
->;
+	Omit<Definition, "type" | "options">
+> &
+	("options" extends keyof Definition
+		? { options?: OptionsPatch<Definition["options"]> | null }
+		: Record<never, never>);
 
 export type LocatorUpdate =
 	| LocatorUpdateFor<RoleDefinition>
@@ -251,6 +323,10 @@ export type LocatorUpdate =
 	| LocatorUpdateFor<TestIdDefinition>
 	| LocatorUpdateFor<IdDefinition>;
 
+/**
+ * The argument of `nth`: a number, as Playwright's `locator.nth()` takes it (`-1` is the last element), `"first"` or
+ * `"last"`.
+ *
+ * @see https://dyhex.github.io/POMWright/api/types/#indexselector
+ */
 export type IndexSelector = number | "first" | "last";
-
-export type PathIndexMap = Partial<Record<string, IndexSelector | null | undefined>>;

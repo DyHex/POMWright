@@ -50,3 +50,17 @@ test("createRegistryWithAccessors exposes getLocatorSchema builder", async ({ pa
 		"locator('div.tree').nth(1).locator('div.leaf').filter({ hasText: 'leaf' })",
 	);
 });
+
+test("createRegistryWithAccessors exposes verify() on the registry", async ({ page }) => {
+	type LocatorSchemaPaths = "list" | "list.item" | "list.badge";
+
+	const { registry } = createRegistry<LocatorSchemaPaths>(page);
+	registry.add("list").locator("ul");
+	registry.add("list.item").getByRole("listitem").filter({ has: "list.badge" });
+
+	expect(() => registry.verify()).toThrowError(
+		'Locator registry verification failed for 1 of 2 paths:\n  "list.item": No locator schema registered for path "list.badge".',
+	);
+	registry.add("list.badge").locator(".badge");
+	expect(() => registry.verify()).not.toThrow();
+});

@@ -4,598 +4,446 @@ import type {
 	LocatorChainPaths,
 	LocatorStrategyDefinition,
 	LocatorUpdate,
+	OptionsPatch,
 	RegistryPath,
 	RoleDefinition,
 } from "./types";
-import { normalizeIdValue } from "./utils";
+import {
+	assembleDefinition,
+	assertStrategyPrimary,
+	definitionFields,
+	mergeOptions,
+	methodForStrategy,
+	strategyOf,
+} from "./utils";
 
-const parseUpdateArguments = <Primary, OptionsType>(
-	primaryOrOptions?: Primary | OptionsType,
-	options?: OptionsType,
-	optionsProvided?: boolean,
+export { mergeOptions };
+
+/**
+ * Separates the primary argument of an `update`/`replace` call from its options. `undefined` means
+ * "not provided" for both, as in any JavaScript call; `null` is the options form that deletes every
+ * option. An object first argument (or `null`) is the options-only form.
+ */
+export const parseUpdateArguments = <Primary, Patch>(
+	primaryOrOptions?: Primary | Patch | null,
+	options?: Patch | null,
 ) => {
-	let primary: Primary | undefined;
-	let parsedOptions: OptionsType | undefined;
-	let hasOptions = optionsProvided ?? false;
-
 	if (options !== undefined) {
-		parsedOptions = options;
-		hasOptions = true;
+		return { primary: primaryOrOptions as Primary | undefined, options, hasOptions: true as const };
 	}
-
-	if (primaryOrOptions !== undefined) {
-		const treatAsOptions =
-			!hasOptions &&
-			options === undefined &&
-			typeof primaryOrOptions === "object" &&
-			!(primaryOrOptions instanceof RegExp);
-
-		if (treatAsOptions) {
-			parsedOptions = primaryOrOptions as OptionsType;
-			hasOptions = true;
-		} else {
-			primary = primaryOrOptions as Primary;
-		}
+	if (primaryOrOptions === null || (typeof primaryOrOptions === "object" && !(primaryOrOptions instanceof RegExp))) {
+		return { primary: undefined, options: primaryOrOptions as Patch | null, hasOptions: true as const };
 	}
-
-	return { primary, options: parsedOptions, hasOptions };
+	return { primary: primaryOrOptions as Primary | undefined, options: undefined, hasOptions: false as const };
 };
 
-const mergeOptions = <OptionsType>(
-	currentOptions: OptionsType | undefined,
-	updates: { options?: OptionsType } | undefined,
-) => {
-	if (updates && "options" in updates) {
-		const updateOptions = updates.options;
-		if (updateOptions && typeof updateOptions === "object") {
-			return {
-				...(typeof currentOptions === "object" && currentOptions !== null ? currentOptions : {}),
-				...updateOptions,
-			} as OptionsType;
-		}
-		return updateOptions as OptionsType;
-	}
-
-	return currentOptions as OptionsType;
-};
-
-type UpdateArgsWithOptions<Primary, Options> = [] | [Primary] | [Options] | [Primary, Options];
+type UpdateArgsWithOptions<Primary, Options> =
+	| []
+	| [Primary]
+	| [OptionsPatch<Options> | null]
+	| [Primary, OptionsPatch<Options> | null | undefined];
 
 type UpdateArgsWithoutOptions<Primary> = [] | [Primary];
 
+/** `update` patches the registered definition; `replace` installs a complete one of any strategy. */
+export type LocatorUpdateMode = "update" | "replace";
+
+/**
+ * The arguments of a strategy method in each mode: in `replace` mode Playwright's own parameter list
+ * (the first argument required, Playwright's option types), in `update` mode the patch shapes.
+ */
+type ArgsFor<
+	Mode extends LocatorUpdateMode,
+	ReplaceArgs extends unknown[],
+	UpdateArgs extends unknown[],
+> = Mode extends "replace" ? ReplaceArgs : UpdateArgs;
+
+type OptionsDefinition = Extract<LocatorStrategyDefinition, { options?: unknown }>;
+
+const requireType = (updates: LocatorUpdate, verb: "update" | "replace", path: string) => {
+	if (!updates || typeof updates !== "object" || !("type" in updates)) {
+		throw new Error(`Locator ${verb} for "${path}" requires a "type" property.`);
+	}
+};
+
+/**
+ * PATCH semantics for `update`: the registered strategy is kept, a provided primary replaces the
+ * primary, and the options follow JSON Merge Patch. Another strategy throws and names `replace`.
+ */
 const mergeLocatorDefinition = (
 	current: LocatorStrategyDefinition,
 	updates: LocatorUpdate,
 	path: string,
-	preferredSource?: LocatorStrategyDefinition,
-	baseline?: LocatorStrategyDefinition,
 ): LocatorStrategyDefinition => {
-	if (!updates || typeof updates !== "object" || !("type" in updates)) {
-		throw new Error(`Locator update for "${path}" requires a "type" property.`);
+	requireType(updates, "update", path);
+	if (updates.type !== current.type) {
+		throw new Error(
+			`update("${path}") cannot change the strategy from "${current.type}" to "${updates.type}"; use replace("${path}").${methodForStrategy[updates.type]}(…) instead.`,
+		);
 	}
-
-	const source = <TType extends LocatorStrategyDefinition["type"]>(targetType: TType) => {
-		if (current.type === targetType) {
-			return current as Extract<LocatorStrategyDefinition, { type: TType }>;
-		}
-		if (preferredSource?.type === targetType) {
-			return preferredSource as Extract<LocatorStrategyDefinition, { type: TType }>;
-		}
-		if (baseline?.type === targetType) {
-			return baseline as Extract<LocatorStrategyDefinition, { type: TType }>;
-		}
-		return undefined;
-	};
-
-	switch (updates.type) {
-		case "role": {
-			const roleSource = source("role");
-			const role = updates.role ?? roleSource?.role;
-			if (role === undefined) {
-				throw new Error(`Locator update for "${path}" of type "role" requires a "role" value.`);
-			}
-			const options = mergeOptions(roleSource?.options, updates);
-			return options !== undefined
-				? ({ type: "role", role, options } as RoleDefinition)
-				: ({ type: "role", role } as RoleDefinition);
-		}
-		case "text": {
-			const textSource = source("text");
-			const text = updates.text ?? textSource?.text;
-			if (text === undefined) {
-				throw new Error(`Locator update for "${path}" of type "text" requires a "text" value.`);
-			}
-			const options = mergeOptions(textSource?.options, updates);
-			return options !== undefined
-				? ({ type: "text", text, options } as LocatorStrategyDefinition)
-				: ({ type: "text", text } as LocatorStrategyDefinition);
-		}
-		case "label": {
-			const textSource = source("label");
-			const text = updates.text ?? textSource?.text;
-			if (text === undefined) {
-				throw new Error(`Locator update for "${path}" of type "label" requires a "text" value.`);
-			}
-			const options = mergeOptions(textSource?.options, updates);
-			return options !== undefined
-				? ({ type: "label", text, options } as LocatorStrategyDefinition)
-				: ({ type: "label", text } as LocatorStrategyDefinition);
-		}
-		case "placeholder": {
-			const textSource = source("placeholder");
-			const text = updates.text ?? textSource?.text;
-			if (text === undefined) {
-				throw new Error(`Locator update for "${path}" of type "placeholder" requires a "text" value.`);
-			}
-			const options = mergeOptions(textSource?.options, updates);
-			return options !== undefined
-				? ({ type: "placeholder", text, options } as LocatorStrategyDefinition)
-				: ({ type: "placeholder", text } as LocatorStrategyDefinition);
-		}
-		case "altText": {
-			const textSource = source("altText");
-			const text = updates.text ?? textSource?.text;
-			if (text === undefined) {
-				throw new Error(`Locator update for "${path}" of type "altText" requires a "text" value.`);
-			}
-			const options = mergeOptions(textSource?.options, updates);
-			return options !== undefined
-				? ({ type: "altText", text, options } as LocatorStrategyDefinition)
-				: ({ type: "altText", text } as LocatorStrategyDefinition);
-		}
-		case "title": {
-			const textSource = source("title");
-			const text = updates.text ?? textSource?.text;
-			if (text === undefined) {
-				throw new Error(`Locator update for "${path}" of type "title" requires a "text" value.`);
-			}
-			const options = mergeOptions(textSource?.options, updates);
-			return options !== undefined
-				? ({ type: "title", text, options } as LocatorStrategyDefinition)
-				: ({ type: "title", text } as LocatorStrategyDefinition);
-		}
-		case "locator": {
-			const selectorSource = source("locator");
-			const selector = updates.selector ?? selectorSource?.selector;
-			if (selector === undefined) {
-				throw new Error(`Locator update for "${path}" of type "locator" requires a "selector" value.`);
-			}
-			const options = mergeOptions(selectorSource?.options, updates);
-			return options !== undefined
-				? ({ type: "locator", selector, options } as LocatorStrategyDefinition)
-				: ({ type: "locator", selector } as LocatorStrategyDefinition);
-		}
-		case "frameLocator": {
-			const selectorSource = source("frameLocator");
-			const selector = updates.selector ?? selectorSource?.selector;
-			if (selector === undefined) {
-				throw new Error(`Locator update for "${path}" of type "frameLocator" requires a "selector" value.`);
-			}
-			return { type: "frameLocator", selector } as LocatorStrategyDefinition;
-		}
-		case "testId": {
-			const testIdSource = source("testId");
-			const testId = updates.testId ?? testIdSource?.testId;
-			if (testId === undefined) {
-				throw new Error(`Locator update for "${path}" of type "testId" requires a "testId" value.`);
-			}
-			return { type: "testId", testId } as LocatorStrategyDefinition;
-		}
-		case "id": {
-			const idSource = source("id");
-			const rawId = updates.id ?? idSource?.id;
-			const id = normalizeIdValue(rawId);
-			if (id === undefined) {
-				throw new Error(`Locator update for "${path}" of type "id" requires an "id" value.`);
-			}
-			return { type: "id", id } as LocatorStrategyDefinition;
-		}
-		default: {
-			const exhaustive: never = updates;
-			return exhaustive;
-		}
-	}
+	const spec = strategyOf(updates.type);
+	const base = definitionFields(current);
+	const given = definitionFields(updates);
+	const options = spec.options
+		? mergeOptions(base.options ?? undefined, given.options as OptionsPatch<object> | null | undefined)
+		: undefined;
+	return assembleDefinition(updates.type, given[spec.primary] ?? base[spec.primary], options);
 };
 
+/**
+ * PUT semantics for `replace`: a complete definition of any strategy. The primary is required
+ * except for `frameLocator`, where its absence is the any-frame form; the options are taken as
+ * given, so a `null` has no delete meaning here and equals omission.
+ */
 const buildReplacementDefinition = (updates: LocatorUpdate, path: string): LocatorStrategyDefinition => {
-	if (!updates || typeof updates !== "object" || !("type" in updates)) {
-		throw new Error(`Locator replace for "${path}" requires a "type" property.`);
+	requireType(updates, "replace", path);
+	const spec = strategyOf(updates.type);
+	const given = definitionFields(updates);
+	const primary = given[spec.primary];
+	if (primary === undefined && !spec.optionalPrimary) {
+		const article = /^[aeiou]/i.test(spec.primary) ? "an" : "a";
+		throw new Error(
+			`Locator replace for "${path}" of type "${updates.type}" requires ${article} "${spec.primary}" value.`,
+		);
 	}
-
-	switch (updates.type) {
-		case "role": {
-			const { role, options } = updates;
-			if (role === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "role" requires a "role" value.`);
-			}
-			return options !== undefined
-				? ({ type: "role", role, options } as RoleDefinition)
-				: ({ type: "role", role } as RoleDefinition);
-		}
-		case "text": {
-			const { text, options } = updates;
-			if (text === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "text" requires a "text" value.`);
-			}
-			return options !== undefined
-				? ({ type: "text", text, options } as LocatorStrategyDefinition)
-				: ({ type: "text", text } as LocatorStrategyDefinition);
-		}
-		case "label": {
-			const { text, options } = updates;
-			if (text === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "label" requires a "text" value.`);
-			}
-			return options !== undefined
-				? ({ type: "label", text, options } as LocatorStrategyDefinition)
-				: ({ type: "label", text } as LocatorStrategyDefinition);
-		}
-		case "placeholder": {
-			const { text, options } = updates;
-			if (text === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "placeholder" requires a "text" value.`);
-			}
-			return options !== undefined
-				? ({ type: "placeholder", text, options } as LocatorStrategyDefinition)
-				: ({ type: "placeholder", text } as LocatorStrategyDefinition);
-		}
-		case "altText": {
-			const { text, options } = updates;
-			if (text === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "altText" requires a "text" value.`);
-			}
-			return options !== undefined
-				? ({ type: "altText", text, options } as LocatorStrategyDefinition)
-				: ({ type: "altText", text } as LocatorStrategyDefinition);
-		}
-		case "title": {
-			const { text, options } = updates;
-			if (text === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "title" requires a "text" value.`);
-			}
-			return options !== undefined
-				? ({ type: "title", text, options } as LocatorStrategyDefinition)
-				: ({ type: "title", text } as LocatorStrategyDefinition);
-		}
-		case "locator": {
-			const { selector, options } = updates;
-			if (selector === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "locator" requires a "selector" value.`);
-			}
-			return options !== undefined
-				? ({ type: "locator", selector, options } as LocatorStrategyDefinition)
-				: ({ type: "locator", selector } as LocatorStrategyDefinition);
-		}
-		case "frameLocator": {
-			const { selector } = updates;
-			if (selector === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "frameLocator" requires a "selector" value.`);
-			}
-			return { type: "frameLocator", selector } as LocatorStrategyDefinition;
-		}
-		case "testId": {
-			const { testId } = updates;
-			if (testId === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "testId" requires a "testId" value.`);
-			}
-			return { type: "testId", testId } as LocatorStrategyDefinition;
-		}
-		case "id": {
-			const rawId = updates.id;
-			const id = normalizeIdValue(rawId);
-			if (id === undefined) {
-				throw new Error(`Locator replace for "${path}" of type "id" requires an "id" value.`);
-			}
-			return { type: "id", id } as LocatorStrategyDefinition;
-		}
-		default: {
-			const exhaustive: never = updates;
-			return exhaustive;
-		}
-	}
+	const options = spec.options
+		? mergeOptions(undefined, given.options as OptionsPatch<object> | null | undefined)
+		: undefined;
+	return assembleDefinition(updates.type, primary, options);
 };
-export class LocatorUpdateBuilder<
+
+/**
+ * What a query's `update(subPath?)` and `replace(subPath?)` return: the ten locator methods, each of which changes the
+ * segment's locator in the query and returns the query.
+ *
+ * - `update` (`Mode` `"update"`) keeps the registered strategy: call the method of that strategy with a patch in JSON
+ *   Merge Patch form. A given first argument replaces the registered one; the options merge key by key, a `null` key
+ *   deletes one, a lone `null` deletes them all, and an omitted value keeps what is registered. Another strategy's
+ *   method throws and names `replace`.
+ * - `replace` (`Mode` `"replace"`) installs a locator of any strategy, with the arguments of Playwright's own method:
+ *   the first argument required, Playwright's options.
+ *
+ * @example
+ * ```ts
+ * registry.getLocatorSchema("main.button@save").update().getByRole({ name: "Cancel" }).getNestedLocator();
+ * registry.getLocatorSchema("main.button@save").replace().getByText("Save").getNestedLocator();
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/
+ */
+export type LocatorUpdateBuilder<
+	LocatorSchemaPathType extends string,
+	Path extends RegistryPath<LocatorSchemaPathType>,
+	SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, Path>,
+	Mode extends LocatorUpdateMode = "update",
+> = LocatorUpdateBuilderInternal<LocatorSchemaPathType, Path, SubPath, Mode>;
+
+export class LocatorUpdateBuilderInternal<
 	LocatorSchemaPathType extends string,
 	LocatorSubstring extends RegistryPath<LocatorSchemaPathType>,
 	SubPath extends LocatorChainPaths<RegistryPath<LocatorSchemaPathType>, LocatorSubstring>,
+	Mode extends LocatorUpdateMode = "update",
 > {
 	constructor(
-		private readonly parent: LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>,
 		private readonly subPath: SubPath,
-		private readonly mode: "update" | "replace" = "update",
+		private readonly mode: Mode,
+		private readonly apply: (definition: LocatorUpdate) => LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring>,
 	) {}
 
 	/**
-	 * Defines or patches a `getByRole` locator strategy for the target subpath. In `update` mode the
-	 * `role` and `options` arguments are optional (PATCH semantics); in `replace` mode they follow
-	 * Playwright requirements (POST semantics) and `role` is required.
+	 * Changes the segment's locator to Playwright's `page.getByRole()`. In `update` mode the segment must be registered
+	 * with `getByRole`: the role is optional and the options follow JSON Merge Patch. In `replace` mode the arguments are
+	 * those of `page.getByRole()`, the role required.
+	 *
+	 * @param role The ARIA role.
+	 * @param options Playwright's options, such as `name` and `exact`; in `update` mode a patch, where `{ name: null }`
+	 * deletes one option and a lone `null` all of them.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "text" to "role"; use replace("main.button@save").getByRole(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("form.button")
-	 *   .update("form.button")
-	 *   .getByRole({ name: "Save" })
-	 *   .getNestedLocator();
+	 * query.update().getByRole({ name: "Cancel" });
+	 * query.update().getByRole("button", null); // clears every option
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbyrole
 	 */
-	getByRole(...args: UpdateArgsWithOptions<RoleDefinition["role"], RoleDefinition["options"]>) {
-		const [roleOrOptions, options] = args;
-		const {
-			primary: role,
-			options: parsedOptions,
-			hasOptions,
-		} = parseUpdateArguments<RoleDefinition["role"], RoleDefinition["options"]>(
-			roleOrOptions,
-			options,
-			args.length >= 2,
-		);
-
-		const definition: LocatorUpdate = {
-			type: "role",
-			...(role !== undefined ? { role } : {}),
-			...(hasOptions ? { options: parsedOptions } : {}),
-		};
-
-		return this.commit(definition);
+	getByRole(
+		...args: ArgsFor<
+			Mode,
+			[role: RoleDefinition["role"], options?: RoleDefinition["options"]],
+			UpdateArgsWithOptions<RoleDefinition["role"], RoleDefinition["options"]>
+		>
+	) {
+		return this.commitWithOptions("role", args);
 	}
 
 	/**
-	 * Defines or patches a `getByText` locator strategy for the target subpath. In `update` mode,
-	 * text/options are optional; in `replace` mode text is required.
+	 * Changes the segment's locator to Playwright's `page.getByText()`. In `update` mode the segment must be registered
+	 * with `getByText`: the text is optional and the options follow JSON Merge Patch. In `replace` mode the arguments are
+	 * those of `page.getByText()`, the text required.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's options (`exact`); in `update` mode a patch, where `null` deletes.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "text"; use replace("main.button@save").getByText(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("banner.message")
-	 *   .replace("banner.message")
-	 *   .getByText(/Updated/, { exact: false })
-	 *   .getNestedLocator();
+	 * query.replace().getByText(/Updated/, { exact: false });
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbytext
 	 */
-	getByText(...args: UpdateArgsWithOptions<Parameters<Page["getByText"]>[0], Parameters<Page["getByText"]>[1]>) {
-		const [textOrOptions, options] = args;
-		const {
-			primary: text,
-			options: parsedOptions,
-			hasOptions,
-		} = parseUpdateArguments<Parameters<Page["getByText"]>[0], Parameters<Page["getByText"]>[1]>(
-			textOrOptions,
-			options,
-			args.length >= 2,
-		);
-
-		const definition: LocatorUpdate = {
-			type: "text",
-			...(text !== undefined ? { text } : {}),
-			...(hasOptions ? { options: parsedOptions } : {}),
-		};
-
-		return this.commit(definition);
+	getByText(
+		...args: ArgsFor<
+			Mode,
+			[text: Parameters<Page["getByText"]>[0], options?: Parameters<Page["getByText"]>[1]],
+			UpdateArgsWithOptions<Parameters<Page["getByText"]>[0], Parameters<Page["getByText"]>[1]>
+		>
+	) {
+		return this.commitWithOptions("text", args);
 	}
 
 	/**
-	 * Defines or patches a `getByLabel` locator strategy for the target subpath. In `update` mode the
-	 * label text/options are optional; in `replace` mode text is required.
+	 * Changes the segment's locator to Playwright's `page.getByLabel()`. In `update` mode the segment must be registered
+	 * with `getByLabel`: the text is optional and the options follow JSON Merge Patch. In `replace` mode the arguments
+	 * are those of `page.getByLabel()`, the text required.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's options (`exact`); in `update` mode a patch, where `null` deletes.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "label"; use replace("main.button@save").getByLabel(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("form.email").update("form.email").getByLabel({ exact: true }).getNestedLocator();
+	 * query.update().getByLabel({ exact: true });
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbylabel
 	 */
-	getByLabel(...args: UpdateArgsWithOptions<Parameters<Page["getByLabel"]>[0], Parameters<Page["getByLabel"]>[1]>) {
-		const [textOrOptions, options] = args;
-		const {
-			primary: text,
-			options: parsedOptions,
-			hasOptions,
-		} = parseUpdateArguments<Parameters<Page["getByLabel"]>[0], Parameters<Page["getByLabel"]>[1]>(
-			textOrOptions,
-			options,
-			args.length >= 2,
-		);
-
-		const definition: LocatorUpdate = {
-			type: "label",
-			...(text !== undefined ? { text } : {}),
-			...(hasOptions ? { options: parsedOptions } : {}),
-		};
-
-		return this.commit(definition);
+	getByLabel(
+		...args: ArgsFor<
+			Mode,
+			[text: Parameters<Page["getByLabel"]>[0], options?: Parameters<Page["getByLabel"]>[1]],
+			UpdateArgsWithOptions<Parameters<Page["getByLabel"]>[0], Parameters<Page["getByLabel"]>[1]>
+		>
+	) {
+		return this.commitWithOptions("label", args);
 	}
 
 	/**
-	 * Defines or patches a `getByPlaceholder` locator strategy for the target subpath. In `update`
-	 * mode text/options are optional; in `replace` mode text is required.
+	 * Changes the segment's locator to Playwright's `page.getByPlaceholder()`. In `update` mode the segment must be
+	 * registered with `getByPlaceholder`: the text is optional and the options follow JSON Merge Patch. In `replace` mode
+	 * the arguments are those of `page.getByPlaceholder()`, the text required.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's options (`exact`); in `update` mode a patch, where `null` deletes.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "placeholder"; use replace("main.button@save").getByPlaceholder(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("form.search").update("form.search").getByPlaceholder({ exact: true }).getNestedLocator();
+	 * query.update().getByPlaceholder("Search orders");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbyplaceholder
 	 */
 	getByPlaceholder(
-		...args: UpdateArgsWithOptions<Parameters<Page["getByPlaceholder"]>[0], Parameters<Page["getByPlaceholder"]>[1]>
+		...args: ArgsFor<
+			Mode,
+			[text: Parameters<Page["getByPlaceholder"]>[0], options?: Parameters<Page["getByPlaceholder"]>[1]],
+			UpdateArgsWithOptions<Parameters<Page["getByPlaceholder"]>[0], Parameters<Page["getByPlaceholder"]>[1]>
+		>
 	) {
-		const [textOrOptions, options] = args;
-		const {
-			primary: text,
-			options: parsedOptions,
-			hasOptions,
-		} = parseUpdateArguments<Parameters<Page["getByPlaceholder"]>[0], Parameters<Page["getByPlaceholder"]>[1]>(
-			textOrOptions,
-			options,
-			args.length >= 2,
-		);
-
-		const definition: LocatorUpdate = {
-			type: "placeholder",
-			...(text !== undefined ? { text } : {}),
-			...(hasOptions ? { options: parsedOptions } : {}),
-		};
-
-		return this.commit(definition);
+		return this.commitWithOptions("placeholder", args);
 	}
 
 	/**
-	 * Defines or patches a `getByAltText` locator strategy for the target subpath. In `update` mode
-	 * text/options are optional; in `replace` mode text is required.
+	 * Changes the segment's locator to Playwright's `page.getByAltText()`. In `update` mode the segment must be
+	 * registered with `getByAltText`: the text is optional and the options follow JSON Merge Patch. In `replace` mode the
+	 * arguments are those of `page.getByAltText()`, the text required.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's options (`exact`); in `update` mode a patch, where `null` deletes.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "altText"; use replace("main.button@save").getByAltText(…) instead.`
 	 *
 	 * @example
 	 * ```ts
-	 * getLocatorSchema("image.logo").replace("image.logo").getByAltText("Logo").getNestedLocator();
+	 * query.replace().getByAltText("Shop logo");
 	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbyalttext
 	 */
 	getByAltText(
-		...args: UpdateArgsWithOptions<Parameters<Page["getByAltText"]>[0], Parameters<Page["getByAltText"]>[1]>
+		...args: ArgsFor<
+			Mode,
+			[text: Parameters<Page["getByAltText"]>[0], options?: Parameters<Page["getByAltText"]>[1]],
+			UpdateArgsWithOptions<Parameters<Page["getByAltText"]>[0], Parameters<Page["getByAltText"]>[1]>
+		>
 	) {
-		const [textOrOptions, options] = args;
-		const {
-			primary: text,
-			options: parsedOptions,
-			hasOptions,
-		} = parseUpdateArguments<Parameters<Page["getByAltText"]>[0], Parameters<Page["getByAltText"]>[1]>(
-			textOrOptions,
-			options,
-			args.length >= 2,
+		return this.commitWithOptions("altText", args);
+	}
+
+	/**
+	 * Changes the segment's locator to Playwright's `page.getByTitle()`. In `update` mode the segment must be registered
+	 * with `getByTitle`: the text is optional and the options follow JSON Merge Patch. In `replace` mode the arguments
+	 * are those of `page.getByTitle()`, the text required.
+	 *
+	 * @param text A string or a RegExp.
+	 * @param options Playwright's options (`exact`); in `update` mode a patch, where `null` deletes.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "title"; use replace("main.button@save").getByTitle(…) instead.`
+	 *
+	 * @example
+	 * ```ts
+	 * query.update().getByTitle({ exact: true });
+	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbytitle
+	 */
+	getByTitle(
+		...args: ArgsFor<
+			Mode,
+			[text: Parameters<Page["getByTitle"]>[0], options?: Parameters<Page["getByTitle"]>[1]],
+			UpdateArgsWithOptions<Parameters<Page["getByTitle"]>[0], Parameters<Page["getByTitle"]>[1]>
+		>
+	) {
+		return this.commitWithOptions("title", args);
+	}
+
+	/**
+	 * Changes the segment's locator to Playwright's `page.locator()`. In `update` mode the segment must be registered
+	 * with `locator`: the selector is optional and the options follow JSON Merge Patch. In `replace` mode the arguments
+	 * are those of `page.locator()`, the selector required.
+	 *
+	 * @param selector A selector; an empty one is rejected in both modes.
+	 * @param options Playwright's options, such as `hasText`; in `update` mode a patch, where `null` deletes.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "locator"; use replace("main.button@save").locator(…) instead.`
+	 *
+	 * @example
+	 * ```ts
+	 * query.replace().locator("ul > li", { hasText: /Order/ });
+	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#locator
+	 */
+	locator(
+		...args: ArgsFor<
+			Mode,
+			[selector: Parameters<Page["locator"]>[0], options?: Parameters<Page["locator"]>[1]],
+			UpdateArgsWithOptions<Parameters<Page["locator"]>[0], Parameters<Page["locator"]>[1]>
+		>
+	) {
+		return this.commitWithOptions("locator", args);
+	}
+
+	/**
+	 * Changes the segment's locator to a frame segment: with a selector, the `<iframe>` element whose descendants resolve
+	 * inside the frame. In `update` mode an omitted selector keeps the registered one. In `replace` mode an omitted
+	 * selector installs Playwright's any-frame `frameLocator()`, which must be the first segment of its chain and takes
+	 * no steps; it cannot replace the query's own path.
+	 *
+	 * @param selector The `<iframe>` element's selector; an empty one is rejected in both modes.
+	 * @returns The query.
+	 * @throws In `replace` mode without a selector, on the query's own path or on a segment with steps in the query:
+	 * `replace() cannot apply to "shell.frame": it has filter or nth steps, and frameLocator() without a selector takes
+	 * none; call clearSteps("shell.frame") first.`
+	 *
+	 * @example
+	 * ```ts
+	 * query.replace("shell.frame@payment").frameLocator("iframe#payment");
+	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#framelocator
+	 */
+	frameLocator(...args: UpdateArgsWithoutOptions<Parameters<Page["locator"]>[0]>) {
+		return this.commitPrimary("frameLocator", args[0]);
+	}
+
+	/**
+	 * Changes the segment's locator to Playwright's `page.getByTestId()`. In `update` mode the segment must be registered
+	 * with `getByTestId` and the test id is optional; in `replace` mode it is required. An empty string is a value
+	 * Playwright matches and is kept.
+	 *
+	 * @param testId The test id: a string or a RegExp.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "testId"; use replace("main.button@save").getByTestId(…) instead.`
+	 *
+	 * @example
+	 * ```ts
+	 * query.replace().getByTestId("order-row");
+	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbytestid
+	 */
+	getByTestId(
+		...args: ArgsFor<
+			Mode,
+			[testId: Parameters<Page["getByTestId"]>[0]],
+			UpdateArgsWithoutOptions<Parameters<Page["getByTestId"]>[0]>
+		>
+	) {
+		return this.commitPrimary("testId", args[0]);
+	}
+
+	/**
+	 * Changes the segment's locator to an `id` locator: a string matches the `id` attribute exactly, a RegExp is tested
+	 * against each element's id with its flags. In `update` mode the segment must be registered with `getById` and the
+	 * id is optional; in `replace` mode it is required. An empty string is rejected.
+	 *
+	 * @param id A string or a RegExp.
+	 * @returns The query.
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "id"; use replace("main.button@save").getById(…) instead.`
+	 *
+	 * @example
+	 * ```ts
+	 * query.replace().getById("order-1042");
+	 * ```
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorupdatebuilder/#getbyid
+	 */
+	getById(...args: ArgsFor<Mode, [id: string | RegExp], UpdateArgsWithoutOptions<string | RegExp>>) {
+		return this.commitPrimary("id", args[0]);
+	}
+
+	/** The strategies with options: the first argument is the primary unless it is an object or `null`. */
+	private commitWithOptions(type: OptionsDefinition["type"], args: unknown[]) {
+		const [primaryOrOptions, options] = args;
+		const parsed = parseUpdateArguments<string | RegExp, OptionsPatch<object>>(
+			primaryOrOptions as string | RegExp | OptionsPatch<object> | null | undefined,
+			options as OptionsPatch<object> | null | undefined,
 		);
-
-		const definition: LocatorUpdate = {
-			type: "altText",
-			...(text !== undefined ? { text } : {}),
-			...(hasOptions ? { options: parsedOptions } : {}),
-		};
-
-		return this.commit(definition);
+		return this.commitPrimary(type, parsed.primary, parsed.hasOptions ? { options: parsed.options } : {});
 	}
 
-	/**
-	 * Defines or patches a `getByTitle` locator strategy for the target subpath. In `update` mode
-	 * text/options are optional; in `replace` mode text is required.
-	 *
-	 * @example
-	 * ```ts
-	 * getLocatorSchema("icon.info").update("icon.info").getByTitle({ exact: true }).getNestedLocator();
-	 * ```
-	 */
-	getByTitle(...args: UpdateArgsWithOptions<Parameters<Page["getByTitle"]>[0], Parameters<Page["getByTitle"]>[1]>) {
-		const [textOrOptions, options] = args;
-		const {
-			primary: text,
-			options: parsedOptions,
-			hasOptions,
-		} = parseUpdateArguments<Parameters<Page["getByTitle"]>[0], Parameters<Page["getByTitle"]>[1]>(
-			textOrOptions,
-			options,
-			args.length >= 2,
-		);
-
-		const definition: LocatorUpdate = {
-			type: "title",
-			...(text !== undefined ? { text } : {}),
-			...(hasOptions ? { options: parsedOptions } : {}),
-		};
-
-		return this.commit(definition);
-	}
-
-	/**
-	 * Defines or patches a `locator` strategy for the target subpath. In `update` mode selector and
-	 * options are optional and merge with the existing definition; in `replace` mode selector is
-	 * required.
-	 *
-	 * @example
-	 * ```ts
-	 * getLocatorSchema("list.items")
-	 *   .replace("list.items")
-	 *   .locator("ul > li", { hasText: /Row/ })
-	 *   .getNestedLocator();
-	 * ```
-	 */
-	locator(...args: UpdateArgsWithOptions<Parameters<Page["locator"]>[0], Parameters<Page["locator"]>[1]>) {
-		const [selectorOrOptions, options] = args;
-		const {
-			primary: selector,
-			options: parsedOptions,
-			hasOptions,
-		} = parseUpdateArguments<Parameters<Page["locator"]>[0], Parameters<Page["locator"]>[1]>(
-			selectorOrOptions,
-			options,
-			args.length >= 2,
-		);
-
-		const definition: LocatorUpdate = {
-			type: "locator",
-			...(selector !== undefined ? { selector } : {}),
-			...(hasOptions ? { options: parsedOptions } : {}),
-		};
-
-		return this.commit(definition);
-	}
-
-	/**
-	 * Defines or patches a `frameLocator` strategy for the target subpath. In `update` mode the
-	 * selector is optional and, when omitted, inherits the existing selector; in `replace` mode the
-	 * selector is required.
-	 *
-	 * @example
-	 * ```ts
-	 * getLocatorSchema("frame.login").replace("frame.login").frameLocator("iframe.auth").getNestedLocator();
-	 * ```
-	 */
-	frameLocator(...args: UpdateArgsWithoutOptions<Parameters<Page["frameLocator"]>[0]>) {
-		const [selector] = args;
-
-		const definition: LocatorUpdate = {
-			type: "frameLocator",
-			...(selector !== undefined ? { selector } : {}),
-		};
-
-		return this.commit(definition);
-	}
-
-	/**
-	 * Defines or patches a `getByTestId` locator strategy for the target subpath. In `update` mode
-	 * `testId` is optional and merges with existing options; in `replace` mode it is required.
-	 *
-	 * @example
-	 * ```ts
-	 * getLocatorSchema("card.title").update("card.title").getByTestId().getNestedLocator();
-	 * ```
-	 */
-	getByTestId(...args: UpdateArgsWithoutOptions<Parameters<Page["getByTestId"]>[0]>) {
-		const [testId] = args;
-
-		const definition: LocatorUpdate = {
-			type: "testId",
-			...(testId !== undefined ? { testId } : {}),
-		};
-
-		return this.commit(definition);
-	}
-
-	/**
-	 * Defines or patches an `id` locator strategy for the target subpath. In `update` mode the id is
-	 * optional and will be normalized if provided; in `replace` mode the id is required.
-	 *
-	 * @example
-	 * ```ts
-	 * getLocatorSchema("modal.close").update("modal.close").getById().getNestedLocator();
-	 * ```
-	 */
-	getById(...args: UpdateArgsWithoutOptions<string | RegExp>) {
-		const [idValue] = args;
-		const id = idValue !== undefined ? normalizeIdValue(idValue) : undefined;
-
-		const definition: LocatorUpdate = {
-			type: "id",
-			...(id !== undefined ? { id } : {}),
-		};
-
-		return this.commit(definition);
+	/** Checks a provided primary, and in `replace` mode a missing one unless the strategy may omit it. */
+	private commitPrimary(type: LocatorStrategyDefinition["type"], primary: unknown, rest: object = {}) {
+		const spec = strategyOf(type);
+		if (primary !== undefined || (this.mode === "replace" && !spec.optionalPrimary)) {
+			assertStrategyPrimary(type, primary, { method: spec.method, path: this.subPath });
+		}
+		return this.commit({
+			type,
+			...(primary !== undefined ? { [spec.primary]: primary } : {}),
+			...rest,
+		} as LocatorUpdate);
 	}
 
 	private commit(definition: LocatorUpdate) {
-		return this.mode === "replace"
-			? this.parent.applyReplacement(this.subPath, definition)
-			: this.parent.applyUpdate(this.subPath, definition);
+		return this.apply(definition);
 	}
 }
 

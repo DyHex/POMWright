@@ -42,4 +42,28 @@ test.describe("sub-path validation", () => {
 				.locator("noop"),
 		).toThrow('"body.section.button" is not a valid sub-path of "body.section.heading"');
 	});
+
+	test("a segment of the path without a registration is named as such", ({ testFilters }) => {
+		expect(() =>
+			testFilters
+				.getLocatorSchema("fictional.filter@hasNotText.filter@hasText")
+				// @ts-expect-error "fictional" is a segment of the path but not a registered path
+				.filter("fictional", { hasText: "nope" }),
+		).toThrowError(
+			'"fictional" is not a valid sub-path of "fictional.filter@hasNotText.filter@hasText". It is a segment of that path, but no locator schema is registered for it.',
+		);
+	});
+
+	test("a path outside the chain gets the sentence alone", ({ testFilters }) => {
+		let message = "";
+		try {
+			testFilters
+				.getLocatorSchema("body.section.heading")
+				// @ts-expect-error not a segment of the path
+				.filter("body.section.button", { hasText: "nope" });
+		} catch (error) {
+			message = (error as Error).message;
+		}
+		expect(message).toEqual('"body.section.button" is not a valid sub-path of "body.section.heading".');
+	});
 });

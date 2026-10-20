@@ -8,7 +8,7 @@ test("navigation.goto prefixes baseUrl for URL paths", async ({ testPath }) => {
 });
 
 test("navigation.expectThisPage supports RegExp fullUrl", async ({ testPath, color }) => {
-	await testPath.navigation.gotoThisPage();
+	await testPath.navigation.goto();
 
 	const linkToColorPage = testPath.getNestedLocator("body.link@color");
 	await linkToColorPage.waitFor({ state: "visible" });

@@ -1,4 +1,5 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
+import TestPage from "@page-object-models/testApp/pages/testPage.page";
 
 // These tests need to be verified manually by checking the test report
 
@@ -27,8 +28,7 @@ test("stepWithTitleAndAllOptions should return the expected message", async ({ t
 });
 
 test("stepWithArgs should support required/default parameters", async ({ testPage }) => {
-	await expect(testPage.stepWithArgs("Starter"))
-		.resolves.toBe("Starter:1");
+	await expect(testPage.stepWithArgs("Starter")).resolves.toBe("Starter:1");
 	await expect(testPage.stepWithArgs("Starter", 3)).resolves.toBe("Starter:3");
 });
 
@@ -46,4 +46,8 @@ test("stepWithArgsAndObjectReturn should preserve typed argument/return flows", 
 		mode: "advanced",
 		retry: 2,
 	});
+});
+
+test("a static @step method returns its value", async () => {
+	await expect(TestPage.stepStatic("x")).resolves.toBe("static:x");
 });

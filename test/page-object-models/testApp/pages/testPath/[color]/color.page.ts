@@ -12,10 +12,6 @@ export default class ColorV2 extends TestApp<Paths, { urlPathType: RegExp }> {
 		defineLocators(this.locatorRegistry);
 	}
 
-	protected pageActionsToPerformAfterNavigation(): (() => Promise<void>)[] | null {
-		return [];
-	}
-
 	async expectThisPage() {
 		await test.step("Expect color page", async () => {
 			await this.page.waitForURL(this.fullUrl);

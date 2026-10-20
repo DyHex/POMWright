@@ -29,10 +29,10 @@ test("getNestedLocator fluent wrapper supports update and clearSteps", async ({ 
 	expect(`${cleared.describe("")}`).toEqual("getByRole('button')");
 });
 
-test("getNestedLocator fluent update can switch strategies without a terminator", async ({ testFilters }) => {
+test("getNestedLocator fluent replace can switch strategies without a terminator", async ({ testFilters }) => {
 	const locator = testFilters
 		.getLocatorSchema("body.section.heading")
-		.update("body.section.heading")
+		.replace("body.section.heading")
 		.getByText("Updated heading")
 		.getNestedLocator();
 

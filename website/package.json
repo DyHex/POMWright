@@ -1,0 +1,19 @@
+{
+	"name": "pomwright-website",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "astro dev --port 4391",
+		"build": "astro build",
+		"preview": "astro preview --port 4392"
+	},
+	"devDependencies": {
+		"@astrojs/starlight": "0.42.6",
+		"astro": "7.4.0",
+		"astro-mermaid": "2.1.0",
+		"mermaid": "11.17.2",
+		"starlight-links-validator": "0.27.0",
+		"starlight-sidebar-topics": "0.9.0"
+	},
+	"packageManager": "pnpm@12.14.0"
+}
