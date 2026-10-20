@@ -1,5 +1,445 @@
 # pomwright
 
+## 3.0.0
+
+### Major Changes
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`17b55dc`](https://github.com/DyHex/POMWright/commit/17b55dcb492c1574bc821b1329c4e7fb22942d66) Thanks [@DyHex](https://github.com/DyHex)! - ### Documentation and upgrading
+
+  POMWright's documentation is now a site: **https://dyhex.github.io/POMWright/**.
+
+  - [Getting started](https://dyhex.github.io/POMWright/docs/installation/): install POMWright, write a first page
+    object, and hand page objects to tests as Playwright fixtures.
+  - [Upgrading from 2.x](https://dyhex.github.io/POMWright/docs/upgrading-from-2x/): every change in 3.0.0 that a 2.x
+    project meets, each with how it shows up (a compile error, a change that still compiles, or a failure with a message
+    that names the fix), the search that finds the affected code, and 2.x and 3.0.0 code side by side. Start here when
+    upgrading; the entries below describe each change in short.
+  - [API reference](https://dyhex.github.io/POMWright/api/): every export and member, with its arguments, return value
+    and the errors it throws, and a page listing every error message. The same text is in the doc comments, so the
+    editor's hover shows it.
+  - [Internal](https://dyhex.github.io/POMWright/internal/): how POMWright works, for contributors.
+
+  The 2.x documentation stays in the repository at the
+  [`v2.1.0` tag](https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2).
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`735066b`](https://github.com/DyHex/POMWright/commit/735066b99a807fb6316d54585afaeaeb9ac73061) Thanks [@DyHex](https://github.com/DyHex)! - ### Breaking changes
+
+  `getById` now matches ids the way the DOM has them, and evaluates RegExp ids as real patterns.
+
+  - String ids are matched verbatim and case-sensitively and resolve as `[id="…"]`. Ids containing `.`, `:`, `[`, `]`,
+    spaces, quotes, backslashes, or a leading digit now work.
+  - The `#` and `id=` prefixes are no longer stripped. `getById("#login")` now looks for `id="#login"`. Find stale call
+    sites with:
+
+    ```sh
+    grep -rnE 'getById\(\s*["'"'"'`](#|id=)' --include=*.ts --exclude-dir=node_modules .
+    ```
+
+  - RegExp ids are evaluated as regular expressions with their flags. In 2.x the regex source was matched as literal
+    substring text, so plain unanchored patterns such as `/btn-submit/` behave the same, while metacharacters (`.`,
+    `[`, `(`, `+`, `*`, `?`, `^`, `$`, `|`) and flags now take effect: escape characters meant literally (`/a\.b/`)
+    and anchor with `^` and `$` for whole-id matches. The rendered selector changes from `[id*="…"]` to
+    `internal:attr=[id=/…/]`.
+  - RegExp flags pass through to Playwright unchanged, as with Playwright's own locators. The sticky `y` flag acts as a
+    start anchor, because Playwright resets the regex state per element from 1.64.0, the peer floor; prefer `^`.
+  - `getById("")` throws at registration, naming the registry path.
+  - The rendered selector for string ids changes from `locator('#x')` to `locator('[id="x"]')`.
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`837f1c8`](https://github.com/DyHex/POMWright/commit/837f1c8a94e7dd08b9de3653108f211307c97b83) Thanks [@DyHex](https://github.com/DyHex)! - ### Breaking changes
+
+  The package now declares its entry points and its Node floor, mirroring how `@playwright/test` is packaged.
+
+  - The package has an `exports` map: import from `"pomwright"` only. Deep imports such as `pomwright/dist/index.js`
+    fail with `ERR_PACKAGE_PATH_NOT_EXPORTED`; `pomwright/package.json` stays available. CommonJS projects (Playwright's
+    default) load the same file as before. ESM projects (`"type": "module"`) now load an ESM entry that re-exports that
+    CommonJS build by name, so a process that reaches pomwright through both `import` and `require` holds one copy of
+    every class; TypeScript reads ESM declarations for `import` and CommonJS declarations for `require`, under every
+    `moduleResolution`. The `module` field and the separate ESM build are gone. Migration: replace deep imports with
+    imports from `"pomwright"`.
+  - `engines.node` is `>=20`, Playwright 1.64's own requirement. npm warns when installing on older Node, where
+    Playwright already refuses to start.
+
+  ### Fixes
+
+  - The `license` field is the SPDX id `Apache-2.0` instead of `Apache 2.0`, and `repository.url` is in the form npm
+    expects, so npm no longer rewrites it on publish.
+
+  ### Publishing
+
+  - Releases are published with npm provenance: npm shows, for each published version, the GitHub Actions run and the
+    commit that built it, and `npm audit signatures` verifies it.
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`2301bee`](https://github.com/DyHex/POMWright/commit/2301bee0e4354805dbe4247b0a2d868fbe5b288c) Thanks [@DyHex](https://github.com/DyHex)! - ### Breaking changes
+
+  `PageObject` no longer calls its hooks from its own constructor, where the subclass has not stored anything yet, so
+  `defineLocators()` and `pageActionsToPerformAfterNavigation()` see the whole page object. Page objects, locator files
+  and fixtures are written as before.
+
+  - `defineLocators()` and the registry verification run once per page object, right after it is constructed (once
+    the code that called `new` has finished: in a fixture, before the test body), or at its first locator call if that
+    comes earlier. In 2.x `defineLocators()` ran inside `super(...)`, so a definition that used a constructor argument,
+    a field or a constructor-body assignment registered `undefined` without a word: a lost name option, a test id such
+    as `undefined-submit`, or the wrong branch of a condition. A locator module can now take page-object state as an
+    extra argument: `defineLocators(this.locatorRegistry, this.locale)`.
+  - A registry mistake (a duplicate path, an empty selector, a `has` reference to a path that is never registered, a
+    cycle) still fails the fixture before the test body, now with the page object's label in the message
+    (`LoginPage: Locator registry verification failed …`, `LoginPage: defineLocators() failed: …`), the construction
+    site in the stack and the original error as `cause`, but `new X(page)` itself no longer throws for it. Every later
+    locator call on that page object throws the same error. Migration: a test that expects `new X(page)` to throw for a
+    registry mistake asserts on a first use instead:
+    `expect(() => new X(page).getNestedLocator(path)).toThrow(…)`.
+  - A broken page object built in `beforeEach` or `beforeAll` still fails the tests the hook runs for, but each body
+    runs until its first use of that page object; in a `beforeAll` group that is not `serial`, every test of the group
+    fails, where 2.x failed the first and did not run the others.
+  - `defineLocators()` does not see a value assigned to the page object after an `await` that follows `new`.
+    Migration: pass such values to the constructor. A field initialiser that resolves a locator runs the definition
+    while the class is still being built; use a getter for derived locators.
+  - `pageActionsToPerformAfterNavigation()` is optional, with no actions by default, and it is called each time the
+    actions run (after `goto()` without a target and after `expectThisPage()`) instead of once at construction, so it
+    reads the page object's current state. `[]` and `null` both mean no actions, as they always did. Migration: delete
+    implementations that return `[]` or `null`; with the `noImplicitOverride` compiler option, add `override` to the
+    ones that stay.
+
+  ### Fixes
+
+  - `defineLocators()` and `pageActionsToPerformAfterNavigation()` see the page object's constructor arguments, fields
+    and constructor-body assignments instead of `undefined`.
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`803455c`](https://github.com/DyHex/POMWright/commit/803455cfe0cdc88a3d2e998e51a2b398cd5bdc50) Thanks [@DyHex](https://github.com/DyHex)! - ### Breaking changes
+
+  The locator registry mirrors Playwright more closely: frames are the `<iframe>` element plus `contentFrame()`, every
+  strategy's first argument is checked where it is written, `update` is a patch of the registered definition and
+  `replace` a new one, and a page object verifies its registry after `defineLocators()`.
+
+  - `filter`, `nth`, `first` and `last` on a `frameLocator(selector)` segment now apply. 2.x recorded them and dropped
+    them at resolution; when it mattered, the action failed with a strict mode violation naming the frame selector. A
+    frame segment resolves as `locator(selector)`, then its steps, then `contentFrame()` for the descendants, and the
+    `<iframe>` element itself when it is the last segment or a `has`/`hasNot` reference (what `owner()` gave). A
+    step-less frame renders exactly as before; a stepped one renders `locator('iframe').nth(1).contentFrame()…`.
+    Migration: `grep -rn 'frameLocator(' --include=*.ts --exclude-dir=node_modules .` and review every chain that
+    follows with `.nth(`, `.filter(`, `.first(` or `.last(`. Prefer telling frames apart through their ancestor
+    segments; `filter({ hasText })` on an iframe element never matches.
+  - `update()` keeps the registered strategy and throws, naming `replace()` and the right method, for another one; the
+    builder-local cache that restored an earlier strategy's definition is gone. `replace()` changes the strategy and,
+    like `update()`, keeps the recorded steps and the description. Migration: rename cross-strategy
+    `update(...).<method>(...)` calls to `replace` and state the first argument.
+  - `update()` follows JSON Merge Patch: `null` deletes an option (`{ name: null }`) or every option
+    (`getByRole("button", null)`, `getByRole(null)`); `undefined` and absent values leave the options alone. So
+    `update(x, undefined)` no longer wipes the options and `{ key: undefined }` no longer removes a key. Migration:
+    `grep -rn 'update(' --include=*.ts --exclude-dir=node_modules . | grep undefined` and use `null`.
+  - `add`, `createReusable` and `replace` throw at the call when the strategy's first argument is missing, naming the
+    method and the path (`getByRole requires a role value for "main.button".`), and every builder, `update` and a seeded
+    `add` included, throws when it is an empty string for `locator`, `frameLocator` and `getByRole`, which Playwright
+    cannot use (`getById("")` already threw). On `update` and a seeded `add` an omitted first argument keeps the
+    registered one, as before. `getByTestId("")` and the text-likes store the empty string, which Playwright
+    matches. 2.x registered `getByTestId("")` and `frameLocator("")` without their value and failed at resolution, a
+    seeded `getByTestId("")` silently inherited, and an options-only `getByRole` from JavaScript registered without a
+    role.
+  - `filter`, `nth` and `describe` before a strategy no longer compile; at runtime the message names the method and the
+    strategies to call first.
+  - A seeded registration whose override throws keeps the seeded definition instead of being unregistered. A throwing
+    DSL call never changes the registry.
+  - A registration ends at the next call on its registry (`add`, `getLocator`, `getNestedLocator`, `getLocatorSchema`,
+    `verify`, or resolving a query). In 2.x a registration kept in a variable could be given more steps at any time,
+    after other registrations, after its path was resolved, from a page object's method mid-test, and the registered
+    locator changed with them; a later step, locator method or seeded override of it now throws
+    (`nth() cannot apply to "item": its registration has ended; …`) and changes nothing. Migration:
+    `grep -rnE '((const|let) +\w+|this\.\w+) *= .*\badd\(' --include=*.ts --exclude-dir=node_modules .` and give each
+    kept registration all its steps before the registry is called again; a step for one use becomes a query.
+  - `PageObject` verifies every registered path right after `defineLocators()`, so a mistyped `has`/`hasNot` path
+    reference or a cycle fails at construction, with every failing path listed, instead of at the first action that
+    resolves it. Registration itself is unchanged: forward references stay allowed.
+
+  ### New
+
+  - `add(path).frameLocator()` with no selector registers Playwright's any-frame locator (`page.frameLocator()`,
+    Playwright 1.63 and later; the peer floor is 1.64): the descendants resolve in whichever single frame holds them,
+    the main frame included. It must be the first segment of its chain, takes no steps and has no terminal form;
+    `replace().frameLocator()` installs it on a sub-path.
+  - `registry.verify()` on every registry and in the public `LocatorRegistry` type, for standalone registries from
+    `createRegistryWithAccessors`.
+
+  ### Fixes
+
+  - Steps on frame segments are no longer dropped.
+  - A registration, seed, update or replacement without its first argument no longer registers and fails later.
+  - `update(x, undefined)` no longer wipes the registered options.
+  - `filter`, `nth` and `describe` before a strategy are compile errors with a runtime message that says what to call
+    first.
+  - A seeded registration is no longer unregistered by a wrong-type override.
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`0850bf1`](https://github.com/DyHex/POMWright/commit/0850bf1c497bd7f91c3b020ac0cb4fdfc82ea485) Thanks [@DyHex](https://github.com/DyHex)! - ### Breaking changes
+
+  - A seed from `createReusable` no longer changes: `filter`, `nth` and `describe` return a new seed and leave the seed
+    they are called on as it was, as a Playwright `Locator` does, and `seed.definition` returns a copy. In 2.x they
+    changed the seed and returned it, so variants derived from one base seed carried each other's steps and
+    description (`row.nth("last")` after `row.nth(0)` resolved to the first row). Migration: use the result of a seed
+    method, `add(path, { reuse: seed.filter(f) })` instead of `seed.filter(f);` followed by `add(path, { reuse: seed })`,
+    which now registers the seed without the filter.
+  - `add(path, { reuse: "other" })` returns `filter`, `nth` and `describe`, which narrow the copy after the copied steps
+    (the copy keeps the source's strategy, steps and explicit description, as before; the source never changes). There
+    is no strategy override and no `clearSteps` after a path, and a copy of an any-frame `frameLocator()` path refuses
+    all three. 2.x returned nothing (`void`). Migration: drop a `void` annotation on the result; a module compiled with
+    `declaration: true` that returns it from an expression-bodied arrow uses a block body or `: void`, as for a seed
+    reuse.
+
+  ### Fixes
+
+  - Variants derived from one seed no longer share steps or a description.
+  - A reuse value that is neither a registered path nor a seed (`{ reuse: null }` from JavaScript) throws `reuse
+requires a registered path or a seed from createReusable for "<path>".` instead of a `TypeError`.
+  - A first argument Playwright cannot take, from JavaScript (`null`, a number, an object, a RegExp for a role,
+    `locator` or `frameLocator`), throws `<method> requires a <field> value for "<path>".` on every builder instead of
+    being stored and failing later with a `TypeError`, resolving to nonsense (`locator('null')`, `getByTestId('42')`) or
+    doing nothing. With two arguments the first is the primary, so `getByRole(null, null)` is valid nowhere; a lone
+    `null` on `update` or a seeded override is the options.
+  - A seeded override follows `update()`'s Merge Patch: a `null` option key is deleted instead of stored (a stored
+    `name: null` failed at resolution), a lone `null` clears the seed's options (2.x ignored it), `(primary, null)` sets
+    the primary and clears them, and a JavaScript `(undefined, options)` no longer drops the options. All of these forms
+    now compile, typed as `update`'s.
+  - Steps or a description can no longer reach an any-frame `frameLocator()` definition, through a copy by path or a
+    hand-made seed object: they throw at the call instead of at the first resolution below the path. A copy or seed
+    without them registers as `add(path).frameLocator()` does.
+
+  ### Internal
+
+  - The ten locator strategies are described once, in one table that locator creation, the clone, the seeded override,
+    `update` and `replace` read; a strategy without its builder method is a compile error.
+  - The debug-step record of the chain builder, built and never read, is removed.
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`ab76175`](https://github.com/DyHex/POMWright/commit/ab7617512b7e495f3039c0d95fcb014dfd17df86) Thanks [@DyHex](https://github.com/DyHex)! - ### Breaking changes
+
+  `SessionStorage` is rebuilt on Playwright's `page.sessionStorage` and adds only what Playwright lacks: batches, step
+  titles, origin checks, typed values, and seeding before the app loads.
+
+  - Requires `@playwright/test` 1.64 or later; the peer range is now `>=1.64.0 <2.0.0`. `page.sessionStorage` needs
+    1.61, the any-frame `frameLocator()` needs 1.63, and the fix that makes every RegExp flag deterministic across
+    elements (microsoft/playwright#42818) is in 1.64.0.
+  - Values are strings, stored and read exactly as given. 2.x JSON-encoded every value, so `set({ token: "abc" })`
+    reached the app as `"abc"` with quotes. A structured value is declared once per key with a codec:
+    `new SessionStorage(page, { schema: { user: json<User>() } })`, or on a page object the `storage` member of its
+    options type plus the `sessionStorage: { schema }` constructor option. `json<T>()` ships; `Codec<T>` is exported
+    for custom codecs. An undeclared key must be a string, at compile time and at runtime. Migration: declare a codec
+    for keys that held objects and drop the `set<T>` / `get<T>` generics; declare `json<string>()` for string keys an
+    app parses as JSON (an `ngx-webstorage` style layer), which keeps the quotes.
+  - `set`, `get`, `clear` and `seed` each take a single key or a record: `set("token", "abc")`, `get("token")`,
+    `clear(["a", "b"])`, `seed({ token })`.
+  - `get(keys)` returns every requested key with `null` when absent; `get()` returns the present entries. A literal
+    `get([])` or `clear([])` no longer compiles; a computed empty list reads nothing or removes nothing (2.x read or
+    cleared everything). Migration: a check for `undefined` becomes a check for `null`.
+  - `setOnNextNavigation` is replaced by `seed(entries, { origin? })`. Away from the origin, it adds an init script
+    that stores the entries when the page's main frame first arrives at the origin, by any navigation (`goto`, a link,
+    a script, a form POST, a server redirect, a page a service worker or a mock serves), before the app's first script
+    runs, and removes it once that document has run it, so a reload never overwrites what the app wrote. Navigations
+    are never intercepted: the app sees the same request, headers and history as without a seed. It never leaves the
+    page the test is on, so an origin can be seeded with data learned on the previous one. Already on the origin, it
+    writes at once. A page that never seeds has nothing registered; two page objects seeding the same origin merge. A
+    seed still pending when the page closes fails the test, as does a write the browser refuses; `seed` itself throws
+    in a browser without the Navigation API and when the page commits a document on the origin while it registers.
+    Migration: `grep -rn 'setOnNextNavigation' --include=*.ts --exclude-dir=node_modules .` and rename to `seed`.
+  - `waitForContext` is removed: an operation on a page without an origin fails at once with a message naming the
+    fix. `reload` is removed: call `page.reload()`.
+  - A page object's helper operates on that page object's origin and throws, naming both origins, when the page is on
+    another one. A standalone helper without an origin operates on the current origin; its `seed` needs `{ origin }`.
+
+  New exports: `json`, `Codec`, `SessionStorageSchema`, `StorageTypeFromOptions`.
+
+  ### Fixes
+
+  - `set` no longer stores strings with JSON quotes.
+  - Seeding before the app's first load no longer loses the race against the app's first script, no longer merges and
+    wipes concurrent calls, and no longer leaks a listener after a failure.
+  - `get([])` and `clear([])` no longer mean "everything".
+  - An empty string no longer reads back as `null`.
+  - No session storage operation waits without a timeout any more.
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`5d2371c`](https://github.com/DyHex/POMWright/commit/5d2371cfa49fb57761f8f0e5dfc7e160f6ab454a) Thanks [@DyHex](https://github.com/DyHex)! - ### Breaking changes
+
+  - The query builder's `remove(subPath?)` is replaced by `skip(subPath)` and `unskip(subPath)`. `skip` leaves an
+    ancestor out of the chain when the query resolves and deletes nothing, so `unskip` brings it back exactly as it was,
+    with its definition, steps and description; `remove` deleted all three from the query, and a later `update()` or
+    `replace()` brought back the definition only. The terminal path cannot be skipped (a compile error, and a runtime
+    error from JavaScript), and `skip` has no form without a sub-path. `update`, `replace`, `filter`, `nth` and
+    `clearSteps` on a skipped segment throw `<method>() cannot apply to "<sub>": it is skipped in this query; call
+unskip("<sub>") first.`, as do a second `skip` and an `unskip` without one. Migration: replace `remove("ancestor")`
+    with `skip("ancestor")`; replace `remove()` followed by `update()`/`replace()` with `update()`/`replace()`, plus
+    `clearSteps()` and `describe("")` where the old deletion of steps and description was wanted.
+  - `@step` decorates only methods that return a Promise. `test.step` always returns a Promise and runs the body after
+    the caller's current line, so a decorated sync method returned a Promise typed as its value and its exceptions
+    escaped the caller's `try/catch`; it is now a compile error naming `"@step decorates methods that return a Promise:
+make the method async"`, with stage-3 decorators and with `experimentalDecorators`. Migration: make decorated
+    methods `async`.
+  - `PlaywrightReportLogger` keeps the message and string arguments exactly as given: no trailing blank lines, no
+    re-formatting of JSON messages. Other arguments are printed as `console.log` prints them instead of
+    `[object Object]`. A message that is a JSON object or array is attached as `application/json`, anything else
+    (`"42"` included) as `text/plain`. Attachment names use Playwright's `locale` and `timezoneId` instead of a fixed
+    `nb-NO`: the `log` fixture passes them, and `attachLogsToTest(testInfo)` called from a fixture of your own takes
+    the project's `use.locale` and `use.timezoneId` from the config, or `{ locale, timeZone }` as its second argument.
+    With no config they read `08:19:55 AM 10/15/2026 - INFO : [TestCase]`. Entries are attached in call order, without
+    sorting. Migration: set `use: { locale: "nb-NO" }` in the config for the 2.x names; a fixture of your own that
+    should also follow `test.use()` passes `{ locale, timeZone: timezoneId }` from its fixtures. Pass
+    `JSON.stringify(data, null, 2)` for pretty JSON or data nested deeper than two levels.
+  - From JavaScript, `describe(null)` and `describe(undefined)` throw `describe requires a string for "<path>"; pass ""
+to remove the description.` instead of falling back to the path, and `nth(null)` and `nth(undefined)` reach
+    Playwright's `nth`, which matches nothing, instead of being dropped, which matched every element. TypeScript rejected
+    all four already. Migration: call `nth` only when there is an index.
+
+  ### Fixes
+
+  - A caller's options or filter object changed after `add()`, `filter()` or `createReusable`, a RegExp it passed
+    rewritten with `compile()`, or a seed's step after `add(path, { reuse })`, no longer changes the registered locator:
+    builders store copies, RegExps included.
+  - A static method decorated with `@step` is titled by its class instead of `Function`, and a bare `@step` on a static
+    method compiled with `experimentalDecorators` is no longer left unwrapped.
+  - An array or a `filter`-only object in `has`/`hasNot` is reported as an unsupported filter reference instead of
+    failing with Playwright's `Inner "has" locator must belong to the same frame.` message.
+  - The duplicate-registration message shows a `Locator` in a step as Playwright prints it (`locator('b')`) instead of
+    its internals.
+  - The sub-path error adds `It is a segment of that path, but no locator schema is registered for it.` when the
+    sub-path is an unregistered segment of the query's path.
+  - A page object's registry error and a never-applied `seed` point at the consumer's line even when the consumer's file
+    is named `pageObject.ts` or `sessionStorage.ts`.
+
+  ### Internal
+
+  - Unreachable branches in the registry and the query builder are removed; `getLocator` resolves a copy of the record
+    without building a query builder (about twice as fast); a nested resolution copies each segment once instead of
+    twice; `seed` and `PageObject` share one call-site helper.
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`4220bfa`](https://github.com/DyHex/POMWright/commit/4220bfa35d55731b6d4e6b2d4d587ad6c5abf723) Thanks [@DyHex](https://github.com/DyHex)! - ### Breaking changes
+
+  - `getLocatorSchema(path).replace(subPath?)` takes the parameter lists of Playwright's own methods: the first argument
+    is required and the options are Playwright's option types. `replace().getByRole({ name: "Save" })`,
+    `replace().getByTestId()` and the other calls without a first argument, which always threw, no longer compile, and
+    neither do `null` options (`replace().getByRole("button", null)` or `{ name: null }`), which meant omission.
+    `replace().frameLocator()` and `replace().getByRole("button", undefined)` still compile; `update()` is unchanged.
+    From JavaScript a missing first argument throws `getByRole requires a role value for "<path>".`, the message every
+    other builder uses, instead of `Locator replace for "<path>" of type "role" requires a "role" value.`, and `null`
+    options still mean omission. Migration: pass the first argument to `replace()` methods and drop `null` options from
+    them.
+  - `UrlTypeOptions`, `PageObject`'s second type argument, is renamed `PageObjectTypeOptions`, since it also carries the
+    `storage` schema. There is no alias. Migration: rename it in imports and constraints.
+  - A path literal containing U+FEFF (the byte-order mark) is a compile error; it always threw at registration.
+
+  ### Features
+
+  - New type exports, so that shared locator modules, helpers and domain base classes can name what the registry hands
+    out, and a project compiled with `declaration: true` can export functions that return it:
+    `LocatorQueryBuilder` (what `getLocatorSchema(path)` and each step of its chain return), `LocatorUpdateBuilder`
+    (what `update()` and `replace()` return), `ReusableLocator` (a seed from `createReusable`, the `reuse` option of
+    `add`; `ReusableLocator<Paths, "role">` keeps the strategy, `ReusableLocator<Paths>` accepts any), `FilterDefinition`,
+    `IndexSelector`, `LocatorSchemaPathFormat` (the path rules as a type) and `LocatorSchemaPathArgument` (the path
+    parameter of `add` and the accessors, for a helper that forwards a path in a base class generic in its paths).
+
+  ### Fixes
+
+  - The query builder's internal `applyUpdate` and `applyReplacement`, which skip the argument checks, are no longer
+    reachable through its types after a chained call.
+  - The type-level path check rejects the same whitespace as the runtime check, U+FEFF included, and the whitespace
+    error shows each character but the plain space as an escape (`main\u00A0.form`) instead of printing it invisibly.
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`4682146`](https://github.com/DyHex/POMWright/commit/46821464fe0819928635be53d04800accab2b2b5) Thanks [@DyHex](https://github.com/DyHex)! - ### Breaking changes
+
+  `PageObject` URLs now behave exactly like Playwright's `baseURL` handling, with one base per page object, and the
+  navigation helper waits the way Playwright does.
+
+  - `gotoThisPage()` is removed. `goto()` without a target replaces it: it navigates to `fullUrl` and runs the
+    post-navigation actions unless `{ runPostNavigationActions: false }`. `goto(target)` never runs the actions.
+    Migration: `grep -rn 'gotoThisPage(' --include=*.ts --exclude-dir=node_modules .` and drop `ThisPage`.
+  - `NavigationOptions.waitForLoadState` is removed; `waitUntil` covers every method. POMWright no longer defaults
+    `waitUntil` to `"load"` itself; an unset value means Playwright's own default. Migration: rename the option in
+    `navOptions` and in per-call options.
+  - A string `baseUrl` must be a non-empty origin (`scheme://host[:port]`, optional trailing slash; no path, query,
+    hash, or scheme-less value such as `localhost:9000`). A string `urlPath` must be `""` or start with exactly one
+    `/`. Both are checked at construction and the error names the page object.
+  - `goto(target)` resolves relative input against the page object's `baseUrl` exactly as Playwright resolves
+    `page.goto` against `use.baseURL` (`goto("login")`, `goto("?tab=1")` are resolved; 2.x passed them through). On a
+    RegExp `baseUrl` only absolute URLs are accepted, at compile time and at runtime.
+  - On a page object with a RegExp `baseUrl` or `urlPath`, `fullUrl` is a `UrlMatcher` instead of a `RegExp`: the base
+    is matched against the URL's origin and the path against the rest (pathname, query, hash), each regex as written
+    with its own flags. Pass it to `page.waitForURL`, `expect(page).toHaveURL`, or `page.route` as before, or use
+    `fullUrl.test(url)` instead of `toMatch`. A base regex that contains a path prefix must move that prefix into
+    `urlPath`.
+  - `expectThisPage` and `expectAnotherPage` are each one `page.waitForURL` call under the project's
+    `use.navigationTimeout` (overridable with `NavigationOptions.timeout`) instead of a navigation wait followed by an
+    unbounded exact-string retry. A failure names the page object, the expected URL or matcher, and the URL found.
+    `expectAnotherPage` waits for the URL to change and then fails at once if it bounced back.
+  - `fullUrl` for a homepage page object (`urlPath` `""`) is `https://app.example/` with the trailing slash, the form
+    the browser reports.
+
+  New exports: `ThisPageOptions`, `NavigationFor`, `UrlMatcher`.
+
+  ### Fixes
+
+  - A fully anchored RegExp `urlPath` such as `/^\/account\/\d+$/` no longer produces a `fullUrl` that can never match.
+  - A substring RegExp `baseUrl` no longer needs to match the URL up to the start of the path.
+  - RegExp flags on `baseUrl` or `urlPath` are no longer dropped.
+  - `fullUrl` and `goto` no longer produce a double slash for a `baseUrl` with a trailing slash.
+  - `expectThisPage` no longer retries forever when `fullUrl` lacks the trailing slash the browser reports, and
+    navigation failures name the expected and found URLs.
+  - `expectAnotherPage` no longer passes while still on the page.
+  - `goto` is no longer unavailable on a page object whose `urlPath` is a RegExp.
+
+### Minor Changes
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`4d9c124`](https://github.com/DyHex/POMWright/commit/4d9c12491ef9250b88cecc8923c8822f65b76b89) Thanks [@DyHex](https://github.com/DyHex)! - ### Features
+
+  - `PageObjectOptions<Options>`, the type of the `PageObject` constructor's options (`label`, `navOptions`,
+    `sessionStorage`, `locators`), and `LocatorRegistryOptions`, the type of `createRegistryWithAccessors`'s second
+    parameter and of `locators`, are exported, so a domain base class forwards the options by name instead of restating
+    their shape. No migration.
+  - A seeded override of any strategy may be called with no argument and keeps the seed's definition, as `update()` does
+    (`add(path, { reuse: seed }).getByRole()`); only `frameLocator()` compiled before.
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`0850bf1`](https://github.com/DyHex/POMWright/commit/0850bf1c497bd7f91c3b020ac0cb4fdfc82ea485) Thanks [@DyHex](https://github.com/DyHex)! - ### Features
+
+  - Opt-in `strictChains`: `createRegistryWithAccessors(page, { strictChains: true })` and the `PageObject` constructor
+    option `locators: { strictChains: true }` make `verify()` require every ancestor of every registered path to be
+    registered, and name every one that is not, one line per path:
+    `"main.form.button.save": strictChains requires every ancestor to be registered; "main.form" and "main.form.button"
+are not.` A page object checks it right after `defineLocators()`; a standalone registry when it calls `verify()`.
+    The option is a boolean, `false` by default; without it nothing changes, and an unregistered segment stays a name
+    that groups paths and is left out of the chain. `skip` and `unskip` work in both modes; under the
+    option an any-frame `frameLocator()` is a root path. No migration.
+
+### Patch Changes
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`17f566d`](https://github.com/DyHex/POMWright/commit/17f566dec08d1648cdaef7c3f5a87b2e9a80f181) Thanks [@DyHex](https://github.com/DyHex)! - ### Documentation
+
+  - Every export and every public member now has a doc comment, so the editor's hover is a reference, as Playwright's
+    own is: a summary, each parameter (with the options of `PageObject`'s constructor and of `SessionStorage` one by
+    one), the return value, the errors thrown with their messages, an example, and a link to its page in the API reference. `navigation.goto`,
+    `expectThisPage` and `expectAnotherPage` are documented on the type a page object's `navigation` has, and `filter`,
+    `nth` and `describe` after a locator method on the type a registration chain has, so the hover shows them where
+    you write them.
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`801e4ac`](https://github.com/DyHex/POMWright/commit/801e4ac8e765a912737d6e13143501d7dcca2165) Thanks [@DyHex](https://github.com/DyHex)! - ### Fixes
+
+  - The steps of the navigation helper (`LoginPage: Navigate to this Page`, `LoginPage: Expect this Page`, …) and of
+    `SessionStorage` (`Auth.SessionStorage.set:`, …) are reported at the line that called them, in the HTML report and
+    the trace, as `@step` rows are: they are boxed steps now. They showed a line in POMWright's bundle, and the session
+    storage steps no location at all. A failure inside them was, and is, reported at the test's line.
+
+- [#46](https://github.com/DyHex/POMWright/pull/46) [`4d9c124`](https://github.com/DyHex/POMWright/commit/4d9c12491ef9250b88cecc8923c8822f65b76b89) Thanks [@DyHex](https://github.com/DyHex)! - ### Fixes
+
+  - A string `urlPath` is compared in the form the browser reports it, as `fullUrl` is and as Playwright's
+    `toHaveURL(string)` compares: for a path such as `/søk`, `/a b` or `/x?q=a b`, `expectThisPage` timed out and
+    `expectAnotherPage` passed while the browser was on the page.
+  - A `baseUrl` or `urlPath` that is neither a string nor a RegExp throws at construction
+    (`LoginPage: baseUrl must be a string or a RegExp; received undefined.`) instead of building a page object that never
+    matched its page, passed `expectAnotherPage` and gave its session storage no origin. Migration: a page object built
+    from an unset environment variable now fails at construction; set the variable.
+  - A hand-made seed object passed to `add(path, { reuse })` is checked as every builder checks its first argument
+    (`reuse requires a selector value for "<path>".`, `reuse requires a non-empty selector for "<path>".`) instead of
+    registering an empty or missing value that failed at the first action.
+  - `replace(sub).frameLocator()` throws at the call on a segment with `filter` or `nth` steps in the query (call
+    `clearSteps(sub)` first) and on the query's own path, which the any-frame form cannot resolve to, instead of failing
+    at resolution. `filter` and `nth` on an any-frame segment in a query give the same message as on `add`.
+  - A path that is not a string, from JavaScript, throws `LocatorSchemaPath must be a string; received 42.` instead of
+    a `TypeError`.
+  - The duplicate-registration message prints a RegExp used twice in each place instead of `"[Circular]"`, and is
+    headed `Existing and attempted schemas:`.
+
 ## 2.1.0
 
 ### Minor Changes
