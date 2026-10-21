@@ -1,3 +1,5 @@
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { User } from "@page-object-models/testApp/pages/teststorage/teststorage.locatorSchema";
 import type TestStorage from "@page-object-models/testApp/pages/teststorage/teststorage.page";
@@ -402,6 +404,66 @@ test.describe("seed", () => {
 		expect(served).toEqual([`${B}/teststorage?hop=link`]);
 	});
 
+	test("seeds for one origin in a Promise.all merge as awaited ones, and nothing writes them again after a round trip", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		await testStorage.navigation.goto();
+		await Promise.all([
+			testStorageSecond.sessionStorage.seed({ token: "seeded" }),
+			testStorageSecond.sessionStorage.seed({ other: "x" }),
+		]);
+
+		await testStorageSecond.navigation.goto();
+		expect(await startup(page)).toEqual({ token: "seeded", other: "x" });
+		await testStorageSecond.sessionStorage.set("token", "changed-by-app");
+
+		await testStorage.navigation.goto();
+		await testStorageSecond.navigation.goto();
+		expect(await startup(page)).toEqual({ token: "changed-by-app", other: "x" });
+	});
+
+	test("a pending seed, then two overlapping ones: every call resolves and the first script sees every key", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({ a: "1" });
+		const later = new Promise((resolve) => setTimeout(resolve, 0)).then(() =>
+			testStorageSecond.sessionStorage.seed({ b: "2" }),
+		);
+		await Promise.all([testStorageSecond.sessionStorage.seed({ c: "3" }), later]);
+
+		await testStorageSecond.navigation.goto();
+		expect(await startup(page)).toEqual({ a: "1", b: "2", c: "3" });
+	});
+
+	test("a seed not awaited before the hop either applies or fails at the call, and never resolves without its entries (5 fresh pages)", async ({
+		context,
+	}) => {
+		for (let round = 0; round < 5; round++) {
+			// a fresh page, so the Navigation API check runs while the navigation replaces about:blank
+			const fresh = await context.newPage();
+			const storage = new SessionStorage(fresh, { label: "Fresh", origin: B });
+			const seeded = storage.seed({ token: `round-${round}` }).then(
+				() => "resolved",
+				(error: Error) => error.message,
+			);
+			await fresh.goto(`${B}/teststorage`);
+			const outcome = await seeded;
+			if (outcome === "resolved") {
+				expect(await startup(fresh)).toEqual({ token: `round-${round}` });
+			} else {
+				expect(outcome).toBe(
+					"Fresh.SessionStorage.seed: the page committed a document on http://127.0.0.1:9000 while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it",
+				);
+			}
+			await fresh.close();
+		}
+	});
+
 	test("seeding both origins first: each first script sees only its own entries, and the first origin keeps its state on return", async ({
 		page,
 		testStorage,
@@ -510,6 +572,42 @@ test.describe("seed", () => {
 		await poc.sessionStorage.seed({ token: "x" }, { origin: B });
 		await poc.navigation.goto(`${B}/teststorage`);
 		expect(await startup(page)).toEqual({ token: "x" });
+	});
+});
+
+test.describe("overlapping seeds that are never applied", () => {
+	test.describe.configure({ mode: "serial" });
+	// thrown from the page's close listener; the failing test's worker is replaced, so a file hands the message over
+	const messageFile = () =>
+		path.join(
+			test.info().project.outputDir,
+			`never-applied-${test.info().project.name}-${test.info().repeatEachIndex}.txt`,
+		);
+
+	test.afterEach(() => {
+		const [error] = test.info().errors;
+		if (error?.message !== undefined) {
+			writeFileSync(messageFile(), error.message);
+		}
+	});
+
+	test("fail the test when the page closes", async ({ page, testStorage, testStorageSecond }) => {
+		test.fail(true, "the never-applied seed must fail this test at close");
+		await testStorage.navigation.goto();
+		await Promise.all([
+			testStorageSecond.sessionStorage.seed({ a: "1" }),
+			testStorageSecond.sessionStorage.seed({ b: "2" }),
+			testStorageSecond.sessionStorage.seed({ c: "3" }),
+		]);
+		await page.close();
+	});
+
+	test("and the message lists every key, in call order", () => {
+		const message = readFileSync(messageFile(), "utf8");
+		rmSync(messageFile());
+		expect(message.split("\n")[0]).toBe(
+			`Error: TestStorageSecond.SessionStorage.seed: the seed for ${B} (keys: a, b, c) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
+		);
 	});
 });
 
