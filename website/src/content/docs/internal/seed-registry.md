@@ -21,6 +21,8 @@ must not do in the documents that run it before then.
 `SeedRegistry` (`src/helpers/sessionStorageSeed.ts`), created on first use and kept in a `WeakMap` keyed by the page,
 so every `SessionStorage` on the page shares it. The registry keeps one pending seed per origin; a second `seed` for the
 same origin registers a script with the merged entries, later values winning, then disposes of the previous one.
+Calls for one origin take turns, in the order they were made (see
+[overlapping calls](/POMWright/internal/seed-registry/#overlapping-calls)).
 
 The first pending seed registers four listeners: `framenavigated`, `domcontentloaded`, `console` and `close`. When
 nothing is pending and no applied document can still report a failure, all four are removed: a page that never seeds,
@@ -90,10 +92,37 @@ sequenceDiagram
 - **The Navigation API**, once per page, by `page.evaluate` in the current document (which works on `about:blank`):
   without `navigation.activation` the script could not tell a first arrival from a reload, so `seed` throws before
   anything is registered.
-- **A commit during registration.** A temporary `framenavigated` listener watches the main frame while
-  `addInitScript` is pending. If the page commits a document on the origin in that time, it is unknown whether that
-  document ran the script: on Chromium, `addInitScript` resolved after such a commit whether or not the document had
-  run it. The registry disposes of the new script and `seed` throws.
+- **A commit during registration.** A temporary `framenavigated` listener watches the main frame from the moment the
+  call reaches the registry until its turn ends, so the wait for earlier calls and the Navigation API check are
+  covered too. If the page commits a document on the origin in that time, it is unknown whether that document ran the
+  script: on Chromium, `addInitScript` resolved after such a commit whether or not the document had run it. A call
+  that sees the commit before registering throws without registering; one that sees it while `addInitScript` is
+  pending disposes of the new script and throws.
+
+## Overlapping calls
+
+A call's turn reads the pending seed, registers a script with the merged entries, stores it as the pending seed and
+disposes of the previous script, with two `await`s in between. Each origin has a chain of turns: a call joins it
+synchronously when it reaches the registry, and its turn starts once the previous one has settled, whether it
+succeeded or failed. So calls that overlap, in a `Promise.all` or without `await`, end exactly as if each had been
+awaited in turn, and a call that fails leaves the pending seed as it was. Chains are per origin, so seeds for different
+origins never wait for each other.
+
+Without the chain, two calls that overlap read the same pending seed. Each merges only that seed with its own entries,
+so one call's keys are lost; the second stored record replaces the first, whose script stays registered and
+untracked; and both dispose of the same previous script, the second time with Playwright's "disposed more than once"
+error. The untracked script is the worst of it: since a return from another origin is a first arrival again, it writes
+the seeded values after every such return, over what the app has stored. A commit watch that started only at
+`addInitScript` would miss a commit during the Navigation API check: a `seed` not awaited before a `goto` on a fresh
+page would resolve on Chromium without its entries.
+
+Rejected:
+
+- **A lock taken inside the turn**, after the Navigation API check: it orders the calls by who finished the check
+  first, not by the order they were made.
+- **Throwing on an overlap**: a `Promise.all` of seeds is a reasonable thing to write.
+- **Coalescing**, one registration of everything merged so far: the commit check would no longer belong to the call
+  that made it.
 
 ## Failures
 

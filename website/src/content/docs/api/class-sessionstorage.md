@@ -147,6 +147,10 @@ Stores entries for an origin before the app's next load there, so the app's firs
 the page the test is on; on the origin already, it writes at once. See
 [how it works](/POMWright/docs/seeding-session-storage/#how-it-works).
 
+Calls for one origin merge in the order they were made, later values winning per key, also when they overlap. Await
+`seed` before the action that starts the hop: see
+[several seeds](/POMWright/docs/seeding-session-storage/#several-seeds).
+
 **Usage**
 
 ```ts
