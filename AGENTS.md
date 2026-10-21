@@ -1,8 +1,8 @@
 # AGENTS.md
 
 Persistent context and working rules for AI agents and humans contributing to POMWright. Read it fully before
-changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-20, when the 3.0.0
-release work was finished and its working folder removed before the merge.
+changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-21, with the 3.0.1 fix
+for overlapping `seed` calls.
 
 ## 1. What POMWright is
 
@@ -26,7 +26,7 @@ release work was finished and its working folder removed before the merge.
   types, `PlaywrightReportLogger` with `LogEntry` and `LogLevel`, `step`, `NavigationFor`, `NavigationOptions`,
   `ThisPageOptions` and `UrlMatcher`. Everything else under `src/` is internal even when it carries an `export`
   keyword, so renaming or deleting it is not by itself a breaking change.
-- Published version: 2.1.0. The next release is 3.0.0, a major, whose changes are the pending changesets (section 7).
+- Published version: 3.0.0. The next release is 3.0.1, a patch, whose changes are the pending changesets (section 7).
   Section 6 describes how release work is organised.
 
 ## 2. Repository map
@@ -36,7 +36,7 @@ release work was finished and its working folder removed before the merge.
 | `index.ts` | Package entry. tsup bundles the CommonJS build from here; `scripts/write-esm-entry.mjs` then writes the ESM entry. | yes |
 | `src/` | Runtime: 17 files, about 4,600 lines, plus colocated vitest unit tests (`**/*.test.ts`: `pageObject.test.ts`, `locators/utils.test.ts`, `locators/locatorRegistry.test.ts`, `locators/locatorRegistrationBuilder.test.ts`, `locators/locatorUpdateBuilder.test.ts`, `locators/locatorQueryBuilder.test.ts`, `locators/reusableLocatorBuilder.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`, `helpers/sessionStorage.test.ts`, `helpers/sessionStorageSeed.test.ts`, `helpers/callSite.test.ts`, `helpers/playwrightReportLogger.test.ts`, `helpers/stepDecorator.test.ts`, `helpers/stepLocations.test.ts`), the type-only `helpers/stepDecorator.test-d.ts` (decorator syntax, which vitest's runtime cannot load), and `locators/fakePage.ts`, test support only: a page whose locators record the chain they were built from, never imported by the runtime and so never bundled. | yes |
 | `src/locators/` | `locatorRegistry.ts` (registry, the open registration it ends at its next call, resolution with frames as `locator` plus `contentFrame()` and the any-frame segment, cycle detection, `verify()` with the opt-in `strictChains`, reuse by path and by seed through one seeded builder), `locatorRegistrationBuilder.ts` (`add(path).getByRole(...)` DSL, seeded registrations with `update`'s argument shapes, the boundary checks, no steps on an any-frame definition), `locatorUpdateBuilder.ts` (`update` as a same-strategy JSON Merge Patch, `replace` with Playwright's argument lists through a `Mode` type parameter; the class `LocatorUpdateBuilderInternal`, the public alias `LocatorUpdateBuilder`), `locatorQueryBuilder.ts` (`getLocatorSchema(path)` chain: `filter`, `nth`, `clearSteps`, `skip`/`unskip`, `describe`, `update`, `replace`, `getLocator`, `getNestedLocator`; the class `LocatorQueryBuilderInternal`, the public alias `LocatorQueryBuilder`), `reusableLocatorBuilder.ts` (`createReusable`; a seed is a value whose methods return new seeds), `types.ts` (definitions, `ReusableLocator`, `FilterDefinition`, `IndexSelector`, `OptionsPatch`, compile-time path validation), `utils.ts` (the `STRATEGIES` table, one row per strategy, that creation, cloning, the seeded patch, `update` and `replace` read; path validation with `LOCATOR_SCHEMA_PATH_WHITESPACE`, `assertStrategyPrimary` over `assertPrimaryValue` and `assertIdValue`, `assertDescription`, the id selector helpers, `createLocator`, `applyIndexSelector`, `isAnyFrameDefinition`, `isLocatorInstance`, `isReusableLocator`, `methodForStrategy`, `mergeOptions`, cloning and copying (`copyValue`, `copyFields`, `copyFilter`, `normalizeSteps`), patching). | yes |
-| `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts` (`SessionStorage`: `page.sessionStorage` with batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `seed`), `sessionStorageSeed.ts` (the seed registry, one per page: an init script per pending origin that writes only in the main frame, on the origin, on the first arrival, disposed at the main frame's commit there; the Navigation API check, the commit-during-registration check, the refused-write and never-applied failures), `callSite.ts` (`captureCallSite(boundary)` and `atCallSite`: a later error pointed at the consumer's call, for `seed` and the page-object check), `playwrightReportLogger.ts` (messages kept as given, other arguments as `console.log` prints them, one attachment per entry in call order, names in Playwright's `locale` and `timezoneId`), `stepDecorator.ts` (`@step`, for methods that return a Promise). | yes |
+| `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts` (`SessionStorage`: `page.sessionStorage` with batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `seed`), `sessionStorageSeed.ts` (the seed registry, one per page: an init script per pending origin that writes only in the main frame, on the origin, on the first arrival, disposed at the main frame's commit there; calls for one origin in turn on a per-origin chain; the Navigation API check, the commit-during-registration check, the refused-write and never-applied failures), `callSite.ts` (`captureCallSite(boundary)` and `atCallSite`: a later error pointed at the consumer's call, for `seed` and the page-object check), `playwrightReportLogger.ts` (messages kept as given, other arguments as `console.log` prints them, one attachment per entry in call order, names in Playwright's `locale` and `timezoneId`), `stepDecorator.ts` (`@step`, for methods that return a Promise). | yes |
 | `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject` (constructor options `label`, `navOptions`, `sessionStorage`, `locators: { strictChains }`): `defineLocators()` and `verify()` run once, right after construction (a check scheduled with `queueMicrotask`) or at the first locator call, through a facade on `locatorRegistry`; labelled, sticky errors with the construction site; the optional actions hook, evaluated per run. The `test` fixture that provides `log`. | yes |
 | `test/` | Standalone pnpm project that installs the packed package from `.pack/pomwright` and runs Playwright against it. Section 4. | yes |
 | `website/` | The documentation site's content (section 9): `src/content/docs/docs/`, the Docs section (24 pages: Getting started, Principles, one page per concept, *Upgrading from 2.x*); `src/content/docs/api/`, the API reference (14 pages, one per class or group, `errors` and the index); `src/content/docs/internal/`, how POMWright works (13 pages, `performance` among them); `snippets/`, the docs' example app (`login.page.ts`, `account.page.ts`, `orders.page.ts`, `checkout.page.ts`, `fixtures.ts`) that every page's examples import. Around them the Starlight site, a pnpm project of its own (`package.json`, `pnpm-lock.yaml`, exact versions): `astro.config.mjs` (base `/POMWright`, the link check, Mermaid, the edit links to `main`), `sidebar.mjs` (the three sections), `plugins/expressive-code-cut.mjs` (hides an example's `// ---cut---` prelude), `src/components/SiteTitle.astro` (the sections as tabs), `src/styles/custom.css`, `src/content/docs/index.mdx` (the home page). | yes |
@@ -249,9 +249,11 @@ release work was finished and its working folder removed before the merge.
   first arrival there (`navigation.activation.from` is `null`, so a reload or a hop within the origin keeps what the
   app wrote), and disposes of it when the main frame commits on the origin. Its four listeners (`framenavigated`,
   `domcontentloaded`, `console`, `close`) exist only while a seed is pending or an applied document may still report a
-  refused write, until that document's `domcontentloaded` or the next commit. `seed` throws at the call in a browser
-  without the Navigation API (checked once per page) and when the main frame commits on the origin while the script is
-  registering; a refused write and a never-applied seed fail the test with the `seed` call site in the stack. Never
+  refused write, until that document's `domcontentloaded` or the next commit. Calls for one origin take turns on a
+  per-origin chain that a call joins synchronously when it reaches the registry, so overlapping calls (a `Promise.all`,
+  a missing `await`) end exactly as awaited ones, and a failing call leaves the pending seed as it was. `seed` throws at
+  the call in a browser without the Navigation API (checked once per page) and when the main frame commits on the
+  origin between the call reaching the registry and the end of its registration; a refused write and a never-applied seed fail the test with the `seed` call site in the stack. Never
   reintroduce JSON-encoding every value, or a write from a `framenavigated` listener (it loses the race against the
   app's first script).
 - URLs mirror Playwright's `baseURL` handling with one base per page object: each part is a string or a RegExp, a
@@ -319,15 +321,7 @@ Rules:
   from the commit that run tested, so every merge updates the site once its checks have passed; since nothing reaches
   `main` before it is ready to release, the site is ahead of npm only until the Version Packages pull request is
   merged.
-- Pending 3.0.0 changesets so far: `.changeset/documentation-site-and-upgrade-guide.md` (`major`, the first item of the
-  3.0.0 entry: changesets orders each bump type by file name), `.changeset/getbyid-verbatim-ids-and-regex.md`,
-  `.changeset/url-composition-and-navigation.md`, `.changeset/session-storage-on-webstorage.md`,
-  `.changeset/registration-guards-and-frames.md`, `.changeset/pageobject-lifecycle.md`,
-  `.changeset/package-exports-and-engines.md`, `.changeset/types-and-exports.md`,
-  `.changeset/small-fixes-and-cleanup.md`, `.changeset/seeds-and-path-reuse.md` (all `major`),
-  `.changeset/strict-chains.md` and `.changeset/page-object-options.md` (`minor`) and
-  `.changeset/quality-review-fixes.md`, `.changeset/helper-step-locations.md` and `.changeset/doc-comments.md`
-  (`patch`).
+- Pending 3.0.1 changesets: `.changeset/seed-overlapping-calls.md` (`patch`).
 - Before a release, outside CI, the packaging probes run against the packed tarball in a scratchpad project: the packed
   file list (`dist/index.js` and `dist/index.d.ts` from tsup, `dist/index.mjs` and `dist/index.d.mts` from
   `scripts/write-esm-entry.mjs`, nothing else in `dist`); Node 20 and 24 loading `index.js` for `require` and
