@@ -4,9 +4,10 @@
  * `SessionStorage.seed()` hands the entries to one registry per page. The registry adds a Playwright init script for
  * each pending origin. The script runs in every new document of the page and stores the entries only in the main frame,
  * on the origin, on the first arrival there, before the document's first script. When the main frame commits on the
- * origin, the registry disposes of the script. Navigations are never intercepted. Nothing is registered on a page that
- * never seeds, and everything is removed once the last seed has been applied and its document has had the chance to
- * report a write the browser refused.
+ * origin, the registry disposes of the script. Calls for one origin run one after the other, in the order they were
+ * made, so overlapping calls merge as awaited ones do. Navigations are never intercepted. Nothing is registered on a
+ * page that never seeds, and everything is removed once the last seed has been applied and its document has had the
+ * chance to report a write the browser refused.
  */
 import type { ConsoleMessage, Frame } from "@playwright/test";
 import { atCallSite } from "./callSite";
@@ -149,6 +150,8 @@ export class SeedRegistry {
 	private readonly pending = new Map<string, PendingSeed>();
 	/** Applied seeds whose document may still report a refused write: until its DOMContentLoaded or the next commit. */
 	private readonly confirming = new Map<string, AppliedSeed>();
+	/** Per origin, the settled end of the chain of `add` calls: each call runs once the previous one has settled. */
+	private readonly queues = new Map<string, Promise<void>>();
 	private navigationApiChecked = false;
 	private listening = false;
 
@@ -164,13 +167,13 @@ export class SeedRegistry {
 
 	/**
 	 * Registers the init script for `origin` with the entries merged into any pending ones, then disposes of the
-	 * previous script. Throws when the browser lacks the Navigation API, and when the main frame commits on the origin
-	 * while the script is being registered: that document may or may not have run it.
+	 * previous script. Calls for one origin run one after the other in the order they were made, so calls that overlap
+	 * merge exactly as awaited ones do; a call that fails leaves the pending seed as it was. Throws when the browser
+	 * lacks the Navigation API, and when the main frame commits on the origin between the call and the end of the
+	 * script's registration: that document may or may not have run it.
 	 */
-	async add(origin: string, entries: Record<string, string>, title: string, site: Error): Promise<void> {
-		await this.assertNavigationApi(origin, title, site);
-		const previous = this.pending.get(origin);
-		const merged = { ...previous?.entries, ...entries };
+	add(origin: string, entries: Record<string, string>, title: string, site: Error): Promise<void> {
+		// watched from the call on, so the wait for earlier calls and the Navigation API check are covered too
 		let committed = false;
 		const watch = (frame: Frame): void => {
 			if (frame === this.page.mainFrame() && originOf(frame.url()) === origin) {
@@ -178,13 +181,41 @@ export class SeedRegistry {
 			}
 		};
 		this.page.on("framenavigated", watch);
-		let disposable: SeedDisposable;
-		try {
-			disposable = await this.page.addInitScript(seedScript, { origin, entries: merged, prefix: FAILURE_PREFIX });
-		} finally {
-			this.page.off("framenavigated", watch);
+		const call = (this.queues.get(origin) ?? Promise.resolve())
+			.then(() => this.register(origin, entries, title, site, () => committed))
+			.finally(() => {
+				this.page.off("framenavigated", watch);
+			});
+		// the next call for the origin waits for this one, whether it succeeds or fails
+		const settled = call.then(
+			() => undefined,
+			() => undefined,
+		);
+		this.queues.set(origin, settled);
+		settled.then(() => {
+			if (this.queues.get(origin) === settled) {
+				this.queues.delete(origin);
+			}
+		});
+		return call;
+	}
+
+	/** One call's turn: read the pending seed, register the merged script, store it, dispose of the previous one. */
+	private async register(
+		origin: string,
+		entries: Record<string, string>,
+		title: string,
+		site: Error,
+		committed: () => boolean,
+	): Promise<void> {
+		await this.assertNavigationApi(origin, title, site);
+		if (committed()) {
+			throw inFlightError(title, origin, site);
 		}
-		if (committed) {
+		const previous = this.pending.get(origin);
+		const merged = { ...previous?.entries, ...entries };
+		const disposable = await this.page.addInitScript(seedScript, { origin, entries: merged, prefix: FAILURE_PREFIX });
+		if (committed()) {
 			await disposable.dispose();
 			throw inFlightError(title, origin, site);
 		}

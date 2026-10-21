@@ -96,8 +96,9 @@ const frame = (url: string): Frame & { current: string } => {
 
 const fakePage = (options: { navigationApi?: boolean } = {}) => {
 	const main = frame("about:blank");
-	const scripts: { arg: SeedScriptArg; disposed: boolean }[] = [];
+	const scripts: { arg: SeedScriptArg; disposed: boolean; disposals: number }[] = [];
 	const listeners: { event: string; listener: unknown }[] = [];
+	const held: (() => void)[] = [];
 	const emit = (event: string, ...args: unknown[]) => {
 		for (const l of listeners.filter((x) => x.event === event)) {
 			(l.listener as (...a: unknown[]) => void)(...args);
@@ -110,18 +111,44 @@ const fakePage = (options: { navigationApi?: boolean } = {}) => {
 		evaluations: 0,
 		/** Runs while `addInitScript` is pending, before it resolves. */
 		duringAdd: undefined as (() => void) | undefined,
+		/** Runs while the Navigation API check is pending, before it resolves. */
+		duringEvaluate: undefined as (() => void) | undefined,
+		/** Keeps every `addInitScript` pending until `release()`. */
+		hold: false,
+		/** The next `addInitScript` rejects with this, registering nothing. */
+		failNextAdd: undefined as Error | undefined,
+		/** Resolves every held `addInitScript`, oldest first. */
+		release: () => {
+			for (const resolve of held.splice(0)) {
+				resolve();
+			}
+		},
 		addInitScript: async (_script: (arg: SeedScriptArg) => void, arg: SeedScriptArg) => {
-			const record = { arg, disposed: false };
+			const failure = page.failNextAdd;
+			if (failure !== undefined) {
+				page.failNextAdd = undefined;
+				throw failure;
+			}
+			const record = { arg, disposed: false, disposals: 0 };
 			scripts.push(record);
 			page.duringAdd?.();
+			if (page.hold) {
+				await new Promise<void>((resolve) => held.push(resolve));
+			}
 			return {
+				// as Playwright's Disposable: a second dispose throws
 				dispose: async () => {
+					record.disposals++;
+					if (record.disposals > 1) {
+						throw new Error("disposableObject.dispose: disposable@fake is disposed more than once");
+					}
 					record.disposed = true;
 				},
 			};
 		},
 		evaluate: async (_pageFunction: () => NavigationSupport): Promise<NavigationSupport> => {
 			page.evaluations++;
+			page.duringEvaluate?.();
 			return { supported: options.navigationApi ?? true, userAgent: "FakeBrowser/1.0" };
 		},
 		on: (event: string, listener: unknown) => {
@@ -167,6 +194,9 @@ const caught = (run: () => unknown): Error | undefined => {
 	}
 	return undefined;
 };
+
+/** Lets every pending promise callback and timer of the current turn run. */
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("SeedRegistry", () => {
 	it("registers one script per origin and the four listeners once; a later seed registers the merged entries, then disposes of the previous script", async () => {
@@ -254,6 +284,144 @@ describe("SeedRegistry", () => {
 		expect(error?.stack).toBe(`Error: ${error?.message}\n${siteFrame}`);
 		expect(page.scripts).toEqual([]);
 		expect(page.listeners).toEqual([]);
+	});
+
+	it("throws from add when the main frame commits on the origin during the Navigation API check, registering nothing", async () => {
+		const { page, registry } = setup();
+		page.duringEvaluate = () => page.navigate(`${B}/app`);
+		const error = await registry.add(B, { token: "1" }, title, site).catch((e: unknown) => e as Error);
+		expect(error?.message).toBe(
+			`${title}: the page committed a document on ${B} while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it`,
+		);
+		expect(error?.stack).toBe(`Error: ${error?.message}\n${siteFrame}`);
+		expect(page.scripts).toEqual([]);
+		expect(registry.pendingOrigins).toEqual([]);
+		expect(page.listeners).toEqual([]);
+	});
+
+	describe("overlapping calls for one origin", () => {
+		const scriptsOf = (page: ReturnType<typeof fakePage>) => page.scripts.map((s) => [s.arg.entries, s.disposals]);
+		const otherFrame = "    at Object.<anonymous> (/suite/tests/login.spec.ts:13:5)";
+		const otherSite = Object.assign(new Error(), { stack: `Error\n${otherFrame}` });
+
+		it("merge as awaited calls do: one pending seed with both entries, and every script disposed exactly once", async () => {
+			const { page, registry } = setup();
+			await Promise.all([
+				registry.add(B, { token: "seeded" }, title, site),
+				registry.add(B, { other: "x" }, "Other.SessionStorage.seed", site),
+			]);
+			expect(scriptsOf(page)).toEqual([
+				[{ token: "seeded" }, 1],
+				[{ token: "seeded", other: "x" }, 0],
+			]);
+			expect(registry.pendingOrigins).toEqual([B]);
+
+			page.navigate(`${B}/app`);
+			expect(scriptsOf(page)).toEqual([
+				[{ token: "seeded" }, 1],
+				[{ token: "seeded", other: "x" }, 1],
+			]);
+		});
+
+		it("after a pending seed, merge every key in call order, later calls winning, and the never-applied message lists them all", async () => {
+			const { page, registry } = setup();
+			await registry.add(B, { a: "1", k: "first" }, title, site);
+			await Promise.all([
+				registry.add(B, { b: "2", k: "second" }, "Second.SessionStorage.seed", site),
+				registry.add(B, { c: "3", k: "third" }, "Third.SessionStorage.seed", site),
+			]);
+			expect(scriptsOf(page)).toEqual([
+				[{ a: "1", k: "first" }, 1],
+				[{ a: "1", k: "second", b: "2" }, 1],
+				[{ a: "1", k: "third", b: "2", c: "3" }, 0],
+			]);
+			expect(caught(() => page.close())?.message).toBe(
+				`${title}: the seed for ${B} (keys: a, k, b, c) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
+			);
+		});
+
+		it("register one after the other: a call's script is registered only once the previous call has settled", async () => {
+			const { page, registry } = setup();
+			page.hold = true;
+			const first = registry.add(B, { a: "1" }, title, site);
+			const second = registry.add(B, { b: "2" }, title, site);
+			await flush();
+			expect(scriptsOf(page)).toEqual([[{ a: "1" }, 0]]);
+
+			page.release();
+			await first;
+			await flush();
+			expect(scriptsOf(page)).toEqual([
+				[{ a: "1" }, 0],
+				[{ a: "1", b: "2" }, 0],
+			]);
+
+			page.release();
+			await second;
+			expect(scriptsOf(page)).toEqual([
+				[{ a: "1" }, 1],
+				[{ a: "1", b: "2" }, 0],
+			]);
+		});
+
+		it("all throw when the main frame commits on the origin while the first registers, each at its own call site; the later ones register nothing", async () => {
+			const { page, registry } = setup();
+			await registry.add(B, { a: "1" }, title, site);
+			page.duringAdd = () => page.navigate(`${B}/app`);
+			const results = await Promise.allSettled([
+				registry.add(B, { b: "2" }, title, site),
+				registry.add(B, { c: "3" }, title, otherSite),
+			]);
+			const errors = results.map((r) => (r.status === "rejected" ? (r.reason as Error) : undefined));
+			const message = `${title}: the page committed a document on ${B} while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it`;
+			expect(errors.map((e) => e?.message)).toEqual([message, message]);
+			expect(errors.map((e) => e?.stack)).toEqual([
+				`Error: ${message}\n${siteFrame}`,
+				`Error: ${message}\n${otherFrame}`,
+			]);
+			// the committed document ran the pending seed's script, which is applied and disposed of; the first call's own
+			// script is disposed of by that call
+			expect(scriptsOf(page)).toEqual([
+				[{ a: "1" }, 1],
+				[{ a: "1", b: "2" }, 1],
+			]);
+			expect(registry.pendingOrigins).toEqual([]);
+			page.domContentLoaded();
+			expect(page.listeners).toEqual([]);
+		});
+
+		it("leave the pending seed as it was when one fails, and the next call merges with it", async () => {
+			const { page, registry } = setup();
+			await registry.add(B, { a: "1" }, title, site);
+			page.failNextAdd = new Error("page.addInitScript: Target page, context or browser has been closed");
+			const [failed, next] = await Promise.allSettled([
+				registry.add(B, { b: "2" }, title, site),
+				registry.add(B, { c: "3" }, title, site),
+			]);
+			expect(failed.status === "rejected" && (failed.reason as Error).message).toBe(
+				"page.addInitScript: Target page, context or browser has been closed",
+			);
+			expect(next.status).toBe("fulfilled");
+			expect(scriptsOf(page)).toEqual([
+				[{ a: "1" }, 1],
+				[{ a: "1", c: "3" }, 0],
+			]);
+			expect(registry.pendingOrigins).toEqual([B]);
+
+			await registry.add(B, { d: "4" }, title, site);
+			expect(scriptsOf(page).at(-1)).toEqual([{ a: "1", c: "3", d: "4" }, 0]);
+		});
+
+		it("do not hold back calls for another origin", async () => {
+			const { page, registry } = setup();
+			page.hold = true;
+			const calls = [registry.add(B, { a: "1" }, title, site), registry.add(C, { other: "x" }, title, site)];
+			await flush();
+			expect(page.scripts.map((s) => s.arg.origin)).toEqual([B, C]);
+			page.release();
+			await Promise.all(calls);
+			expect(registry.pendingOrigins).toEqual([B, C]);
+		});
 	});
 
 	describe("a write the browser refused", () => {

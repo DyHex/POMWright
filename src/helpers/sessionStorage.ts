@@ -407,7 +407,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	/**
 	 * Stores entries for an origin before the app's next load there, so the app's first script sees them, without
 	 * leaving the page the test is on; on the origin already, it writes at once. A seed that is still waiting when the
-	 * page closes fails the test.
+	 * page closes fails the test. Calls for one origin merge in the order they were made, later values winning per key,
+	 * also when they overlap. Await it before the action that starts the hop.
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#seed
 	 *
