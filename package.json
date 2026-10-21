@@ -73,12 +73,12 @@
 	],
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.15",
-		"@changesets/changelog-github": "^0.7.0",
-		"@changesets/cli": "^2.29.7",
+		"@changesets/changelog-github": "^1.0.1",
+		"@changesets/cli": "^3.0.3",
 		"@playwright/test": "1.64.0",
-		"@types/node": "^24.19.2",
+		"@types/node": "^26.6.5",
 		"tsup": "^9.0.0",
-		"typescript": "^6.0.3",
+		"typescript": "^7.0.2",
 		"vitest": "5.0.5"
 	},
 	"peerDependencies": {
