@@ -87,8 +87,45 @@ test("a payment origin", async ({ checkoutPage, page }) => {
 });
 ```
 
-Await `seed` before the action that starts the hop. A `seed` that is still registering when the page arrives at its
-origin fails, because that document may have loaded without the entries.
+## Several seeds
+
+Await each `seed` before the action that starts the hop. A `seed` that is still registering when the page arrives at
+its origin fails, because that document may have loaded without the entries. Without `await`, the call races the
+navigation: depending on the browser and the timing, it applies or it fails. A failure that nothing awaits fails the
+test as an unhandled rejection, and a test that ends before the hop fails because the seed was never applied. The
+[`no-floating-promises`](https://typescript-eslint.io/rules/no-floating-promises/) lint rule of typescript-eslint
+finds a missing `await`.
+
+Calls for one origin merge, in the order they were made, later values winning per key. One call with every entry
+says the same:
+
+```ts
+import { test } from "./fixtures";
+
+test("a returning customer in Norwegian", async ({ loginPage }) => {
+  await loginPage.sessionStorage.seed({ token: "eyJ…", locale: "en" });
+  await loginPage.sessionStorage.seed({ locale: "nb" });
+  // the same as seed({ token: "eyJ…", locale: "nb" })
+  await loginPage.navigation.goto();
+});
+```
+
+The calls merge the same way when they overlap, as in a `Promise.all`. For one origin that gains nothing, since the
+calls still run one after the other. For several origins they register at the same time, instead of one after the
+other. A seed can also run beside work that does not touch the page, such as an API request, as long as everything is
+awaited before the hop:
+
+```ts
+import { SessionStorage } from "pomwright";
+import { test } from "./fixtures";
+
+test("a consent page, both origins seeded at once", async ({ loginPage, page }) => {
+  const identityProvider = new SessionStorage(page, { label: "Login", origin: "https://login.example" });
+
+  await Promise.all([identityProvider.seed({ consent: "given" }), loginPage.sessionStorage.seed({ token: "eyJ…" })]);
+  await loginPage.navigation.goto();
+});
+```
 
 ## What a seeded navigation looks like to the app
 
@@ -102,7 +139,7 @@ body, the same history entry and navigation type, the same URL fragment. `page.g
 | --- | --- |
 | the seed is still waiting when the page closes | the test fails, naming the origin and the keys: remove the `seed` call, or navigate there before the test ends; do not seed in a fixture that some tests never use |
 | the hop opens a new tab | a new tab has its own session storage and does not run the page's init scripts; the seed waits on and fails the test when the page closes. Seed the new tab yourself with [`browserContext.addInitScript`](https://playwright.dev/docs/api/class-browsercontext#browser-context-add-init-script), or `set` the entries in it and reload it |
-| `seed` is called while the page is already loading a document on the origin | `seed` fails: that document may have loaded without the entries. Await the navigation first, or seed before starting it |
+| `seed` is called while the page is already loading a document on the origin, or is not awaited before the hop | `seed` fails when that document may have loaded without the entries. Await the navigation first, or seed before starting it, and await the seed: see [Several seeds](/POMWright/docs/seeding-session-storage/#several-seeds) |
 | a browser without the [Navigation API](https://developer.mozilla.org/en-US/docs/Web/API/NavigationActivation/from) | `seed` fails at the call, before anything is registered: use `set` on the origin and reload instead. Every browser Playwright 1.64 ships has it |
 | the browser refuses the write (the storage quota) | the app loads without the entries and the test fails |
 
