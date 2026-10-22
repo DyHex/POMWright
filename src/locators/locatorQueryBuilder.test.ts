@@ -119,6 +119,17 @@ describe("skip and unskip", () => {
 		expect(() => skipped().clearSteps("main.list")).toThrowError(`clearSteps() cannot apply to "main.list": ${unskip}`);
 	});
 
+	it("reject a change from an update() or replace() builder kept from before the skip, changing nothing", () => {
+		const unskip = 'it is skipped in this query; call unskip("main.list") first.';
+		const query = createChainRegistry().getLocatorSchema("main.list.item");
+		const pendingUpdate = query.update("main.list");
+		const pendingReplace = query.replace("main.list");
+		query.skip("main.list");
+		expect(() => pendingUpdate.locator("ol")).toThrowError(`update() cannot apply to "main.list": ${unskip}`);
+		expect(() => pendingReplace.getByRole("list")).toThrowError(`replace() cannot apply to "main.list": ${unskip}`);
+		expect(String(query.unskip("main.list").getNestedLocator())).toBe(REGISTERED);
+	});
+
 	it("leave the query unchanged when such a call throws", () => {
 		const query = createChainRegistry().getLocatorSchema("main.list.item").skip("main.list");
 		expect(() => query.update("main.list")).toThrow();

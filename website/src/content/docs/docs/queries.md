@@ -211,7 +211,8 @@ query.unskip("main.list").getNestedLocator();
 ```
 
 The query's own path cannot be skipped: TypeScript does not offer it, and from JavaScript it throws. A skipped segment
-rejects changes until it is unskipped, since they would have no effect:
+rejects changes until it is unskipped, since they would have no effect, also from an `update()` or `replace()` builder
+taken before the `skip`:
 
 ```text
 filter() cannot apply to "main.list": it is skipped in this query; call unskip("main.list") first.
