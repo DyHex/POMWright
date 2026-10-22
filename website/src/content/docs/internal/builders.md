@@ -53,6 +53,22 @@ kept in a variable; `getNestedLocator()` and `getLocator()` hand the maps to the
 `skip` is a flag in the set, so `unskip` restores a segment exactly as it was. A change to a skipped segment throws
 until `unskip`, because a change nobody would see in the resolved chain is more likely a mistake than an intent.
 
+## Path parameters are generic
+
+Every method that takes a path takes it as a type parameter, `<Path extends Paths>(path: LocatorSchemaPathArgument<Path>)`,
+not as the union itself: the path's own type decides what follows it. It is what lets `getLocatorSchema` accept only
+the path's own segments as sub-paths, and what checks the format of a literal or template literal path where it is
+passed.
+
+An editor's rename follows from this. TypeScript's language service treats two string literals as one when they have
+the same text and the same contextual type. A member of `Paths` has the union as its type, and a use has the path's own
+literal type, so a rename from the member reaches only the member, and one from a use reaches every use, sub-path
+arguments included (see [one path gets a new name](/POMWright/docs/locator-paths/#one-path-gets-a-new-name)). A
+parameter typed as the union would link the member to its uses, but only in the methods typed that way:
+`getLocatorSchema` and the sub-path arguments must stay generic, so a plain overload on `getNestedLocator` would split
+its uses from theirs and make a rename reach fewer places than today. Probed against the TypeScript 6.0.3 language
+service; not adopted.
+
 ## The update builder
 
 `update(subPath?)` and `replace(subPath?)` return a `LocatorUpdateBuilderInternal`
