@@ -124,7 +124,13 @@ much of it as you need:
 | report steps | `@step()` on any `async` method makes it a step of the report |
 
 A suite with a few pages and little repetition may need none of it: plain Playwright locators in a class are enough
-there. The registry pays off where the same structure is located again and again, with variations.
+there. The registry pays off as a suite grows:
+
+- **The same structure, located again and again,** with a variation for one use, while the registered locator stays
+  as it is.
+- **Locators shared** across page objects, or across applications, through locator modules and seeds.
+- **Many similar elements on a page.** Every path resolves as a chain scoped by its ancestors, so a Cancel button is
+  found in its row, in the orders table, in `main`. The scope is written once, in the registry, not at every use.
 
 ## Installation
 
