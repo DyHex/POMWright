@@ -425,7 +425,7 @@ describe("a registration kept by a page object", () => {
 		const { instance, runCheck } = construct(() => new Keeping(page));
 		runCheck();
 		expect(() => instance.narrow()).toThrowError(
-			'filter() cannot apply to "main.button": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.',
+			'filter() cannot apply to "main.button": its registration was ended by verify(); give a registration all its steps in its add(…) chain, or query the path for one use.',
 		);
 		calls.length = 0;
 		instance.getNestedLocator("main.button");

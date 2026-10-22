@@ -7,8 +7,8 @@ import { createRegistryWithAccessors, PageObject } from "pomwright";
  * and a later call of it throws and changes nothing. Against the packed package and the /testfilters page (four
  * sections, each with an h2 and the buttons Red, Blue, Green and Reset Color).
  */
-const ended = (method: string, path: string) =>
-	`${method}() cannot apply to "${path}": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.`;
+const ended = (method: string, path: string, by: string) =>
+	`${method}() cannot apply to "${path}": its registration was ended by ${by}; give a registration all its steps in its add(…) chain, or query the path for one use.`;
 
 const sectionOf = (locator: Locator) => locator.evaluate((element) => element.closest("section")?.id);
 
@@ -24,7 +24,7 @@ test("a kept registration given a step after another add throws, and its path fi
 	const section = add("section@explorer").locator("section").filter({ hasText: "Explorer" });
 	add("section@explorer.button@red").getByRole("button", { name: "Red" });
 
-	expect(() => section.nth(1)).toThrowError(ended("nth", "section@explorer"));
+	expect(() => section.nth(1)).toThrowError(ended("nth", "section@explorer", 'add("section@explorer.button@red")'));
 	await expect(getNestedLocator("section@explorer")).toHaveCount(1);
 	expect(await sectionOf(getNestedLocator("section@explorer.button@red"))).toBe("section2");
 });
@@ -38,8 +38,10 @@ test("a kept registration given a step after its path was used throws, and the p
 
 	await getNestedLocator("button@red").click();
 	await expect(page.locator("#section1")).toHaveCSS("background-color", "rgb(255, 0, 0)");
-	expect(() => red.nth(1)).toThrowError(ended("nth", "button@red"));
-	expect(() => red.filter({ hasText: "Blue" })).toThrowError(ended("filter", "button@red"));
+	expect(() => red.nth(1)).toThrowError(ended("nth", "button@red", 'getNestedLocator("button@red")'));
+	expect(() => red.filter({ hasText: "Blue" })).toThrowError(
+		ended("filter", "button@red", 'getNestedLocator("button@red")'),
+	);
 	expect(await sectionOf(getNestedLocator("button@red"))).toBe("section1");
 });
 
@@ -87,7 +89,31 @@ const withKeepingPage = test.extend<{ keepingPage: KeepingPage }>({
 withKeepingPage(
 	"a page object's kept registration ended with defineLocators(): narrowing it from a method throws",
 	async ({ keepingPage }) => {
-		expect(() => keepingPage.narrowToRed()).toThrowError(ended("filter", "section@test.button@red"));
+		expect(() => keepingPage.narrowToRed()).toThrowError(ended("filter", "section@test.button@red", "verify()"));
 		await expect(keepingPage.getNestedLocator("section@test.button@red")).toHaveCount(4);
 	},
 );
+
+test("a getLocator in an add chain's filter ends that registration; a path, or a locator resolved first, filter the same", async ({
+	page,
+}) => {
+	type Paths = "heading@explorer" | "section@inline" | "section@byPath" | "section@byLocator";
+	const { add, getLocator, getNestedLocator } = createRegistryWithAccessors<Paths>(page);
+	add("heading@explorer").getByRole("heading", { name: "Primary Colors Explorer" });
+
+	expect(() =>
+		add("section@inline")
+			.locator("section")
+			.filter({ has: getLocator("heading@explorer") }),
+	).toThrowError(
+		`filter() cannot apply to "section@inline": its registration was ended by getLocator("heading@explorer"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "heading@explorer" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.`,
+	);
+
+	add("section@byPath").locator("section").filter({ has: "heading@explorer" });
+	const heading = getLocator("heading@explorer");
+	add("section@byLocator").locator("section").filter({ has: heading });
+	for (const path of ["section@byPath", "section@byLocator"] as const) {
+		await expect(getNestedLocator(path)).toHaveCount(1);
+		expect(await sectionOf(getNestedLocator(path))).toBe("section2");
+	}
+});

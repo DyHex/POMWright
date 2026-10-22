@@ -26,6 +26,9 @@ import {
 	type StrategyMethod,
 } from "./utils";
 
+/** The registry call that ended a registration, and the path it resolved when it was `getLocator` or `getNestedLocator`. */
+export type RegistrationEnd = { call: string; resolvedPath?: string };
+
 export type LocatorRegistrationPostDefinitionBuilder<
 	LocatorSchemaPathType extends string,
 	Path extends RegistryPath<LocatorSchemaPathType>,
@@ -41,7 +44,7 @@ export type LocatorRegistrationPostDefinitionBuilder<
 	 * @throws On a `frameLocator()` without a selector, which has no element:
 	 * `filter() cannot apply to "…": frameLocator() without a selector has no element to filter, index or describe; …`
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `filter() cannot apply to "…": its registration has ended; …`
+	 * `filter() cannot apply to "…": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -60,7 +63,7 @@ export type LocatorRegistrationPostDefinitionBuilder<
 	 * @returns The registration, for more steps.
 	 * @throws On a `frameLocator()` without a selector, which has no element.
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `nth() cannot apply to "…": its registration has ended; …`
+	 * `nth() cannot apply to "…": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -80,7 +83,7 @@ export type LocatorRegistrationPostDefinitionBuilder<
 	 * @throws When the description is not a string (from JavaScript):
 	 * `describe requires a string for "…"; pass "" to remove the description.`
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `describe() cannot apply to "…": its registration has ended; …`
+	 * `describe() cannot apply to "…": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -114,20 +117,32 @@ export class LocatorRegistrationBuilder<
 	private readonly seededDefinition: boolean;
 	private overrideApplied = false;
 	private postDefinitionView?: LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	private ended = false;
+	private endedBy: RegistrationEnd | undefined;
 
 	/** Called by the registry at its next call: from then on every method of this registration throws. */
-	end(): void {
-		this.ended = true;
+	end(by: RegistrationEnd): void {
+		this.endedBy = by;
 	}
 
-	/** Checked first by every method, so a registration kept in a variable cannot change its path once it has ended. */
+	/**
+	 * Checked first by every method, so a registration kept in a variable cannot change its path once it has ended. The
+	 * message names the call that ended it. A `getLocator` or `getNestedLocator` of another path before `filter()` may
+	 * have run in the filter's own arguments, which run before the call they are passed to, so the message shows the two
+	 * ways to write such a filter.
+	 */
 	private ensureOpen(method: string): void {
-		if (this.ended) {
+		const by = this.endedBy;
+		if (by === undefined) {
+			return;
+		}
+		if (method === "filter" && by.resolvedPath !== undefined && by.resolvedPath !== this.path) {
 			throw new Error(
-				`${method}() cannot apply to "${this.path}": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.`,
+				`filter() cannot apply to "${this.path}": its registration was ended by ${by.call}. If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "${by.resolvedPath}" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.`,
 			);
 		}
+		throw new Error(
+			`${method}() cannot apply to "${this.path}": its registration was ended by ${by.call}; give a registration all its steps in its add(…) chain, or query the path for one use.`,
+		);
 	}
 
 	constructor(
@@ -184,7 +199,7 @@ export class LocatorRegistrationBuilder<
 	 * @throws On a `frameLocator()` without a selector, which has no element:
 	 * `filter() cannot apply to "…": frameLocator() without a selector has no element to filter, index or describe; …`
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `filter() cannot apply to "…": its registration has ended; …`
+	 * `filter() cannot apply to "…": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -207,7 +222,7 @@ export class LocatorRegistrationBuilder<
 	 * @returns The registration, for more steps.
 	 * @throws On a `frameLocator()` without a selector, which has no element.
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `nth() cannot apply to "…": its registration has ended; …`
+	 * `nth() cannot apply to "…": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -231,7 +246,7 @@ export class LocatorRegistrationBuilder<
 	 * @throws When the description is not a string (from JavaScript):
 	 * `describe requires a string for "…"; pass "" to remove the description.`
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `describe() cannot apply to "…": its registration has ended; …`
+	 * `describe() cannot apply to "…": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -256,7 +271,7 @@ export class LocatorRegistrationBuilder<
 	 * @throws When the role is missing (`getByRole requires a role value for "main.button@save".`) or empty
 	 * (`getByRole requires a non-empty role for "main.button@save".`).
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `getByRole() cannot apply to "main.button@save": its registration has ended; …`
+	 * `getByRole() cannot apply to "main.button@save": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -306,7 +321,7 @@ export class LocatorRegistrationBuilder<
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the text is missing: `getByText requires a text value for "main.alert@error".`
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `getByText() cannot apply to "main.alert@error": its registration has ended; …`
+	 * `getByText() cannot apply to "main.alert@error": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -353,7 +368,7 @@ export class LocatorRegistrationBuilder<
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the text is missing: `getByLabel requires a text value for "main.form.input@email".`
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `getByLabel() cannot apply to "main.form.input@email": its registration has ended; …`
+	 * `getByLabel() cannot apply to "main.form.input@email": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -400,7 +415,7 @@ export class LocatorRegistrationBuilder<
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the text is missing: `getByPlaceholder requires a text value for "main.input@search".`
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `getByPlaceholder() cannot apply to "main.input@search": its registration has ended; …`
+	 * `getByPlaceholder() cannot apply to "main.input@search": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -447,7 +462,7 @@ export class LocatorRegistrationBuilder<
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the text is missing: `getByAltText requires a text value for "header.image@logo".`
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `getByAltText() cannot apply to "header.image@logo": its registration has ended; …`
+	 * `getByAltText() cannot apply to "header.image@logo": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -494,7 +509,7 @@ export class LocatorRegistrationBuilder<
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the text is missing: `getByTitle requires a text value for "main.icon@info".`
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `getByTitle() cannot apply to "main.icon@info": its registration has ended; …`
+	 * `getByTitle() cannot apply to "main.icon@info": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -542,7 +557,7 @@ export class LocatorRegistrationBuilder<
 	 * @throws When the selector is missing (`locator requires a selector value for "main.list".`) or empty
 	 * (`locator requires a non-empty selector for "main.list".`).
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `locator() cannot apply to "main.list": its registration has ended; …`
+	 * `locator() cannot apply to "main.list": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -602,7 +617,7 @@ export class LocatorRegistrationBuilder<
 	 * @returns The registration, for `filter`, `nth` and `describe` steps; nothing for the any-frame form.
 	 * @throws When the selector is empty: `frameLocator requires a non-empty selector for "shell.frame".`
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `frameLocator() cannot apply to "shell.frame": its registration has ended; …`
+	 * `frameLocator() cannot apply to "shell.frame": its registration was ended by add("…"); …`
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#framelocator
 	 *
@@ -649,7 +664,7 @@ export class LocatorRegistrationBuilder<
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the test id is missing (from JavaScript): `getByTestId requires a testId value for "main.row@order".`
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `getByTestId() cannot apply to "main.row@order": its registration has ended; …`
+	 * `getByTestId() cannot apply to "main.row@order": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -686,7 +701,7 @@ export class LocatorRegistrationBuilder<
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
 	 * @throws When the id is empty or missing: `getById requires a non-empty id for "main.panel@settings".`
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `getById() cannot apply to "main.panel@settings": its registration has ended; …`
+	 * `getById() cannot apply to "main.panel@settings": its registration was ended by add("…"); …`
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbyid
 	 *

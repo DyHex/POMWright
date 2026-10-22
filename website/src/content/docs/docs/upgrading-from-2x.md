@@ -202,7 +202,7 @@ locator changed with them. In 3.0.0 it ends at the next call on its registry (`a
 `getLocatorSchema`, `verify`, or resolving a query), and a later step, locator method or seeded override of it throws:
 
 ```text
-filter() cannot apply to "list.item": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+filter() cannot apply to "list.item": its registration was ended by add("list"); give a registration all its steps in its add(…) chain, or query the path for one use.
 ```
 
 Find the registrations kept in variables, and give each all its steps before the registry is called again; a step

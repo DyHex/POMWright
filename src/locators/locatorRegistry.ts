@@ -5,6 +5,7 @@ import {
 	type LocatorRegistrationPostDefinitionBuilder,
 	type LocatorRegistrationPreDefinitionBuilder,
 	type LocatorRegistrationSeededBuilderForType,
+	type RegistrationEnd,
 } from "./locatorRegistrationBuilder";
 import { ReusableLocatorFactory } from "./reusableLocatorBuilder";
 import type {
@@ -109,11 +110,14 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	private readonly strictChains: boolean;
 
 	/** The registration the latest `add(path)` started; the next call on the registry ends it. */
-	private openRegistration: { end(): void } | undefined;
+	private openRegistration: { end(by: RegistrationEnd): void } | undefined;
 
-	/** Ends the open registration, so a registration kept in a variable can no longer change its path. */
-	private endOpenRegistration(): void {
-		this.openRegistration?.end();
+	/**
+	 * Ends the open registration, so a registration kept in a variable can no longer change its path. `by` names the
+	 * call, so the ended registration's error can say what ended it.
+	 */
+	private endOpenRegistration(by: RegistrationEnd): void {
+		this.openRegistration?.end(by);
 		this.openRegistration = undefined;
 	}
 
@@ -162,7 +166,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * string where Playwright cannot use one (`locator requires a non-empty selector for "main.list".`), or when the
 	 * path breaks the path rules (`LocatorSchemaPath string cannot contain consecutive dots: main..list`); at `add`, when
 	 * a reused path is not registered (`No locator schema registered for path "common.button".`). A method of a registration
-	 * that has ended throws: `nth() cannot apply to "main.list.items": its registration has ended; …`
+	 * that has ended throws: `nth() cannot apply to "main.list.items": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
@@ -193,7 +197,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 					RegistryPath<LocatorSchemaPathType>,
 					Extract<Reuse, ReusableLocator<LocatorSchemaPathType>>["type"]
 				> {
-		this.endOpenRegistration();
+		this.endOpenRegistration({ call: `add("${String(path)}")` });
 		const options = args[0] as
 			| {
 					reuse?:
@@ -436,7 +440,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	getLocatorSchema<Path extends LocatorSchemaPathType>(
 		path: LocatorSchemaPathArgument<Path>,
 	): LocatorQueryBuilder<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>> {
-		this.endOpenRegistration();
+		this.endOpenRegistration({ call: `getLocatorSchema("${String(path)}")` });
 		return new LocatorQueryBuilderInternal<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>>(
 			this,
 			path as Extract<Path, RegistryPath<LocatorSchemaPathType>>,
@@ -461,7 +465,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * ```
 	 */
 	verify(): void {
-		this.endOpenRegistration();
+		this.endOpenRegistration({ call: "verify()" });
 		const failures: string[] = [];
 		for (const [path, record] of this.schemas) {
 			const problems: string[] = [];
@@ -516,7 +520,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * ```
 	 */
 	getLocator<Path extends LocatorSchemaPathType>(path: LocatorSchemaPathArgument<Path>): Locator {
-		this.endOpenRegistration();
+		this.endOpenRegistration({ call: `getLocator("${String(path)}")`, resolvedPath: String(path) });
 		const target = path as RegistryPath<LocatorSchemaPathType>;
 		validateLocatorSchemaPath(target);
 		return this.resolveRecord(target, this.get(target));
@@ -539,6 +543,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * ```
 	 */
 	getNestedLocator<Path extends LocatorSchemaPathType>(path: LocatorSchemaPathArgument<Path>): Locator {
+		this.endOpenRegistration({ call: `getNestedLocator("${String(path)}")`, resolvedPath: String(path) });
 		return this.getLocatorSchema(path).getNestedLocator();
 	}
 
@@ -559,7 +564,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		},
 	): Locator {
 		// every resolution, a query's included, is a call on the registry
-		this.endOpenRegistration();
+		this.endOpenRegistration({ call: `a query's resolution of "${path}"` });
 		const resolutionContext = context ?? this.createResolutionContext(path);
 		// the registered ancestors in chain order; an unregistered or skipped one is left out
 		const ancestors = expandSchemaPath(path)

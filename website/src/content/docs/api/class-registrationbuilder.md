@@ -36,7 +36,7 @@ registration has ended, and, from JavaScript, when the path breaks the path rule
 getByRole requires a role value for "main.button@save".
 A locator schema with the path "main" already exists.
 A locator definition for "main" has already been provided; only one locator type can be set for a registration.
-getByRole() cannot apply to "main.button@save": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+getByRole() cannot apply to "main.button@save": its registration was ended by add("main.list.item"); give a registration all its steps in its add(…) chain, or query the path for one use.
 LocatorSchemaPath string cannot contain consecutive dots: main..list
 ```
 
@@ -364,7 +364,8 @@ Available after a locator method, chained in any order and number, and applied i
 registration kept in a variable, after the registry was called again, throws:
 
 ```text
-nth() cannot apply to "main.list.item": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+nth() cannot apply to "main.button@save": its registration was ended by add("main.list.item"); give a registration all its steps in its add(…) chain, or query the path for one use.
+filter() cannot apply to "list.item@open": its registration was ended by getLocator("badge"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "badge" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
 ```
 
 From JavaScript, a step before the locator method throws:

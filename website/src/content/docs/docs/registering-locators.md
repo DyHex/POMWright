@@ -167,11 +167,21 @@ item.filter({ hasText: "Open" }); // throws; list.item stays getByRole('listitem
 ```
 
 ```text
-filter() cannot apply to "list.item": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+filter() cannot apply to "list.item": its registration was ended by add("list"); give a registration all its steps in its add(…) chain, or query the path for one use.
 ```
 
 So nothing that reads the registry ever sees a registration change. In a page object, the check that runs after
 `defineLocators()` ends the last one.
+
+A registry call in a step's own arguments counts too, since JavaScript runs a call's arguments before the call. In
+`add("list.item@open").getByRole("listitem").filter({ has: registry.getLocator("badge") })`, `getLocator` ends the
+registration of `list.item@open` before `filter` runs. The message names the call and the two ways to write such a
+filter, a path or a locator resolved before `add(…)` (see
+[a path, a locator or a chain](/POMWright/docs/filters-and-indices/#a-path-a-locator-or-a-chain)):
+
+```text
+filter() cannot apply to "list.item@open": its registration was ended by getLocator("badge"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "badge" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+```
 
 ## When locators are registered
 
