@@ -61,6 +61,144 @@ A whitespace character that is hard to see is shown escaped: a no-break space re
 Only the paths you resolve need a locator: a segment without one is a name that groups paths, and resolution leaves it
 out of the chain. See [Resolving locators](/POMWright/docs/resolving-locators/#segments-without-a-locator).
 
+## When the page changes
+
+A path says where an element is, so when the page's structure changes, the paths follow, and a chain through the old
+structure finds nothing. Each common change takes a small edit in one place, and TypeScript and the registry's check
+point at anything missed. The examples start from an order section whose subscriptions sit in a Subscriptions region:
+
+```ts
+import type { Page } from "@playwright/test";
+import { createRegistryWithAccessors } from "pomwright";
+
+declare const page: Page;
+// ---cut---
+type Paths =
+  | "main"
+  | "main.section@order"
+  | "main.section@order.region@subscriptions"
+  | "main.section@order.region@subscriptions.region@subscription"
+  | "main.section@order.region@subscriptions.region@subscription.button@edit";
+
+const { add } = createRegistryWithAccessors<Paths>(page);
+
+add("main").locator("main");
+add("main.section@order").getByRole("region", { name: "Order" });
+add("main.section@order.region@subscriptions").getByRole("region", { name: "Subscriptions" });
+add("main.section@order.region@subscriptions.region@subscription").getByRole("region", { name: "Mobile subscription" });
+add("main.section@order.region@subscriptions.region@subscription.button@edit").getByRole("button", { name: "Edit" });
+```
+
+### A wrapper is removed
+
+The page drops the Subscriptions region, and the subscriptions now sit in the order section itself. Two edits bring the
+chains back:
+
+- **Delete the segment's `add(…)`, and nothing else.** A segment without a locator is left out of the chain, so every
+  path below it resolves again, with its name unchanged:
+
+  ```text
+  locator('main').getByRole('region', { name: 'Order' }).getByRole('region', { name: 'Mobile subscription' }).getByRole('button', { name: 'Edit' })
+  ```
+
+  This is one line. It does not fit a registry with `strictChains: true`, whose check then reports the missing
+  ancestor for every path below it:
+
+  ```text
+  "main.section@order.region@subscriptions.region@subscription": strictChains requires every ancestor to be registered; "main.section@order.region@subscriptions" is not.
+  ```
+
+- **Rename the paths below it**, so that the names describe the page again, with your editor's find and replace across
+  the project:
+
+  - find `main.section@order.region@subscriptions.`
+  - replace with `main.section@order.`
+
+  The closing dot limits the replace to the paths below the segment: the segment's own path does not contain it, and
+  neither does a sibling such as `region@subscriptionsArchive`. Then remove the segment itself: its member of `Paths`
+  and its `add(…)`. Anything else that still names it, a `has`, a `skip`, or an `update` or `filter` sub-path, becomes
+  a compile error, to decide case by case. With regular expressions turned on, ``(["'`])main\.section@order\.region@subscriptions\.``
+  replaced with `$1main.section@order.` does the same, and touches only a path in quotes.
+
+:::note
+Keep the dot. Without it, the replace also renames the segment's own path, and
+`skip("main.section@order.region@subscriptions")` becomes `skip("main.section@order")`, which compiles and leaves the
+wrong segment out.
+:::
+
+### A wrapper is added
+
+A Billing region now holds the subscription. The old chains still find it, since each locator of a chain is looked for
+anywhere inside the previous one, not only directly inside it. To scope them to Billing, insert the segment with two
+replaces, one for the paths below the subscription and one for its own path, which is renamed too, since the
+subscription still exists:
+
+- `main.section@order.region@subscription.` with `main.section@order.region@billing.region@subscription.`
+- `main.section@order.region@subscription"` with `main.section@order.region@billing.region@subscription"`
+
+Then register `main.section@order.region@billing`. The dot and the quote keep both replaces off
+`region@subscriptions`; a path in single quotes or backticks takes its own closing quote. As one regular expression,
+``(["'`])main\.section@order\.region@subscription(?=[.'"`])`` replaced with
+`$1main.section@order.region@billing.region@subscription` covers both, in any quote style.
+
+### An element moves, or its locator changes
+
+An element that moves to another section takes the same replace, from its old prefix to its new one. An element whose
+role, name or test id changes needs one edit: its `add(…)`. Every chain through it, and every `has` that names it,
+follows.
+
+### One path gets a new name
+
+Your editor's rename (F2 in VS Code) works on a single path, in two steps. Started from any use, it renames every use
+of that exact path across the project, sub-path arguments included, but not its member of `Paths`; started from the
+member, it renames only the member. Rename from a use, then the member: in between, TypeScript flags every use, so
+nothing is missed. A rename changes whole paths only, so a change of structure, which changes the prefix of many
+paths, stays a find and replace.
+
+### A variant of the page for one test
+
+A feature flag that drops the wrapper for one test needs no change to the registry. The test leaves the segment out of
+its own query:
+
+```ts
+import type { LocatorRegistry } from "pomwright";
+
+type Paths =
+  | "main"
+  | "main.section@order"
+  | "main.section@order.region@subscriptions"
+  | "main.section@order.region@subscriptions.region@subscription"
+  | "main.section@order.region@subscriptions.region@subscription.button@edit";
+declare const registry: LocatorRegistry<Paths>;
+// ---cut---
+const edit = registry
+  .getLocatorSchema("main.section@order.region@subscriptions.region@subscription.button@edit")
+  .skip("main.section@order.region@subscriptions")
+  .getNestedLocator();
+```
+
+See [Queries](/POMWright/docs/queries/#leaving-an-ancestor-out-skip-and-unskip).
+
+### What catches a missed spot
+
+- **TypeScript.** Once `Paths` is edited, every use of an old path is a compile error, in a resolution, a `has`, or a
+  sub-path of `skip`, `update` or `filter`:
+
+  ```text
+  Argument of type '"main.section@order.region@subscriptions"' is not assignable to parameter of type '"main" | "main.section@order"'.
+  ```
+
+- **The registry's check.** A `has` path that is no longer registered, or with `strictChains` an ancestor, fails the
+  page object before the test body runs. A segment's `add(…)` left behind by a replace, now a second registration of
+  its parent's path, fails it too:
+
+  ```text
+  OrderPage: defineLocators() failed: A locator schema with the path "main.section@order" already exists.
+  ```
+
+A path built at runtime, from a template literal, is not found by a find and replace. TypeScript still checks it when
+its parts are literal types.
+
 ## The registry
 
 Every page object has its own registry and offers its methods: `this.add(path)` registers a locator, and

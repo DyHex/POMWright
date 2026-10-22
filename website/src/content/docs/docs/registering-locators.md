@@ -128,6 +128,9 @@ The message spreads the JSON over more lines; it is shortened here. Calling a se
 throws too: `A locator definition for "main.button" has already been provided; only one locator type can be set for a
 registration.` A call that throws registers nothing and changes nothing that is registered.
 
+Since each path has one registration, and every chain through it is built from that registration, a change to the
+page is an edit in one place. See [when the page changes](/POMWright/docs/locator-paths/#when-the-page-changes).
+
 ## Registered locators do not change
 
 The registry keeps a copy of every options and filter object you pass, so changing the object afterwards changes
