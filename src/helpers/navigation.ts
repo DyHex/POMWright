@@ -204,7 +204,8 @@ class Navigation {
 	 */
 	public async goto(...args: GotoArguments): Promise<void> {
 		const [first, second] = args;
-		// as page.goto, which takes a URL string only: from JavaScript, a URL object is not this page's options
+		// as page.goto, which takes a URL string only: from JavaScript, a URL object is not this page's options. Any other
+		// object is taken as the options, as page.goto takes any object as its options: a class instance works today
 		const given: unknown = first;
 		if (
 			given !== undefined &&
