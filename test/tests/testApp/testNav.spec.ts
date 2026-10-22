@@ -163,6 +163,18 @@ test.describe("expectThisPage", () => {
 		}
 	});
 
+	test("an empty query or fragment is another URL, as for Playwright's toHaveURL", async ({ page, testNav }) => {
+		for (const suffix of ["?", "#"]) {
+			await page.goto(`${BASE}/testnav${suffix}`);
+			expect(page.url()).toBe(`${BASE}/testnav${suffix}`);
+			await expect(page).not.toHaveURL(testNav.fullUrl, { timeout: 500 });
+			await expect(testNav.navigation.expectThisPage({ timeout: 500 })).rejects.toThrow(
+				`TestNav: expected URL "${BASE}/testnav"; found "${BASE}/testnav${suffix}" (page.waitForURL: Timeout 500ms exceeded.)`,
+			);
+			await testNav.navigation.expectAnotherPage({ timeout: 500 });
+		}
+	});
+
 	test("awaits a delayed navigation under the navigation timeout; a short timeout rejects with the matcher", async ({
 		testNav,
 		testNavItem,

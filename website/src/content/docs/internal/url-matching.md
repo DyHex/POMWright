@@ -36,8 +36,9 @@ A `UrlMatcher` is a function from a `URL` to a boolean, with `base`, `path`, `te
 parts of a URL apart:
 
 - the base against `url.origin`: a RegExp as written, a string by equality with its own origin;
-- the path against `pathname + search + hash`: a RegExp as written, a string by equality with the form `new URL` gives
-  it.
+- the path against the rest of the URL as `href` writes it, path, query and fragment: a RegExp as written, a string by
+  equality with the form `new URL` gives it. `pathname + search + hash` would not do: the URL API reports an empty query
+  or fragment as `""`, so `/orders?` would pass for `/orders`, where Playwright's `toHaveURL` tells them apart.
 
 Each RegExp is used with its own flags, and its `lastIndex` is reset before each test, so a `g` or `y` flag cannot make
 a second test start where the first stopped. No anchors are added or removed.

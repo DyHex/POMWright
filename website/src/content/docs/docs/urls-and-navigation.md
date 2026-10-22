@@ -69,9 +69,11 @@ As with `page.goto`, a complete URL is used as it is, so `goto(target)` also lea
 `loginPage.navigation.goto("https://help.example/faq")` goes from `https://shop.example` to the help site.
 
 A page's identity is its exact URL: `/orders?tab=1` is not `/orders` for `expectThisPage`, and counts as another page
-for `expectAnotherPage`. When the URL is already right, `page.waitForURL` returns at once, after the requested load
-state, so calling `expectThisPage()` after a navigation that has already landed is fine. A `goto(target)` whose target
-happens to equal `fullUrl` is ordinary navigation and does not run the actions.
+for `expectAnotherPage`. The same holds for an empty query or fragment, `/orders?` or `/orders#`, as it does for
+Playwright's `toHaveURL`; a page that may carry one has a RegExp path such as `/^\/orders\??$/`. When the URL is
+already right, `page.waitForURL` returns at once, after the requested load state, so calling `expectThisPage()` after
+a navigation that has already landed is fine. A `goto(target)` whose target happens to equal `fullUrl` is ordinary
+navigation and does not run the actions.
 
 Each call is a step of the report (`LoginPage: Navigate to this Page`, `LoginPage: Expect this Page`, …), shown at the
 line that called it.

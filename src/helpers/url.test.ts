@@ -174,6 +174,28 @@ describe("createUrlMatcher", () => {
 		expect(orders.test("https://shop.example/orders#top")).toBe(false);
 	});
 
+	it('keeps an empty "?" or "#", as Playwright\'s toHaveURL does, for a string and a RegExp path alike', () => {
+		for (const matcher of [
+			createUrlMatcher("https://shop.example", "/orders"),
+			createUrlMatcher("https://shop.example", /^\/orders$/),
+		]) {
+			expect(matcher.test("https://shop.example/orders"), String(matcher)).toBe(true);
+			expect(matcher.test("https://shop.example/orders?"), String(matcher)).toBe(false);
+			expect(matcher.test("https://shop.example/orders#"), String(matcher)).toBe(false);
+		}
+		const withEmptyQuery = createUrlMatcher("https://shop.example", "/search?");
+		expect(withEmptyQuery.test("https://shop.example/search?")).toBe(true);
+		expect(withEmptyQuery.test("https://shop.example/search")).toBe(false);
+		expect(createUrlMatcher("https://shop.example", /^\/search\??$/).test("https://shop.example/search?")).toBe(true);
+	});
+
+	it("finds the rest of a URL with credentials", () => {
+		const orders = createUrlMatcher("https://shop.example", "/orders?tab=1");
+		expect(orders.test("https://user:secret@shop.example/orders?tab=1")).toBe(true);
+		expect(orders.test("https://user@shop.example/orders?tab=1")).toBe(true);
+		expect(orders.test("https://:secret@shop.example/orders?tab=1")).toBe(true);
+	});
+
 	it("gives the same answer on repeated calls even with g or y flags", () => {
 		const matcher = createUrlMatcher(/shop\.example/g, /^\/orders$/y);
 		for (let i = 0; i < 3; i++) {

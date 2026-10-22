@@ -122,7 +122,18 @@ export const resolveUrl = (input: string, baseUrl: string): string => {
 	}
 };
 
-const restOf = (url: URL): string => url.pathname + url.search + url.hash;
+/**
+ * The URL after its origin, as `href` writes it: path, query and fragment, an empty "?" or "#" included, as Playwright's
+ * own URL matching sees them (`pathname + search + hash` reports an empty query or fragment as "").
+ */
+const restOf = (url: URL): string => {
+	const credentials =
+		url.username === "" && url.password === ""
+			? ""
+			: `${url.username}${url.password === "" ? "" : `:${url.password}`}@`;
+	const start = `${url.protocol}//${credentials}${url.host}`;
+	return url.href.startsWith(start) ? url.href.slice(start.length) : url.pathname + url.search + url.hash;
+};
 
 const toUrl = (input: string | URL): URL => (typeof input === "string" ? new URL(input) : input);
 
@@ -133,7 +144,8 @@ const testRegExp = (regExp: RegExp, value: string): boolean => {
 
 /**
  * Builds the matcher for a base and a path. A string base is exact origin equality after URL
- * normalisation; a string path is exact against `pathname + search + hash` in the form `new URL` gives it,
+ * normalisation; a string path is exact against the rest of the URL, path, query and fragment, in the form `new URL`
+ * gives it (an empty "?" or "#" included),
  * with "" meaning "/".
  * A RegExp base is tested against the origin and a RegExp path against the rest, as written.
  */
