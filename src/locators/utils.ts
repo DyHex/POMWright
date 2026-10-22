@@ -185,11 +185,39 @@ export const copyValue = <Value>(value: Value): Value =>
 	value instanceof RegExp ? (new RegExp(value) as Value) : value;
 
 /**
- * An options or filter object, copied with every value through `copyValue`. Its values are leaves (strings, numbers,
- * booleans, RegExps, Locators), so nothing below it is left to copy.
+ * The entries of an options, patch or filter object as Playwright reads them, by property access: the object's own
+ * enumerable properties, then the properties of its prototypes up to `Object.prototype`, such as a class's getters or
+ * an inherited default. Methods found on a prototype are left out.
+ */
+export const readFields = (fields: object): [string, unknown][] => {
+	const entries: [string, unknown][] = Object.entries(fields);
+	const seen = new Set(entries.map(([key]) => key));
+	for (
+		let prototype: object | null = Object.getPrototypeOf(fields);
+		prototype !== null && prototype !== Object.prototype;
+		prototype = Object.getPrototypeOf(prototype)
+	) {
+		for (const name of Object.getOwnPropertyNames(prototype)) {
+			if (seen.has(name)) {
+				continue;
+			}
+			seen.add(name);
+			const value: unknown = (fields as Record<string, unknown>)[name];
+			if (typeof value !== "function") {
+				entries.push([name, value]);
+			}
+		}
+	}
+	return entries;
+};
+
+/**
+ * An options or filter object, copied with every value through `copyValue`, read as Playwright reads it
+ * (`readFields`). Its values are leaves (strings, numbers, booleans, RegExps, Locators), so nothing below it is left to
+ * copy.
  */
 export const copyFields = <Fields extends object>(fields: Fields): Fields =>
-	Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, copyValue(value)])) as Fields;
+	Object.fromEntries(readFields(fields).map(([key, value]) => [key, copyValue(value)])) as Fields;
 
 /** A filter as given, copied with `copyFields`: a copy shares nothing a caller can change. */
 export const copyFilter = <Filter>(filter: Filter): Filter =>
@@ -459,7 +487,7 @@ export const mergeOptions = <Options extends object>(
 		return undefined;
 	}
 	const merged: Record<string, unknown> = { ...(current ?? {}) };
-	for (const [key, value] of Object.entries(patch)) {
+	for (const [key, value] of readFields(patch)) {
 		if (value === undefined) {
 			continue;
 		}

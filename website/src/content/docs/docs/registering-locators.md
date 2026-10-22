@@ -145,8 +145,10 @@ options.name = "Cancel";
 registry.getLocator("form.button@save"); // getByRole('button', { name: 'Save' })
 ```
 
-The copy reaches every value you pass. A RegExp is copied too, whether it is the first argument, an option or a filter
-value, so rewriting yours afterwards with `compile()` changes nothing registered. A `Locator` is kept as it is: every
+The copy reaches every value you pass, and reads an options or filter object as Playwright does: a getter on a class
+or a value from the object's prototype is copied with the rest, a method is not. A RegExp is copied too, whether it is
+the first argument, an option or a filter value, so rewriting yours afterwards with `compile()` changes nothing
+registered. A `Locator` is kept as it is: every
 method of a `Locator` returns a new one, so the one you passed cannot change. This holds for `add`, `createReusable`
 and queries alike. To change a locator for one use, query it; see [Queries](/POMWright/docs/queries/).
 

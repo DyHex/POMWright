@@ -121,3 +121,33 @@ test("a registered locator stays as registered when the caller changes what it p
 	await getNestedLocator("button@first").click();
 	await expect(page.locator("#section1")).toHaveCSS("background-color", "rgb(255, 0, 0)");
 });
+
+test("options read through a prototype, a class's getter or an inherited default, match what Playwright matches", async ({
+	page,
+}) => {
+	await page.setContent("<button>Save</button><button>Save draft</button><button>Cancel</button>");
+	type Paths = "button@byGetter" | "button@byDefault" | "button@byPatch";
+	const { add, getLocator, getLocatorSchema } = createRegistryWithAccessors<Paths>(page);
+
+	class SaveButton {
+		get name() {
+			return "Save";
+		}
+	}
+	add("button@byGetter").getByRole("button", new SaveButton());
+	await expect(page.getByRole("button", new SaveButton())).toHaveCount(2);
+	await expect(getLocator("button@byGetter")).toHaveCount(2);
+
+	const exactSave = Object.assign(Object.create({ exact: true }), { name: "Save" });
+	add("button@byDefault").getByRole("button", exactSave);
+	await expect(page.getByRole("button", exactSave)).toHaveCount(1);
+	await expect(getLocator("button@byDefault")).toHaveCount(1);
+
+	class ExactPatch {
+		get exact() {
+			return true;
+		}
+	}
+	add("button@byPatch").getByRole("button", { name: "Save" });
+	await expect(getLocatorSchema("button@byPatch").update().getByRole(new ExactPatch()).getLocator()).toHaveCount(1);
+});
