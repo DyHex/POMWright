@@ -132,7 +132,8 @@ export const encodeEntries = (
 	entries: Record<string, unknown>,
 	title: string,
 ): Record<string, string> => {
-	const encoded: Record<string, string> = {};
+	// no prototype: assigning "__proto__" on a plain object would set its prototype instead of storing the key
+	const encoded: Record<string, string> = Object.create(null);
 	for (const [key, value] of Object.entries(entries)) {
 		const codec = hasCodec(schema, key) ? schema[key] : undefined;
 		if (codec === undefined) {

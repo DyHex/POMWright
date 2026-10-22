@@ -140,6 +140,17 @@ test.describe("set, get and clear", () => {
 		);
 	});
 
+	test("a __proto__ key is stored like any other, alone and in a parsed snapshot", async ({ page, testStorage }) => {
+		await testStorage.navigation.goto();
+		await testStorage.sessionStorage.set("__proto__", "saved");
+		expect(await storedItem(page, "__proto__")).toBe("saved");
+
+		await testStorage.sessionStorage.set(JSON.parse('{"__proto__":"snapshot","other":"z"}'));
+		expect(await storedItem(page, "__proto__")).toBe("snapshot");
+		expect(await storedItem(page, "other")).toBe("z");
+		expect(await testStorage.sessionStorage.get("__proto__")).toBe("snapshot");
+	});
+
 	test("codec failures name the key: a stored value that is not valid JSON, and an object for an undeclared key", async ({
 		page,
 		testStorage,
@@ -175,6 +186,12 @@ test.describe("seed", () => {
 		await testStorage.navigation.goto();
 		expect(await servedBy(page)).toBe("server");
 		expect(await startup(page)).toEqual({ token: "abc", user: userJson });
+	});
+
+	test("a __proto__ key seeded before the navigation is written on arrival", async ({ page, testStorage }) => {
+		await testStorage.sessionStorage.seed("__proto__", "seeded");
+		await testStorage.navigation.goto();
+		expect(await storedItem(page, "__proto__")).toBe("seeded");
 	});
 
 	test("seed while already on the origin writes at once; the app sees the values on its next load", async ({

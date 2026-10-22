@@ -45,7 +45,7 @@ describe("seedScript", () => {
 		from?: unknown;
 		setItem?: (key: string, value: string) => void;
 	}) => {
-		const stored: Record<string, string> = {};
+		const stored: Record<string, string> = Object.create(null);
 		const logged: string[] = [];
 		const window: { top?: unknown } = {};
 		window.top = document.top === false ? {} : window;
@@ -62,12 +62,26 @@ describe("seedScript", () => {
 		vi.spyOn(console, "error").mockImplementation((message: string) => {
 			logged.push(message);
 		});
-		seedScript({ origin: B, entries: { token: "abc", user: '{"name":"Ada"}' }, prefix: FAILURE_PREFIX });
+		seedScript({
+			origin: B,
+			entries: [
+				["token", "abc"],
+				["user", '{"name":"Ada"}'],
+				["__proto__", "kept"],
+			],
+			prefix: FAILURE_PREFIX,
+		});
 		return { stored, logged };
 	};
 
-	it("writes every entry verbatim on the first arrival in the main frame on the origin", () => {
-		expect(run({ origin: B })).toEqual({ stored: { token: "abc", user: '{"name":"Ada"}' }, logged: [] });
+	it("writes every entry verbatim on the first arrival in the main frame on the origin, a __proto__ key included", () => {
+		const { stored, logged } = run({ origin: B });
+		expect(Object.entries(stored)).toEqual([
+			["token", "abc"],
+			["user", '{"name":"Ada"}'],
+			["__proto__", "kept"],
+		]);
+		expect(logged).toEqual([]);
 	});
 
 	it("writes nothing in a sub-frame, on another origin, or after a document on the origin (a reload, a hop within it)", () => {
@@ -203,13 +217,20 @@ describe("SeedRegistry", () => {
 		const { page, registry } = setup();
 		await registry.add(B, { token: "1", keep: "k" }, title, site);
 		expect(page.scripts.map((s) => s.arg)).toEqual([
-			{ origin: B, entries: { token: "1", keep: "k" }, prefix: FAILURE_PREFIX },
+			{
+				origin: B,
+				entries: [
+					["token", "1"],
+					["keep", "k"],
+				],
+				prefix: FAILURE_PREFIX,
+			},
 		]);
 		expect(page.listeners.map((l) => l.event)).toEqual(["framenavigated", "domcontentloaded", "console", "close"]);
 
 		await registry.add(B, { token: "2" }, "Other.SessionStorage.seed", site);
 		await registry.add(C, { other: "x" }, title, site);
-		expect(page.scripts.map((s) => [s.arg.origin, s.arg.entries, s.disposed])).toEqual([
+		expect(page.scripts.map((s) => [s.arg.origin, Object.fromEntries(s.arg.entries), s.disposed])).toEqual([
 			[B, { token: "1", keep: "k" }, true],
 			[B, { token: "2", keep: "k" }, false],
 			[C, { other: "x" }, false],
@@ -217,6 +238,19 @@ describe("SeedRegistry", () => {
 		expect(page.listeners).toHaveLength(4);
 		expect(registry.pendingOrigins).toEqual([B, C]);
 		expect(page.evaluations).toBe(1);
+	});
+
+	it("keeps a __proto__ key through the merge of pending seeds and into the script's pairs", async () => {
+		const { page, registry } = setup();
+		await registry.add(B, Object.fromEntries([["__proto__", "x"]]), title, site);
+		await registry.add(B, { other: "y" }, title, site);
+		expect(page.scripts.map((s) => s.arg.entries)).toEqual([
+			[["__proto__", "x"]],
+			[
+				["__proto__", "x"],
+				["other", "y"],
+			],
+		]);
 	});
 
 	it("disposes of an origin's script when the main frame commits there, and ignores sub-frames, other origins and documents without an origin", async () => {
@@ -300,7 +334,8 @@ describe("SeedRegistry", () => {
 	});
 
 	describe("overlapping calls for one origin", () => {
-		const scriptsOf = (page: ReturnType<typeof fakePage>) => page.scripts.map((s) => [s.arg.entries, s.disposals]);
+		const scriptsOf = (page: ReturnType<typeof fakePage>) =>
+			page.scripts.map((s) => [Object.fromEntries(s.arg.entries), s.disposals]);
 		const otherFrame = "    at Object.<anonymous> (/suite/tests/login.spec.ts:13:5)";
 		const otherSite = Object.assign(new Error(), { stack: `Error\n${otherFrame}` });
 

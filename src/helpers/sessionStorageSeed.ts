@@ -71,8 +71,11 @@ export const FAILURE_PREFIX = "pomwright-seed-failure:";
 export type SeedScriptArg = {
 	/** The origin whose documents receive the entries. */
 	origin: string;
-	/** The encoded entries. */
-	entries: Record<string, string>;
+	/**
+	 * The encoded entries as `[key, value]` pairs. A key is never a property name on the way to the page, where
+	 * Playwright's serialisation of an argument drops an own `__proto__` key.
+	 */
+	entries: [key: string, value: string][];
 	/** `FAILURE_PREFIX`, passed in because the script is serialised and refers to nothing outside its body. */
 	prefix: string;
 };
@@ -91,7 +94,7 @@ export const seedScript = ({ origin, entries, prefix }: SeedScriptArg): void => 
 		return;
 	}
 	try {
-		for (const [key, value] of Object.entries(entries)) {
+		for (const [key, value] of entries) {
 			sessionStorage.setItem(key, value);
 		}
 	} catch (error) {
@@ -214,7 +217,11 @@ export class SeedRegistry {
 		}
 		const previous = this.pending.get(origin);
 		const merged = { ...previous?.entries, ...entries };
-		const disposable = await this.page.addInitScript(seedScript, { origin, entries: merged, prefix: FAILURE_PREFIX });
+		const disposable = await this.page.addInitScript(seedScript, {
+			origin,
+			entries: Object.entries(merged),
+			prefix: FAILURE_PREFIX,
+		});
 		if (committed()) {
 			await disposable.dispose();
 			throw inFlightError(title, origin, site);

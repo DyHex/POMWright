@@ -53,6 +53,19 @@ describe("encodeEntries", () => {
 		});
 	});
 
+	it("keeps keys that name Object.prototype members as own entries, __proto__ included", () => {
+		const entries = Object.fromEntries([
+			["__proto__", "p"],
+			["constructor", "c"],
+			["toString", "t"],
+		]);
+		expect(Object.entries(encodeEntries({}, entries, title))).toEqual([
+			["__proto__", "p"],
+			["constructor", "c"],
+			["toString", "t"],
+		]);
+	});
+
 	it("rejects an undeclared non-string naming the key", () => {
 		for (const value of [1, true, null, undefined, { a: 1 }, ["a"]]) {
 			expect(() => encodeEntries({}, { user: value }, title)).toThrow(
