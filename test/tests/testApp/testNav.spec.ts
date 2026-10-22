@@ -115,8 +115,8 @@ test.describe("goto", () => {
 	});
 
 	test("from JavaScript, a URL object throws instead of going to the page object's own URL", async ({ testNav }) => {
-		const untyped = testNav.navigation.goto as unknown as (first: unknown) => Promise<void>;
-		await expect(untyped(new URL(`${BASE}/testnav/item/7`))).rejects.toThrow(
+		const untyped = testNav.navigation as unknown as { goto(first: unknown): Promise<void> };
+		await expect(untyped.goto(new URL(`${BASE}/testnav/item/7`))).rejects.toThrow(
 			"TestNav: goto() takes a URL string or options; received a URL object; pass its href.",
 		);
 		expect(testNav.page.url()).toBe("about:blank");
