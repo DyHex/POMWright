@@ -140,6 +140,7 @@ When a URL part is not what it must be:
 LoginPage: baseUrl must be an origin such as "https://example.com" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "localhost:9000".
 LoginPage: baseUrl must be a string or a RegExp; received undefined.
 LoginPage: urlPath must be "" or start with exactly one "/"; received "login".
+LoginPage: urlPath must be a path on the page object's origin; received "/\\login.example/account", which names the host "login.example" instead. A "/" followed by another "/" or a "\", also with a tab or line break between them, starts a host.
 ```
 
 ---

@@ -248,8 +248,9 @@ export abstract class PageObject<
 	 * @param page The page the page object works on.
 	 * @param baseUrl The origin: a string `scheme://host[:port]` with nothing after it (a trailing slash is allowed), or
 	 * a RegExp tested against the URL's origin (declare `baseUrlType: RegExp` in `Options`).
-	 * @param urlPath The page's path: `""` for the origin itself, a string that starts with exactly one `/`, or a RegExp
-	 * tested against the rest of the URL, path, query and hash (declare `urlPathType: RegExp` in `Options`).
+	 * @param urlPath The page's path: `""` for the origin itself, a string that starts with exactly one `/` and stays on
+	 * the base's origin, or a RegExp tested against the rest of the URL, path, query and hash (declare
+	 * `urlPathType: RegExp` in `Options`).
 	 * @param options Optional settings.
 	 * @param options.label The name in step titles and error messages. Defaults to the class name.
 	 * @param options.navOptions Defaults for every navigation method (`waitUntil`, `timeout`); a call's own options win.
@@ -277,7 +278,7 @@ export abstract class PageObject<
 			assertBaseUrl(baseUrl, label);
 		}
 		if (typeof urlPath === "string") {
-			assertUrlPath(urlPath, label);
+			assertUrlPath(urlPath, baseUrl, label);
 		}
 		this.baseUrl = baseUrl;
 		this.urlPath = urlPath;

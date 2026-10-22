@@ -37,6 +37,8 @@ test("rejects a baseUrl that is not a non-empty origin, naming the page object a
 		"https://app.example/app",
 		"https://app.example/?a=1",
 		"https://app.example/#h",
+		"https://app.example?",
+		"https://app.example#",
 	];
 	for (const baseUrl of invalid) {
 		expect(() => new Probe(page, baseUrl, "/login"), baseUrl).toThrow(
@@ -52,6 +54,15 @@ test("rejects a urlPath without exactly one leading slash", async ({ page }) => 
 	for (const urlPath of ["login", "?tab=1", "#section", "https://app.example/a", "//other.example/x"]) {
 		expect(() => new Probe(page, "https://app.example", urlPath), urlPath).toThrow(
 			`Probe: urlPath must be "" or start with exactly one "/"; received ${JSON.stringify(urlPath)}.`,
+		);
+	}
+});
+
+test("rejects a urlPath that names another host through a backslash, a tab or a line break", async ({ page }) => {
+	const hint = 'A "/" followed by another "/" or a "\\", also with a tab or line break between them, starts a host.';
+	for (const urlPath of ["/\\127.0.0.1:9000/testnav", "/\t/127.0.0.1:9000/testnav", "/\n\\127.0.0.1:9000/testnav"]) {
+		expect(() => new Probe(page, "http://localhost:9000", urlPath), urlPath).toThrow(
+			`Probe: urlPath must be a path on the page object's origin; received ${JSON.stringify(urlPath)}, which names the host "127.0.0.1:9000" instead. ${hint}`,
 		);
 	}
 });

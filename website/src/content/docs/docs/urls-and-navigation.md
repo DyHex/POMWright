@@ -22,12 +22,15 @@ checked like a literal:
 ```text
 LoginPage: baseUrl must be an origin such as "https://example.com" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "shop.example".
 LoginPage: urlPath must be "" or start with exactly one "/"; received "login".
+LoginPage: urlPath must be a path on the page object's origin; received "/\\login.example/account", which names the host "login.example" instead. A "/" followed by another "/" or a "\", also with a tab or line break between them, starts a host.
 LoginPage: baseUrl must be a string or a RegExp; received undefined.
 ```
 
 `localhost:9000` without a scheme and a base with a path are rejected: Playwright could not resolve paths against the
-first, and would drop the path of the second for every path that starts with `/`. A path that starts with `//` would
-name another host.
+first, and would drop the path of the second for every path that starts with `/`. A base that ends in a bare `?` or
+`#` is rejected too. A path that starts with `//` names another host, and so does one whose first `/` is followed by a
+backslash, or by a tab or line break and then `/` or a backslash: the URL standard reads a backslash as `/` and drops
+tabs and line breaks. The constructor resolves the path and rejects it when it leaves the base's origin.
 
 ## `fullUrl`
 

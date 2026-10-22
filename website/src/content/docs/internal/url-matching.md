@@ -16,7 +16,9 @@ helpers in `src/helpers/url.ts`:
   a path that starts with `/` against the origin of its `baseURL`, dropping any path the base had, and a scheme-less
   `localhost:9000` parses as a URL with the scheme `localhost:`; both are rejected so that no page object is built on a
   base that resolves differently than it reads.
-- `urlPath`: `""` or a string that starts with exactly one `/`; `//shop.example/x` would name another host.
+- `urlPath`: `""` or a string that starts with exactly one `/` and, resolved against the base, keeps its origin;
+  `//shop.example/x` would name another host, and so would a backslash after the first `/`, which the URL standard
+  reads as `/`. The check resolves the path rather than listing characters, so it follows the standard.
 - neither a string nor a RegExp, usually an unset environment variable: rejected, because it would build a page
   object that matches nothing.
 

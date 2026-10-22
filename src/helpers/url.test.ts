@@ -19,6 +19,7 @@ describe("assertBaseUrl", () => {
 			"https://app.example/",
 			"https://app.example:8443",
 			"https://SHOP.example",
+			"https://user:secret@app.example",
 		]) {
 			expect(() => assertBaseUrl(value, "Poc"), value).not.toThrow();
 		}
@@ -34,6 +35,9 @@ describe("assertBaseUrl", () => {
 			"https://app.example/app",
 			"https://app.example/?a=1",
 			"https://app.example/#h",
+			"https://app.example?",
+			"https://app.example/?",
+			"https://app.example#",
 		]) {
 			expect(() => assertBaseUrl(value, "ShopLogin"), value).toThrow(
 				new RegExp(
@@ -45,16 +49,37 @@ describe("assertBaseUrl", () => {
 });
 
 describe("assertUrlPath", () => {
-	it('accepts "" and paths that start with exactly one slash', () => {
-		for (const value of ["", "/", "/login", "/app/login", "/a//b", "/orders?tab=1", "/orders#top"]) {
-			expect(() => assertUrlPath(value, "Poc"), value).not.toThrow();
+	it('accepts "" and paths that start with exactly one slash, against a string or a RegExp base', () => {
+		for (const base of ["https://app.example", /^https:\/\/app\.example$/]) {
+			for (const value of ["", "/", "/login", "/app/login", "/a//b", "/a\\b", "/orders?tab=1", "/orders#top", "/søk"]) {
+				expect(() => assertUrlPath(value, base, "Poc"), value).not.toThrow();
+			}
 		}
 	});
 
 	it("rejects paths without a leading slash, protocol-relative paths, and absolute URLs", () => {
 		for (const value of ["login", "?tab=1", "#section", "https://app.example/a", "//other.example/x", "//"]) {
-			expect(() => assertUrlPath(value, "ShopLogin"), value).toThrow(
+			expect(() => assertUrlPath(value, "https://app.example", "ShopLogin"), value).toThrow(
 				`ShopLogin: urlPath must be "" or start with exactly one "/"; received ${JSON.stringify(value)}.`,
+			);
+		}
+	});
+
+	it("rejects a path that names a host through a backslash, a tab or a line break, against either base", () => {
+		const hint = 'A "/" followed by another "/" or a "\\", also with a tab or line break between them, starts a host.';
+		for (const base of ["https://app.example", /^https:\/\/app\.example$/]) {
+			for (const value of [
+				"/\\other.example/x",
+				"/\t/other.example/x",
+				"/\n/other.example/x",
+				"/\r\\other.example/x",
+			]) {
+				expect(() => assertUrlPath(value, base, "ShopLogin"), value).toThrow(
+					`ShopLogin: urlPath must be a path on the page object's origin; received ${JSON.stringify(value)}, which names the host "other.example" instead. ${hint}`,
+				);
+			}
+			expect(() => assertUrlPath("/\\", base, "ShopLogin")).toThrow(
+				`ShopLogin: urlPath must be a path on the page object's origin; received "/\\\\", which names a host instead. ${hint}`,
 			);
 		}
 	});
