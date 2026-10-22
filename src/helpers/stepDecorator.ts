@@ -133,6 +133,10 @@ const createStepDecorator =
  * @param options `test.step`'s options, such as `box` and `timeout`.
  * @param value The method, when `@step` is written without parentheses.
  * @param context The decorator context, when `@step` is written without parentheses.
+ * @param target With `experimentalDecorators` and without parentheses: the class's prototype, or the class itself for a
+ * static method.
+ * @param propertyKey With `experimentalDecorators` and without parentheses: the method's name.
+ * @param descriptor With `experimentalDecorators` and without parentheses: the method's property descriptor.
  * @returns The decorator.
  * @throws From JavaScript, on something that is not a method: `@step decorator can only be applied to methods.`
  *
@@ -150,13 +154,22 @@ export function step<This, Args extends unknown[], Return>(
 	value: StepRequiresPromise,
 	context: ClassMethodDecoratorContext<This, AnyMethod<This, Args, Return>>,
 ): undefined;
+// experimentalDecorators: a bare @step is called with the target, the key and the descriptor; after the two-argument
+// forms, so a standard decorator's error still comes from the message overload above
+export function step<This, Args extends unknown[], Return>(
+	target: object,
+	propertyKey: string | symbol,
+	descriptor: TypedPropertyDescriptor<AsyncMethod<This, Args, Return>>,
+): TypedPropertyDescriptor<AsyncMethod<This, Args, Return>> | undefined;
+export function step(target: object, propertyKey: string | symbol, descriptor: StepRequiresPromise): undefined;
 export function step(
 	...args:
 		| StepDecoratorArgs
 		| LegacyMethodDecoratorArgs<AnyMethod>
 		| Stage3MethodDecoratorArgs<AnyMethod>
-		// the message overload exists for the compiler only; at runtime the first argument is the method
+		// the message overloads exist for the compiler only; at runtime the method or its descriptor is passed
 		| [StepRequiresPromise, ClassMethodDecoratorContext]
+		| [object, string | symbol, StepRequiresPromise]
 ): StepDecoratorFactory | AnyMethod | undefined | TypedPropertyDescriptor<AnyMethod> {
 	if (isStage3MethodDecoratorArgs(args)) {
 		return createStepDecorator(normalizeStepArguments([]))(...args);

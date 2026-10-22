@@ -1,0 +1,10 @@
+{
+	// @step with experimentalDecorators against the published declarations: bare, called, titled and with options, and
+	// the readable error for a method that does not return a Promise. Run by pnpm typecheck and pack-test.sh.
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"experimentalDecorators": true,
+		"noEmit": true
+	},
+	"files": ["tests/packaging/stepLegacyDecorators.typecheck.ts"]
+}

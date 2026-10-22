@@ -36,6 +36,7 @@ fi
 
 pnpm -C "$SCRIPT_DIR" exec tsc --noEmit -p test
 pnpm -C "$SCRIPT_DIR" exec tsc -p test/tsconfig.declarations.json
+pnpm -C "$SCRIPT_DIR" exec tsc -p test/tsconfig.legacyDecorators.json
 node "$SCRIPT_DIR/scripts/check-doc-snippets.mjs"
 node "$SCRIPT_DIR/scripts/check-api-coverage.mjs"
 # shellcheck disable=SC2086 # PLAYWRIGHT_INSTALL_ARGS is a word list on purpose
