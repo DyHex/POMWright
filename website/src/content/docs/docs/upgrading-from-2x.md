@@ -440,7 +440,8 @@ passed to a call. POMWright no longer sets `"load"` itself; Playwright's default
 ### URLs are checked when a page object is constructed
 
 **Fails at run time.** A string `baseUrl` must be an origin with a scheme and nothing after it, and a string `urlPath`
-must be `""` or start with exactly one `/`. The constructor checks every value, a literal or one from the environment:
+must be `""` or start with exactly one `/`, and stay on the base's origin once resolved. The constructor checks every
+value, a literal or one from the environment:
 
 ```text
 LoginPage: baseUrl must be an origin such as "https://example.com" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "https://shop.example/app".
