@@ -162,15 +162,8 @@ export function step<This, Args extends unknown[], Return>(
 	descriptor: TypedPropertyDescriptor<AsyncMethod<This, Args, Return>>,
 ): TypedPropertyDescriptor<AsyncMethod<This, Args, Return>> | undefined;
 export function step(target: object, propertyKey: string | symbol, descriptor: StepRequiresPromise): undefined;
-export function step(
-	...args:
-		| StepDecoratorArgs
-		| LegacyMethodDecoratorArgs<AnyMethod>
-		| Stage3MethodDecoratorArgs<AnyMethod>
-		// the message overloads exist for the compiler only; at runtime the method or its descriptor is passed
-		| [StepRequiresPromise, ClassMethodDecoratorContext]
-		| [object, string | symbol, StepRequiresPromise]
-): StepDecoratorFactory | AnyMethod | undefined | TypedPropertyDescriptor<AnyMethod> {
+// the overloads above are what a caller passes and gets; the implementation tells the forms apart with its type guards
+export function step(...args: unknown[]): unknown {
 	if (isStage3MethodDecoratorArgs(args)) {
 		return createStepDecorator(normalizeStepArguments([]))(...args);
 	}
