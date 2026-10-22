@@ -355,7 +355,8 @@ Rules:
   `scripts/write-esm-entry.mjs`, nothing else in `dist`); Node 20 and 24 loading `index.js` for `require` and
   `index.mjs` for `import` with one shared `PageObject`; TypeScript under `node10`, `node16`, `nodenext` and `bundler`
   resolution; attw (`@arethetypeswrong/cli`, downloaded, never a dependency) reporting no problem; Playwright's runner in
-  a CommonJS and a `"type": "module"` project; npm's `EBADENGINE` warning on Node 18.
+  a CommonJS and a `"type": "module"` project; and, when `engines` changes, npm's `EBADENGINE` warning on a Node
+  version below the new floor.
 - Work planned for later is tracked as open GitHub issues labelled `backlog` (`gh issue list --label backlog`), not in
   this file: read them before planning a release, and turn a working folder's deferred items into issues before the
   folder is deleted. A breaking item also carries `breaking`.
