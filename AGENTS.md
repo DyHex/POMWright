@@ -335,6 +335,10 @@ Rules:
   Packages" PR and publishes when it merges. Do not edit `package.json#version` or `CHANGELOG.md` by hand.
 - Call out consumer-facing API or behaviour changes in the changeset body, with a migration hint whenever something
   a 2.x user wrote stops working.
+- The changelog is written by `@changesets/changelog-github` with `disableThanks: true` (`.changeset/config.json`): an
+  entry is ``- [#PR](…) [`sha`](…) - <the changeset's first line>``, its further lines indented below. So a changeset
+  starts with a sentence, never a heading: a heading on that line does not render, in `CHANGELOG.md` or in the GitHub
+  release taken from it (3.0.0's entries show it).
 - `publish.yaml` starts after `CI` succeeds, and `CI` runs only for pushes to `main` and includes the whole harness;
   its job condition also requires a push run on `main` in this repository. Pull requests run the same jobs through
   `PR`, which Publish does not listen to. CI runs only for pull requests (drafts included) and `main`. The gate job
