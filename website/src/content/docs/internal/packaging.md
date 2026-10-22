@@ -22,7 +22,8 @@ split.
 ## The `exports` map
 
 `package.json` maps the root, `"."`, to the ESM entry for `import` and the CommonJS build for `require`, each with its
-own declarations, and exposes `./package.json`. Nothing else is importable: `pomwright/dist/index.js` fails with
+own declarations, and, last, to the CommonJS build for `default`, the condition a resolver falls back to when it
+matches neither, as `@playwright/test`'s map does. It also exposes `./package.json`. Nothing else is importable: `pomwright/dist/index.js` fails with
 `ERR_PACKAGE_PATH_NOT_EXPORTED`, so internal files can change without breaking a consumer. `engines.node` is `>=20`,
 Playwright's own floor, and `@playwright/test` is a peer dependency: POMWright never bundles or installs it. The
 `files` list decides what is packed: `dist`, the README, the license and the changelog.
