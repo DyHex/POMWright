@@ -112,6 +112,32 @@ What the definition cannot see:
   the definition reads them as `undefined`. A getter resolves when it is read and is always safe:
   `get submit() { return this.getNestedLocator("main.form@login.button@login"); }`.
 
+:::note
+A subclass constructor that throws after `super(…)` leaves an object nobody receives, but the definition that
+`PageObject`'s constructor scheduled still runs on it. It finds what the subclass never set, and fails the test with a
+second error, `AccountPage: defineLocators() failed: …`, even when the test caught the first. Check the arguments
+before `super(…)`: TypeScript allows statements there that do not use `this`.
+
+```ts
+import type { Page } from "@playwright/test";
+import { PageObject } from "pomwright";
+
+export class AccountPage extends PageObject<"main" | "main.heading@account"> {
+  constructor(page: Page, private readonly accountId: string) {
+    if (!/^\d+$/.test(accountId)) {
+      throw new Error(`AccountPage: accountId must be digits; received ${JSON.stringify(accountId)}`);
+    }
+    super(page, "https://shop.example", `/account/${accountId}`);
+  }
+
+  protected defineLocators(): void {
+    this.add("main").locator("main");
+    this.add("main.heading@account").getByRole("heading", { name: `Account ${this.accountId}` });
+  }
+}
+```
+:::
+
 ## How a mistake is reported
 
 A mistake in `defineLocators()` or found by the registry's check is reported with the page object's label, the original
