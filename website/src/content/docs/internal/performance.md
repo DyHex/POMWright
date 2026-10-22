@@ -145,7 +145,9 @@ browser: navigations, page loads, the application's scripts and Playwright's wai
 - **A query costs the same as `getNestedLocator`,** which starts a query itself.
 - **A page object is ready in about a millisecond.** Registration takes 1 to 2 µs per path, and `verify()` about
   3 µs. A page object of 100 paths defines and verifies its locators in under 1 ms; 10,000 paths take about 40 ms.
-- **Everything grows linearly** with the number of paths, and a registered path takes about 300 bytes of heap.
+- **Everything grows linearly** with the number of paths, for the registries measured here, whose filters are text
+  filters; a filter that names another path resolves that path as well, at each resolution and in `verify()`. A
+  registered path takes about 300 bytes of heap.
 - **As a fixture, a POMWright page object takes four to six times as long to set up** as one written with Playwright:
   2.6 ms against 0.5 ms for about 100 paths, 0.4 s against 0.1 s for 100,000. The page object written by hand has built
   every locator by then; a POMWright page object builds a locator at each use instead, for the 1.3 to 16 µs of the
@@ -154,8 +156,9 @@ browser: navigations, page loads, the application's scripts and Playwright's wai
   definition and its steps, where a Playwright `Locator` holds its whole selector chain.
 
 For scale: on the same machine, one `count()` of a locator on a small page, the cheapest round trip to the browser,
-took about 950 µs, the median of 200 calls. Resolving the longest chain measured here costs under 2% of that, and a page
-object of a few hundred paths is ready in less time than one such round trip takes.
+took about 950 µs, the median of 200 calls. Resolving the longest chain measured here costs under 2% of that. A page
+object of about 100 paths defines and verifies its locators in a little less than one such round trip (0.8 ms), and is
+set up as a fixture in under three (2.6 ms).
 
 ## Limitations
 

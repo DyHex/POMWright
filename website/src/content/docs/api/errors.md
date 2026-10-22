@@ -38,8 +38,8 @@ A locator schema with the path "main" already exists.
 Existing and attempted schemas: { … }
 ```
 
-Thrown by the locator method of a second `add(path)` for the same path. Each path has one locator: give the second
-one its own path, or change the first.
+Thrown by the locator method of a second `add(path)` for the same path, or, with `{ reuse }`, by `add` itself, which
+registers at once. Each path has one locator: give the second one its own path, or change the first.
 
 ### Two locator methods on one registration
 
@@ -111,6 +111,13 @@ reuse requires a registered path or a seed from createReusable for "main.list.it
 
 Thrown by `add(path, { reuse })`: the reused path is not registered (register it first, or fix its name); the path
 reuses itself; or the value is neither a path nor a seed (from JavaScript).
+
+```text
+Invalid reuse path configuration for "main.same": Invalid reuse path, reuse path cannot be the same as registration path: main.same
+```
+
+Thrown from JavaScript by `add(path, { reuse })` when `reuse` is an array: the form in which the types report a path
+that reuses itself, so only JavaScript can pass it. Reuse another path.
 
 ```text
 The locator definition for "main.button@cancel" must use the "role" strategy when reusing a locator.

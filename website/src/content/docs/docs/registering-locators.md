@@ -105,8 +105,8 @@ The only call without a first argument is `frameLocator()`, which registers Play
 
 ## One registration per path
 
-A path holds one locator. Registering it again throws at the second method call and shows both records, the existing
-one and the attempted one:
+A path holds one locator. Registering it again throws at the second locator method, or, with `{ reuse }`, at `add`
+itself, which registers at once, and shows both records, the existing one and the attempted one:
 
 ```text
 A locator schema with the path "list.items" already exists.

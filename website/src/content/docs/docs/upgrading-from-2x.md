@@ -191,8 +191,10 @@ with an empty attribute. See [Registering locators](/POMWright/docs/registering-
 ### Steps come after the strategy
 
 **Compile error.** `add(path).filter(…)`, `.nth(…)` and `.describe(…)` before a strategy method no longer compile:
-call the strategy first, `add("list.item").getByRole("listitem").nth(0)`. A seeded registration keeps its optional
-override as the first call. See [Registering locators](/POMWright/docs/registering-locators/).
+call the strategy first, `add("list.item").getByRole("listitem").nth(0)`. In one chain, a seeded registration's
+optional override comes first too; a registration kept in a variable may take it after its `filter`, `nth` and
+`describe` calls (see [changing a seed's options](/POMWright/docs/reusing-locators/#changing-a-seeds-options)). See
+[Registering locators](/POMWright/docs/registering-locators/).
 
 ### A registration ends at the next call on the registry
 

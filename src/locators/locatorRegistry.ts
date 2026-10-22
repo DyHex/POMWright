@@ -173,7 +173,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * @param options `{ reuse }`: a registered path (not this one) or a seed from `createReusable`.
 	 * @returns The registration: the ten locator methods, or after a reuse `filter`, `nth` and `describe`.
 	 * @throws At the locator method, when the path is registered already
-	 * (`A locator schema with the path "main" already exists. …`), when its first argument is missing or an empty
+	 * (`A locator schema with the path "main" already exists. …`; with `{ reuse }`, at `add`, which registers at once), when its first argument is missing or an empty
 	 * string where Playwright cannot use one (`locator requires a non-empty selector for "main.list".`), or when the
 	 * path breaks the path rules (`LocatorSchemaPath string cannot contain consecutive dots: main..list`); at `add`, when
 	 * a reused path is not registered (`No locator schema registered for path "common.button".`). A method of a registration
