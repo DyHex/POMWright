@@ -58,20 +58,34 @@ const normalizeStepArguments = (args: StepDecoratorArgs) => {
 	return { title, options };
 };
 
+/**
+ * The method `@step` puts in place of the original. Playwright takes a step's location from the async stack when the
+ * step opens: an unboxed step at its first frame, a boxed one at the frame after it. So an unboxed step's wrapper is not
+ * `async` (the first frame is the caller's), and a boxed step's wrapper is, and awaits the step (its frame is the one a
+ * box leaves out), as the navigation and session storage helpers are.
+ */
 const createWrappedMethod = <T extends AnyMethod>(
 	original: T,
 	methodName: string | symbol,
 	title?: StepTitle,
 	options?: StepOptions,
-) =>
-	function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
+) => {
+	const titleFor = (self: unknown): StepTitle => {
 		// in a static method `this` is the class itself
-		const owner = typeof this === "function" ? this : (this as { constructor?: { name?: string } }).constructor;
+		const owner = typeof self === "function" ? self : (self as { constructor?: { name?: string } }).constructor;
 		const rawClassName = owner?.name ?? "";
 		const className = rawClassName && rawClassName !== "Object" ? rawClassName : "Anonymous";
-		const resolvedTitle = title ?? `${className}.${String(methodName)}`;
-		return test.step(resolvedTitle, () => original.apply(this, methodArgs), options) as ReturnType<T>;
+		return title ?? `${className}.${String(methodName)}`;
+	};
+	if (options?.box) {
+		return async function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
+			return await test.step(titleFor(this), () => original.apply(this, methodArgs), options);
+		} as T;
+	}
+	return function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
+		return test.step(titleFor(this), () => original.apply(this, methodArgs), options) as ReturnType<T>;
 	} as T;
+};
 
 const createStepDecorator =
 	({ title, options }: { title?: StepTitle; options?: StepOptions }) =>

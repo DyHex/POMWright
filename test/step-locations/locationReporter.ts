@@ -1,0 +1,70 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import type { FullResult, Reporter, TestCase, TestResult, TestStep } from "@playwright/test/reporter";
+
+const ID = /LOCATION ([\w-]+)/;
+
+/** Fails the run when a step or an error carrying `LOCATION <id>` is reported away from the line marked with that id. */
+export default class LocationReporter implements Reporter {
+	private readonly markers = new Map<string, Map<string, number>>();
+	private readonly failures: string[] = [];
+	private checked = 0;
+
+	private markerLine(file: string, id: string): number | undefined {
+		let lines = this.markers.get(file);
+		if (lines === undefined) {
+			lines = new Map();
+			readFileSync(file, "utf8")
+				.split("\n")
+				.forEach((line, index) => {
+					const match = /\/\/ LOCATION ([\w-]+)$/.exec(line.trimEnd());
+					if (match?.[1] !== undefined) {
+						lines?.set(match[1], index + 1);
+					}
+				});
+			this.markers.set(file, lines);
+		}
+		return lines.get(id);
+	}
+
+	private check(what: string, test: TestCase, id: string, location: { file: string; line: number } | undefined) {
+		this.checked++;
+		const expected = this.markerLine(test.location.file, id);
+		const reported = location ? `${path.basename(location.file)}:${location.line}` : "no location";
+		if (expected === undefined) {
+			this.failures.push(`${what} "${id}": no line is marked // LOCATION ${id}`);
+		} else if (location?.file !== test.location.file || location.line !== expected) {
+			this.failures.push(
+				`${what} "${id}": expected ${path.basename(test.location.file)}:${expected}, reported ${reported}`,
+			);
+		}
+	}
+
+	onStepEnd(test: TestCase, _result: TestResult, step: TestStep): void {
+		const id = step.category === "test.step" ? ID.exec(step.title)?.[1] : undefined;
+		if (id !== undefined) {
+			this.check("step", test, id, step.location);
+		}
+	}
+
+	onTestEnd(test: TestCase, result: TestResult): void {
+		for (const error of result.errors) {
+			const id = ID.exec(error.message ?? "")?.[1];
+			if (id !== undefined) {
+				this.check("error", test, id, error.location);
+			}
+		}
+	}
+
+	async onEnd(_result: FullResult): Promise<{ status: FullResult["status"] } | undefined> {
+		if (this.checked === 0) {
+			this.failures.push("no step or error was checked");
+		}
+		if (this.failures.length === 0) {
+			console.log(`step locations: ${this.checked} checked, all where they were called`);
+			return undefined;
+		}
+		console.error(`step locations: ${this.failures.length} wrong\n  ${this.failures.join("\n  ")}`);
+		return { status: "failed" };
+	}
+}
