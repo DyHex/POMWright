@@ -32,6 +32,20 @@ first, and would drop the path of the second for every path that starts with `/`
 backslash, or by a tab or line break and then `/` or a backslash: the URL standard reads a backslash as `/` and drops
 tabs and line breaks. The constructor resolves the path and rejects it when it leaves the base's origin.
 
+:::note
+A base with credentials, `http://user:secret@shop.example`, is accepted and works: browsers send them when the server
+asks. But the credentials are part of every URL the page object shows, `fullUrl`, step titles and error messages, so
+they reach reports and traces:
+
+```text
+AccountPage: expected to have left "http://user:secret@shop.example/account"; found "http://user:secret@shop.example/account" (page.waitForURL: Timeout 500ms exceeded.)
+```
+
+Give them to Playwright instead, with the `httpCredentials` option
+([HTTP authentication](https://playwright.dev/docs/network#http-authentication)), and keep the base an origin without
+them.
+:::
+
 ## `fullUrl`
 
 For two strings, `fullUrl` is `new URL(urlPath, baseUrl).href`, the URL in the form the browser reports it:
