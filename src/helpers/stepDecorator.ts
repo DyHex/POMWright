@@ -71,11 +71,19 @@ const createWrappedMethod = <T extends AnyMethod>(
 	options?: StepOptions,
 ) => {
 	const titleFor = (self: unknown): StepTitle => {
-		// in a static method `this` is the class itself
-		const owner = typeof self === "function" ? self : (self as { constructor?: { name?: string } }).constructor;
+		if (title !== undefined) {
+			return title;
+		}
+		// in a static method `this` is the class itself; a method called without its object has none
+		const owner =
+			typeof self === "function"
+				? self
+				: self === null || self === undefined
+					? undefined
+					: (self as { constructor?: { name?: string } }).constructor;
 		const rawClassName = owner?.name ?? "";
 		const className = rawClassName && rawClassName !== "Object" ? rawClassName : "Anonymous";
-		return title ?? `${className}.${String(methodName)}`;
+		return `${className}.${String(methodName)}`;
 	};
 	if (options?.box) {
 		return async function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
