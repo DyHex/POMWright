@@ -69,7 +69,7 @@ describe("encodeEntries", () => {
 	it("rejects an undeclared non-string naming the key", () => {
 		for (const value of [1, true, null, undefined, { a: 1 }, ["a"]]) {
 			expect(() => encodeEntries({}, { user: value }, title)).toThrow(
-				`${title}: value for "user" is not a string and no codec is declared for it`,
+				`${title}: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)`,
 			);
 		}
 	});

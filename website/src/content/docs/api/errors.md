@@ -283,7 +283,7 @@ AccountPage.SessionStorage.get: the page is on https://login.example, not on thi
 an origin must be on it.
 
 ```text
-Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it
+Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)
 Shop.SessionStorage.set: value for "user" could not be encoded
 Shop.SessionStorage.set: the codec for "user" returned undefined instead of a string
 Shop.SessionStorage.get: value for "user" could not be decoded: {not json

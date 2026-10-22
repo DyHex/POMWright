@@ -225,7 +225,7 @@ await storage.set({ token: "abc", locale: "nb" });
 **Throws**
 
 ```text
-Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it
+Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)
 Shop.SessionStorage.set: value for "user" could not be encoded
 Shop.SessionStorage.set: the codec for "user" returned undefined instead of a string
 ```

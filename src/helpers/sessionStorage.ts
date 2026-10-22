@@ -141,7 +141,8 @@ export const encodeEntries = (
 		if (codec === undefined) {
 			if (typeof value !== "string") {
 				throw new TypeError(
-					`${title}: value for ${JSON.stringify(key)} is not a string and no codec is declared for it`,
+					`${title}: value for ${JSON.stringify(key)} is not a string and no codec is declared for it; declare one in ` +
+						"the schema (a page object's sessionStorage.schema option)",
 				);
 			}
 			encoded[key] = value;
@@ -305,7 +306,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * @param value The value: a string, or the type of the key's codec.
 	 * @param entries Several keys and values, written in one call.
 	 * @throws When a value for a key without a codec is not a string
-	 * (`Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it`), when a key's codec
+	 * (`Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)`), when a key's codec
 	 * throws (`… value for "user" could not be encoded`) or returns something other than a string
 	 * (`… the codec for "user" returned undefined instead of a string`), when the page is on another origin than the
 	 * helper's, and when the page has no origin yet

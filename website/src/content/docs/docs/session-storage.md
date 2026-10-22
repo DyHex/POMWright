@@ -142,6 +142,13 @@ export class AccountPage extends PageObject<"main", { storage: typeof accountSto
 }
 ```
 
+:::note
+The type and the value go together, and nothing checks that both are there. A page object that declares `storage` but
+passes no `sessionStorage.schema` compiles, and its helper has no codecs: a declared key is stored and read as the raw
+string, so `get("user")` returns the stored text where its type says an object, and a `json<string>()` value is stored
+without its quotes. Only writing a value that is not a string fails, with the message in [Errors](#errors).
+:::
+
 A helper that belongs to an origin refuses to touch another one, since another origin's storage can only be reached
 from a document on it:
 
@@ -175,7 +182,7 @@ export const test = base.extend<{ storage: SessionStorage<{ user: Codec<User> }>
 | --- | --- |
 | a page without an origin | `Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()` |
 | a page on another origin | `AccountPage.SessionStorage.get: the page is on …, not on this page object's origin …` |
-| a value that is not a string, for a key without a codec | `Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it` |
+| a value that is not a string, for a key without a codec | `Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)` |
 | a stored value its codec cannot decode | `Shop.SessionStorage.get: value for "user" could not be decoded: {not json` |
 
 ## Reference

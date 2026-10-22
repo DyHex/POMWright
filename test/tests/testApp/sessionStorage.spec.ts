@@ -162,7 +162,7 @@ test.describe("set, get and clear", () => {
 			'TestStorage.SessionStorage.get: value for "user" could not be decoded: {not json',
 		);
 		await expect(testStorage.sessionStorage.set({ other: { x: 1 } as unknown as string })).rejects.toThrow(
-			'TestStorage.SessionStorage.set: value for "other" is not a string and no codec is declared for it',
+			'TestStorage.SessionStorage.set: value for "other" is not a string and no codec is declared for it; declare one in the schema (a page object\'s sessionStorage.schema option)',
 		);
 	});
 });
