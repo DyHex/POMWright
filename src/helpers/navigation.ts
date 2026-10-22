@@ -97,7 +97,9 @@ export type NavigationFor<BaseUrl, FullUrl> = {
 	 * @param options `waitUntil`, `timeout` (or, without a target, also `runPostNavigationActions`); each defaults to
 	 * the page object's `navOptions`.
 	 * @throws What `page.goto` throws; on a RegExp `baseUrl`, for a relative target (from JavaScript):
-	 * `AccountPage: goto("/account") needs an absolute URL because baseUrl is a RegExp.`
+	 * `AccountPage: goto("/account") needs an absolute URL because baseUrl is a RegExp.`; for a first argument that is
+	 * neither a string nor options, a `URL` object included (from JavaScript):
+	 * `LoginPage: goto() takes a URL string or options; received a URL object; pass its href.`
 	 *
 	 * @example
 	 * ```ts
@@ -202,6 +204,17 @@ class Navigation {
 	 */
 	public async goto(...args: GotoArguments): Promise<void> {
 		const [first, second] = args;
+		// as page.goto, which takes a URL string only: from JavaScript, a URL object is not this page's options
+		const given: unknown = first;
+		if (
+			given !== undefined &&
+			typeof given !== "string" &&
+			(typeof given !== "object" || given === null || given instanceof URL)
+		) {
+			const received =
+				given instanceof URL ? "a URL object; pass its href" : given === null ? "null" : `a ${typeof given}`;
+			throw new Error(`${this.label}: goto() takes a URL string or options; received ${received}.`);
+		}
 
 		if (typeof first !== "string") {
 			if (typeof this.fullUrl !== "string") {

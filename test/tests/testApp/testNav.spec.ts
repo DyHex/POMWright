@@ -114,6 +114,16 @@ test.describe("goto", () => {
 		expect(testNav.page.url()).toBe(`${BASE}/testids`);
 	});
 
+	test("from JavaScript, a URL object throws instead of going to the page object's own URL", async ({ testNav }) => {
+		const untyped = testNav.navigation.goto as unknown as (first: unknown) => Promise<void>;
+		await expect(untyped(new URL(`${BASE}/testnav/item/7`))).rejects.toThrow(
+			"TestNav: goto() takes a URL string or options; received a URL object; pass its href.",
+		);
+		expect(testNav.page.url()).toBe("about:blank");
+		await testNav.navigation.goto(new URL(`${BASE}/testnav/item/7`).href);
+		expect(testNav.page.url()).toBe(`${BASE}/testnav/item/7`);
+	});
+
 	test("a trailing slash on baseUrl composes to a single slash", async ({ page }) => {
 		const nav = new TrailingSlashNav(page);
 		expect(nav.fullUrl).toBe(`${BASE}/testnav`);
