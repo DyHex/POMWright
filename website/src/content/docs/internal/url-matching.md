@@ -51,6 +51,13 @@ Playwright's `waitForURL`, `toHaveURL` and `route` accept a URL predicate, so th
 The navigation helper builds a matcher for every page object, a string `fullUrl` included, and waits with it: a page
 is matched in the form the browser reports, so `/søk` matches the percent-encoded URL the browser shows.
 
+The browsers agree with `new URL` on every printable ASCII character in the path, the query and the fragment but one:
+Chromium reports a `|` in the path as `%7C`. Before comparing a string path, the matcher writes `|` as `%7C` in the path
+part of both sides (`comparable` in `src/helpers/url.ts`); a RegExp path sees the URL as the browser reports it.
+`test/tests/testApp/urlForms.spec.ts` repeats the sweep on every browser, so a new difference fails the harness and
+gets its own entry. Decoding both sides with `decodeURI` was rejected: it would also equate `/a%41` with `/aA` and every
+other encoded unreserved character, far more than the browsers differ on, and Playwright compares raw strings.
+
 ## Alternatives weighed
 
 - **One composed RegExp** with a filler between the parts. The base would have to match up to the exact character

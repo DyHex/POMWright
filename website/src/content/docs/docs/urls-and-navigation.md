@@ -43,6 +43,10 @@ For two strings, `fullUrl` is `new URL(urlPath, baseUrl).href`, the URL in the f
 | `"https://shop.example"` | `"/søk"` | `https://shop.example/s%C3%B8k` |
 | `"http://localhost:9000"` | `"/orders?tab=1"` | `http://localhost:9000/orders?tab=1` |
 
+One character is reported differently by the browsers: Chromium writes a `|` in the path as `%7C`, where Firefox,
+WebKit and `new URL` keep it. A string `urlPath` with `|` matches both forms, so its page object works the same on
+every browser.
+
 ## Navigating
 
 Every page object has a `navigation` helper:

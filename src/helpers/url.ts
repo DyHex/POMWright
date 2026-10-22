@@ -135,6 +135,16 @@ const restOf = (url: URL): string => {
 	return url.href.startsWith(start) ? url.href.slice(start.length) : url.pathname + url.search + url.hash;
 };
 
+/**
+ * The rest of a URL in the one form a string path is compared in. Chromium reports a "|" in the path as "%7C", where
+ * `new URL`, Firefox and WebKit keep it; a sweep of every printable ASCII character in the path, query and fragment on
+ * the three browsers found no other difference (`test/tests/testApp/urlForms.spec.ts` keeps checking).
+ */
+const comparable = (rest: string): string => {
+	const end = rest.search(/[?#]/);
+	return end === -1 ? rest.replaceAll("|", "%7C") : rest.slice(0, end).replaceAll("|", "%7C") + rest.slice(end);
+};
+
 const toUrl = (input: string | URL): URL => (typeof input === "string" ? new URL(input) : input);
 
 const testRegExp = (regExp: RegExp, value: string): boolean => {
@@ -154,13 +164,13 @@ export const createUrlMatcher = (base: string | RegExp, path: string | RegExp): 
 	// a string path as the browser reports it: percent-encoded, dot segments resolved, as fullUrl is
 	const expectedRest =
 		typeof path === "string"
-			? restOf(new URL(path || "/", typeof base === "string" ? base : PLACEHOLDER_BASE))
+			? comparable(restOf(new URL(path || "/", typeof base === "string" ? base : PLACEHOLDER_BASE)))
 			: undefined;
 
 	const matches = (url: URL): boolean => {
 		const rest = restOf(url);
 		const baseMatches = base instanceof RegExp ? testRegExp(base, url.origin) : url.origin === expectedOrigin;
-		const pathMatches = path instanceof RegExp ? testRegExp(path, rest) : rest === expectedRest;
+		const pathMatches = path instanceof RegExp ? testRegExp(path, rest) : comparable(rest) === expectedRest;
 		return baseMatches && pathMatches;
 	};
 

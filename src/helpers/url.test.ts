@@ -189,6 +189,20 @@ describe("createUrlMatcher", () => {
 		expect(createUrlMatcher("https://shop.example", /^\/search\??$/).test("https://shop.example/search?")).toBe(true);
 	});
 
+	it('compares "|" and "%7C" in a string path as one character, as Chromium reports the first as the second', () => {
+		const pipe = createUrlMatcher("https://shop.example", "/a|b");
+		expect(pipe.test("https://shop.example/a|b")).toBe(true);
+		expect(pipe.test("https://shop.example/a%7Cb")).toBe(true);
+		expect(pipe.test("https://shop.example/a%7cb")).toBe(false);
+		expect(createUrlMatcher("https://shop.example", "/a%7Cb").test("https://shop.example/a|b")).toBe(true);
+		// only in the path: the query and the fragment are compared as written
+		const query = createUrlMatcher("https://shop.example", "/a?q=x|y");
+		expect(query.test("https://shop.example/a?q=x|y")).toBe(true);
+		expect(query.test("https://shop.example/a?q=x%7Cy")).toBe(false);
+		// a RegExp path sees the URL as the browser reports it
+		expect(createUrlMatcher("https://shop.example", /^\/a\|b$/).test("https://shop.example/a%7Cb")).toBe(false);
+	});
+
 	it("finds the rest of a URL with credentials", () => {
 		const orders = createUrlMatcher("https://shop.example", "/orders?tab=1");
 		expect(orders.test("https://user:secret@shop.example/orders?tab=1")).toBe(true);
