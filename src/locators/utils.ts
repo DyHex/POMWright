@@ -191,12 +191,13 @@ export const copyValue = <Value>(value: Value): Value =>
  */
 export const readFields = (fields: object): [string, unknown][] => {
 	const entries: [string, unknown][] = Object.entries(fields);
+	let prototype: object | null = Object.getPrototypeOf(fields);
+	// a plain object, the common case, has nothing more to read
+	if (prototype === null || prototype === Object.prototype) {
+		return entries;
+	}
 	const seen = new Set(entries.map(([key]) => key));
-	for (
-		let prototype: object | null = Object.getPrototypeOf(fields);
-		prototype !== null && prototype !== Object.prototype;
-		prototype = Object.getPrototypeOf(prototype)
-	) {
+	for (; prototype !== null && prototype !== Object.prototype; prototype = Object.getPrototypeOf(prototype)) {
 		for (const name of Object.getOwnPropertyNames(prototype)) {
 			if (seen.has(name)) {
 				continue;

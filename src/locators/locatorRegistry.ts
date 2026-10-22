@@ -113,11 +113,22 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	private openRegistration: { end(by: RegistrationEnd): void } | undefined;
 
 	/**
-	 * Ends the open registration, so a registration kept in a variable can no longer change its path. `by` names the
-	 * call, so the ended registration's error can say what ended it.
+	 * Ends the open registration, so a registration kept in a variable can no longer change its path. The call that ends
+	 * it, `method` with `path`, is described for the ended registration's error only when one is open: every registry
+	 * call comes here, and most find nothing open. `resolves` marks a `getLocator` or `getNestedLocator`.
 	 */
-	private endOpenRegistration(by: RegistrationEnd): void {
-		this.openRegistration?.end(by);
+	private endOpenRegistration(method: string, path?: string, resolves = false): void {
+		if (this.openRegistration === undefined) {
+			return;
+		}
+		const by: RegistrationEnd =
+			method === "resolution"
+				? { call: `a query's resolution of "${path}"` }
+				: {
+						call: path === undefined ? `${method}()` : `${method}("${path}")`,
+						resolvedPath: resolves ? path : undefined,
+					};
+		this.openRegistration.end(by);
 		this.openRegistration = undefined;
 	}
 
@@ -197,7 +208,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 					RegistryPath<LocatorSchemaPathType>,
 					Extract<Reuse, ReusableLocator<LocatorSchemaPathType>>["type"]
 				> {
-		this.endOpenRegistration({ call: `add("${String(path)}")` });
+		this.endOpenRegistration("add", String(path));
 		const options = args[0] as
 			| {
 					reuse?:
@@ -440,7 +451,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	getLocatorSchema<Path extends LocatorSchemaPathType>(
 		path: LocatorSchemaPathArgument<Path>,
 	): LocatorQueryBuilder<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>> {
-		this.endOpenRegistration({ call: `getLocatorSchema("${String(path)}")` });
+		this.endOpenRegistration("getLocatorSchema", String(path));
 		return new LocatorQueryBuilderInternal<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>>(
 			this,
 			path as Extract<Path, RegistryPath<LocatorSchemaPathType>>,
@@ -465,7 +476,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * ```
 	 */
 	verify(): void {
-		this.endOpenRegistration({ call: "verify()" });
+		this.endOpenRegistration("verify");
 		const failures: string[] = [];
 		for (const [path, record] of this.schemas) {
 			const problems: string[] = [];
@@ -520,7 +531,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * ```
 	 */
 	getLocator<Path extends LocatorSchemaPathType>(path: LocatorSchemaPathArgument<Path>): Locator {
-		this.endOpenRegistration({ call: `getLocator("${String(path)}")`, resolvedPath: String(path) });
+		this.endOpenRegistration("getLocator", String(path), true);
 		const target = path as RegistryPath<LocatorSchemaPathType>;
 		validateLocatorSchemaPath(target);
 		return this.resolveRecord(target, this.get(target));
@@ -543,7 +554,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * ```
 	 */
 	getNestedLocator<Path extends LocatorSchemaPathType>(path: LocatorSchemaPathArgument<Path>): Locator {
-		this.endOpenRegistration({ call: `getNestedLocator("${String(path)}")`, resolvedPath: String(path) });
+		this.endOpenRegistration("getNestedLocator", String(path), true);
 		return this.getLocatorSchema(path).getNestedLocator();
 	}
 
@@ -564,7 +575,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		},
 	): Locator {
 		// every resolution, a query's included, is a call on the registry
-		this.endOpenRegistration({ call: `a query's resolution of "${path}"` });
+		this.endOpenRegistration("resolution", path);
 		const resolutionContext = context ?? this.createResolutionContext(path);
 		// the registered ancestors in chain order; an unregistered or skipped one is left out
 		const ancestors = expandSchemaPath(path)
