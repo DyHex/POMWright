@@ -53,6 +53,10 @@ push to `main`:
 - **build**: the gate job, the check `main` requires.
 
 Publishing waits for `CI` on `main`, so nothing is published past a red run, and `pages.yaml` deploys the site after
-the same green run (see [documentation](/POMWright/internal/documentation/#building-and-publishing)). Third-party actions are pinned to commits and kept current by
-Dependabot, which also proposes the npm versions of the root, `test/` and `website/` once a month, grouped, except
-`@playwright/test`, which moves by decision.
+the same green run (see [documentation](/POMWright/internal/documentation/#building-and-publishing)). A run that
+`workflow_run` starts checks out the newest commit on `main`, which may be newer than the one `CI` tested, so
+`publish.yaml` first compares the two and goes no further when `main` has moved on: the newer commit's own `CI` run
+starts Publish again. `pages.yaml` builds the tested commit itself.
+
+Third-party actions are pinned to commits and kept current by Dependabot, which also proposes the npm versions of the
+root, `test/` and `website/` once a month, grouped, except `@playwright/test`, which moves by decision.
