@@ -17,11 +17,12 @@ must not do in the documents that run it before then.
 
 ## One registry per page
 
-`SessionStorage.seed()` writes at once when the page is on the origin. Otherwise it hands the entries to the page's
-`SeedRegistry` (`src/helpers/sessionStorageSeed.ts`), created on first use and kept in a `WeakMap` keyed by the page,
-so every `SessionStorage` on the page shares it. The registry keeps one pending seed per origin; a second `seed` for the
-same origin registers a script with the merged entries, later values winning, then disposes of the previous one.
-Calls for one origin take turns, in the order they were made (see
+`SessionStorage.seed()` hands the entries to the page's `SeedRegistry` (`src/helpers/sessionStorageSeed.ts`), created
+on first use and kept in a `WeakMap` keyed by the page, so every `SessionStorage` on the page shares it. In the call's
+turn, the registry writes the entries at once when the page is on the origin, and otherwise registers them. It keeps
+one pending seed per origin; a second `seed` for the same origin registers a script with the merged entries, later
+values winning, then disposes of the previous one. Calls for one origin take turns with every session storage call for
+that origin on the page, in the order they were made (see
 [overlapping calls](/POMWright/internal/seed-registry/#overlapping-calls)).
 
 The first pending seed registers four listeners: `framenavigated`, `domcontentloaded`, `console` and `close`. When
@@ -102,11 +103,18 @@ sequenceDiagram
 ## Overlapping calls
 
 A call's turn reads the pending seed, registers a script with the merged entries, stores it as the pending seed and
-disposes of the previous script, with two `await`s in between. Each origin has a chain of turns: a call joins it
-synchronously when it reaches the registry, and its turn starts once the previous one has settled, whether it
-succeeded or failed. So calls that overlap, in a `Promise.all` or without `await`, end exactly as if each had been
-awaited in turn, and a call that fails leaves the pending seed as it was. Chains are per origin, so seeds for different
-origins never wait for each other.
+disposes of the previous script, with two `await`s in between. Each origin has a chain of turns
+(`src/helpers/storageTurns.ts`), kept per page and shared by `set`, `get`, `clear` and `seed`: a call joins it
+synchronously when it starts, and its turn starts once the previous one has settled, whether it succeeded or failed. So
+calls that overlap, in a `Promise.all` or without `await`, end exactly as if each had been awaited in turn, and a call
+that fails leaves the pending seed as it was. Chains are per origin, so calls for different origins never wait for each
+other.
+
+A `seed` on the origin writes key by key, one round trip each, as `set` does, so two overlapping calls without the
+chain would interleave and an earlier value could win. The registry therefore decides in the call's turn, not at the
+call, whether to write at once or register: if the page was on the origin at the call and still is, it writes; if it has
+left, it registers. A navigation within the origin while the call waits is not an arrival. A call made away from the
+origin keeps its commit watch from the call on, so a page that arrives while the call waits fails the call, as before.
 
 Without the chain, two calls that overlap read the same pending seed. Each merges only that seed with its own entries,
 so one call's keys are lost; the second stored record replaces the first, whose script stays registered and
@@ -121,6 +129,9 @@ Rejected:
 - **A lock taken inside the turn**, after the Navigation API check: it orders the calls by who finished the check
   first, not by the order they were made.
 - **Throwing on an overlap**: a `Promise.all` of seeds is a reasonable thing to write.
+- **One browser call per `seed` on the origin** (`page.evaluate` writing every entry): it leaves `page.sessionStorage`,
+  which the helper mirrors, and still relies on the order of messages rather than a rule. The chain orders every call,
+  `set`, `get` and `clear` included.
 - **Coalescing**, one registration of everything merged so far: the commit check would no longer belong to the call
   that made it.
 

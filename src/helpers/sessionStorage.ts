@@ -5,12 +5,14 @@
  * Values are strings unless a codec is declared for the key, so without a schema the helper is exactly
  * Playwright's contract: strings in, strings out, `null` for a missing key. A helper constructed with an
  * `origin` (every page object with a string `baseUrl`) refuses to touch another origin's storage, which is
- * unreachable without leaving the current document anyway. `seed` writes at once when the page is on the
- * origin and otherwise defers to the page's seed registry, whose init script writes on the first arrival there.
+ * unreachable without leaving the current document anyway. `seed` goes through the page's seed registry,
+ * which writes at once when the page is on the origin and otherwise adds an init script that writes on the
+ * first arrival there. Calls for one origin take turns on the page (`storageTurns.ts`), in call order.
  */
 import { type Page, test } from "@playwright/test";
 import { captureCallSite } from "./callSite";
 import { originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSeed";
+import { takeTurn } from "./storageTurns";
 
 /**
  * How a session storage key's value is stored as a string and read back: `stringify` on the way in, `parse` on the way
@@ -276,6 +278,18 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		}
 	}
 
+	/**
+	 * Runs `task` in its turn among the page's session storage calls for the origin this call touches: the helper's, or
+	 * the one the page is on (`""` without one). The origin is checked again when the turn starts, since the page may
+	 * have left while the call waited.
+	 */
+	private inTurn<T>(method: string, task: () => Promise<T>): Promise<T> {
+		return takeTurn(this.page, this.origin ?? originOf(this.page.url()) ?? "", async () => {
+			this.assertOnOrigin(method);
+			return await task();
+		});
+	}
+
 	private async write(method: string, encoded: Record<string, string>): Promise<void> {
 		for (const [key, value] of Object.entries(encoded)) {
 			await this.access(method, () => this.page.sessionStorage.setItem(key, value));
@@ -285,6 +299,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	/**
 	 * Writes one entry, or several, to the session storage of the origin the page is on: each value through its key's
 	 * codec, or as the string it must be. Every value is encoded before any is written, so a bad value writes nothing.
+	 * Calls for one origin act in the order they were made, also when they overlap, across every helper on the page.
 	 *
 	 * @param key The key.
 	 * @param value The value: a string, or the type of the key's codec.
@@ -310,14 +325,15 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		const entries = typeof keyOrEntries === "string" ? { [keyOrEntries]: value } : keyOrEntries;
 		await this.step("set", async () => {
 			this.assertOnOrigin("set");
-			await this.write("set", encodeEntries(this.schema, entries, this.title("set")));
+			const encoded = encodeEntries(this.schema, entries, this.title("set"));
+			await this.inTurn("set", () => this.write("set", encoded));
 		});
 	}
 
 	/**
 	 * Reads the session storage of the origin the page is on: every entry, one key, or several, each value through its
 	 * key's codec. A missing key reads as `null`. A literal `[]` does not compile; a list that is empty at run time
-	 * reads nothing.
+	 * reads nothing. In a `Promise.all`, it reads what an earlier `set` for the origin wrote.
 	 *
 	 * @param key One key: returns its value, or `null`.
 	 * @param keys Several keys: returns a record with every key, `null` for each that is missing.
@@ -341,41 +357,45 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		// awaited, not returned: see step()
 		return await this.step("get", async () => {
 			this.assertOnOrigin("get");
-			const title = this.title("get");
-			if (typeof keyOrKeys === "string") {
-				return decodeValue(
-					this.schema,
-					keyOrKeys,
-					await this.access("get", () => this.page.sessionStorage.getItem(keyOrKeys)),
-					title,
-				);
-			}
-			if (keyOrKeys !== undefined) {
-				const pairs = await Promise.all(
-					keyOrKeys.map(
-						async (key) =>
-							[
-								key,
-								decodeValue(
-									this.schema,
-									key,
-									await this.access("get", () => this.page.sessionStorage.getItem(key)),
-									title,
-								),
-							] as const,
-					),
-				);
-				return Object.fromEntries(pairs);
-			}
-			const items = await this.access("get", () => this.page.sessionStorage.items());
-			return Object.fromEntries(
-				items.map((item) => [item.name, decodeValue(this.schema, item.name, item.value, title)]),
-			);
+			return await this.inTurn("get", () => this.read(keyOrKeys));
 		});
 	}
 
+	/** What `get` reads, in its turn: one key, several, or every entry, each through its key's codec. */
+	private async read(keyOrKeys: string | readonly string[] | undefined): Promise<unknown> {
+		const title = this.title("get");
+		if (typeof keyOrKeys === "string") {
+			return decodeValue(
+				this.schema,
+				keyOrKeys,
+				await this.access("get", () => this.page.sessionStorage.getItem(keyOrKeys)),
+				title,
+			);
+		}
+		if (keyOrKeys !== undefined) {
+			const pairs = await Promise.all(
+				keyOrKeys.map(
+					async (key) =>
+						[
+							key,
+							decodeValue(
+								this.schema,
+								key,
+								await this.access("get", () => this.page.sessionStorage.getItem(key)),
+								title,
+							),
+						] as const,
+				),
+			);
+			return Object.fromEntries(pairs);
+		}
+		const items = await this.access("get", () => this.page.sessionStorage.items());
+		return Object.fromEntries(items.map((item) => [item.name, decodeValue(this.schema, item.name, item.value, title)]));
+	}
+
 	/**
-	 * Removes entries from the session storage of the origin the page is on: every entry, one key, or several.
+	 * Removes entries from the session storage of the origin the page is on: every entry, one key, or several. Calls for
+	 * one origin act in the order they were made, also when they overlap.
 	 *
 	 * @param key One key.
 	 * @param keys Several keys. A literal `[]` does not compile; a list that is empty at run time removes nothing.
@@ -395,13 +415,15 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	async clear(keyOrKeys?: string | readonly string[]): Promise<void> {
 		await this.step("clear", async () => {
 			this.assertOnOrigin("clear");
-			if (keyOrKeys === undefined) {
-				await this.access("clear", () => this.page.sessionStorage.clear());
-				return;
-			}
-			for (const key of typeof keyOrKeys === "string" ? [keyOrKeys] : keyOrKeys) {
-				await this.access("clear", () => this.page.sessionStorage.removeItem(key));
-			}
+			await this.inTurn("clear", async () => {
+				if (keyOrKeys === undefined) {
+					await this.access("clear", () => this.page.sessionStorage.clear());
+					return;
+				}
+				for (const key of typeof keyOrKeys === "string" ? [keyOrKeys] : keyOrKeys) {
+					await this.access("clear", () => this.page.sessionStorage.removeItem(key));
+				}
+			});
 		});
 	}
 
@@ -409,7 +431,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * Stores entries for an origin before the app's next load there, so the app's first script sees them, without
 	 * leaving the page the test is on; on the origin already, it writes at once. A seed that is still waiting when the
 	 * page closes fails the test. Calls for one origin merge in the order they were made, later values winning per key,
-	 * also when they overlap. Await it before the action that starts the hop.
+	 * also when they overlap, on the origin or before the hop. Await it before the action that starts the hop.
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#seed
 	 *
@@ -448,11 +470,10 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 				throw new Error(`${title}: an origin is required; pass { origin } or construct the helper with one`);
 			}
 			const encoded = encodeEntries(this.schema, entries, title);
-			if (originOf(this.page.url()) === origin) {
-				await this.write("seed", encoded);
-				return;
-			}
-			await registryFor(this.page, readTestOutcome).add(origin, encoded, title, site);
+			// on the origin, the registry writes at once in the call's turn; elsewhere it registers the seed
+			await registryFor(this.page, readTestOutcome).add(origin, encoded, title, site, () =>
+				this.write("seed", encoded),
+			);
 		});
 	}
 }

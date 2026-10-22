@@ -72,8 +72,10 @@ Shop.SessionStorage.constructor: origin must be an origin such as "https://app.e
 
 ## Methods
 
-Every method is a step of the report. `set`, `get` and `clear` work on the origin the page is on, and throw when the
-helper belongs to another origin, or when the page has no origin yet:
+Every method is a step of the report. Calls for one origin act in the order they were made, also when they overlap,
+across every helper on the page (see [the methods](/POMWright/docs/session-storage/#the-methods)). `set`, `get` and
+`clear` work on the origin the page is on, and throw when the helper belongs to another origin, or when the page has
+no origin yet:
 
 ```text
 AccountPage.SessionStorage.get: the page is on https://login.example, not on this page object's origin https://shop.example; another origin's sessionStorage is reachable only from a document on it. Use the page object for https://login.example, or a standalone SessionStorage without an origin
@@ -147,7 +149,8 @@ Stores entries for an origin before the app's next load there, so the app's firs
 the page the test is on; on the origin already, it writes at once. See
 [how it works](/POMWright/docs/seeding-session-storage/#how-it-works).
 
-Calls for one origin merge in the order they were made, later values winning per key, also when they overlap. Await
+Calls for one origin merge in the order they were made, later values winning per key, also when they overlap, on the
+origin or before the hop. Await
 `seed` before the action that starts the hop: see
 [several seeds](/POMWright/docs/seeding-session-storage/#several-seeds).
 

@@ -114,6 +114,11 @@ await storage.clear(); // everything
 `set` encodes every value before it writes any, so a bad value writes nothing. A literal `[]` is a compile error for
 `get` and `clear`; a list that turns out empty at runtime reads or removes nothing.
 
+Calls for one origin act in the order they were made, also when they overlap. In a `Promise.all`, a `get` after a `set`
+reads what the `set` wrote, and two `set` calls for one key leave the later value. The order holds across helpers:
+every `SessionStorage` on a page, a page object's or a standalone one, waits for the earlier calls for its origin. A call
+that waited checks the origin again when its turn comes, since the page may have left it meanwhile.
+
 ## Through a page object
 
 A page object's helper is labelled with the page object's label, belongs to the origin of its string `baseUrl`, and

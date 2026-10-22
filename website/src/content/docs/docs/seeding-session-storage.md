@@ -110,8 +110,8 @@ test("a returning customer in Norwegian", async ({ loginPage }) => {
 });
 ```
 
-The calls merge the same way when they overlap, as in a `Promise.all`. For one origin that gains nothing, since the
-calls still run one after the other. For several origins they register at the same time, instead of one after the
+The calls merge the same way when they overlap, as in a `Promise.all`, whether the page is on the origin or not. For
+one origin that gains nothing, since the calls still run one after the other. For several origins they register at the same time, instead of one after the
 other. A seed can also run beside work that does not touch the page, such as an API request, as long as everything is
 awaited before the hop:
 

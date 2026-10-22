@@ -4,13 +4,14 @@
  * `SessionStorage.seed()` hands the entries to one registry per page. The registry adds a Playwright init script for
  * each pending origin. The script runs in every new document of the page and stores the entries only in the main frame,
  * on the origin, on the first arrival there, before the document's first script. When the main frame commits on the
- * origin, the registry disposes of the script. Calls for one origin run one after the other, in the order they were
- * made, so overlapping calls merge as awaited ones do. Navigations are never intercepted. Nothing is registered on a
+ * origin, the registry disposes of the script. Calls for one origin take turns with every other session storage call
+ * for it on the page, in the order they were made, so overlapping calls merge as awaited ones do. Navigations are never intercepted. Nothing is registered on a
  * page that never seeds, and everything is removed once the last seed has been applied and its document has had the
  * chance to report a write the browser refused.
  */
 import type { ConsoleMessage, Frame } from "@playwright/test";
 import { atCallSite } from "./callSite";
+import { takeTurn } from "./storageTurns";
 
 /** Removes what `addInitScript` added. Playwright's `Disposable` satisfies it. */
 export type SeedDisposable = { dispose(): Promise<void> };
@@ -153,8 +154,6 @@ export class SeedRegistry {
 	private readonly pending = new Map<string, PendingSeed>();
 	/** Applied seeds whose document may still report a refused write: until its DOMContentLoaded or the next commit. */
 	private readonly confirming = new Map<string, AppliedSeed>();
-	/** Per origin, the settled end of the chain of `add` calls: each call runs once the previous one has settled. */
-	private readonly queues = new Map<string, Promise<void>>();
 	private navigationApiChecked = false;
 	private listening = false;
 
@@ -170,12 +169,22 @@ export class SeedRegistry {
 
 	/**
 	 * Registers the init script for `origin` with the entries merged into any pending ones, then disposes of the
-	 * previous script. Calls for one origin run one after the other in the order they were made, so calls that overlap
-	 * merge exactly as awaited ones do; a call that fails leaves the pending seed as it was. Throws when the browser
-	 * lacks the Navigation API, and when the main frame commits on the origin between the call and the end of the
-	 * script's registration: that document may or may not have run it.
+	 * previous script. The call takes its turn among the page's session storage calls for the origin (`takeTurn`), so
+	 * calls that overlap merge exactly as awaited ones do; a call that fails leaves the pending seed as it was. Throws
+	 * when the browser lacks the Navigation API, and when the main frame commits on the origin between the call and the
+	 * end of the script's registration: that document may or may not have run it.
+	 *
+	 * With `writeOnOrigin`, a call made while the page is on the origin writes there in its turn instead, if the page is
+	 * still there; a navigation within the origin while it waits is not an arrival.
 	 */
-	add(origin: string, entries: Record<string, string>, title: string, site: Error): Promise<void> {
+	add(
+		origin: string,
+		entries: Record<string, string>,
+		title: string,
+		site: Error,
+		writeOnOrigin?: () => Promise<void>,
+	): Promise<void> {
+		const wasOnOrigin = writeOnOrigin !== undefined && originOf(this.page.mainFrame().url()) === origin;
 		// watched from the call on, so the wait for earlier calls and the Navigation API check are covered too
 		let committed = false;
 		const watch = (frame: Frame): void => {
@@ -184,23 +193,20 @@ export class SeedRegistry {
 			}
 		};
 		this.page.on("framenavigated", watch);
-		const call = (this.queues.get(origin) ?? Promise.resolve())
-			.then(() => this.register(origin, entries, title, site, () => committed))
-			.finally(() => {
+		return takeTurn(this.page, origin, async () => {
+			try {
+				if (wasOnOrigin) {
+					committed = false;
+					if (originOf(this.page.mainFrame().url()) === origin) {
+						await writeOnOrigin?.();
+						return;
+					}
+				}
+				await this.register(origin, entries, title, site, () => committed);
+			} finally {
 				this.page.off("framenavigated", watch);
-			});
-		// the next call for the origin waits for this one, whether it succeeds or fails
-		const settled = call.then(
-			() => undefined,
-			() => undefined,
-		);
-		this.queues.set(origin, settled);
-		settled.then(() => {
-			if (this.queues.get(origin) === settled) {
-				this.queues.delete(origin);
 			}
 		});
-		return call;
 	}
 
 	/** One call's turn: read the pending seed, register the merged script, store it, dispose of the previous one. */

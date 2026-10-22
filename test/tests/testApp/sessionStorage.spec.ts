@@ -421,6 +421,26 @@ test.describe("seed", () => {
 		expect(served).toEqual([`${B}/teststorage?hop=link`]);
 	});
 
+	test("on the origin, overlapping seeds and overlapping sets write in call order, the later value winning", async ({
+		page,
+		testStorage,
+	}) => {
+		await testStorage.navigation.goto();
+		await Promise.all([
+			testStorage.sessionStorage.seed({ first: "1", shared: "earlier" }),
+			testStorage.sessionStorage.seed({ shared: "later" }),
+		]);
+		expect(await storedItem(page, "shared")).toBe("later");
+
+		await Promise.all([
+			testStorage.sessionStorage.set({ second: "2", shared: "set earlier" }),
+			testStorage.sessionStorage.set({ shared: "set later" }),
+			testStorage.sessionStorage.get("shared"),
+		]);
+		expect(await storedItem(page, "shared")).toBe("set later");
+		expect([await storedItem(page, "first"), await storedItem(page, "second")]).toEqual(["1", "2"]);
+	});
+
 	test("seeds for one origin in a Promise.all merge as awaited ones, and nothing writes them again after a round trip", async ({
 		page,
 		testStorage,
