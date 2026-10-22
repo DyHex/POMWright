@@ -34,9 +34,9 @@ milliseconds.
   that a fixture's `await use()` gives it, when a POMWright page object has run `defineLocators()` and `verify()`, and
   reads the heap after a garbage collection, before and after.
 
-Measured 2026-10-20 at b17b9c8 with Node v24.19.0, Playwright 1.64.0, on a 13th Gen Intel Core i9-13980HX under Linux.
-On the same machine, three runs of the first two tables agreed within about 10%, and two runs of the fixture table
-within about 25% at the small sizes, where one run of a few milliseconds is easily disturbed.
+Measured 2026-10-22 at 61e266c with Node v24.22.0, Playwright 1.64.0, on a 13th Gen Intel Core i9-13980HX under Linux.
+On the same machine, two runs of this code agreed within about 10% on every table; an earlier set of runs saw up to
+25% between runs of the fixture table at the small sizes, where one run of a few milliseconds is easily disturbed.
 
 ## Results
 
@@ -46,10 +46,10 @@ within about 25% at the small sizes, where one run of a few milliseconds is easi
 
 | path | Playwright chain | `getNestedLocator` | `getLocator` | query, `getNestedLocator()` | registration, per path |
 | --- | --- | --- | --- | --- | --- |
-| short, plain (3 segments) | 0.423 µs | 3.05 µs | 1.39 µs | 3.08 µs | 1.61 µs |
-| short, a step per segment (3 segments) | 0.692 µs | 3.85 µs | 1.62 µs | 3.81 µs | 2.18 µs |
-| long, plain (12 segments) | 2.03 µs | 13.4 µs | 3.43 µs | 13.4 µs | 1.24 µs |
-| long, a step per segment (12 segments) | 3.12 µs | 16.6 µs | 3.77 µs | 16.9 µs | 2.45 µs |
+| short, plain (3 segments) | 0.447 µs | 2.88 µs | 1.28 µs | 2.82 µs | 1.12 µs |
+| short, a step per segment (3 segments) | 0.708 µs | 3.59 µs | 1.56 µs | 3.64 µs | 1.74 µs |
+| long, plain (12 segments) | 1.91 µs | 12.4 µs | 3.31 µs | 12.5 µs | 0.933 µs |
+| long, a step per segment (12 segments) | 2.97 µs | 15.5 µs | 3.61 µs | 15.6 µs | 1.84 µs |
 
 ```mermaid
 %%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#3b82f6, #f97316"}}}}%%
@@ -57,8 +57,8 @@ xychart-beta
   title "One chain, µs per call"
   x-axis ["short", "short, steps", "long", "long, steps"]
   y-axis "µs" 0 --> 18
-  bar [3.05, 3.85, 13.4, 16.6]
-  line [0.423, 0.692, 2.03, 3.12]
+  bar [2.88, 3.59, 12.4, 15.5]
+  line [0.447, 0.708, 1.91, 2.97]
 ```
 
 </div>
@@ -71,11 +71,11 @@ The blue bars are `getNestedLocator`, the orange line the same chain built with 
 
 | registered paths | registration | `verify()` | page object: `defineLocators()` and `verify()` | heap |
 | --- | --- | --- | --- | --- |
-| 108 | 0.268 ms | 0.387 ms | 0.911 ms | 0.024 MB |
-| 1,008 | 2.30 ms | 3.01 ms | 5.32 ms | 0.265 MB |
-| 10,008 | 27.8 ms | 30.6 ms | 57.9 ms | 2.79 MB |
-| 100,008 | 220 ms | 243 ms | 476 ms | 31.4 MB |
-| 1,000,008 | 2.34 s | 2.44 s | 4.82 s | 308 MB |
+| 108 | 0.249 ms | 0.347 ms | 0.780 ms | 0.049 MB |
+| 1,008 | 1.98 ms | 2.75 ms | 4.84 ms | 0.271 MB |
+| 10,008 | 17.0 ms | 28.2 ms | 41.6 ms | 2.73 MB |
+| 100,008 | 186 ms | 223 ms | 384 ms | 31.4 MB |
+| 1,000,008 | 1.89 s | 2.30 s | 4.18 s | 308 MB |
 
 ```mermaid
 %%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#3b82f6, #f97316"}}}}%%
@@ -83,8 +83,8 @@ xychart-beta
   title "Per path, µs"
   x-axis ["108", "1,008", "10,008", "100,008", "1,000,008"]
   y-axis "µs" 0 --> 9
-  bar [8.44, 5.28, 5.79, 4.76, 4.82]
-  line [3.58, 2.99, 3.06, 2.43, 2.44]
+  bar [7.22, 4.8, 4.16, 3.84, 4.18]
+  line [3.21, 2.73, 2.82, 2.23, 2.3]
 ```
 
 </div>
@@ -98,10 +98,10 @@ of paths: the cost per path stays flat from 1,000 paths to 1,000,000.
 
 | paths | written with Playwright: setup | heap | POMWright: setup, `defineLocators()` and `verify()` | heap |
 | --- | --- | --- | --- | --- |
-| 108 | 0.506 ms | 0.036 MB | 2.37 ms | 0.109 MB |
-| 1,008 | 1.25 ms | 0.476 MB | 6.51 ms | 0.387 MB |
-| 10,008 | 10.9 ms | 4.73 MB | 59.9 ms | 3.20 MB |
-| 100,008 | 104 ms | 49.8 MB | 398 ms | 30.4 MB |
+| 108 | 0.530 ms | 0.031 MB | 2.55 ms | 0.117 MB |
+| 1,008 | 1.27 ms | 0.477 MB | 7.29 ms | 0.397 MB |
+| 10,008 | 11.0 ms | 4.74 MB | 63.0 ms | 3.20 MB |
+| 100,008 | 106 ms | 49.8 MB | 417 ms | 30.4 MB |
 
 <div class="chart-pair">
 
@@ -110,9 +110,9 @@ of paths: the cost per path stays flat from 1,000 paths to 1,000,000.
 xychart-beta
   title "Setup per path, µs"
   x-axis ["108", "1,008", "10,008", "100,008"]
-  y-axis "µs" 0 --> 23
-  bar [21.9, 6.46, 5.99, 3.98]
-  line [4.69, 1.24, 1.09, 1.04]
+  y-axis "µs" 0 --> 25
+  bar [23.6, 7.23, 6.29, 4.17]
+  line [4.91, 1.26, 1.1, 1.06]
 ```
 
 ```mermaid
@@ -120,9 +120,9 @@ xychart-beta
 xychart-beta
   title "Heap per path, bytes"
   x-axis ["108", "1,008", "10,008", "100,008"]
-  y-axis "bytes" 0 --> 1100
-  bar [1058, 403, 335, 319]
-  line [350, 495, 496, 522]
+  y-axis "bytes" 0 --> 1200
+  bar [1136, 413, 335, 319]
+  line [301, 496, 497, 522]
 ```
 
 </div>
@@ -139,16 +139,16 @@ measured here is in microseconds per locator, or milliseconds per page object, w
 browser: navigations, page loads, the application's scripts and Playwright's waits. The details:
 
 - **Resolving costs about 1 µs per segment.** `getNestedLocator` on a 3-segment path takes about 3 µs, on 12 segments
-  about 13 µs, five to seven times what building the same chain by hand takes. The difference is the work of the
+  about 12 µs, five to seven times what building the same chain by hand takes. The difference is the work of the
   registry: checking the path, copying the records of the chain, and describing the result.
 - **`getLocator` builds one locator,** the path's own, so its cost hardly grows with the path's length.
 - **A query costs the same as `getNestedLocator`,** which starts a query itself.
-- **A page object is ready in about a millisecond.** Registration takes 1 to 2.5 µs per path, and `verify()` about
-  3 µs. A page object of 100 paths defines and verifies its locators in about 1 ms; 10,000 paths take about 60 ms.
+- **A page object is ready in about a millisecond.** Registration takes 1 to 2 µs per path, and `verify()` about
+  3 µs. A page object of 100 paths defines and verifies its locators in under 1 ms; 10,000 paths take about 40 ms.
 - **Everything grows linearly** with the number of paths, and a registered path takes about 300 bytes of heap.
 - **As a fixture, a POMWright page object takes four to six times as long to set up** as one written with Playwright:
-  2.4 ms against 0.5 ms for about 100 paths, 0.4 s against 0.1 s for 100,000. The page object written by hand has built
-  every locator by then; a POMWright page object builds a locator at each use instead, for the 1.4 to 17 µs of the
+  2.6 ms against 0.5 ms for about 100 paths, 0.4 s against 0.1 s for 100,000. The page object written by hand has built
+  every locator by then; a POMWright page object builds a locator at each use instead, for the 1.3 to 16 µs of the
   first table.
 - **It takes less memory from 1,000 paths up:** about 30 MB against 50 MB for 100,000 paths. A record holds a path, a
   definition and its steps, where a Playwright `Locator` holds its whole selector chain.
