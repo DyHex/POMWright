@@ -10,8 +10,8 @@ changes, and the segment keeps its steps and description.
 
 - **`update`** keeps the registered strategy. Call the method of that strategy with a patch in
   [JSON Merge Patch](https://www.rfc-editor.org/rfc/rfc7386) form: a given first argument replaces the registered one,
-  the options merge key by key, a `null` key deletes one, a lone `null` deletes them all, and an omitted value keeps
-  what is registered. Another strategy's method throws and names `replace`.
+  the options merge key by key, a `null` key deletes one, a lone `null` deletes them all, and an omitted or `undefined`
+  value, the first argument included, keeps what is registered. Another strategy's method throws and names `replace`.
 - **`replace`** installs a locator of any strategy, with the arguments of Playwright's own method: the first argument
   required, Playwright's options.
 

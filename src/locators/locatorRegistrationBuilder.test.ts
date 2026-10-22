@@ -162,8 +162,15 @@ describe("add with a seed", () => {
 
 		const other = createRegistry();
 		const roleSeed = other.createReusable.getByRole("button", { name: "Submit" });
-		other.add("a", { reuse: roleSeed }).getByRole(undefined as never);
+		other.add("a", { reuse: roleSeed }).getByRole(undefined);
 		expect(other.get("a").definition).toEqual({ type: "role", role: "button", options: { name: "Submit" } });
+		const withOptions = createRegistry();
+		withOptions.add("a", { reuse: roleSeed }).getByRole(undefined, { exact: true });
+		expect(withOptions.get("a").definition).toEqual({
+			type: "role",
+			role: "button",
+			options: { name: "Submit", exact: true },
+		});
 		expect(() => other.add("a.b", { reuse: roleSeed }).getByRole("" as never)).toThrowError(
 			'getByRole requires a non-empty role for "a.b".',
 		);

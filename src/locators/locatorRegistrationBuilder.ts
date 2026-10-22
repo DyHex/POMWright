@@ -281,12 +281,14 @@ export class LocatorRegistrationBuilder<
 	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbyrole
 	 */
 	getByRole(
-		role: RoleDefinition["role"],
+		role: Seeded extends true ? RoleDefinition["role"] | undefined : RoleDefinition["role"],
 		options: Seeded extends true
 			? OptionsPatch<RoleDefinition["options"]> | null | undefined
 			: RoleDefinition["options"],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
-	getByRole(role: RoleDefinition["role"]): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
+	getByRole(
+		role: Seeded extends true ? RoleDefinition["role"] | undefined : RoleDefinition["role"],
+	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByRole(
 		options: Seeded extends true ? OptionsPatch<RoleDefinition["options"]> | null : never,
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
@@ -331,13 +333,13 @@ export class LocatorRegistrationBuilder<
 	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbytext
 	 */
 	getByText(
-		text: Parameters<Page["getByText"]>[0],
+		text: Seeded extends true ? Parameters<Page["getByText"]>[0] | undefined : Parameters<Page["getByText"]>[0],
 		options: Seeded extends true
 			? OptionsPatch<Parameters<Page["getByText"]>[1]> | null | undefined
 			: Parameters<Page["getByText"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByText(
-		text: Parameters<Page["getByText"]>[0],
+		text: Seeded extends true ? Parameters<Page["getByText"]>[0] | undefined : Parameters<Page["getByText"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByText(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByText"]>[1]> | null : never,
@@ -378,13 +380,13 @@ export class LocatorRegistrationBuilder<
 	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbylabel
 	 */
 	getByLabel(
-		text: Parameters<Page["getByLabel"]>[0],
+		text: Seeded extends true ? Parameters<Page["getByLabel"]>[0] | undefined : Parameters<Page["getByLabel"]>[0],
 		options: Seeded extends true
 			? OptionsPatch<Parameters<Page["getByLabel"]>[1]> | null | undefined
 			: Parameters<Page["getByLabel"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByLabel(
-		text: Parameters<Page["getByLabel"]>[0],
+		text: Seeded extends true ? Parameters<Page["getByLabel"]>[0] | undefined : Parameters<Page["getByLabel"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByLabel(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByLabel"]>[1]> | null : never,
@@ -425,13 +427,17 @@ export class LocatorRegistrationBuilder<
 	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbyplaceholder
 	 */
 	getByPlaceholder(
-		text: Parameters<Page["getByPlaceholder"]>[0],
+		text: Seeded extends true
+			? Parameters<Page["getByPlaceholder"]>[0] | undefined
+			: Parameters<Page["getByPlaceholder"]>[0],
 		options: Seeded extends true
 			? OptionsPatch<Parameters<Page["getByPlaceholder"]>[1]> | null | undefined
 			: Parameters<Page["getByPlaceholder"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByPlaceholder(
-		text: Parameters<Page["getByPlaceholder"]>[0],
+		text: Seeded extends true
+			? Parameters<Page["getByPlaceholder"]>[0] | undefined
+			: Parameters<Page["getByPlaceholder"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByPlaceholder(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByPlaceholder"]>[1]> | null : never,
@@ -472,13 +478,13 @@ export class LocatorRegistrationBuilder<
 	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbyalttext
 	 */
 	getByAltText(
-		text: Parameters<Page["getByAltText"]>[0],
+		text: Seeded extends true ? Parameters<Page["getByAltText"]>[0] | undefined : Parameters<Page["getByAltText"]>[0],
 		options: Seeded extends true
 			? OptionsPatch<Parameters<Page["getByAltText"]>[1]> | null | undefined
 			: Parameters<Page["getByAltText"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByAltText(
-		text: Parameters<Page["getByAltText"]>[0],
+		text: Seeded extends true ? Parameters<Page["getByAltText"]>[0] | undefined : Parameters<Page["getByAltText"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByAltText(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByAltText"]>[1]> | null : never,
@@ -519,13 +525,13 @@ export class LocatorRegistrationBuilder<
 	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbytitle
 	 */
 	getByTitle(
-		text: Parameters<Page["getByTitle"]>[0],
+		text: Seeded extends true ? Parameters<Page["getByTitle"]>[0] | undefined : Parameters<Page["getByTitle"]>[0],
 		options: Seeded extends true
 			? OptionsPatch<Parameters<Page["getByTitle"]>[1]> | null | undefined
 			: Parameters<Page["getByTitle"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByTitle(
-		text: Parameters<Page["getByTitle"]>[0],
+		text: Seeded extends true ? Parameters<Page["getByTitle"]>[0] | undefined : Parameters<Page["getByTitle"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	getByTitle(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["getByTitle"]>[1]> | null : never,
@@ -567,13 +573,13 @@ export class LocatorRegistrationBuilder<
 	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#locator
 	 */
 	locator(
-		selector: Parameters<Page["locator"]>[0],
+		selector: Seeded extends true ? Parameters<Page["locator"]>[0] | undefined : Parameters<Page["locator"]>[0],
 		options: Seeded extends true
 			? OptionsPatch<Parameters<Page["locator"]>[1]> | null | undefined
 			: Parameters<Page["locator"]>[1],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	locator(
-		selector: Parameters<Page["locator"]>[0],
+		selector: Seeded extends true ? Parameters<Page["locator"]>[0] | undefined : Parameters<Page["locator"]>[0],
 	): LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, Path>;
 	locator(
 		options: Seeded extends true ? OptionsPatch<Parameters<Page["locator"]>[1]> | null : never,

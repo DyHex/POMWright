@@ -82,6 +82,16 @@ const createChainRegistry = () => {
 };
 const REGISTERED = "locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').nth(0)";
 
+describe("update with an explicit undefined first argument", () => {
+	it("keeps the registered one, as an omitted argument does, with or without options", () => {
+		const query = () => createChainRegistry().getLocatorSchema("main.list.item");
+		expect(String(query().update().locator(undefined, { hasText: "Open" }).getLocator())).toBe(
+			"locator('li', { hasText: 'Open' }).nth(0)",
+		);
+		expect(String(query().update().locator(undefined).getLocator())).toBe("locator('li').nth(0)");
+	});
+});
+
 describe("skip and unskip", () => {
 	it("leave an ancestor out of the chain and bring it back exactly as it was", () => {
 		const query = createChainRegistry().getLocatorSchema("main.list.item");

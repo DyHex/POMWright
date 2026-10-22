@@ -85,6 +85,16 @@ getLocatorSchema("list.item").replace().getByRole("listitem", { name: null });
 // @ts-expect-error the test id is required
 getLocatorSchema("list.item").replace().getByTestId();
 getLocatorSchema("list.item").update().getByRole({ name: null });
+// undefined as update's primary keeps the registered one, also from a variable that may be undefined
+declare const maybeRole: "listitem" | undefined;
+getLocatorSchema("list.item").update().getByRole(undefined, { name: "x" });
+getLocatorSchema("list.item").update().getByRole(maybeRole, { name: "x" });
+getLocatorSchema("list.item").update().getByText(undefined);
+getLocatorSchema("list.item").update().getByTestId(undefined);
+// @ts-expect-error replace takes Playwright's arguments: the role is required
+getLocatorSchema("list.item").replace().getByRole(undefined, { name: "x" });
+// @ts-expect-error a registration's first argument is required
+add("main").getByRole(undefined, { name: "x" });
 
 // the internals are not reachable through any step
 // @ts-expect-error private
@@ -230,6 +240,9 @@ add("main", { reuse: locatorSeed }).locator(null);
 add("main", { reuse: locatorSeed }).locator({ hasText: null });
 add("main", { reuse: locatorSeed }).locator("a", null);
 add("main", { reuse: testIdSeed }).getByTestId(undefined);
+add("main", { reuse: roleSeed }).getByRole(undefined, { name: "x" });
+add("main", { reuse: textSeed }).getByText(undefined, { exact: false });
+add("main", { reuse: locatorSeed }).locator(undefined);
 add("main", { reuse: frameSeed }).frameLocator();
 // @ts-expect-error a primary is never null: with two arguments the first is the primary
 add("main", { reuse: roleSeed }).getByRole(null, null);
