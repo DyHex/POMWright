@@ -751,6 +751,66 @@ test.describe("a navigation to a seeded origin that fails", () => {
 	}
 });
 
+test.describe("a seed's failure and the page's other listeners", () => {
+	test.describe.configure({ mode: "serial" });
+	// the failing test's worker is replaced, so what it saw is handed to the next test through files
+	const file = (name: string) =>
+		path.join(test.info().project.outputDir, `${name}-${test.info().project.name}-${test.info().repeatEachIndex}.txt`);
+	test.afterEach(() => {
+		// a refused write fails the test during its body; a never-applied seed only when the page closes, after this hook
+		if (test.info().title.startsWith("fails the test for a refused write")) {
+			writeFileSync(file("listener-failure"), test.info().errors[0]?.message ?? "");
+		}
+	});
+	const read = (name: string) => {
+		const text = readFileSync(file(name), "utf8");
+		rmSync(file(name));
+		return text;
+	};
+
+	test("fails the test for a seed never applied, and a close listener added after the seed runs", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		test.fail(true, "the never-applied seed fails this test");
+		const marker = file("later-close-listener");
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({ token: "t" });
+		page.on("close", () => writeFileSync(marker, "ran"));
+	});
+
+	test("the later close listener ran", () => {
+		// the failure itself (the never-applied seed, the only one this test can have) is test.fail's expectation above;
+		// its message is fixed by the unit tests
+		expect(read("later-close-listener")).toBe("ran");
+	});
+
+	test("fails the test for a refused write, and a console listener added after the seed runs", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		test.fail(true, "the refused write fails this test");
+		const marker = file("later-console-listener");
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({ big: "x".repeat(12 * 1024 * 1024) });
+		page.on("console", (message) => {
+			if (message.text().startsWith("pomwright-seed-failure:")) {
+				writeFileSync(marker, "ran");
+			}
+		});
+		await testStorageSecond.navigation.goto();
+	});
+
+	test("the later console listener ran, and the failure was the refused write", () => {
+		expect(read("later-console-listener")).toBe("ran");
+		expect(read("listener-failure")).toMatch(
+			/^(Error: )?TestStorageSecond\.SessionStorage\.seed: could not write sessionStorage for http:\/\/127\.0\.0\.1:9000 \(keys: big\)/,
+		);
+	});
+});
+
 test.describe("a page that closes while seed registers", () => {
 	test("seed fails with its label, the keys and its own line", async ({ page, testStorage, testStorageSecond }) => {
 		await testStorage.navigation.goto();

@@ -218,17 +218,14 @@ const refused = (origin: string) =>
 
 const setup = (options: { outcome?: () => TestOutcome | undefined; navigationApi?: boolean } = {}) => {
 	const page = fakePage({ navigationApi: options.navigationApi });
-	const registry = new SeedRegistry(page, options.outcome ?? (() => passed));
-	return { page, registry };
-};
-
-const caught = (run: () => unknown): Error | undefined => {
-	try {
+	const failures: Error[] = [];
+	const registry = new SeedRegistry(page, options.outcome ?? (() => passed), (error) => failures.push(error));
+	/** Runs `run` and returns the failure it made the registry report, if any. */
+	const failure = (run: () => unknown): Error | undefined => {
 		run();
-	} catch (error) {
-		return error as Error;
-	}
-	return undefined;
+		return failures.shift();
+	};
+	return { page, registry, failure };
 };
 
 /** Lets every pending promise callback and timer of the current turn run. */
@@ -422,7 +419,7 @@ describe("SeedRegistry", () => {
 		});
 
 		it("after a pending seed, merge every key in call order, later calls winning, and the never-applied message lists them all", async () => {
-			const { page, registry } = setup();
+			const { page, registry, failure } = setup();
 			await registry.add(B, { a: "1", k: "first" }, title, site);
 			await Promise.all([
 				registry.add(B, { b: "2", k: "second" }, "Second.SessionStorage.seed", site),
@@ -433,7 +430,7 @@ describe("SeedRegistry", () => {
 				[{ a: "1", k: "second", b: "2" }, 1],
 				[{ a: "1", k: "third", b: "2", c: "3" }, 0],
 			]);
-			expect(caught(() => page.close())?.message).toBe(
+			expect(failure(() => page.close())?.message).toBe(
 				`${title}: the seed for ${B} (keys: a, k, b, c) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
 			);
 		});
@@ -538,10 +535,10 @@ describe("SeedRegistry", () => {
 
 	describe("a write the browser refused", () => {
 		it("fails the test from the console listener, naming the origin and the keys and pointing at the seed call", async () => {
-			const { page, registry } = setup();
+			const { page, registry, failure } = setup();
 			await registry.add(B, { token: "1", user: "u" }, title, site);
 			page.navigate(`${B}/app`);
-			const error = caught(() => page.console(refused(B)));
+			const error = failure(() => page.console(refused(B)));
 			expect(error?.message).toBe(
 				`${title}: could not write sessionStorage for ${B} (keys: token, user): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries`,
 			);
@@ -550,19 +547,19 @@ describe("SeedRegistry", () => {
 		});
 
 		it("is ignored after the applied document has loaded or another has committed, and for other messages", async () => {
-			const { page, registry } = setup();
+			const { page, registry, failure } = setup();
 			await registry.add(B, { token: "1" }, title, site);
 			await registry.add(C, { other: "x" }, title, site);
-			expect(caught(() => page.console(refused(B)))).toBeUndefined(); // not applied yet
+			expect(failure(() => page.console(refused(B)))).toBeUndefined(); // not applied yet
 			page.navigate(`${B}/app`);
-			expect(caught(() => page.console("the app's own message"))).toBeUndefined();
-			expect(caught(() => page.console(`${FAILURE_PREFIX}not json`))).toBeUndefined();
-			expect(caught(() => page.console(refused(C)))).toBeUndefined();
+			expect(failure(() => page.console("the app's own message"))).toBeUndefined();
+			expect(failure(() => page.console(`${FAILURE_PREFIX}not json`))).toBeUndefined();
+			expect(failure(() => page.console(refused(C)))).toBeUndefined();
 			page.domContentLoaded();
-			expect(caught(() => page.console(refused(B)))).toBeUndefined();
+			expect(failure(() => page.console(refused(B)))).toBeUndefined();
 			page.navigate(`${C}/app`);
 			page.navigate(`${C}/next`);
-			expect(caught(() => page.console(refused(C)))).toBeUndefined();
+			expect(failure(() => page.console(refused(C)))).toBeUndefined();
 		});
 	});
 
@@ -581,10 +578,10 @@ describe("SeedRegistry", () => {
 					`the browser counted the page's arrival on ${B} as a return there (navigation.activation.from is set), as after a failed navigation to it`,
 				],
 			] as const) {
-				const { page, registry } = setup();
+				const { page, registry, failure } = setup();
 				await registry.add(B, { token: "1" }, title, site);
 				page.navigate(`${B}/app`);
-				const error = caught(() => page.console(skipped(B, reason)));
+				const error = failure(() => page.console(skipped(B, reason)));
 				expect(error?.message).toBe(`${title}: the seed for ${B} (keys: token) was not applied: ${why}`);
 				expect(error?.stack).toBe(`Error: ${error?.message}\n${siteFrame}`);
 				expect(page.listeners).toEqual([]);
@@ -592,21 +589,21 @@ describe("SeedRegistry", () => {
 		});
 
 		it("is ignored for a document that did not take a seed", async () => {
-			const { page, registry } = setup();
+			const { page, registry, failure } = setup();
 			await registry.add(B, { token: "1" }, title, site);
-			expect(caught(() => page.console(skipped(B, "return")))).toBeUndefined(); // still pending
+			expect(failure(() => page.console(skipped(B, "return")))).toBeUndefined(); // still pending
 			page.navigate(`${B}/app`);
 			page.domContentLoaded();
-			expect(caught(() => page.console(skipped(B, "return")))).toBeUndefined(); // applied and loaded
+			expect(failure(() => page.console(skipped(B, "return")))).toBeUndefined(); // applied and loaded
 		});
 	});
 
 	describe("page close", () => {
 		it("fails a passing test when a seed was never applied, naming origins and keys and pointing at the seed call", async () => {
-			const { page, registry } = setup();
+			const { page, registry, failure } = setup();
 			await registry.add(B, { token: "1", user: "u" }, title, site);
 			await registry.add(C, { other: "x" }, "Other.SessionStorage.seed", site);
-			const error = caught(() => page.close());
+			const error = failure(() => page.close());
 			expect(error?.message).toBe(
 				`${title}: the seed for ${B} (keys: token, user) and the seed for ${C} (keys: other) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
 			);
@@ -621,17 +618,17 @@ describe("SeedRegistry", () => {
 				(): TestOutcome | undefined => ({ status: "passed", errors: [new Error("soft")] }),
 				(): TestOutcome | undefined => undefined,
 			]) {
-				const { page, registry } = setup({ outcome });
+				const { page, registry, failure } = setup({ outcome });
 				await registry.add(B, { token: "1" }, title, site);
-				expect(() => page.close()).not.toThrow();
+				expect(failure(() => page.close())).toBeUndefined();
 			}
 		});
 
 		it("stays quiet when every seed was applied", async () => {
-			const { page, registry } = setup();
+			const { page, registry, failure } = setup();
 			await registry.add(B, { token: "1" }, title, site);
 			page.navigate(`${B}/app`);
-			expect(() => page.close()).not.toThrow();
+			expect(failure(() => page.close())).toBeUndefined();
 		});
 	});
 

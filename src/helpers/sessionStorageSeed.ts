@@ -176,6 +176,17 @@ export const neverAppliedError = (pendings: readonly (readonly [string, PendingS
 	);
 };
 
+/**
+ * Fails the running test with an error found in a page listener. Thrown in the listener, it would also stop the page's
+ * later listeners for that event (Playwright's emitter calls them in turn, without a `try`); rethrown in a microtask, it
+ * still fails the test at once, and the other listeners run.
+ */
+const rethrowLater = (error: Error): void => {
+	queueMicrotask(() => {
+		throw error;
+	});
+};
+
 /** One per page, shared by every `SessionStorage` on it. See the module comment. */
 export class SeedRegistry {
 	private readonly pending = new Map<string, PendingSeed>();
@@ -187,6 +198,8 @@ export class SeedRegistry {
 	constructor(
 		private readonly page: SeedPage,
 		private readonly readTestOutcome: ReadTestOutcome,
+		/** How a failure found in a page listener fails the test; unit tests collect them instead. */
+		private readonly fail: (error: Error) => void = rethrowLater,
 	) {}
 
 	/** Origins with a pending seed, oldest first. */
@@ -402,11 +415,11 @@ export class SeedRegistry {
 		}
 		this.confirming.delete(origin);
 		this.teardownIfIdle();
-		// thrown from a page listener: fails the test at once
-		if (report.skipped === "opaque" || report.skipped === "return") {
-			throw notAppliedError(applied, origin, report.skipped);
-		}
-		throw writeFailedError(applied, origin, String(report.error));
+		this.fail(
+			report.skipped === "opaque" || report.skipped === "return"
+				? notAppliedError(applied, origin, report.skipped)
+				: writeFailedError(applied, origin, String(report.error)),
+		);
 	};
 
 	private readonly onClose = (): void => {
@@ -415,7 +428,7 @@ export class SeedRegistry {
 			return;
 		}
 		if (this.pending.size > 0) {
-			throw neverAppliedError([...this.pending.entries()]);
+			this.fail(neverAppliedError([...this.pending.entries()]));
 		}
 	};
 }

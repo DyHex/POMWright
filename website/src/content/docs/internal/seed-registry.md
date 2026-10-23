@@ -96,7 +96,7 @@ sequenceDiagram
 - **The confirming window.** A refused write reaches Node as a console message after the commit. The script runs
   before the document parses, so the message arrives before that document's `domcontentloaded` and before the next
   main-frame commit, on every engine. Until one of those, the applied seed is kept as confirming. A prefixed message
-  for it throws the failure from the `console` listener: a refused write, or a skip. Later messages are ignored.
+  for it fails the test from the `console` listener: a refused write, or a skip. Later messages are ignored.
 
 ## The checks in `seed`
 
@@ -156,10 +156,14 @@ Every failure carries the line of the `seed` call, captured when it was called (
 [call sites](/POMWright/internal/call-sites/)):
 
 - **No Navigation API** and **a commit during registration** are thrown by the `seed` call itself.
-- **A refused write**, and **a seed the arriving document skipped** (an opaque document, or a return), are thrown
-  from the `console` listener, which fails the test at once.
-- **Never applied.** When the page closes after a test that has passed so far, a seed still waiting throws, naming the
-  origin and the keys.
+- **A refused write**, and **a seed the arriving document skipped** (an opaque document, or a return), fail the test
+  from the `console` listener at once.
+- **Never applied.** When the page closes after a test that has passed so far, a seed still waiting fails it, naming
+  the origin and the keys.
+
+The listeners do not throw: Playwright's emitter calls a page's listeners in turn, without a `try`, so a throw would
+skip the page's later listeners for that event, the test's own included. The error is rethrown from a microtask
+instead, which fails the running test at once all the same.
 
 ## Limits
 
