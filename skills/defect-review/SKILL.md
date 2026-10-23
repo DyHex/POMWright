@@ -43,7 +43,8 @@ at `<commit>`".
 
 ### What changes with the scope
 
-- **Whole project**: every phase below, as written.
+- **Whole project**: every phase below, as written. When the project has changes since its last release, also put
+  those commits through the change-set questions below: regressions gather there.
 - **A change set**: the inventory is the change's items: every changed function, type, option, message, doc page and
   test, and every contract the change adds or alters (read its commit messages, changelog entries and changed docs:
   they say what it promises). Read enough around each change to know its callers and the paths beside it. Then ask what
@@ -73,6 +74,8 @@ Ask only for what you cannot find yourself. Defaults in brackets:
   shows the finding; the expensive ones when a finding depends on them].
 - **Calibration**: whether the user knows some defects already and wants to measure the review by them [no]. If so, the
   user keeps them to themselves until the report is done: knowing them biases the search.
+- **Who runs the segments, and what they may cost**, when the review is split into segments (Phase 2). Ask once the
+  segment plan is written, so the user sees the segments: see *Running the segments*.
 
 Work in a checkout of its own (a separate git worktree or clone), so nothing you run touches the user's working tree,
 and so notes or memories tied to the user's usual checkout do not leak earlier findings into an independent review.
@@ -111,10 +114,15 @@ Find out how the project wants to be worked on before forming opinions about it.
    run code in isolation, what breaks when you try).
 2. Read the README and the package or build manifest: the public entry points, the supported runtimes and versions,
    what is published.
-3. Run the baseline: install, the unit tests, the integration or end-to-end tests at the cheapest useful scope, the
+3. Read the known issues: the open issues or backlog, and any list of known limitations. A finding that matches one is
+   *known*. It goes in the coverage section with its link, not among the findings, unless the behaviour is worse than
+   the issue says. If the user chose calibration, skip this step until the report is done.
+4. Run the baseline: install, the unit tests, the integration or end-to-end tests at the cheapest useful scope, the
    type check, the linter. Record each command and its exit code. A red baseline is a finding in itself; it also tells
-   you which failures are not yours.
-4. Work out how to probe: where a temporary test file goes so the runner picks it up, how to run one file, how to load
+   you which failures are not yours. When the project declares a supported range (a runtime floor in its manifest, a
+   peer dependency range), also run the tests on the floor, and at the top of the range when that is cheap. The
+   contributors' own versions hide defects that show only at one end.
+5. Work out how to probe: where a temporary test file goes so the runner picks it up, how to run one file, how to load
    the built package from a script, where a scratch folder outside the repository is. Note **shared resources** (a fixed
    port, a server the tests start, a shared build output): two probes or two reviewers using them at once will collide.
 
@@ -136,9 +144,14 @@ where it is documented. Cover:
 - the documentation: README, guides, API reference, examples, migration guides;
 - the tests and the tooling: what is tested and against what (source or the built package), CI workflows, release and
   publishing (which commit is tested, which is published), scripts;
+- the pending release notes or changelog entries, when there are unreleased changes: each against its change (the
+  version bump, the text, a migration note where code stops working), and every user-facing change covered;
 - the contributor guide itself: does it still describe the repository?
 
 Read the source in full for the areas in scope; skim the tests to learn what is covered and what is not.
+
+Leave out what the project marks frozen, archived, generated or vendored: docs for old versions, a changelog a tool
+writes, vendored code, build output. List it in the coverage section as excluded, never as reviewed.
 
 ## Phase 2: plan segments
 
@@ -160,6 +173,73 @@ inventory and the ground rules at its start. Give each the ground rules, the inv
 notes from Phase 0, and where to write its findings (`segment-<n>.md`). Run segments that use a shared resource one
 after another, or each in its own worktree. Work written to files survives a context that runs out; work held only in
 the conversation does not.
+
+## Running the segments
+
+Once the segment plan is written, ask the user two things, with the plan in front of them.
+
+**Who runs the segments.** Offer the options that fit:
+
+- **You, one at a time**: the default whenever segments share a resource (a fixed port, a test server, a build output,
+  one checkout).
+- **You, in parallel**: only when the segments share nothing, for example each in its own worktree with its own port.
+  It is faster, but costs about the same in total.
+- **The user, one session per segment**: write a brief per segment (its scope, inventory lines, probing notes, where to
+  write) and give the user the command and the prompt that start each session.
+
+**Whether to cap the cost**: no cap, a cap per segment, a cap on the whole review, or both. Caps are in dollars at the
+model's list prices. Look the prices up, do not recall them. Say that the figures are API-equivalent and that on a
+subscription they are not what is billed.
+
+When you run the segments, start each agent with the same model and effort as your own session unless the user asks
+for others. Tell it not to start agents of its own, to write its findings to files as it goes, to leave a shared
+checkout as it found it, and to end with its counts per kind and one line per finding. Between segments, check that the
+shared checkout is clean before starting the next.
+
+### The status table
+
+Keep the user informed with one table. Show it after every segment finishes and whenever the user asks for a status.
+Each segment gets one row, with these columns:
+
+- the segment and its area;
+- the findings per kind, marked *so far* while the segment runs;
+- the tokens spent;
+- the cost so far, and the projected cost while it runs;
+- the progress: an estimate while it runs, and the actual duration once it is done.
+
+Add a row for your own session and a total. Say plainly that the first estimates are rough and improve as segments
+finish.
+
+- **Spend.** Read it from what the harness records, never from the agent's own report. In Claude Code, each subagent's
+  transcript is `~/.claude/projects/<project>/<session-id>/subagents/agent-<agent-id>.jsonl`, and the launch result
+  gives the agent's ID. Your own transcript is `<session-id>.jsonl` beside that folder. Each line holds a call's usage.
+  A call's usage repeats on each of its content blocks, so count it once per message ID. Never read a transcript into
+  your context: sum it with a script.
+- **Progress.** Compare a segment's elapsed time with its expected duration: its size factor (a relative weight you
+  give each segment in the plan) times the mean minutes per size unit of the finished segments. Before any segment has
+  finished, use a guess.
+- **Projection.** Each call re-reads a context that grows, so a segment's per-call cost rises. Fit it as a line over
+  the call index and extend it to the projected number of calls. Blend that with the prior, the size factor times the
+  mean dollars per size unit of the finished segments, giving the fit more weight as the segment advances. A segment
+  not yet started uses the prior. Every finished segment recalibrates the rest.
+
+`scripts/review-status.mjs` beside this file implements all of this for Claude Code transcripts from a small state
+file that you keep current (the segments, their size factors, status, transcripts and result paths, the prices and the
+caps). Its header documents the state file.
+
+### Enforcing caps
+
+- Before starting a segment, compare its projected cost with what is left of the total cap. If it does not fit, ask the
+  user whether to raise the cap, narrow the segment or skip it. Never start it silently.
+- While a segment with a cap runs, keep a background check that wakes you when it reaches 90 % of its cap or the review
+  reaches 90 % of the total. In Claude Code, that is a background shell command such as
+  `while node scripts/review-status.mjs <state> --check-caps; do sleep 90; done`, which ends when the check exits with
+  3.
+- When a check fires, stop the segment, then resume it with one instruction: stop probing, write the coverage and the
+  findings it has, and end. That keeps its work and costs a few calls. A segment that cannot be resumed is recorded as
+  *partial*, with the inventory lines it did not reach, in the coverage section.
+- A cap is approximate. Spend is measured between calls, so the last call can overshoot. A cap below a segment's
+  projected cost will end it partial, so say so when the user sets one.
 
 ## Phase 3: review a segment
 
@@ -194,7 +274,9 @@ For every item in the segment, ask at least:
 Probing:
 
 - Make each reproduction minimal, and run it where the behaviour lives: a real browser for browser behaviour, the
-  built package for packaging, the compiler for types.
+  compiler for types, and for packaging the packed artifact installed into a scratch project as a consumer installs it.
+  A build folder can hold files the published package leaves out, and the reverse. Import every entry point under each
+  module system and resolution the package claims.
 - Call what a user calls. Probe through the public entry point, not an internal unit behind it: the public call may take
   a path that never reaches the unit (an early return, a fast path, a different mode). Probe an internal unit only to
   explain a defect already shown through the public API.
@@ -238,8 +320,9 @@ for example with `date`, rather than from memory). Then these sections:
 2. **Inventory**: the map from Phase 1, or a link to it.
 3. **Scope, segments and coverage**: the scope (the range and its commits, or the files and pages, or the whole
    repository at a commit), each segment, and for each inventory group whether it was reviewed fully, partly or not at
-   all, and what was not run. Be honest; it decides what gets a second look. End it with the **test gaps**: contracts
-   no test covers, most important first.
+   all, and what was not run. Be honest; it decides what gets a second look. List what was excluded as frozen,
+   archived, generated or vendored, and the known issues met, each with its link. End it with the **test gaps**:
+   contracts no test covers, most important first.
 4. **Confirmed defects**, most severe first. Each with:
    - **ID**: `<reviewer>-D<n>`;
    - **Area**: the inventory item;
@@ -251,7 +334,9 @@ for example with `date`, rather than from memory). Then these sections:
      needs to run beside it;
    - **Observed / expected**: the output the command printed, copied, and what the contract says it should be;
    - **Severity**, with a reason;
-   - **Suggested fix**: a sketch, and anything it could break;
+   - **Suggested fix**: a sketch, and anything it could break. Suggest the fix that makes the code keep its stated
+     contract. A fix that adds a capability to make the failing case pass (a retry, a fallback, a new option) is a
+     design question: report it as one;
    - **Semver**, with a reason.
 5. **Documentation findings**: wrong, contradictory, missing or unclear; the same fields, with *Reproduction* replaced
    by the page and its text, plus the probe and its output where the page shows behaviour. A fix that only changes the
