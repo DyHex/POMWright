@@ -152,10 +152,12 @@ without its quotes. Only writing a value that is not a string fails, with the me
 :::
 
 A helper that belongs to an origin refuses to touch another one, since another origin's storage can only be reached
-from a document on it:
+from a document on it. That holds on a page at `about:blank` too, whose document may have inherited an origin, as a
+popup from `window.open()` does; the message then names the URL:
 
 ```text
 AccountPage.SessionStorage.get: the page is on https://login.example, not on this page object's origin https://shop.example; another origin's sessionStorage is reachable only from a document on it. Use the page object for https://login.example, or a standalone SessionStorage without an origin
+AccountPage.SessionStorage.set: the page (about:blank) is on https://login.example, not on this page object's origin https://shop.example; another origin's sessionStorage is reachable only from a document on it. Use the page object for https://login.example, or a standalone SessionStorage without an origin
 ```
 
 A helper without an origin, `new SessionStorage(page)`, works on whatever origin the page is on. On a page without an

@@ -32,6 +32,38 @@ const mock = (route: Route) =>
 			'<script>document.getElementById("startup").textContent = window.__startup;</script>',
 	});
 
+test.describe("a popup on about:blank, which inherits its opener's origin", () => {
+	const openPopup = async (page: Page) => {
+		await page.goto(`${A}/teststorage`);
+		const [popup] = await Promise.all([page.waitForEvent("popup"), page.evaluate(() => void window.open())]);
+		expect(popup.url()).toBe("about:blank");
+		return popup;
+	};
+
+	test("a helper bound to another origin refuses it; one bound to the inherited origin writes there", async ({
+		page,
+	}) => {
+		const popup = await openPopup(page);
+		await expect(new SessionStorage(popup, { label: "Second", origin: B }).set("token", "for B")).rejects.toThrow(
+			`Second.SessionStorage.set: the page (about:blank) is on ${A}, not on this page object's origin ${B}; another origin's sessionStorage is reachable only from a document on it. Use the page object for ${A}, or a standalone SessionStorage without an origin`,
+		);
+		await new SessionStorage(popup, { label: "First", origin: A }).set("token", "for A");
+		await popup.goto(`${A}/teststorage`);
+		expect(await current(popup)).toEqual({ token: "for A" });
+	});
+
+	test("a seed for the inherited origin applies, or fails the test where the browser counts the arrival as a return", async ({
+		page,
+		browserName,
+	}) => {
+		test.fail(browserName === "firefox", "Firefox presents the about:blank entry as activation.from: not applied");
+		const popup = await openPopup(page);
+		await new SessionStorage(popup, { origin: A }).seed({ token: "seeded" });
+		await popup.goto(`${A}/teststorage`);
+		expect(await startup(popup)).toEqual({ token: "seeded" });
+	});
+});
+
 test.describe("a sandboxed document", () => {
 	test("set, get and an on-origin seed say the document's origin is opaque", async ({ page, testStorage }) => {
 		await page.goto(`${A}/teststorage/sandboxed`);

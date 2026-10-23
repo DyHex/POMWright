@@ -323,19 +323,32 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		}
 	}
 
-	/** A helper with an origin touches only that origin's storage. */
-	private assertOnOrigin(method: string): void {
-		if (this.origin === undefined) {
+	/**
+	 * A helper with an origin touches only that origin's storage. Synchronous, from the page's URL, so a call joins its
+	 * turn at once; `assertInheritedOrigin` adds the case of a URL without an origin, inside the turn.
+	 */
+	private assertOnOrigin(method: string, current = originOf(this.page.url())): void {
+		if (this.origin === undefined || current === undefined || current === this.origin) {
 			return;
 		}
-		const current = originOf(this.page.url());
-		if (current !== undefined && current !== this.origin) {
-			throw new Error(
-				`${this.title(method)}: the page is on ${current}, not on this page object's origin ${this.origin}; ` +
-					"another origin's sessionStorage is reachable only from a document on it. " +
-					`Use the page object for ${current}, or a standalone SessionStorage without an origin`,
-			);
+		const url = this.page.url();
+		throw new Error(
+			`${this.title(method)}: the page ${originOf(url) === undefined ? `(${url}) ` : ""}is on ${current}, not on this ` +
+				`page object's origin ${this.origin}; another origin's sessionStorage is reachable only from a document on ` +
+				`it. Use the page object for ${current}, or a standalone SessionStorage without an origin`,
+		);
+	}
+
+	/**
+	 * The page's URL has no origin (`about:blank`), but its document may have inherited one, as a popup from
+	 * `window.open()` does: then the document is asked, and the origin check applies to that.
+	 */
+	private async assertInheritedOrigin(method: string): Promise<void> {
+		if (this.origin === undefined || originOf(this.page.url()) !== undefined) {
+			return;
 		}
+		const inherited = await this.page.evaluate(() => self.origin).catch(() => "null");
+		this.assertOnOrigin(method, inherited === "null" ? undefined : inherited);
 	}
 
 	/**
@@ -346,6 +359,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	private inTurn<T>(method: string, task: () => Promise<T>): Promise<T> {
 		return takeTurn(this.page, this.origin ?? originOf(this.page.url()) ?? "", async () => {
 			this.assertOnOrigin(method);
+			await this.assertInheritedOrigin(method);
 			return await task();
 		});
 	}
