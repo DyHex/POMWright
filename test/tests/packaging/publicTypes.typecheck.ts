@@ -5,9 +5,11 @@ import type { Locator, Page } from "@playwright/test";
 import type { UrlTypeOptions } from "pomwright";
 import {
 	type AddAccessor,
+	type AllEntries,
 	type BaseUrlTypeFromOptions,
 	type Codec,
 	createRegistryWithAccessors,
+	type Decoded,
 	type FilterDefinition,
 	type FullUrlTypeFromOptions,
 	type GetLocatorAccessor,
@@ -30,7 +32,9 @@ import {
 	type PageObjectTypeOptions,
 	PlaywrightReportLogger,
 	type ReusableLocator,
+	type SeedOptions,
 	SessionStorage,
+	type SessionStorageOptions,
 	type SessionStorageSchema,
 	type StorageTypeFromOptions,
 	step,
@@ -55,7 +59,14 @@ const typedRegistry: LocatorRegistry<Paths> = registry;
 type Options = { urlPathType: RegExp; storage: { token: Codec<string> } };
 const options: PageObjectTypeOptions = {} as Options;
 type Urls = [BaseUrlTypeFromOptions<Options>, UrlPathTypeFromOptions<Options>, FullUrlTypeFromOptions<Options>];
-type Storage = [StorageTypeFromOptions<Options>, SessionStorageSchema];
+type Storage = [
+	StorageTypeFromOptions<Options>,
+	SessionStorageSchema,
+	SessionStorageOptions<Options["storage"]>,
+	SeedOptions,
+	Decoded<Options["storage"], "token">,
+	AllEntries<Options["storage"]>,
+];
 type Navigation = [NavigationFor<string, string>, NavigationOptions, ThisPageOptions, UrlMatcher];
 type Logging = [LogEntry, LogLevel];
 const values = [json, PageObject, PlaywrightReportLogger, SessionStorage, step, test];
@@ -85,6 +96,16 @@ getLocatorSchema("list.item").replace().getByRole("listitem", { name: null });
 // @ts-expect-error the test id is required
 getLocatorSchema("list.item").replace().getByTestId();
 getLocatorSchema("list.item").update().getByRole({ name: null });
+// undefined as update's primary keeps the registered one, also from a variable that may be undefined
+declare const maybeRole: "listitem" | undefined;
+getLocatorSchema("list.item").update().getByRole(undefined, { name: "x" });
+getLocatorSchema("list.item").update().getByRole(maybeRole, { name: "x" });
+getLocatorSchema("list.item").update().getByText(undefined);
+getLocatorSchema("list.item").update().getByTestId(undefined);
+// @ts-expect-error replace takes Playwright's arguments: the role is required
+getLocatorSchema("list.item").replace().getByRole(undefined, { name: "x" });
+// @ts-expect-error a registration's first argument is required
+add("main").getByRole(undefined, { name: "x" });
 
 // the internals are not reachable through any step
 // @ts-expect-error private
@@ -230,6 +251,9 @@ add("main", { reuse: locatorSeed }).locator(null);
 add("main", { reuse: locatorSeed }).locator({ hasText: null });
 add("main", { reuse: locatorSeed }).locator("a", null);
 add("main", { reuse: testIdSeed }).getByTestId(undefined);
+add("main", { reuse: roleSeed }).getByRole(undefined, { name: "x" });
+add("main", { reuse: textSeed }).getByText(undefined, { exact: false });
+add("main", { reuse: locatorSeed }).locator(undefined);
 add("main", { reuse: frameSeed }).frameLocator();
 // @ts-expect-error a primary is never null: with two arguments the first is the primary
 add("main", { reuse: roleSeed }).getByRole(null, null);
@@ -287,3 +311,14 @@ void [DomainLogin, wrongOptions];
 void [accessors, typedRegistry, options, values, afterUpdate, afterReplace, notAValue, wrongSeed, misspelt];
 void [wellFormed, malformed, ListPage, arrayHas, Steps];
 void [copy, voidCopy, narrowed, strictRegistry, StrictPage];
+
+// a session storage key typed string, not a literal, may be any key: its value is a string or any declared codec's type
+declare const storageWithCodecs: SessionStorage<{ user: Codec<{ name: string }> }>;
+declare const anyKey: string;
+const widenedValue: Promise<string | { name: string } | null> = storageWithCodecs.get(anyKey);
+// @ts-expect-error a declared codec's type may come back, so the value is not known to be a string
+const narrowedValue: Promise<string | null> = storageWithCodecs.get(anyKey);
+const literalValue: Promise<{ name: string } | null> = storageWithCodecs.get("user");
+// @ts-expect-error the key's type comes from the key alone: a declared key keeps its codec's type
+storageWithCodecs.set("user", "a string");
+void [widenedValue, narrowedValue, literalValue];

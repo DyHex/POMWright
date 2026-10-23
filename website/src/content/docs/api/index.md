@@ -50,6 +50,10 @@ the errors thrown, with the real messages. The same text is in the doc comments,
 | [`json`](/POMWright/api/class-sessionstorage/#json) | the JSON codec |
 | [`Codec`](/POMWright/api/class-sessionstorage/#codec) | how a key's value is stored and read back |
 | [`SessionStorageSchema`](/POMWright/api/class-sessionstorage/#sessionstorageschema) | codecs by key |
+| [`SessionStorageOptions`](/POMWright/api/class-sessionstorage/#sessionstorageoptions) | the options of `new SessionStorage()` |
+| [`SeedOptions`](/POMWright/api/class-sessionstorage/#seedoptions) | the options of `seed` |
+| [`Decoded`](/POMWright/api/class-sessionstorage/#decoded) | the type of a key's value under a schema |
+| [`AllEntries`](/POMWright/api/class-sessionstorage/#allentries) | what `get()` returns |
 
 ## Reports
 

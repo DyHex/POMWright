@@ -22,8 +22,10 @@ and no browser handling of its own; your tests stay Playwright tests.
 - **Node.js 20** or later, the version Playwright itself needs.
 - **`"@playwright/test": ">=1.64.0 <2.0.0"`**. POMWright declares it as a peer dependency: your project installs
   Playwright, and POMWright uses that copy.
-- **TypeScript** is what these docs use. POMWright also works from JavaScript; every rule its types state is also
-  checked at runtime.
+- **TypeScript** is what these docs use. POMWright also works from JavaScript: paths, the first argument of every
+  locator method, URLs and session storage values are checked at runtime as the types check them. An index is not:
+  `nth` hands it to Playwright as given, as Playwright's `locator.nth` takes it (see
+  [indices](/POMWright/docs/filters-and-indices/#indices-nth)).
 
 ## Install
 
@@ -50,9 +52,11 @@ holds two copies of POMWright, even when some files `import` it and others `requ
 
 ## TypeScript settings
 
-POMWright needs no `tsconfig.json` setting: with TypeScript's defaults everything in these docs compiles, and
-Playwright compiles your TypeScript itself ([TypeScript](https://playwright.dev/docs/test-typescript)). Three settings
-change how code that uses POMWright is checked. None is required, and each only matters when you turn it on:
+POMWright needs no `tsconfig.json` setting of its own. Playwright compiles your TypeScript itself and does not check
+its types ([TypeScript](https://playwright.dev/docs/test-typescript)). To check them with `tsc`, note that TypeScript 6
+includes only the `@types` packages a tsconfig lists, and Playwright's own declarations need Node's, so a Playwright
+project lists `"types": ["node"]`, with or without POMWright. With that, everything in these docs compiles. Three
+settings change how code that uses POMWright is checked. None is required, and each only matters when you turn it on:
 
 - **Decorators.** Nothing to enable. [`@step`](/POMWright/docs/test-steps/) works with TypeScript's standard
   decorators, the default, and with `experimentalDecorators: true`, in your editor and in Playwright's runner. Use

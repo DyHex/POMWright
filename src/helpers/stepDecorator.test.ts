@@ -45,6 +45,17 @@ describe("@step, stage-3 decorators", () => {
 		expect(recorded).toEqual([{ title: "Open settings", options: { box: true } }]);
 	});
 
+	it("runs a method called without its object, with its own title or as Anonymous.method", async () => {
+		const titled = stage3(step("Add an item"), async () => "added", context("addItem", false));
+		const untitled = stage3(step(), async () => "added", context("addItem", false));
+		for (const method of [titled, untitled]) {
+			await expect(method.call(undefined)).resolves.toBe("added");
+		}
+		const boxed = stage3(step({ box: true }), async () => "added", context("addItem", false));
+		await expect(boxed.call(undefined)).resolves.toBe("added");
+		expect(recorded.map((entry) => entry.title)).toEqual(["Add an item", "Anonymous.addItem", "Anonymous.addItem"]);
+	});
+
 	it("works as a bare decorator", async () => {
 		const wrapped = stage3(step, async () => undefined, context("bare", false));
 		await wrapped.call(new Account());

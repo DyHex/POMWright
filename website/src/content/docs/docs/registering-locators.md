@@ -105,8 +105,8 @@ The only call without a first argument is `frameLocator()`, which registers Play
 
 ## One registration per path
 
-A path holds one locator. Registering it again throws at the second method call and shows both records, the existing
-one and the attempted one:
+A path holds one locator. Registering it again throws at the second locator method, or, with `{ reuse }`, at `add`
+itself, which registers at once, and shows both records, the existing one and the attempted one:
 
 ```text
 A locator schema with the path "list.items" already exists.
@@ -128,6 +128,9 @@ The message spreads the JSON over more lines; it is shortened here. Calling a se
 throws too: `A locator definition for "main.button" has already been provided; only one locator type can be set for a
 registration.` A call that throws registers nothing and changes nothing that is registered.
 
+Since each path has one registration, and every chain through it is built from that registration, a change to the
+page is an edit in one place. See [when the page changes](/POMWright/docs/locator-paths/#when-the-page-changes).
+
 ## Registered locators do not change
 
 The registry keeps a copy of every options and filter object you pass, so changing the object afterwards changes
@@ -145,8 +148,10 @@ options.name = "Cancel";
 registry.getLocator("form.button@save"); // getByRole('button', { name: 'Save' })
 ```
 
-The copy reaches every value you pass. A RegExp is copied too, whether it is the first argument, an option or a filter
-value, so rewriting yours afterwards with `compile()` changes nothing registered. A `Locator` is kept as it is: every
+The copy reaches every value you pass, and reads an options or filter object as Playwright does: a getter on a class
+or a value from the object's prototype is copied with the rest, a method is not. A RegExp is copied too, whether it is
+the first argument, an option or a filter value, so rewriting yours afterwards with `compile()` changes nothing
+registered. A `Locator` is kept as it is: every
 method of a `Locator` returns a new one, so the one you passed cannot change. This holds for `add`, `createReusable`
 and queries alike. To change a locator for one use, query it; see [Queries](/POMWright/docs/queries/).
 
@@ -167,11 +172,21 @@ item.filter({ hasText: "Open" }); // throws; list.item stays getByRole('listitem
 ```
 
 ```text
-filter() cannot apply to "list.item": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+filter() cannot apply to "list.item": its registration was ended by add("list"); give a registration all its steps in its add(…) chain, or query the path for one use.
 ```
 
 So nothing that reads the registry ever sees a registration change. In a page object, the check that runs after
 `defineLocators()` ends the last one.
+
+A registry call in a step's own arguments counts too, since JavaScript runs a call's arguments before the call. In
+`add("list.item@open").getByRole("listitem").filter({ has: registry.getLocator("badge") })`, `getLocator` ends the
+registration of `list.item@open` before `filter` runs. The message names the call and the two ways to write such a
+filter, a path or a locator resolved before `add(…)` (see
+[a path, a locator or a chain](/POMWright/docs/filters-and-indices/#a-path-a-locator-or-a-chain)):
+
+```text
+filter() cannot apply to "list.item@open": its registration was ended by getLocator("badge"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "badge" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+```
 
 ## When locators are registered
 

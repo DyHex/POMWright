@@ -1,8 +1,8 @@
 # AGENTS.md
 
 Persistent context and working rules for AI agents and humans contributing to POMWright. Read it fully before
-changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-21, with the 3.0.1 fix
-for overlapping `seed` calls.
+changing anything. Repo-specific facts here override generic defaults. Last revised 2026-10-23, with the 3.0.2 fixes
+from two reviews of 3.0.1 and from the triage of the session storage findings that followed.
 
 ## 1. What POMWright is
 
@@ -12,7 +12,7 @@ for overlapping `seed` calls.
   dependency. Node 20 or later (`engines`), Playwright's own floor; re-read it from Playwright's `engines` whenever
   the peer floor moves.
 - Packaging mirrors `@playwright/test`: one CommonJS build (`dist/index.js`, `dist/index.d.ts`) behind an `exports`
-  map; `dist/index.mjs` and `dist/index.d.mts` are written by `scripts/write-esm-entry.mjs` and re-export that build
+  map whose root has `import`, `require` and, last, `default` (the CommonJS build); `dist/index.mjs` and `dist/index.d.mts` are written by `scripts/write-esm-entry.mjs` and re-export that build
   by name, so `import` and `require` share one copy. Only the root and `pomwright/package.json` are importable.
 - Core idea: register one locator definition per dot-delimited path (`"main.form.submit"`) in a `LocatorRegistry`,
   and POMWright composes the full Playwright locator chain from the path. The registry, `PageObject`,
@@ -22,28 +22,30 @@ for overlapping `seed` calls.
   helpers, `createRegistryWithAccessors` with `LocatorRegistryOptions`, the accessor types, the `LocatorRegistry` type (`add`, `createReusable`, `getLocator`, `getLocatorSchema`,
   `getNestedLocator`, `verify`), what the registry hands out (`LocatorQueryBuilder`, `LocatorUpdateBuilder`,
   `ReusableLocator`, `FilterDefinition`, `IndexSelector`) and the path types (`LocatorSchemaPathFormat`,
-  `LocatorSchemaPathArgument`), `SessionStorage` with the `json` codec and the `Codec` and `SessionStorageSchema`
-  types, `PlaywrightReportLogger` with `LogEntry` and `LogLevel`, `step`, `NavigationFor`, `NavigationOptions`,
+  `LocatorSchemaPathArgument`), `SessionStorage` with the `json` codec and the `Codec`, `SessionStorageSchema`,
+  `SessionStorageOptions`, `SeedOptions`, `Decoded` and `AllEntries` types, `PlaywrightReportLogger` with `LogEntry` and `LogLevel`, `step`, `NavigationFor`, `NavigationOptions`,
   `ThisPageOptions` and `UrlMatcher`. Everything else under `src/` is internal even when it carries an `export`
   keyword, so renaming or deleting it is not by itself a breaking change.
-- Published version: 3.0.0. The next release is 3.0.1, a patch, whose changes are the pending changesets (section 7).
-  Section 6 describes how release work is organised.
+- The published version is `package.json`'s `version`, which changesets sets; the next release is the changesets in
+  `.changeset/` (section 7). Neither is restated here, so this file does not go stale at a release. Section 6 describes
+  how release work is organised.
 
 ## 2. Repository map
 
 | Path | What it is | Edit? |
 | --- | --- | --- |
 | `index.ts` | Package entry. tsup bundles the CommonJS build from here; `scripts/write-esm-entry.mjs` then writes the ESM entry. | yes |
-| `src/` | Runtime: 17 files, about 4,600 lines, plus colocated vitest unit tests (`**/*.test.ts`: `pageObject.test.ts`, `locators/utils.test.ts`, `locators/locatorRegistry.test.ts`, `locators/locatorRegistrationBuilder.test.ts`, `locators/locatorUpdateBuilder.test.ts`, `locators/locatorQueryBuilder.test.ts`, `locators/reusableLocatorBuilder.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`, `helpers/sessionStorage.test.ts`, `helpers/sessionStorageSeed.test.ts`, `helpers/callSite.test.ts`, `helpers/playwrightReportLogger.test.ts`, `helpers/stepDecorator.test.ts`, `helpers/stepLocations.test.ts`), the type-only `helpers/stepDecorator.test-d.ts` (decorator syntax, which vitest's runtime cannot load), and `locators/fakePage.ts`, test support only: a page whose locators record the chain they were built from, never imported by the runtime and so never bundled. | yes |
+| `src/` | Runtime: 18 files, about 6,400 lines, plus colocated vitest unit tests (`**/*.test.ts`: `pageObject.test.ts`, `locators/utils.test.ts`, `locators/locatorRegistry.test.ts`, `locators/locatorRegistrationBuilder.test.ts`, `locators/locatorUpdateBuilder.test.ts`, `locators/locatorQueryBuilder.test.ts`, `locators/reusableLocatorBuilder.test.ts`, `helpers/url.test.ts`, `helpers/navigation.test.ts`, `helpers/sessionStorage.test.ts`, `helpers/sessionStorageSeed.test.ts`, `helpers/storageTurns.test.ts`, `helpers/callSite.test.ts`, `helpers/playwrightReportLogger.test.ts`, `helpers/stepDecorator.test.ts`, `helpers/stepLocations.test.ts`), the type-only `helpers/stepDecorator.test-d.ts` (decorator syntax, which vitest's runtime cannot load), and `locators/fakePage.ts`, test support only: a page whose locators record the chain they were built from, never imported by the runtime and so never bundled. | yes |
 | `src/locators/` | `locatorRegistry.ts` (registry, the open registration it ends at its next call, resolution with frames as `locator` plus `contentFrame()` and the any-frame segment, cycle detection, `verify()` with the opt-in `strictChains`, reuse by path and by seed through one seeded builder), `locatorRegistrationBuilder.ts` (`add(path).getByRole(...)` DSL, seeded registrations with `update`'s argument shapes, the boundary checks, no steps on an any-frame definition), `locatorUpdateBuilder.ts` (`update` as a same-strategy JSON Merge Patch, `replace` with Playwright's argument lists through a `Mode` type parameter; the class `LocatorUpdateBuilderInternal`, the public alias `LocatorUpdateBuilder`), `locatorQueryBuilder.ts` (`getLocatorSchema(path)` chain: `filter`, `nth`, `clearSteps`, `skip`/`unskip`, `describe`, `update`, `replace`, `getLocator`, `getNestedLocator`; the class `LocatorQueryBuilderInternal`, the public alias `LocatorQueryBuilder`), `reusableLocatorBuilder.ts` (`createReusable`; a seed is a value whose methods return new seeds), `types.ts` (definitions, `ReusableLocator`, `FilterDefinition`, `IndexSelector`, `OptionsPatch`, compile-time path validation), `utils.ts` (the `STRATEGIES` table, one row per strategy, that creation, cloning, the seeded patch, `update` and `replace` read; path validation with `LOCATOR_SCHEMA_PATH_WHITESPACE`, `assertStrategyPrimary` over `assertPrimaryValue` and `assertIdValue`, `assertDescription`, the id selector helpers, `createLocator`, `applyIndexSelector`, `isAnyFrameDefinition`, `isLocatorInstance`, `isReusableLocator`, `methodForStrategy`, `mergeOptions`, cloning and copying (`copyValue`, `copyFields`, `copyFilter`, `normalizeSteps`), patching). | yes |
-| `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts` (`SessionStorage`: `page.sessionStorage` with batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `seed`), `sessionStorageSeed.ts` (the seed registry, one per page: an init script per pending origin that writes only in the main frame, on the origin, on the first arrival, disposed at the main frame's commit there; calls for one origin in turn on a per-origin chain; the Navigation API check, the commit-during-registration check, the refused-write and never-applied failures), `callSite.ts` (`captureCallSite(boundary)` and `atCallSite`: a later error pointed at the consumer's call, for `seed` and the page-object check), `playwrightReportLogger.ts` (messages kept as given, other arguments as `console.log` prints them, one attachment per entry in call order, names in Playwright's `locale` and `timezoneId`), `stepDecorator.ts` (`@step`, for methods that return a Promise). | yes |
+| `src/helpers/` | `url.ts` (`assertBaseUrl`, `assertUrlPath`, `resolveUrl`, `createUrlMatcher`, `composeFullUrl`), `navigation.ts` (`NavigationFor`, one `page.waitForURL` per wait), `sessionStorage.ts` (`SessionStorage`: `page.sessionStorage` with batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `seed`), `sessionStorageSeed.ts` (the seed registry, one per page: in the call's turn, a write at once on the origin, or an init script per pending origin that writes only in the main frame, on the origin, on the first arrival, disposed at the main frame's commit there, with its entries as `[key, value]` pairs; the Navigation API check, the commit-during-registration check, the refused-write, not-applied and never-applied failures), `storageTurns.ts` (`takeTurn`: per page and origin, every `SessionStorage` call in the order it was made), `callSite.ts` (`captureCallSite(boundary)` and `atCallSite`: a later error pointed at the consumer's call, for `seed` and the page-object check), `playwrightReportLogger.ts` (messages kept as given, other arguments as `console.log` prints them, one attachment per entry in call order, names in Playwright's `locale` and `timezoneId`), `stepDecorator.ts` (`@step`, for methods that return a Promise; an `async` wrapper for a boxed step, a plain one otherwise). | yes |
 | `src/pageObject.ts`, `src/fixture/base.fixtures.ts` | Abstract `PageObject` (constructor options `label`, `navOptions`, `sessionStorage`, `locators: { strictChains }`): `defineLocators()` and `verify()` run once, right after construction (a check scheduled with `queueMicrotask`) or at the first locator call, through a facade on `locatorRegistry`; labelled, sticky errors with the construction site; the optional actions hook, evaluated per run. The `test` fixture that provides `log`. | yes |
 | `test/` | Standalone pnpm project that installs the packed package from `.pack/pomwright` and runs Playwright against it. Section 4. | yes |
 | `website/` | The documentation site's content (section 9): `src/content/docs/docs/`, the Docs section (24 pages: Getting started, Principles, one page per concept, *Upgrading from 2.x*); `src/content/docs/api/`, the API reference (14 pages, one per class or group, `errors` and the index); `src/content/docs/internal/`, how POMWright works (13 pages, `performance` among them); `snippets/`, the docs' example app (`login.page.ts`, `account.page.ts`, `orders.page.ts`, `checkout.page.ts`, `fixtures.ts`) that every page's examples import. Around them the Starlight site, a pnpm project of its own (`package.json`, `pnpm-lock.yaml`, exact versions): `astro.config.mjs` (base `/POMWright`, the link check, Mermaid, the edit links to `main`), `sidebar.mjs` (the three sections), `plugins/expressive-code-cut.mjs` (hides an example's `// ---cut---` prelude), `src/components/SiteTitle.astro` (the sections as tabs), `src/styles/custom.css`, `src/content/docs/index.mdx` (the home page). | yes |
 | `docs/v2/` | Frozen 2.x reference. | no |
 | `docs/v1/`, `docs/v1-to-v2-migration/` | Archived. | no |
+| `skills/` | Agent skills in the Claude Code and claude.ai format, one folder per skill with its `SKILL.md` and the scripts it ships: `defect-review/`, an evidence-based defect review of a whole project, a change set or one area, with `scripts/review-status.mjs` (the status table, cost projections and cost caps of a review whose segments run as subagents). Not published (`package.json#files`), not on the site yet: kept for a later Skills section. biome checks the scripts but not the `SKILL.md` (it does not process `.md`). Their evals and test runs are not in the repository. | yes |
 | `.changeset/` | Changesets config. `CHANGELOG.md` is generated from changesets at release time. | config only |
-| `.github/workflows/` | `checks.yaml` (reusable): `changes`, `lint` (always), `package` (unit tests, build and pack once, the tarball as a run artifact) and `harness` (the browsers the caller passes, each at the Playwright pin and at the latest 1.x, each testing that tarball), and with the `node-floor` input, which `pr.yaml` and `main.yaml` set, `harness-node-floor` (chromium at the pin on Node 20, the `engines` floor); every third-party action is pinned to a commit with its version in a comment, kept current by `.github/dependabot.yml` (monthly, grouped), which also proposes the npm versions of the root, `test/` and `website/`, never `@playwright/test`; `changes` (`scripts/ci-changes.sh`) compares with the last green commit of the branch (the newest commit whose run of the same workflow succeeded) and, on a pull request, with its base, never with the previous push alone (which would let a docs-only push turn a red run green), and outputs `code` (a change outside `website/` that is not `*.md`) and `site` (`code` or a change under `website/`); `package` runs on either, `harness` on `code`, and `site` on `site`: the tarball installed into `test/`, the snippet and coverage checks, the site's frozen install and build on Node 24. `pr.yaml` (`PR`) runs it for every pull request, draft or not, with the harness on chromium only; `main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit, one run at a time in push order (a `concurrency` group without `cancel-in-progress`, so Publish and Pages follow the order of the commits and an older run never deploys over a newer site; a waiting run gives way to a newer push); both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs the changesets action after `CI` succeeds on a push to `main`, guarded by its job condition, and publishes with npm provenance (`id-token: write`, `NPM_CONFIG_PROVENANCE`). `pages.yaml` builds `website/` and deploys it to GitHub Pages (`https://dyhex.github.io/POMWright/`) after `CI` succeeds on a push to `main`, guarded as `publish.yaml` is and building the commit that run tested, or by `workflow_dispatch`. | yes |
+| `.github/workflows/` | `checks.yaml` (reusable): `changes`, `lint` (always), `package` (unit tests, build and pack once, the tarball as a run artifact) and `harness` (the browsers the caller passes, each at the Playwright pin and at the latest 1.x, each testing that tarball), and with the `node-floor` input, which `pr.yaml` and `main.yaml` set, `harness-node-floor` (chromium at the pin on Node 20, the `engines` floor); every third-party action is pinned to a commit with its version in a comment, kept current by `.github/dependabot.yml` (monthly, grouped), which also proposes the npm versions of the root, `test/` and `website/`, never `@playwright/test`; `changes` (`scripts/ci-changes.sh`) compares with the last green commit of the branch (the newest commit whose run of the same workflow succeeded) and, on a pull request, with its base, never with the previous push alone (which would let a docs-only push turn a red run green), and outputs `code` (a change outside `website/` that is not `*.md`) and `site` (`code` or a change under `website/`); `package` runs on either, `harness` on `code`, and `site` on `site`: the tarball installed into `test/`, the snippet and coverage checks, the site's frozen install and build on Node 24. `pr.yaml` (`PR`) runs it for every pull request, draft or not, with the harness on chromium only; `main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit, one run at a time in push order (a `concurrency` group without `cancel-in-progress`, so Publish and Pages follow the order of the commits and an older run never deploys over a newer site; a waiting run gives way to a newer push); both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs the changesets action after `CI` succeeds on a push to `main`, guarded by its job condition and by a step that goes no further when `main` has moved past the commit that run tested (a `workflow_run` checks out the newest commit; the newer commit's own run publishes), and publishes with npm provenance (`id-token: write`, `NPM_CONFIG_PROVENANCE`). `pages.yaml` builds `website/` and deploys it to GitHub Pages (`https://dyhex.github.io/POMWright/`) after `CI` succeeds on a push to `main`, guarded as `publish.yaml` is and building the commit that run tested, or by `workflow_dispatch`. | yes |
 | `pack-build.sh`, `pack-extract.sh`, `pack-test.sh`, `playwright.base.ts` | Build and pack the tarball and extract it into `.pack/pomwright`; the extraction; run the harness (section 3); shared Playwright config. | yes |
 | `scripts/` | `write-esm-entry.mjs` (part of `pnpm build`), `check-doc-snippets.mjs` (compiles the docs' TypeScript examples) and `check-api-coverage.mjs` (the API reference and the doc comments against the installed declarations), both part of `pnpm typecheck` (section 9), `benchmark.mjs` (`pnpm bench`, the tables of *Internal → Performance*), `pack-version.sh` (`pnpm pack:version`, a tarball with a chosen version for trying a build elsewhere), `ci-last-green.sh`, `ci-changes.sh` and `ci-playwright-version.sh` (the decisions of `checks.yaml`; `ci-last-green.sh` reads the runs API through `gh`, the other two run locally as they are). | yes |
 | `vitest.config.ts` | Unit-test discovery limited to `src/**/*.test.ts`, node environment, so Playwright specs are never picked up; typecheck mode on, so `expectTypeOf` and `// @ts-expect-error` assertions are enforced, in `src/**/*.test.ts` and in the type-only `src/**/*.test-d.ts`. | yes |
@@ -84,9 +86,12 @@ for overlapping `seed` calls.
 - `pnpm typecheck` runs `tsc --noEmit -p test` against the installed package: specs, page objects, fixtures,
   `playwright.base.ts`, the `src/locators` files the source-level specs import, and the compile-only probes; then
   `tsc -p test/tsconfig.declarations.json` (`declaration: true`, `noEmit`), the declaration emit of
-  `tests/packaging/publicTypes.emit.ts`; then `scripts/check-doc-snippets.mjs`, every `ts` block of
+  `tests/packaging/publicTypes.emit.ts`; then `tsc -p test/tsconfig.legacyDecorators.json`, `@step` under
+  `experimentalDecorators` (`tests/packaging/stepLegacyDecorators.typecheck.ts`, also compiled under the standard
+  decorators by the first `tsc`); then `scripts/check-doc-snippets.mjs`, every `ts` block of
   `website/src/content/docs` against the installed package, and `scripts/check-api-coverage.mjs`, the API reference and
-  the doc comments against the installed declarations (section 9). `pack-test.sh` runs all four.
+  the doc comments against the installed declarations (section 9). `pack-test.sh` runs all five, and after the harness
+  `playwright test -c playwright.steps.config.ts` (section 4).
 - `pnpm pack:version <version>` (`scripts/pack-version.sh`, run by hand only) builds and packs the package with the
   given semver version in the packed `package.json` only, as `pomwright-<version>.tgz` at the root (gitignored), for
   trying a build in another project before it is released; the repository's version stays what changesets set, and
@@ -146,7 +151,13 @@ for overlapping `seed` calls.
   down after it), `step/`, `testApp/`, `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
   published entries, one shared copy, closed deep imports, the manifest; `publicTypes.typecheck.ts` and
   `publicTypes.emit.ts`, compile-only). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through
-  `playwright.bench.config.ts`, never by `pack-test`. 53 spec files, about 7,800 lines. One spec file per DSL method,
+  `playwright.bench.config.ts`, never by `pack-test`. `testApp/urlForms.spec.ts` sweeps the printable ASCII
+  characters through the URL each browser reports, with the one known difference (Chromium's `|` in a path) listed.
+  `test/step-locations/` is the step-location check: its spec marks each probed call with `// LOCATION <id>`, and its
+  reporter fails the run when a step or an error with that id is reported on another line; it needs no browser and
+  runs from `test/playwright.steps.config.ts`, which `pack-test.sh` runs after the harness, so no `--reporter` given to
+  the harness can switch it off. `testApp/sessionStorageOverlay.spec.ts` runs with Playwright's step overlay
+  (`video: { show: { test } }`), which delays a step's body. 55 spec files, about 8,400 lines. One spec file per DSL method,
   for example `add.getById.spec.ts` or `getLocatorSchema.update.spec.ts`; one DOM-level spec per fixture page under
   `testApp/`, for example `testIds.spec.ts`.
 - Know what each spec exercises. Most `locatorRegistry/` specs import `LocatorRegistryInternal` from
@@ -178,27 +189,36 @@ for overlapping `seed` calls.
   terminal-only `has:` path references. Builders are synchronous. There are no thenables anywhere in `src`; do not
   add any.
 - A registered locator cannot change after registration: builders store copies of the options and filter objects
-  callers pass and of every value in them, a RegExp included (`copyValue`: `RegExp.prototype.compile()` rewrites one
+  callers pass, read as Playwright reads them (`readFields`: own properties, then those of each prototype up to
+  `Object.prototype`, methods left out), and of every value in them, a RegExp included (`copyValue`: `RegExp.prototype.compile()` rewrites one
   in place; a `Locator` is kept, since its methods return new ones), the registration builder keeps its own copy of
   the definition it re-registers from, and every read (`getLocator`, `getNestedLocator`, `getLocatorSchema`, `verify`,
   `has` paths) works on a clone of the record; each `getLocatorSchema` call is a new, independent clone. A
   registration ends at the next call on its registry (`add`, `getLocator`, `getNestedLocator`, `getLocatorSchema`,
   `verify`, a resolution): the registry ends the open one, and every method of an ended registration throws first,
-  so a registration kept in a variable cannot change its path once anything else has happened.
+  naming the call that ended it, so a registration kept in a variable cannot change its path once anything else has
+  happened. A `getLocator` in an `add` chain's filter arguments runs first and ends that registration; the message shows
+  the two ways to write it (a path, or a locator resolved before `add`). The rule stays "the next call", not "the next
+  call that could read it" (considered and not adopted).
 - `skip(subPath)` is a flag on the query: it leaves an ancestor out of the chain and deletes nothing, and
   `unskip(subPath)` restores it exactly as it was. The terminal path cannot be skipped (types and runtime);
   `update`, `replace`, `filter`, `nth` and `clearSteps` on a skipped segment throw, as do a second `skip` and a
-  stray `unskip`. `update` and `replace` never touch steps or the description; `clearSteps()` and `describe("")`
+  stray `unskip`; an `update()` or `replace()` builder taken before the `skip` throws when it applies its change. `update` and `replace` never touch steps or the description; `clearSteps()` and `describe("")`
   take those away.
 - `describe` takes a string on every builder; `describe("")` removes the description (Playwright's meaning), and
   the default stays the path. `nth` hands every index but `"first"`/`"last"` to Playwright's `nth` as given.
 - A deferred error (the page object's scheduled check, a pending `seed`) points at the consumer's call through
   `src/helpers/callSite.ts`, which cuts the stack at a boundary function with V8's `Error.captureStackTrace`. Never
-  filter stack frames by file name: a consumer's file may share a POMWright file name.
+  filter stack frames by file name: a consumer's file may share a POMWright file name. The one exception is the frames
+  of POMWright's own published bundle (`/pomwright/dist/index.(js|mjs|cjs)`), which `atCallSite` drops so the report's
+  code frame is the consumer's line.
 - `@step` decorates methods that return a Promise; `test.step` always returns one. The navigation and session storage
-  helpers pass `{ box: true }` to their steps, so the report shows the line that called them: Playwright takes a boxed
-  step's location from the async stack after its first frame, so the helper that opens the step is not `async`, and a
-  caller awaits it rather than returning its Promise (`src/helpers/stepLocations.test.ts`). The logger keeps the message and
+  helpers pass `{ box: true }` to their steps, so the report shows the line that called them. Playwright takes a step's
+  location from the async stack (only `async` functions waiting in an `await`): an unboxed step's from its first frame,
+  a boxed step's from the frame after it. So exactly one `async` POMWright frame sits between the caller and a boxed
+  `test.step`: the navigation methods are `async` and open their steps themselves; a `SessionStorage` method is `async`
+  and awaits a helper that is not; `@step`'s wrapper is `async` for a boxed step and a plain function otherwise. A caller
+  awaits rather than returns such a Promise, which would cut the stack. `test/step-locations` checks the result. The logger keeps the message and
   string arguments as given, prints other arguments as `console.log` does, attaches one attachment per entry in call
   order, and names them in Playwright's `locale` and `timezoneId`.
 - Keep the dot-delimited path guarantees. The runtime `validateLocatorSchemaPath` and the type-level
@@ -245,27 +265,37 @@ for overlapping `seed` calls.
 - Session storage mirrors `page.sessionStorage`: values are strings stored verbatim unless a codec is declared for the
   key (`json<T>()`, `Codec<T>`), `get` returns `null` for a missing key, a literal `[]` does not compile, and a helper
   with an origin touches only that origin. `seed` never navigates and never intercepts a navigation: away from the
-  origin it adds one `page.addInitScript` per pending origin, which writes only in the main frame, on the origin, on the
-  first arrival there (`navigation.activation.from` is `null`, so a reload or a hop within the origin keeps what the
-  app wrote), and disposes of it when the main frame commits on the origin. Its four listeners (`framenavigated`,
+  origin it adds one `page.addInitScript` per pending origin, which writes only in the main frame, on the origin (`location.origin` and
+  the document's own `self.origin`, so never into a browser's error page), on the first arrival there
+  (`navigation.activation.from` is `null`, so a reload or a hop within the origin keeps what the app wrote), and disposes of it when the main frame commits on the origin. Its four listeners (`framenavigated`,
   `domcontentloaded`, `console`, `close`) exist only while a seed is pending or an applied document may still report a
-  refused write, until that document's `domcontentloaded` or the next commit. Calls for one origin take turns on a
-  per-origin chain that a call joins synchronously when it reaches the registry, so overlapping calls (a `Promise.all`,
-  a missing `await`) end exactly as awaited ones, and a failing call leaves the pending seed as it was. `seed` throws at
+  refused write, until that document's `domcontentloaded` or the next commit. Every `SessionStorage` call (`set`, `get`,
+  `clear`, `seed`) takes its turn on a per-page, per-origin chain (`storageTurns.ts`) that it joins synchronously when its
+  step starts, so overlapping calls (a `Promise.all`, a missing `await`) end exactly as awaited ones, across every
+  helper on the page; a call that waited checks the origin again when its turn starts, and a failing call leaves the
+  pending seed as it was. `seed` decides in its turn whether to write at once (the page was on the origin at the call
+  and still is) or to register; it reads the page and starts its commit watch at the call, before its step's body,
+  which Playwright may delay (the step overlay). Keys are never property names on the way to the page: a `__proto__` key is stored. `seed` throws at
   the call in a browser without the Navigation API (checked once per page) and when the main frame commits on the
-  origin between the call reaching the registry and the end of its registration; a refused write and a never-applied seed fail the test with the `seed` call site in the stack. Never
+  origin between the call reaching the registry and the end of its registration; a refused write, a seed the arriving document skipped (an opaque document, or a
+  return there, as after a failed navigation: retrying it is not attempted) and a never-applied seed fail the test
+  with the `seed` call site in the stack. Never
   reintroduce JSON-encoding every value, or a write from a `framenavigated` listener (it loses the race against the
   app's first script).
 - URLs mirror Playwright's `baseURL` handling with one base per page object: each part is a string or a RegExp, a
-  string `baseUrl` is a non-empty origin and a string `urlPath` is `""` or a single-slash path, all validated at
-  construction; two strings resolve with `new URL`, and a string path is compared in the form `new URL` gives it (as
-  the browser reports it); a RegExp in either part makes `fullUrl` a `UrlMatcher` (base against the origin, path against the
-  rest, each regex as written). `goto()` without a target is the this-page navigation; `expectThisPage` and
+  string `baseUrl` is a non-empty origin (no bare `?` or `#`, and a scheme with a URL origin, so not `chrome-extension:` or `file:`, as for `SessionStorage`'s `origin`) and a string `urlPath` is `""` or a single-slash path
+  that stays on the base's origin once resolved, all validated at construction; two strings resolve with `new URL`,
+  and a page is compared as Playwright compares URLs: the rest of the URL as `href` writes it, an empty `?` or `#`
+  included, a string path in the form `new URL` gives it, with `|` and `%7C`, and `^` and `%5E`, equal in its path part (Chromium reports
+  a `|` as `%7C`; every browser reports a `^` as `%5E`, which `new URL` keeps as `^` before Node 24); a RegExp in either part makes `fullUrl` a `UrlMatcher` (base against the origin, path against the
+  rest, each regex as written). `goto` takes a URL string or options, as `page.goto` does. `goto()` without a target is the this-page navigation; `expectThisPage` and
   `expectAnotherPage` are one `page.waitForURL` each. POMWright sets no timeout or `waitUntil` default of its own.
 - Descriptive path names in docs and tests. No anonymous segments.
 - `// biome-ignore` only with a one-line justification. No `try/catch` around imports.
 - Prefer behaviour-preserving refactors. A contract change (anything documented behaviour relies on) goes through a
-  plan (section 6), never in silently.
+  plan (section 6), never in silently. A fix enforces what the code already promises; it never adds a capability that
+  keeps a failing test going (a navigation to a seeded origin that fails fails the test; no retry is made to apply the
+  seed, since that would rest on browser behaviour without a guarantee).
 - No new runtime dependencies. A new dev dependency is recorded, with its reason, in the plan or the commit that adds
   it, and in the working folder's decisions log while one exists (section 6).
 
@@ -301,8 +331,8 @@ Rules:
    collapses into one changelog entry; the changesets, not the release notes, are what consumers read.
 7. **Nothing of the folder is kept.** Before the merge, an audit reads every file of the folder and moves what a later
    reader needs into the code, its tests, the doc comments, the site (the reasons behind a design on the Internal
-   pages), the changesets or this file (work left for later into section 7); no reference to the folder, a plan, a
-   finding or a decision number stays outside it. Then the folder is deleted.
+   pages), the changesets or this file, and work left for later into a GitHub issue (section 7); no reference to the
+   folder, a plan, a finding or a decision number stays outside it. Then the folder is deleted.
 8. **Commits only when asked.** Never commit on your own. When the user asks for one commit per execution step,
    commit exactly those steps, name the plan and step in the message, and leave everything else uncommitted.
 
@@ -312,38 +342,40 @@ Rules:
   Packages" PR and publishes when it merges. Do not edit `package.json#version` or `CHANGELOG.md` by hand.
 - Call out consumer-facing API or behaviour changes in the changeset body, with a migration hint whenever something
   a 2.x user wrote stops working.
+- Bumps: behaviour brought in line with what the docs, the doc comments or this file already promise is a patch; so
+  is an export that such a promise requires (section 5: every public method returns a type a consumer can import), and
+  a type corrected to what the docs promise and the runtime does, even when code that relied on the wrong type stops
+  compiling (its changeset gives the migration). A new export, member, option or accepted input is a minor; code
+  written against the docs that stops compiling for any other reason, or documented behaviour removed, is a major.
+- The changelog is written by `@changesets/changelog-github` with `disableThanks: true` (`.changeset/config.json`): an
+  entry is ``- [#PR](…) [`sha`](…) - <the changeset's first line>``, its further lines indented below. So a changeset
+  starts with a sentence, never a heading: a heading on that line does not render, in `CHANGELOG.md` or in the GitHub
+  release taken from it (3.0.0's entries show it).
 - `publish.yaml` starts after `CI` succeeds, and `CI` runs only for pushes to `main` and includes the whole harness;
   its job condition also requires a push run on `main` in this repository. Pull requests run the same jobs through
   `PR`, which Publish does not listen to. CI runs only for pull requests (drafts included) and `main`. The gate job
   `build` of `pr.yaml` and `main.yaml` is `main`'s required status check. The published package is rebuilt by
-  `pnpm run release`, not taken from the CI artifact (see *After 3.0.0* below).
+  `pnpm run release`, not taken from the CI artifact (an open issue). A `workflow_run` checks out the newest commit on
+  `main`, so `publish.yaml` compares it with the commit the run tested and goes no further when `main` has moved on.
 - `pages.yaml` deploys the documentation site after `CI` succeeds on a push to `main`, guarded as `publish.yaml` is,
   from the commit that run tested, so every merge updates the site once its checks have passed; since nothing reaches
   `main` before it is ready to release, the site is ahead of npm only until the Version Packages pull request is
   merged.
-- Pending 3.0.1 changesets: `.changeset/seed-overlapping-calls.md` (`patch`).
+- Pending changesets are the files in `.changeset/` other than `config.json` and `README.md`.
 - Before a release, outside CI, the packaging probes run against the packed tarball in a scratchpad project: the packed
   file list (`dist/index.js` and `dist/index.d.ts` from tsup, `dist/index.mjs` and `dist/index.d.mts` from
   `scripts/write-esm-entry.mjs`, nothing else in `dist`); Node 20 and 24 loading `index.js` for `require` and
   `index.mjs` for `import` with one shared `PageObject`; TypeScript under `node10`, `node16`, `nodenext` and `bundler`
   resolution; attw (`@arethetypeswrong/cli`, downloaded, never a dependency) reporting no problem; Playwright's runner in
-  a CommonJS and a `"type": "module"` project; npm's `EBADENGINE` warning on Node 18.
-- After 3.0.0, each as a change of its own:
-  - the release tooling: `@changesets/cli` 3, `@changesets/changelog-github` 1 and `changesets/action` v2 move
-    together (action v2 refuses CLI 2; CLI 3 needs Node 22.11 and pnpm 10 or later). Action v2 renames `publish` to
-    `publish-script`, takes the token as `github-token`, and no longer writes `.npmrc` from `NPM_TOKEN`, so npm
-    authentication moves to npm Trusted Publishing (OIDC, configured by the package owner on npmjs.com for
-    `publish.yaml`, which also gives provenance without `NPM_CONFIG_PROVENANCE`). It cannot be tried without publishing,
-    so it is proven on the first patch release after 3.0.0;
-  - TypeScript 7, once it ships a compiler API (tsup's declaration build and the two doc checks use it);
-  - Node 26 in CI and for contributors once it is LTS; the floor job stays on the `engines` floor;
-  - publishing the tarball CI tested instead of rebuilding it in `publish.yaml` (two builds of one commit are
-    byte-identical today, but the published bytes are not the tested bytes; closing it changes how changesets
-    publishes);
-  - possibly a browser-context-wide `seed` option for hops that open a new tab (non-breaking; today the docs show
-    `browserContext.addInitScript` as the workaround).
-  Considered and not planned: a scheduled workflow that tests the latest release against each new Playwright release
-  (GitHub has no event for another repository's releases), and linting Markdown (biome does not process `.md`).
+  a CommonJS and a `"type": "module"` project; and, when `engines` changes, npm's `EBADENGINE` warning on a Node
+  version below the new floor.
+- Work planned for later is tracked as open GitHub issues labelled `backlog` (`gh issue list --label backlog`), not in
+  this file: read them before planning a release, and turn a working folder's deferred items into issues before the
+  folder is deleted. A breaking item also carries `breaking`.
+- Considered and not planned: a scheduled workflow that tests the latest release against each new Playwright release
+  (GitHub has no event for another repository's releases); linting Markdown (biome does not process `.md`); ending a
+  registration only at calls that could read it (section 5); and validating `nth`'s index, which Playwright's
+  `locator.nth` takes as given (rejecting `nth(undefined)`, documented as matching nothing, would be breaking).
 
 ## 8. Do not
 
@@ -364,7 +396,7 @@ Rules:
   exposed to the app's page (section 5).
 - Add a per-strategy `switch` outside the `STRATEGIES` table, or make `strictChains` the default (section 5).
 - Keep a reference to an object a caller passed to a builder, a RegExp included, let a registration take a call after
-  its registry was called again, or filter stack frames by file name (section 5).
+  its registry was called again, or filter stack frames by file name other than POMWright's own bundle (section 5).
 - Re-export a class as a public type, return `this` from a public builder step, or hide internals with `@internal`
   and `stripInternal` (section 5).
 - Commit without being asked.

@@ -191,8 +191,10 @@ with an empty attribute. See [Registering locators](/POMWright/docs/registering-
 ### Steps come after the strategy
 
 **Compile error.** `add(path).filter(…)`, `.nth(…)` and `.describe(…)` before a strategy method no longer compile:
-call the strategy first, `add("list.item").getByRole("listitem").nth(0)`. A seeded registration keeps its optional
-override as the first call. See [Registering locators](/POMWright/docs/registering-locators/).
+call the strategy first, `add("list.item").getByRole("listitem").nth(0)`. In one chain, a seeded registration's
+optional override comes first too; a registration kept in a variable may take it after its `filter`, `nth` and
+`describe` calls (see [changing a seed's options](/POMWright/docs/reusing-locators/#changing-a-seeds-options)). See
+[Registering locators](/POMWright/docs/registering-locators/).
 
 ### A registration ends at the next call on the registry
 
@@ -202,7 +204,7 @@ locator changed with them. In 3.0.0 it ends at the next call on its registry (`a
 `getLocatorSchema`, `verify`, or resolving a query), and a later step, locator method or seeded override of it throws:
 
 ```text
-filter() cannot apply to "list.item": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+filter() cannot apply to "list.item": its registration was ended by add("list"); give a registration all its steps in its add(…) chain, or query the path for one use.
 ```
 
 Find the registrations kept in variables, and give each all its steps before the registry is called again; a step
@@ -438,7 +440,8 @@ passed to a call. POMWright no longer sets `"load"` itself; Playwright's default
 ### URLs are checked when a page object is constructed
 
 **Fails at run time.** A string `baseUrl` must be an origin with a scheme and nothing after it, and a string `urlPath`
-must be `""` or start with exactly one `/`. The constructor checks every value, a literal or one from the environment:
+must be `""` or start with exactly one `/`, and stay on the base's origin once resolved. The constructor checks every
+value, a literal or one from the environment:
 
 ```text
 LoginPage: baseUrl must be an origin such as "https://example.com" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "https://shop.example/app".

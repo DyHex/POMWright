@@ -264,3 +264,5 @@ Each application has its own base class, with its own origin, so its page object
 
 - [Principles](/POMWright/docs/principles/): the ideas POMWright is built on
 - [Paths and the registry](/POMWright/docs/locator-paths/): how paths work, in depth
+- [When the page changes](/POMWright/docs/locator-paths/#when-the-page-changes): following a change of the page's
+  structure with an edit in one place

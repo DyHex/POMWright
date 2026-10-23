@@ -290,7 +290,8 @@ registry.getLocatorSchema("main.list.item").skip("main.list").getNestedLocator()
 **Throws**
 
 A change to a skipped segment and a second `skip` of it throw at the call, and so does skipping the query's own path
-(from JavaScript):
+(from JavaScript). An `update()` or `replace()` builder taken before the `skip` throws when its method applies the
+change:
 
 ```text
 filter() cannot apply to "main.list": it is skipped in this query; call unskip("main.list") first.

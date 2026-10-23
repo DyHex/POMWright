@@ -114,6 +114,16 @@ test.describe("goto", () => {
 		expect(testNav.page.url()).toBe(`${BASE}/testids`);
 	});
 
+	test("from JavaScript, a URL object throws instead of going to the page object's own URL", async ({ testNav }) => {
+		const untyped = testNav.navigation as unknown as { goto(first: unknown): Promise<void> };
+		await expect(untyped.goto(new URL(`${BASE}/testnav/item/7`))).rejects.toThrow(
+			"TestNav: goto() takes a URL string or options; received a URL object; pass its href.",
+		);
+		expect(testNav.page.url()).toBe("about:blank");
+		await testNav.navigation.goto(new URL(`${BASE}/testnav/item/7`).href);
+		expect(testNav.page.url()).toBe(`${BASE}/testnav/item/7`);
+	});
+
 	test("a trailing slash on baseUrl composes to a single slash", async ({ page }) => {
 		const nav = new TrailingSlashNav(page);
 		expect(nav.fullUrl).toBe(`${BASE}/testnav`);
@@ -160,6 +170,18 @@ test.describe("expectThisPage", () => {
 			await expect(testNav.navigation.expectThisPage({ timeout: 500 }), path).rejects.toThrow(
 				`TestNav: expected URL "${BASE}/testnav"; found "${found}" (page.waitForURL: Timeout 500ms exceeded.)`,
 			);
+		}
+	});
+
+	test("an empty query or fragment is another URL, as for Playwright's toHaveURL", async ({ page, testNav }) => {
+		for (const suffix of ["?", "#"]) {
+			await page.goto(`${BASE}/testnav${suffix}`);
+			expect(page.url()).toBe(`${BASE}/testnav${suffix}`);
+			await expect(page).not.toHaveURL(testNav.fullUrl, { timeout: 500 });
+			await expect(testNav.navigation.expectThisPage({ timeout: 500 })).rejects.toThrow(
+				`TestNav: expected URL "${BASE}/testnav"; found "${BASE}/testnav${suffix}" (page.waitForURL: Timeout 500ms exceeded.)`,
+			);
+			await testNav.navigation.expectAnotherPage({ timeout: 500 });
 		}
 	});
 

@@ -82,6 +82,16 @@ const createChainRegistry = () => {
 };
 const REGISTERED = "locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').nth(0)";
 
+describe("update with an explicit undefined first argument", () => {
+	it("keeps the registered one, as an omitted argument does, with or without options", () => {
+		const query = () => createChainRegistry().getLocatorSchema("main.list.item");
+		expect(String(query().update().locator(undefined, { hasText: "Open" }).getLocator())).toBe(
+			"locator('li', { hasText: 'Open' }).nth(0)",
+		);
+		expect(String(query().update().locator(undefined).getLocator())).toBe("locator('li').nth(0)");
+	});
+});
+
 describe("skip and unskip", () => {
 	it("leave an ancestor out of the chain and bring it back exactly as it was", () => {
 		const query = createChainRegistry().getLocatorSchema("main.list.item");
@@ -117,6 +127,17 @@ describe("skip and unskip", () => {
 		);
 		expect(() => skipped().nth("main.list", 1)).toThrowError(`nth() cannot apply to "main.list": ${unskip}`);
 		expect(() => skipped().clearSteps("main.list")).toThrowError(`clearSteps() cannot apply to "main.list": ${unskip}`);
+	});
+
+	it("reject a change from an update() or replace() builder kept from before the skip, changing nothing", () => {
+		const unskip = 'it is skipped in this query; call unskip("main.list") first.';
+		const query = createChainRegistry().getLocatorSchema("main.list.item");
+		const pendingUpdate = query.update("main.list");
+		const pendingReplace = query.replace("main.list");
+		query.skip("main.list");
+		expect(() => pendingUpdate.locator("ol")).toThrowError(`update() cannot apply to "main.list": ${unskip}`);
+		expect(() => pendingReplace.getByRole("list")).toThrowError(`replace() cannot apply to "main.list": ${unskip}`);
+		expect(String(query.unskip("main.list").getNestedLocator())).toBe(REGISTERED);
 	});
 
 	it("leave the query unchanged when such a call throws", () => {

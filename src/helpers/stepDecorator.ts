@@ -58,20 +58,42 @@ const normalizeStepArguments = (args: StepDecoratorArgs) => {
 	return { title, options };
 };
 
+/**
+ * The method `@step` puts in place of the original. Playwright takes a step's location from the async stack when the
+ * step opens: an unboxed step at its first frame, a boxed one at the frame after it. So an unboxed step's wrapper is not
+ * `async` (the first frame is the caller's), and a boxed step's wrapper is, and awaits the step (its frame is the one a
+ * box leaves out), as the navigation and session storage helpers are.
+ */
 const createWrappedMethod = <T extends AnyMethod>(
 	original: T,
 	methodName: string | symbol,
 	title?: StepTitle,
 	options?: StepOptions,
-) =>
-	function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
-		// in a static method `this` is the class itself
-		const owner = typeof this === "function" ? this : (this as { constructor?: { name?: string } }).constructor;
+) => {
+	const titleFor = (self: unknown): StepTitle => {
+		if (title !== undefined) {
+			return title;
+		}
+		// in a static method `this` is the class itself; a method called without its object has none
+		const owner =
+			typeof self === "function"
+				? self
+				: self === null || self === undefined
+					? undefined
+					: (self as { constructor?: { name?: string } }).constructor;
 		const rawClassName = owner?.name ?? "";
 		const className = rawClassName && rawClassName !== "Object" ? rawClassName : "Anonymous";
-		const resolvedTitle = title ?? `${className}.${String(methodName)}`;
-		return test.step(resolvedTitle, () => original.apply(this, methodArgs), options) as ReturnType<T>;
+		return `${className}.${String(methodName)}`;
+	};
+	if (options?.box) {
+		return async function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
+			return await test.step(titleFor(this), () => original.apply(this, methodArgs), options);
+		} as T;
+	}
+	return function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
+		return test.step(titleFor(this), () => original.apply(this, methodArgs), options) as ReturnType<T>;
 	} as T;
+};
 
 const createStepDecorator =
 	({ title, options }: { title?: StepTitle; options?: StepOptions }) =>
@@ -111,6 +133,10 @@ const createStepDecorator =
  * @param options `test.step`'s options, such as `box` and `timeout`.
  * @param value The method, when `@step` is written without parentheses.
  * @param context The decorator context, when `@step` is written without parentheses.
+ * @param target With `experimentalDecorators` and without parentheses: the class's prototype, or the class itself for a
+ * static method.
+ * @param propertyKey With `experimentalDecorators` and without parentheses: the method's name.
+ * @param descriptor With `experimentalDecorators` and without parentheses: the method's property descriptor.
  * @returns The decorator.
  * @throws From JavaScript, on something that is not a method: `@step decorator can only be applied to methods.`
  *
@@ -128,14 +154,16 @@ export function step<This, Args extends unknown[], Return>(
 	value: StepRequiresPromise,
 	context: ClassMethodDecoratorContext<This, AnyMethod<This, Args, Return>>,
 ): undefined;
-export function step(
-	...args:
-		| StepDecoratorArgs
-		| LegacyMethodDecoratorArgs<AnyMethod>
-		| Stage3MethodDecoratorArgs<AnyMethod>
-		// the message overload exists for the compiler only; at runtime the first argument is the method
-		| [StepRequiresPromise, ClassMethodDecoratorContext]
-): StepDecoratorFactory | AnyMethod | undefined | TypedPropertyDescriptor<AnyMethod> {
+// experimentalDecorators: a bare @step is called with the target, the key and the descriptor; after the two-argument
+// forms, so a standard decorator's error still comes from the message overload above
+export function step<This, Args extends unknown[], Return>(
+	target: object,
+	propertyKey: string | symbol,
+	descriptor: TypedPropertyDescriptor<AsyncMethod<This, Args, Return>>,
+): TypedPropertyDescriptor<AsyncMethod<This, Args, Return>> | undefined;
+export function step(target: object, propertyKey: string | symbol, descriptor: StepRequiresPromise): undefined;
+// the overloads above are what a caller passes and gets; the implementation tells the forms apart with its type guards
+export function step(...args: unknown[]): unknown {
 	if (isStage3MethodDecoratorArgs(args)) {
 		return createStepDecorator(normalizeStepArguments([]))(...args);
 	}

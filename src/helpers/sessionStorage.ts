@@ -5,12 +5,14 @@
  * Values are strings unless a codec is declared for the key, so without a schema the helper is exactly
  * Playwright's contract: strings in, strings out, `null` for a missing key. A helper constructed with an
  * `origin` (every page object with a string `baseUrl`) refuses to touch another origin's storage, which is
- * unreachable without leaving the current document anyway. `seed` writes at once when the page is on the
- * origin and otherwise defers to the page's seed registry, whose init script writes on the first arrival there.
+ * unreachable without leaving the current document anyway. `seed` goes through the page's seed registry,
+ * which writes at once when the page is on the origin and otherwise adds an init script that writes on the
+ * first arrival there. Calls for one origin take turns on the page (`storageTurns.ts`), in call order.
  */
 import { type Page, test } from "@playwright/test";
 import { captureCallSite } from "./callSite";
 import { originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSeed";
+import { takeTurn } from "./storageTurns";
 
 /**
  * How a session storage key's value is stored as a string and read back: `stringify` on the way in, `parse` on the way
@@ -25,7 +27,7 @@ import { originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSee
  */
 export type Codec<T> = {
 	/**
-	 * Turns the stored string into the value. An error it throws makes `get` fail, naming the key and the value.
+	 * Turns the stored string into the value. An error it throws makes `get` fail, naming the key, the error and the stored value.
 	 *
 	 * @param raw The string as stored.
 	 * @returns The value.
@@ -70,6 +72,11 @@ export const json = <T>(): Codec<T> => ({
  */
 export type SessionStorageSchema = Record<string, Codec<unknown>>;
 
+/**
+ * The options of `new SessionStorage(page, options)`: a label, the origin the helper belongs to, and its schema.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#sessionstorageoptions
+ */
 export type SessionStorageOptions<S extends SessionStorageSchema> = {
 	/** Prefix for step titles and error messages. */
 	label?: string;
@@ -79,12 +86,30 @@ export type SessionStorageOptions<S extends SessionStorageSchema> = {
 	schema?: S;
 };
 
-/** The decoded type of key `K`: the codec's type when declared, otherwise `string`. */
-export type Decoded<S extends SessionStorageSchema, K extends string> = K extends keyof S
-	? S[K] extends Codec<infer T>
-		? T
-		: never
-	: string;
+/** The type of any declared key's value: the union of the schema's codecs' types (`never` without codecs). */
+type AnyDecoded<S extends SessionStorageSchema> = { [P in keyof S]: S[P] extends Codec<infer T> ? T : never }[keyof S];
+
+/**
+ * The type of key `K`'s value under schema `S`: the codec's type when the key is declared, otherwise `string`. A key
+ * typed `string`, not a literal, may be any key, so its value is a string or any declared codec's type; pass the literal,
+ * or type the key as the schema's keys (`keyof typeof schema`), for one codec's type. `get` returns it, with `null`, and
+ * `set` and `seed` take it.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#decoded
+ */
+export type Decoded<S extends SessionStorageSchema, K extends string> = string extends K
+	? string | AnyDecoded<S>
+	: K extends keyof S
+		? S[K] extends Codec<infer T>
+			? T
+			: never
+		: string;
+
+/**
+ * `K`, but not a place TypeScript infers `K` from, so `set(key, value)` takes the key's type from the key alone; inferred
+ * from the value too, `K` could widen to `string` and accept any value. TypeScript's own `NoInfer` needs 5.4.
+ */
+type KeyOnly<K> = [K][K extends unknown ? 0 : never];
 
 /** A record whose every value is typed by its key's codec. */
 export type EntriesFor<S extends SessionStorageSchema, E> = { [K in keyof E]: Decoded<S, K & string> };
@@ -92,12 +117,21 @@ export type EntriesFor<S extends SessionStorageSchema, E> = { [K in keyof E]: De
 /** A key list that cannot be the literal `[]`; computed lists, including empty ones, still pass. */
 export type NonEmpty<K extends string> = readonly K[] & ([K] extends [never] ? never : unknown);
 
+/**
+ * The options of `seed`: the origin to seed, when it is not the helper's.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#seedoptions
+ */
 export type SeedOptions = {
 	/** The origin to seed; defaults to the helper's `origin`. */
 	origin?: string;
 };
 
-/** The shape `get()` returns: plain strings without a schema, otherwise declared keys decoded. */
+/**
+ * What `get()` returns: every entry, as plain strings without a schema, otherwise with the declared keys decoded.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#allentries
+ */
 export type AllEntries<S extends SessionStorageSchema> = [keyof S] extends [never]
 	? Record<string, string>
 	: { [K in keyof S]?: Decoded<S, K & string> } & Record<string, string | Decoded<S, keyof S & string>>;
@@ -109,16 +143,27 @@ const describeOrigin = (value: string): string | undefined => {
 	} catch {
 		return undefined;
 	}
-	return url.host !== "" && url.pathname === "/" && url.search === "" && url.hash === "" ? url.origin : undefined;
+	// a scheme such as chrome-extension: or file: has a host but no origin in the URL standard ("null"), which no page
+	// URL would ever be compared equal to
+	return url.host !== "" && url.pathname === "/" && url.search === "" && url.hash === "" && url.origin !== "null"
+		? url.origin
+		: undefined;
 };
 
 /** Throws unless `value` is an origin; returns it normalised. */
 const normaliseOrigin = (value: string, title: string): string => {
 	const origin = describeOrigin(value);
 	if (origin === undefined) {
+		let why = "";
+		try {
+			const url = new URL(value);
+			why = url.host !== "" && url.origin === "null" ? ", whose scheme has no URL origin" : "";
+		} catch {
+			// not a URL at all: the rule says enough
+		}
 		throw new Error(
 			`${title}: origin must be an origin such as "https://app.example" or "http://localhost:9000" ` +
-				`(scheme, host, optional port, no path, query or hash); received ${JSON.stringify(value)}`,
+				`(scheme, host, optional port, no path, query or hash); received ${JSON.stringify(value)}${why}`,
 		);
 	}
 	return origin;
@@ -132,13 +177,15 @@ export const encodeEntries = (
 	entries: Record<string, unknown>,
 	title: string,
 ): Record<string, string> => {
-	const encoded: Record<string, string> = {};
+	// no prototype: assigning "__proto__" on a plain object would set its prototype instead of storing the key
+	const encoded: Record<string, string> = Object.create(null);
 	for (const [key, value] of Object.entries(entries)) {
 		const codec = hasCodec(schema, key) ? schema[key] : undefined;
 		if (codec === undefined) {
 			if (typeof value !== "string") {
 				throw new TypeError(
-					`${title}: value for ${JSON.stringify(key)} is not a string and no codec is declared for it`,
+					`${title}: value for ${JSON.stringify(key)} is not a string and no codec is declared for it; declare one in ` +
+						"the schema (a page object's sessionStorage.schema option)",
 				);
 			}
 			encoded[key] = value;
@@ -170,7 +217,14 @@ export const decodeValue = (schema: SessionStorageSchema, key: string, raw: stri
 	try {
 		return codec.parse(raw);
 	} catch (error) {
-		throw new TypeError(`${title}: value for ${JSON.stringify(key)} could not be decoded: ${raw}`, { cause: error });
+		// the reason first, then the whole value last and quoted, so an empty or whitespace value is visible
+		const reason =
+			error instanceof Error ? (error.message ? `${error.name}: ${error.message}` : error.name) : String(error);
+		const length = `${raw.length} character${raw.length === 1 ? "" : "s"}`;
+		throw new TypeError(
+			`${title}: value for ${JSON.stringify(key)} could not be decoded (${reason}); stored value, ${length}: ${JSON.stringify(raw)}`,
+			{ cause: error },
+		);
 	}
 };
 
@@ -182,13 +236,6 @@ const readTestOutcome: ReadTestOutcome = () => {
 		return undefined;
 	}
 };
-
-/**
- * The browser's refusal to touch storage on a document without an origin, such as `about:blank`: Chromium and
- * WebKit raise a `SecurityError`, Firefox says "The operation is insecure".
- */
-const isNoOriginError = (error: unknown): error is Error =>
-	error instanceof Error && /SecurityError|Access is denied|The operation is insecure/.test(error.message);
 
 /**
  * Playwright's `page.sessionStorage` with batches, report steps, an origin check, per-key codecs and `seed`. Values are
@@ -245,55 +292,134 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		return test.step(`${this.title(method)}:`, body, { box: true });
 	}
 
-	/** One call into `page.sessionStorage`; the browser's refusal on a document without an origin is explained. */
+	/**
+	 * One call into `page.sessionStorage`, its failure labelled; a page without an origin and a sandboxed document are
+	 * explained.
+	 */
 	private async access<T>(method: string, call: () => Promise<T>): Promise<T> {
 		try {
 			return await call();
 		} catch (error) {
-			if (isNoOriginError(error) || (error instanceof Error && originOf(this.page.url()) === undefined)) {
+			const url = this.page.url();
+			if (originOf(url) === undefined) {
+				const instead = method === "seed" ? "" : " or use seed()";
 				throw new Error(
-					`${this.title(method)}: the page has no origin yet (${this.page.url()}); navigate to the origin first or use seed()`,
+					`${this.title(method)}: the page has no origin yet (${url}); navigate to the origin first${instead}`,
+					{
+						cause: error,
+					},
+				);
+			}
+			// the browsers word the refusal differently, so the document's own origin tells a sandboxed document apart
+			if (await this.page.evaluate(() => self.origin === "null").catch(() => false)) {
+				throw new Error(
+					`${this.title(method)}: the document at ${url} cannot use sessionStorage: its origin is opaque, as in a ` +
+						"sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)",
 					{ cause: error },
 				);
 			}
-			throw error;
+			throw new Error(`${this.title(method)}: ${error instanceof Error ? error.message : String(error)}`, {
+				cause: error,
+			});
 		}
 	}
 
-	/** A helper with an origin touches only that origin's storage. */
-	private assertOnOrigin(method: string): void {
-		if (this.origin === undefined) {
+	/**
+	 * One storage call per key, in order: Playwright has no batch call, so a navigation can stop the batch partway. The
+	 * failure then says so and names the keys already done, which stay.
+	 */
+	private async eachKey(
+		method: string,
+		keys: readonly string[],
+		[doing, done]: readonly [doing: string, done: string],
+		call: (key: string) => Promise<void>,
+	): Promise<void> {
+		const start = originOf(this.page.url());
+		for (const [index, key] of keys.entries()) {
+			try {
+				await this.access(method, () => call(key));
+			} catch (error) {
+				const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
+				const destroyed = cause instanceof Error && /Execution context was destroyed/.test(cause.message);
+				if (start === undefined || !(destroyed || originOf(this.page.url()) !== start)) {
+					throw error;
+				}
+				const finished = keys.slice(0, index);
+				throw new Error(
+					`${this.title(method)}: the page navigated while ${method}() was ${doing} ${start}; ` +
+						`${finished.length} of ${keys.length} ${keys.length === 1 ? "key was" : "keys were"} ${done}` +
+						(finished.length > 0 ? ` (${finished.join(", ")})` : ""),
+					{ cause },
+				);
+			}
+		}
+	}
+
+	/**
+	 * A helper with an origin touches only that origin's storage. Synchronous, from the page's URL, so a call joins its
+	 * turn at once; `assertInheritedOrigin` adds the case of a URL without an origin, inside the turn.
+	 */
+	private assertOnOrigin(method: string, current = originOf(this.page.url())): void {
+		if (this.origin === undefined || current === undefined || current === this.origin) {
 			return;
 		}
-		const current = originOf(this.page.url());
-		if (current !== undefined && current !== this.origin) {
-			throw new Error(
-				`${this.title(method)}: the page is on ${current}, not on this page object's origin ${this.origin}; ` +
-					"another origin's sessionStorage is reachable only from a document on it. " +
-					`Use the page object for ${current}, or a standalone SessionStorage without an origin`,
-			);
+		const url = this.page.url();
+		throw new Error(
+			`${this.title(method)}: the page ${originOf(url) === undefined ? `(${url}) ` : ""}is on ${current}, not on this ` +
+				`page object's origin ${this.origin}; another origin's sessionStorage is reachable only from a document on ` +
+				`it. Use the page object for ${current}, or a standalone SessionStorage without an origin`,
+		);
+	}
+
+	/**
+	 * The page's URL has no origin (`about:blank`), but its document may have inherited one, as a popup from
+	 * `window.open()` does: then the document is asked, and the origin check applies to that.
+	 */
+	private async assertInheritedOrigin(method: string): Promise<void> {
+		if (this.origin === undefined || originOf(this.page.url()) !== undefined) {
+			return;
 		}
+		const inherited = await this.page.evaluate(() => self.origin).catch(() => "null");
+		this.assertOnOrigin(method, inherited === "null" ? undefined : inherited);
+	}
+
+	/**
+	 * Runs `task` in its turn among the page's session storage calls for the origin this call touches: the helper's, or
+	 * the one the page is on (`""` without one). The origin is checked again when the turn starts, since the page may
+	 * have left while the call waited.
+	 */
+	private inTurn<T>(method: string, task: () => Promise<T>): Promise<T> {
+		return takeTurn(this.page, this.origin ?? originOf(this.page.url()) ?? "", async () => {
+			this.assertOnOrigin(method);
+			await this.assertInheritedOrigin(method);
+			return await task();
+		});
 	}
 
 	private async write(method: string, encoded: Record<string, string>): Promise<void> {
-		for (const [key, value] of Object.entries(encoded)) {
-			await this.access(method, () => this.page.sessionStorage.setItem(key, value));
-		}
+		await this.eachKey(method, Object.keys(encoded), ["writing to", "written"], (key) =>
+			this.page.sessionStorage.setItem(key, encoded[key] as string),
+		);
 	}
 
 	/**
 	 * Writes one entry, or several, to the session storage of the origin the page is on: each value through its key's
 	 * codec, or as the string it must be. Every value is encoded before any is written, so a bad value writes nothing.
+	 * Calls for one origin act in the order they were made, also when they overlap, across every helper on the page.
 	 *
 	 * @param key The key.
 	 * @param value The value: a string, or the type of the key's codec.
 	 * @param entries Several keys and values, written in one call.
 	 * @throws When a value for a key without a codec is not a string
-	 * (`Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it`), when a key's codec
+	 * (`Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)`), when a key's codec
 	 * throws (`… value for "user" could not be encoded`) or returns something other than a string
 	 * (`… the codec for "user" returned undefined instead of a string`), when the page is on another origin than the
-	 * helper's, and when the page has no origin yet
-	 * (`Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()`).
+	 * helper's, when the page has no origin yet
+	 * (`Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()`),
+	 * when the document is sandboxed, so its origin is opaque
+	 * (`Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque, …`),
+	 * and when the page navigates during the batch, which is written one key at a time and stops there
+	 * (`Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)`).
 	 *
 	 * @example
 	 * ```ts
@@ -303,26 +429,27 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#set
 	 */
-	set<K extends string>(key: K, value: Decoded<S, K>): Promise<void>;
+	set<K extends string>(key: K, value: Decoded<S, KeyOnly<K>>): Promise<void>;
 	set<E extends Record<string, unknown>>(entries: EntriesFor<S, E>): Promise<void>;
 	async set(keyOrEntries: string | Record<string, unknown>, value?: unknown): Promise<void> {
 		const entries = typeof keyOrEntries === "string" ? { [keyOrEntries]: value } : keyOrEntries;
 		await this.step("set", async () => {
 			this.assertOnOrigin("set");
-			await this.write("set", encodeEntries(this.schema, entries, this.title("set")));
+			const encoded = encodeEntries(this.schema, entries, this.title("set"));
+			await this.inTurn("set", () => this.write("set", encoded));
 		});
 	}
 
 	/**
 	 * Reads the session storage of the origin the page is on: every entry, one key, or several, each value through its
 	 * key's codec. A missing key reads as `null`. A literal `[]` does not compile; a list that is empty at run time
-	 * reads nothing.
+	 * reads nothing. In a `Promise.all`, it reads what an earlier `set` for the origin wrote.
 	 *
 	 * @param key One key: returns its value, or `null`.
 	 * @param keys Several keys: returns a record with every key, `null` for each that is missing.
 	 * @returns Without an argument, every entry; otherwise the value or the record.
 	 * @throws When a stored value cannot be decoded by its codec
-	 * (`Shop.SessionStorage.get: value for "user" could not be decoded: {not json`), when the page is on another origin
+	 * (`Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"`), when the page is on another origin
 	 * than the helper's, and when the page has no origin yet.
 	 *
 	 * @example
@@ -340,45 +467,51 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		// awaited, not returned: see step()
 		return await this.step("get", async () => {
 			this.assertOnOrigin("get");
-			const title = this.title("get");
-			if (typeof keyOrKeys === "string") {
-				return decodeValue(
-					this.schema,
-					keyOrKeys,
-					await this.access("get", () => this.page.sessionStorage.getItem(keyOrKeys)),
-					title,
-				);
-			}
-			if (keyOrKeys !== undefined) {
-				const pairs = await Promise.all(
-					keyOrKeys.map(
-						async (key) =>
-							[
-								key,
-								decodeValue(
-									this.schema,
-									key,
-									await this.access("get", () => this.page.sessionStorage.getItem(key)),
-									title,
-								),
-							] as const,
-					),
-				);
-				return Object.fromEntries(pairs);
-			}
-			const items = await this.access("get", () => this.page.sessionStorage.items());
-			return Object.fromEntries(
-				items.map((item) => [item.name, decodeValue(this.schema, item.name, item.value, title)]),
-			);
+			return await this.inTurn("get", () => this.read(keyOrKeys));
 		});
 	}
 
+	/** What `get` reads, in its turn: one key, several, or every entry, each through its key's codec. */
+	private async read(keyOrKeys: string | readonly string[] | undefined): Promise<unknown> {
+		const title = this.title("get");
+		if (typeof keyOrKeys === "string") {
+			return decodeValue(
+				this.schema,
+				keyOrKeys,
+				await this.access("get", () => this.page.sessionStorage.getItem(keyOrKeys)),
+				title,
+			);
+		}
+		if (keyOrKeys !== undefined) {
+			const pairs = await Promise.all(
+				keyOrKeys.map(
+					async (key) =>
+						[
+							key,
+							decodeValue(
+								this.schema,
+								key,
+								await this.access("get", () => this.page.sessionStorage.getItem(key)),
+								title,
+							),
+						] as const,
+				),
+			);
+			return Object.fromEntries(pairs);
+		}
+		const items = await this.access("get", () => this.page.sessionStorage.items());
+		return Object.fromEntries(items.map((item) => [item.name, decodeValue(this.schema, item.name, item.value, title)]));
+	}
+
 	/**
-	 * Removes entries from the session storage of the origin the page is on: every entry, one key, or several.
+	 * Removes entries from the session storage of the origin the page is on: every entry, one key, or several. Calls for
+	 * one origin act in the order they were made, also when they overlap.
 	 *
 	 * @param key One key.
 	 * @param keys Several keys. A literal `[]` does not compile; a list that is empty at run time removes nothing.
-	 * @throws When the page is on another origin than the helper's, and when the page has no origin yet.
+	 * @throws When the page is on another origin than the helper's, when the page has no origin yet, and when the page
+	 * navigates while several keys are being removed
+	 * (`Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token)`).
 	 *
 	 * @example
 	 * ```ts
@@ -394,13 +527,18 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	async clear(keyOrKeys?: string | readonly string[]): Promise<void> {
 		await this.step("clear", async () => {
 			this.assertOnOrigin("clear");
-			if (keyOrKeys === undefined) {
-				await this.access("clear", () => this.page.sessionStorage.clear());
-				return;
-			}
-			for (const key of typeof keyOrKeys === "string" ? [keyOrKeys] : keyOrKeys) {
-				await this.access("clear", () => this.page.sessionStorage.removeItem(key));
-			}
+			await this.inTurn("clear", async () => {
+				if (keyOrKeys === undefined) {
+					await this.access("clear", () => this.page.sessionStorage.clear());
+					return;
+				}
+				await this.eachKey(
+					"clear",
+					typeof keyOrKeys === "string" ? [keyOrKeys] : keyOrKeys,
+					["removing keys from", "removed"],
+					(key) => this.page.sessionStorage.removeItem(key),
+				);
+			});
 		});
 	}
 
@@ -408,7 +546,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * Stores entries for an origin before the app's next load there, so the app's first script sees them, without
 	 * leaving the page the test is on; on the origin already, it writes at once. A seed that is still waiting when the
 	 * page closes fails the test. Calls for one origin merge in the order they were made, later values winning per key,
-	 * also when they overlap. Await it before the action that starts the hop.
+	 * also when they overlap, on the origin or before the hop. Await it before the action that starts the hop. Entries
+	 * that are empty at run time (`seed({})`) do nothing.
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#seed
 	 *
@@ -417,9 +556,15 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * @param entries Several keys and values.
 	 * @param options `{ origin }`: the origin to seed. Defaults to the helper's origin, which a page object's helper has.
 	 * @throws At the call, when there is no origin (`Shop.SessionStorage.seed: an origin is required; pass { origin } or
-	 * construct the helper with one`), when the browser has no Navigation API, and when the page commits a document on
-	 * the origin while the seed is being registered; later, failing the test with the line of this call in the stack,
-	 * when the browser refuses the write (the storage quota) or when the page closes before the seed was applied.
+	 * construct the helper with one`), when a value cannot be encoded, as for `set`
+	 * (`… value for "orderId" is not a string and no codec is declared for it; …`, `… could not be encoded`,
+	 * `… the codec for "orderId" returned undefined instead of a string`), when the browser has no Navigation API, when the page commits a document on the
+	 * origin while the seed is being registered, and when the page closes before it is registered (`… the page closed
+	 * while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends`);
+	 * later, failing the test with the line of this call in the stack, when the browser refuses the write (the storage
+	 * quota), when the document that arrives on the origin does not take the seed (after a navigation there that failed:
+	 * `… was not applied: the document that arrived on https://pay.example has an opaque origin …`), or when the page
+	 * closes before the seed was applied.
 	 *
 	 * @example
 	 * ```ts
@@ -427,7 +572,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * await loginPage.navigation.goto(); // the app's first script already sees the token
 	 * ```
 	 */
-	seed<K extends string>(key: K, value: Decoded<S, K>, options?: SeedOptions): Promise<void>;
+	seed<K extends string>(key: K, value: Decoded<S, KeyOnly<K>>, options?: SeedOptions): Promise<void>;
 	seed<E extends Record<string, unknown>>(entries: EntriesFor<S, E>, options?: SeedOptions): Promise<void>;
 	async seed(
 		keyOrEntries: string | Record<string, unknown>,
@@ -439,19 +584,27 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 			typeof keyOrEntries === "string"
 				? [{ [keyOrEntries]: valueOrOptions }, maybeOptions]
 				: [keyOrEntries, valueOrOptions as SeedOptions | undefined];
-		await this.step("seed", async () => {
-			const title = this.title("seed");
-			const requested = options?.origin;
-			const origin = requested === undefined ? this.origin : normaliseOrigin(requested, title);
-			if (origin === undefined) {
-				throw new Error(`${title}: an origin is required; pass { origin } or construct the helper with one`);
-			}
-			const encoded = encodeEntries(this.schema, entries, title);
-			if (originOf(this.page.url()) === origin) {
-				await this.write("seed", encoded);
-				return;
-			}
-			await registryFor(this.page, readTestOutcome).add(origin, encoded, title, site);
-		});
+		// the page as the call finds it, before the step: Playwright may await work of its own before the body runs
+		const registry = registryFor(this.page, readTestOutcome);
+		const atCall = registry.snapshot();
+		try {
+			await this.step("seed", async () => {
+				const title = this.title("seed");
+				const requested = options?.origin;
+				const origin = requested === undefined ? this.origin : normaliseOrigin(requested, title);
+				if (origin === undefined) {
+					throw new Error(`${title}: an origin is required; pass { origin } or construct the helper with one`);
+				}
+				const encoded = encodeEntries(this.schema, entries, title);
+				if (Object.keys(encoded).length === 0) {
+					// nothing to store, as get([]) and clear([]) read and remove nothing; a seed without keys would only wait
+					return;
+				}
+				// on the origin, the registry writes at once in the call's turn; elsewhere it registers the seed
+				await registry.add(origin, encoded, title, site, () => this.write("seed", encoded), atCall);
+			});
+		} finally {
+			atCall.stop();
+		}
 	}
 }

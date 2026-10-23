@@ -38,8 +38,8 @@ A locator schema with the path "main" already exists.
 Existing and attempted schemas: { … }
 ```
 
-Thrown by the locator method of a second `add(path)` for the same path. Each path has one locator: give the second
-one its own path, or change the first.
+Thrown by the locator method of a second `add(path)` for the same path, or, with `{ reuse }`, by `add` itself, which
+registers at once. Each path has one locator: give the second one its own path, or change the first.
 
 ### Two locator methods on one registration
 
@@ -70,13 +70,15 @@ empty string, which Playwright matches. See [registering locators](/POMWright/do
 ### A registration that has ended
 
 ```text
-nth() cannot apply to "main.list.item": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
-getByRole() cannot apply to "main.button@save": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+nth() cannot apply to "main.button@save": its registration was ended by add("main.list.item"); give a registration all its steps in its add(…) chain, or query the path for one use.
+filter() cannot apply to "list.item@open": its registration was ended by getLocator("badge"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "badge" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
 ```
 
 A method of a registration kept in a variable, called after the registry was called again (the next `add`,
-`getLocator`, `getNestedLocator`, `getLocatorSchema`, `verify`, or the resolution of a query). Give the registration
-all its steps before that, in its chain; for a variation of one use, query the path. See
+`getLocator`, `getNestedLocator`, `getLocatorSchema`, `verify`, or the resolution of a query), which the message names.
+Give the registration all its steps before that, in its chain; for a variation of one use, query the path. A
+`getLocator` or `getNestedLocator` in a filter's own arguments runs before the filter: pass a path, or resolve the
+locator before `add(…)`. See
 [registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change).
 
 ### A step before the locator method
@@ -109,6 +111,13 @@ reuse requires a registered path or a seed from createReusable for "main.list.it
 
 Thrown by `add(path, { reuse })`: the reused path is not registered (register it first, or fix its name); the path
 reuses itself; or the value is neither a path nor a seed (from JavaScript).
+
+```text
+Invalid reuse path configuration for "main.same": Invalid reuse path, reuse path cannot be the same as registration path: main.same
+```
+
+Thrown from JavaScript by `add(path, { reuse })` when `reuse` is an array: the form in which the types report a path
+that reuses itself, so only JavaScript can pass it. Reuse another path.
 
 ```text
 The locator definition for "main.button@cancel" must use the "role" strategy when reusing a locator.
@@ -222,8 +231,10 @@ The any-frame form has no element: it cannot be the query's own path, carry step
 
 ```text
 LoginPage: baseUrl must be an origin such as "https://example.com" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "localhost:9000".
+LoginPage: baseUrl must be an origin such as "https://example.com" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "chrome-extension://abcdef/", whose scheme has no URL origin.
 LoginPage: baseUrl must be a string or a RegExp; received undefined.
 LoginPage: urlPath must be "" or start with exactly one "/"; received "login".
+LoginPage: urlPath must be a path on the page object's origin; received "/\\login.example/account", which names the host "login.example" instead. A "/" followed by another "/" or a "\", also with a tab or line break between them, starts a host.
 ```
 
 Thrown by the constructor. A string `baseUrl` is an origin with a scheme and nothing after it; a path goes in
@@ -275,17 +286,26 @@ and method.
 
 ```text
 Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()
+Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)
 AccountPage.SessionStorage.get: the page is on https://login.example, not on this page object's origin https://shop.example; another origin's sessionStorage is reachable only from a document on it. Use the page object for https://login.example, or a standalone SessionStorage without an origin
 ```
 
 `set`, `get` and `clear` work on the page's current origin, so the page must be on one, and a helper that belongs to
-an origin must be on it.
+an origin must be on it. A sandboxed document has no session storage, although its URL has an origin.
 
 ```text
-Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it
+Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)
+Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token)
+```
+
+Playwright writes and removes one key per call, so a navigation can stop a batch; the keys named were done, and stay
+so. Any other error from Playwright gets the label in front of its message and is the `cause`.
+
+```text
+Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)
 Shop.SessionStorage.set: value for "user" could not be encoded
 Shop.SessionStorage.set: the codec for "user" returned undefined instead of a string
-Shop.SessionStorage.get: value for "user" could not be decoded: {not json
+Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"
 ```
 
 A key without a codec holds a string; declare a codec for a key that holds anything else. A codec's own error is the
@@ -293,22 +313,29 @@ A key without a codec holds a string; declare a codec for a key that holds anyth
 
 ```text
 Shop.SessionStorage.constructor: origin must be an origin such as "https://app.example" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "shop.example"
+Shop.SessionStorage.constructor: origin must be an origin such as "https://app.example" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "chrome-extension://abcdef/", whose scheme has no URL origin
 ```
 
 ### seed
 
 ```text
 Shop.SessionStorage.seed: an origin is required; pass { origin } or construct the helper with one
+Shop.SessionStorage.seed: value for "orderId" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)
+Shop.SessionStorage.seed: value for "orderId" could not be encoded
+Shop.SessionStorage.seed: the codec for "orderId" returned undefined instead of a string
 Shop.SessionStorage.seed: the page committed a document on https://pay.example while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it
 Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation) to write only on the first arrival at https://pay.example, and this browser has none (Mozilla/5.0 …); use set() on the origin and reload instead
+Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends
 ```
 
-At the call. The others fail the test later, when the app's document loads or when the page closes, with the line of
+At the call, the last when the page closes before the seed is registered. The others fail the test later, when the app's document loads or when the page closes, with the line of
 the `seed` call in the stack:
 
 ```text
 Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the document that arrived on https://pay.example has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the browser counted the page's arrival on https://pay.example as a return there (navigation.activation.from is set), as after a failed navigation to it
 ```
 
 See [what `seed` cannot do](/POMWright/docs/seeding-session-storage/#what-seed-cannot-do).

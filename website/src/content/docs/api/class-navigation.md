@@ -142,11 +142,13 @@ await loginPage.navigation.goto("https://help.shop.example/");
 
 **Throws**
 
-What `page.goto()` throws. From JavaScript, on a page object whose URL is a RegExp:
+What `page.goto()` throws. From JavaScript, on a page object whose URL is a RegExp, and for a first argument that is
+neither a URL string nor options, which `page.goto()` rejects too:
 
 ```text
 AccountPage: goto() without a URL needs a string fullUrl; this page object has a RegExp URL. Pass an absolute URL instead.
 AccountPage: goto("/account") needs an absolute URL because baseUrl is a RegExp.
+LoginPage: goto() takes a URL string or options; received a URL object; pass its href.
 ```
 
 ---

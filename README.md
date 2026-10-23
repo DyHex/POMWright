@@ -9,30 +9,128 @@
 [![License](https://img.shields.io/github/license/DyHex/POMWright)](https://github.com/DyHex/POMWright/blob/main/LICENSE)
 [![Created at ICE](https://img.shields.io/badge/created%40-ICE-ffcd00)](https://www.ice.no/)
 
-POMWright is a TypeScript library for [Playwright Test](https://playwright.dev/) that organises a suite's locators
-and page objects. You register one locator per dot-delimited path, such as `main.form@login.button@login`, with
-Playwright's own methods, and POMWright builds the Playwright locator chain from the locators of the path's segments.
-A page object registers its locators and checks them as it is created, so a mistake in a locator fails the fixture
-before the test body runs.
+POMWright is a TypeScript library for [Playwright Test](https://playwright.dev/) that gives a suite's locators one
+place to live. You register each locator once, under a dot-delimited path, with Playwright's own methods; POMWright
+builds the chain from the path, and what you get back is a plain Playwright `Locator`. Page objects, session storage,
+report logging and steps build on that, and each part works on its own.
 
-## What it adds to Playwright
+## Example
 
-- **Locator chains from paths.** Playwright recommends chaining locators, so that each element is found inside the one
-  it belongs to. POMWright builds those chains: `getNestedLocator("main.form@login.button@login")` resolves to
-  `locator('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })`, and the trace viewer
-  and the report show the path. Paths are checked at compile time and at run time.
-- **Page objects that check themselves.** `PageObject` registers its locators once and checks every path right after it
-  is created: a filter that names a path that does not exist, a cycle, a frame segment in the wrong place. From its URL
-  it gets `goto`, `expectThisPage` and `expectAnotherPage`, each one Playwright call with Playwright's waits.
-- **Changes for one use.** `getLocatorSchema(path)` returns a copy of a path's chain to filter, index, patch or replace
-  for one test; the registered locator never changes.
-- **Session storage.** Playwright's `page.sessionStorage` with codecs, report steps and `seed`, which stores entries
-  before the app's first script reads them.
-- **Reports.** A `log` fixture whose entries are attached to the test's report, and `@step`, which turns a method into
-  a report step.
+An orders page lists orders in a table. The rows are registered once; two methods narrow them to one order, and each
+reaches a different element in that row:
 
-Each part can be used on its own. POMWright does not replace Playwright's API, runner or assertions: locators are
-Playwright `Locator`s, and `@playwright/test` is a peer dependency.
+```ts
+// orders.page.ts
+import { expect, type Page } from "@playwright/test";
+import { PageObject, step } from "pomwright";
+
+type Paths =
+  | "main"
+  | "main.table@orders"
+  | "main.table@orders.row"
+  | "main.table@orders.row.button@cancel"
+  | "main.table@orders.row.cell@status";
+
+export class OrdersPage extends PageObject<Paths> {
+  constructor(page: Page) {
+    super(page, "https://shop.example", "/orders");
+  }
+
+  protected defineLocators(): void {
+    this.add("main").locator("main");
+    this.add("main.table@orders").getByRole("table", { name: "Orders" });
+    this.add("main.table@orders.row").getByRole("row");
+    this.add("main.table@orders.row.button@cancel").getByRole("button", { name: "Cancel" });
+    this.add("main.table@orders.row.cell@status").getByTestId("order-status");
+  }
+
+  @step()
+  async cancel(order: string) {
+    await this.getLocatorSchema("main.table@orders.row.button@cancel")
+      .filter("main.table@orders.row", { hasText: order })
+      .getNestedLocator()
+      .click();
+  }
+
+  @step()
+  async expectStatus(order: string, status: string) {
+    const cell = this.getLocatorSchema("main.table@orders.row.cell@status")
+      .filter("main.table@orders.row", { hasText: order })
+      .getNestedLocator();
+    await expect(cell).toHaveText(status);
+  }
+}
+```
+
+The test receives the page object as a Playwright fixture:
+
+```ts
+// orders.spec.ts
+import { expect } from "@playwright/test";
+import { test as base } from "pomwright";
+import { OrdersPage } from "./orders.page";
+
+const test = base.extend<{ ordersPage: OrdersPage }>({
+  ordersPage: async ({ page }, use) => {
+    await use(new OrdersPage(page));
+  },
+});
+
+test("a customer cancels an open order", async ({ ordersPage }) => {
+  await ordersPage.navigation.goto();
+  await ordersPage.cancel("ORD-1042");
+  await ordersPage.expectStatus("ORD-1042", "Cancelled");
+});
+
+test("two orders are still open", async ({ ordersPage }) => {
+  await ordersPage.navigation.goto();
+  const openOrders = ordersPage
+    .getLocatorSchema("main.table@orders.row")
+    .filter({ hasText: "Open" })
+    .getNestedLocator();
+  await expect(openOrders).toHaveCount(2);
+});
+```
+
+`cancel("ORD-1042")` clicks this locator, which the report and the trace viewer show by its path,
+`main.table@orders.row.button@cancel`:
+
+```text
+locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })
+```
+
+`getLocatorSchema(path)` returns a copy of the path's chain to narrow, index, patch or replace for one use, as both
+methods and the second test do; the registered locators never change. A path that is not in `Paths` does not compile,
+and a mistake the compiler cannot see fails the fixture before the test body runs. Say `Paths` also declared
+`main.table@orders.caption`, and the table were registered with `filter({ has: "main.table@orders.caption" })`, but the
+caption itself never was:
+
+```text
+OrdersPage: Locator registry verification failed for 1 of 5 paths:
+  "main.table@orders": No locator schema registered for path "main.table@orders.caption".
+```
+
+## The parts on their own
+
+POMWright does not replace Playwright's API, runner or assertions, and `@playwright/test` is a peer dependency. Use as
+much of it as you need:
+
+| part | on its own |
+| --- | --- |
+| the locator registry | `const { add, getNestedLocator } = createRegistryWithAccessors<Paths>(page);` |
+| page objects | `class OrdersPage extends PageObject<Paths>`, with `goto`, `expectThisPage` and `expectAnotherPage` from its URL |
+| session storage | `await new SessionStorage(page, { origin }).seed({ token });` stores entries before the app's first script reads them |
+| report logging | `test` from `pomwright`, whose `log` fixture attaches its entries to the test's report |
+| report steps | `@step()` on any `async` method makes it a step of the report |
+
+A suite with a few pages and little repetition may need none of it: plain Playwright locators in a class are enough
+there. The registry pays off as a suite grows:
+
+- **The same structure, located again and again,** with a variation for one use, while the registered locator stays
+  as it is.
+- **Locators shared** across page objects, or across applications, through locator modules and seeds.
+- **Many similar elements on a page.** Every path resolves as a chain scoped by its ancestors, so a Cancel button is
+  found in its row, in the orders table, in `main`. The scope is written once, in the registry, not at every use.
 
 ## Installation
 
@@ -41,66 +139,6 @@ npm install --save-dev pomwright
 ```
 
 POMWright 3 needs `@playwright/test` 1.64 or later (below 2) and Node 20 or later.
-
-## Example
-
-A page object names its paths, passes its URL, and registers a locator per path:
-
-```ts
-// login.page.ts
-import type { Page } from "@playwright/test";
-import { PageObject, step } from "pomwright";
-
-type Paths =
-  | "main"
-  | "main.form@login"
-  | "main.form@login.input@email"
-  | "main.form@login.input@password"
-  | "main.form@login.button@login";
-
-export class LoginPage extends PageObject<Paths> {
-  constructor(page: Page) {
-    super(page, "https://shop.example", "/login");
-  }
-
-  protected defineLocators(): void {
-    this.add("main").locator("main");
-    this.add("main.form@login").getByRole("form", { name: "Log in" });
-    this.add("main.form@login.input@email").getByLabel("Email");
-    this.add("main.form@login.input@password").getByLabel("Password");
-    this.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
-  }
-
-  @step()
-  async logIn(email: string, password: string) {
-    await this.getNestedLocator("main.form@login.input@email").fill(email);
-    await this.getNestedLocator("main.form@login.input@password").fill(password);
-    await this.getNestedLocator("main.form@login.button@login").click();
-  }
-}
-```
-
-Tests receive it as a Playwright fixture:
-
-```ts
-// login.spec.ts
-import { test as base } from "pomwright";
-import { LoginPage } from "./login.page";
-
-const test = base.extend<{ loginPage: LoginPage }>({
-  loginPage: async ({ page }, use) => {
-    await use(new LoginPage(page));
-  },
-});
-
-test("a registered customer can log in", async ({ loginPage }) => {
-  await loginPage.navigation.goto();
-  await loginPage.logIn("ada@shop.example", "correct horse");
-  await loginPage.navigation.expectAnotherPage(); // the login page sends the customer on
-});
-```
-
-[Getting started](https://dyhex.github.io/POMWright/docs/installation/) walks through this example step by step.
 
 ## Documentation
 
@@ -112,7 +150,8 @@ test("a registered customer can log in", async ({ loginPage }) => {
 - [Internal](https://dyhex.github.io/POMWright/internal/): how POMWright works
 
 Using POMWright 2.x? Its documentation is in this repository at the
-[`v2.1.0` tag](https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2).
+[`v2.1.0` tag](https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2). Still on 1.x? The
+[1.x to 2.x migration guide](https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v1-to-v2-migration) is at the same tag.
 
 ## Support
 

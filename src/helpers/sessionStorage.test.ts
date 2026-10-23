@@ -7,7 +7,7 @@ import {
 	decodeValue,
 	encodeEntries,
 	json,
-	type SessionStorage,
+	SessionStorage,
 	type SessionStorageSchema,
 } from "./sessionStorage";
 
@@ -53,10 +53,23 @@ describe("encodeEntries", () => {
 		});
 	});
 
+	it("keeps keys that name Object.prototype members as own entries, __proto__ included", () => {
+		const entries = Object.fromEntries([
+			["__proto__", "p"],
+			["constructor", "c"],
+			["toString", "t"],
+		]);
+		expect(Object.entries(encodeEntries({}, entries, title))).toEqual([
+			["__proto__", "p"],
+			["constructor", "c"],
+			["toString", "t"],
+		]);
+	});
+
 	it("rejects an undeclared non-string naming the key", () => {
 		for (const value of [1, true, null, undefined, { a: 1 }, ["a"]]) {
 			expect(() => encodeEntries({}, { user: value }, title)).toThrow(
-				`${title}: value for "user" is not a string and no codec is declared for it`,
+				`${title}: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)`,
 			);
 		}
 	});
@@ -114,14 +127,175 @@ describe("decodeValue", () => {
 		expect(decodeValue(schema, "attempts", "3", title)).toBe(3);
 	});
 
-	it("names the key and the raw value when the codec fails, with the cause", () => {
+	it("gives the reason, the length and the whole value, quoted, when the codec fails, with the cause", () => {
+		// JSON.parse's own wording differs between Node versions
 		expect(() => decodeValue(schema, "user", "{not json", title)).toThrow(
-			`${title}: value for "user" could not be decoded: {not json`,
+			/^Poc\.SessionStorage\.set: value for "user" could not be decoded \(SyntaxError: .+\); stored value, 9 characters: "\{not json"$/,
+		);
+		expect(() => decodeValue(schema, "attempts", "x", title)).toThrow(
+			`${title}: value for "attempts" could not be decoded (TypeError: not a number: x); stored value, 1 character: "x"`,
+		);
+		// an empty or whitespace value is visible
+		expect(() => decodeValue(schema, "user", "", title)).toThrow(/; stored value, 0 characters: ""$/);
+		expect(() => decodeValue(schema, "user", " \n", title)).toThrow(/; stored value, 2 characters: " \\n"$/);
+		const silent: Codec<string> = {
+			parse: () => {
+				throw new RangeError();
+			},
+			stringify: String,
+		};
+		expect(() => decodeValue({ token: silent }, "token", "v", title)).toThrow(
+			`${title}: value for "token" could not be decoded (RangeError); stored value, 1 character: "v"`,
 		);
 		try {
 			decodeValue(schema, "attempts", "x", title);
 		} catch (error) {
 			expect((error as Error).cause).toEqual(new TypeError("not a number: x"));
+		}
+	});
+});
+
+describe("a batch the page leaves", () => {
+	/** A page whose storage call fails with `failure` on call number `failAt`, after which the page is at `urlAfter`. */
+	const pageFailingAt = (failAt: number, failure: Error, urlAfter = "http://localhost:9000/") => {
+		let calls = 0;
+		let url = "http://localhost:9000/teststorage";
+		const fail = async () => {
+			calls++;
+			if (calls === failAt) {
+				url = urlAfter;
+				throw failure;
+			}
+		};
+		return {
+			url: () => url,
+			evaluate: async () => false,
+			sessionStorage: { setItem: fail, removeItem: fail },
+		} as unknown as Page;
+	};
+	const destroyed = new Error(
+		"webStorage.setItem: Execution context was destroyed, most likely because of a navigation",
+	);
+	const write = (page: Page, entries: Record<string, string>) =>
+		(
+			new SessionStorage(page, { label: "Shop" }) as unknown as {
+				write(m: string, e: Record<string, string>): Promise<void>;
+			}
+		).write("set", entries);
+
+	it("names the keys already written when the page navigates during the batch", async () => {
+		const error = await write(pageFailingAt(3, destroyed), { a: "1", b: "2", c: "3", d: "4" }).catch((e: Error) => e);
+		expect((error as Error).message).toBe(
+			"Shop.SessionStorage.set: the page navigated while set() was writing to http://localhost:9000; 2 of 4 keys were written (a, b)",
+		);
+		expect((error as Error).cause).toBe(destroyed);
+	});
+
+	it("says so for a lone key, and when the page has left for another origin", async () => {
+		const error = await write(pageFailingAt(1, new Error("gone"), "http://127.0.0.1:9000/x"), { token: "t" }).catch(
+			(e: Error) => e,
+		);
+		expect((error as Error).message).toBe(
+			"Shop.SessionStorage.set: the page navigated while set() was writing to http://localhost:9000; 0 of 1 key was written",
+		);
+	});
+
+	it("labels any other failure and keeps it as the cause", async () => {
+		const quota = new Error("webStorage.setItem: QuotaExceededError: The quota has been exceeded.");
+		const error = await write(pageFailingAt(2, quota, "http://localhost:9000/teststorage"), { a: "1", b: "2" }).catch(
+			(e: Error) => e,
+		);
+		expect((error as Error).message).toBe(
+			"Shop.SessionStorage.set: webStorage.setItem: QuotaExceededError: The quota has been exceeded.",
+		);
+		expect((error as Error).cause).toBe(quota);
+	});
+
+	it("names the keys already removed when clear() is interrupted", async () => {
+		const helper = new SessionStorage(pageFailingAt(2, destroyed), { label: "Shop" }) as unknown as {
+			eachKey(
+				m: string,
+				k: string[],
+				words: readonly [string, string],
+				call: (key: string) => Promise<void>,
+			): Promise<void>;
+			page: Page;
+		};
+		const error = await helper
+			.eachKey("clear", ["token", "locale", "theme"], ["removing keys from", "removed"], (key) =>
+				helper.page.sessionStorage.removeItem(key),
+			)
+			.catch((e: Error) => e);
+		expect((error as Error).message).toBe(
+			"Shop.SessionStorage.clear: the page navigated while clear() was removing keys from http://localhost:9000; 1 of 3 keys were removed (token)",
+		);
+	});
+});
+
+describe("a refused storage call", () => {
+	const refused = new Error("webStorage.setItem: SecurityError: The operation is insecure.");
+	const accessOn = (url: string, opaque: boolean) =>
+		new SessionStorage({ url: () => url, evaluate: async () => opaque } as unknown as Page, {
+			label: "Shop",
+		}) as unknown as { access(m: string, call: () => Promise<void>): Promise<void> };
+	const fail = async () => {
+		throw refused;
+	};
+
+	it("on a sandboxed document says its origin is opaque", async () => {
+		await expect(accessOn("http://localhost:9000/sandboxed", true).access("set", fail)).rejects.toThrow(
+			"Shop.SessionStorage.set: the document at http://localhost:9000/sandboxed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)",
+		);
+	});
+
+	it("on a page without an origin says so, without pointing seed at seed()", async () => {
+		await expect(accessOn("about:blank", true).access("get", fail)).rejects.toThrow(
+			"Shop.SessionStorage.get: the page has no origin yet (about:blank); navigate to the origin first or use seed()",
+		);
+		await expect(accessOn("about:blank", true).access("seed", fail)).rejects.toThrow(
+			/^Shop\.SessionStorage\.seed: the page has no origin yet \(about:blank\); navigate to the origin first$/,
+		);
+	});
+
+	it("otherwise labels Playwright's error", async () => {
+		await expect(accessOn("http://localhost:9000/", false).access("clear", fail)).rejects.toThrow(
+			"Shop.SessionStorage.clear: webStorage.setItem: SecurityError: The operation is insecure.",
+		);
+	});
+});
+
+describe("the origin option", () => {
+	// the constructor only validates; it calls nothing on the page
+	const unusedPage = {} as Page;
+	const rule =
+		'Shop.SessionStorage.constructor: origin must be an origin such as "https://app.example" or "http://localhost:9000" ' +
+		"(scheme, host, optional port, no path, query or hash); received";
+
+	it("accepts an origin, with or without a trailing slash", () => {
+		for (const origin of ["https://app.example", "http://localhost:9000/", "https://SHOP.example:8443"]) {
+			expect(() => new SessionStorage(unusedPage, { label: "Shop", origin }), origin).not.toThrow();
+		}
+	});
+
+	it("rejects a URL whose scheme has no origin, saying so", () => {
+		for (const origin of [
+			"chrome-extension://abcdef/",
+			"chrome-extension://abcdef",
+			"app://foo/",
+			"file://host/",
+			"file://host",
+		]) {
+			expect(() => new SessionStorage(unusedPage, { label: "Shop", origin }), origin).toThrow(
+				`${rule} ${JSON.stringify(origin)}, whose scheme has no URL origin`,
+			);
+		}
+	});
+
+	it("rejects a value that is not an origin with the rule alone", () => {
+		for (const origin of ["localhost:9000", "https://app.example/app", "not a url"]) {
+			expect(() => new SessionStorage(unusedPage, { label: "Shop", origin }), origin).toThrow(
+				new RegExp(`received ${JSON.stringify(origin).replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}$`),
+			);
 		}
 	});
 });
@@ -133,6 +307,8 @@ declare const typed: SessionStorage<typeof schema>;
 declare const plain: SessionStorage;
 declare const computed: string[];
 declare const readonlyComputed: readonly string[];
+declare const dynamicKey: string;
+declare const declaredKey: keyof typeof schema;
 
 const voiceStorage = { voiceCheckout: json<VoiceCheckoutModel>() };
 
@@ -207,8 +383,22 @@ const typeContract = async () => {
 		token: string | null;
 		user: VoiceCheckoutModel | null;
 	}>();
-	expectTypeOf(typed.get(computed)).resolves.toEqualTypeOf<{ [x: string]: string | null }>();
-	expectTypeOf(typed.get(readonlyComputed)).resolves.toEqualTypeOf<{ [x: string]: string | null }>();
+	// a key typed string may be any key: a string or any declared codec's type
+	expectTypeOf(typed.get(computed)).resolves.toEqualTypeOf<{
+		[x: string]: string | VoiceCheckoutModel | number | null;
+	}>();
+	expectTypeOf(typed.get(readonlyComputed)).resolves.toEqualTypeOf<{
+		[x: string]: string | VoiceCheckoutModel | number | null;
+	}>();
+	expectTypeOf(typed.get(dynamicKey)).resolves.toEqualTypeOf<string | VoiceCheckoutModel | number | null>();
+	expectTypeOf(plain.get(dynamicKey)).resolves.toEqualTypeOf<string | null>();
+	expectTypeOf(plain.get(computed)).resolves.toEqualTypeOf<{ [x: string]: string | null }>();
+	expectTypeOf(typed.get(declaredKey)).resolves.toEqualTypeOf<VoiceCheckoutModel | number | null>();
+	await typed.set(dynamicKey, model);
+	await typed.set(dynamicKey, "abc");
+	await typed.seed(dynamicKey, 3);
+	// @ts-expect-error the value may be a declared codec's type, so it is not known to be a string
+	(await typed.get(dynamicKey))?.toUpperCase();
 	expectTypeOf(plain.get()).resolves.toEqualTypeOf<Record<string, string>>();
 	expectTypeOf(typed.get()).resolves.toMatchTypeOf<{ user?: VoiceCheckoutModel; attempts?: number }>();
 	expectTypeOf<AllEntries<typeof schema>["anything"]>().toEqualTypeOf<string | VoiceCheckoutModel | number>();

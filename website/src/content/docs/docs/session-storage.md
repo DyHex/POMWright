@@ -36,7 +36,9 @@ test("a token", async ({ loginPage }) => {
 ## Codecs for structured values
 
 A key whose value is JSON, or any other encoding, is declared once with a **codec**, `{ parse, stringify }`. `set`,
-`get` and `seed` then take and return the decoded value, typed by key. `json<T>()` is the one codec POMWright ships:
+`get` and `seed` then take and return the decoded value, typed by key. A key typed `string` rather than a literal
+may be any key, so its value is typed as a string or any declared codec's type; pass the literal, or type the variable
+as the schema's keys (`keyof typeof schema`), to get one codec's type. `json<T>()` is the one codec POMWright ships:
 
 ```ts
 import type { Page } from "@playwright/test";
@@ -85,8 +87,8 @@ const base64Json = <T>(): Codec<T> => ({
 });
 ```
 
-A stored value its codec cannot decode makes `get` fail, naming the key and the value, with the codec's error as
-`cause`.
+A stored value its codec cannot decode makes `get` fail, naming the key and the codec's error, then the stored value,
+whole and quoted, so an empty or whitespace value shows; the codec's error is also the `cause`.
 
 ## The methods
 
@@ -111,8 +113,15 @@ await storage.clear(["token", "locale"]);
 await storage.clear(); // everything
 ```
 
-`set` encodes every value before it writes any, so a bad value writes nothing. A literal `[]` is a compile error for
+`set` encodes every value before it writes any, so a bad value writes nothing. It then writes one key at a time, as
+Playwright's `setItem` takes one, so a navigation during the batch stops it: the keys written before stay, and the call
+fails, naming them. A literal `[]` is a compile error for
 `get` and `clear`; a list that turns out empty at runtime reads or removes nothing.
+
+Calls for one origin act in the order they were made, also when they overlap. In a `Promise.all`, a `get` after a `set`
+reads what the `set` wrote, and two `set` calls for one key leave the later value. The order holds across helpers:
+every `SessionStorage` on a page, a page object's or a standalone one, waits for the earlier calls for its origin. A call
+that waited checks the origin again when its turn comes, since the page may have left it meanwhile.
 
 ## Through a page object
 
@@ -137,16 +146,27 @@ export class AccountPage extends PageObject<"main", { storage: typeof accountSto
 }
 ```
 
+:::note
+The type and the value go together, and nothing checks that both are there. A page object that declares `storage` but
+passes no `sessionStorage.schema` compiles, and its helper has no codecs: a declared key is stored and read as the raw
+string, so `get("user")` returns the stored text where its type says an object, and a `json<string>()` value is stored
+without its quotes. Only writing a value that is not a string fails, with the message in [Errors](#errors).
+:::
+
 A helper that belongs to an origin refuses to touch another one, since another origin's storage can only be reached
-from a document on it:
+from a document on it. That holds on a page at `about:blank` too, whose document may have inherited an origin, as a
+popup from `window.open()` does; the message then names the URL:
 
 ```text
 AccountPage.SessionStorage.get: the page is on https://login.example, not on this page object's origin https://shop.example; another origin's sessionStorage is reachable only from a document on it. Use the page object for https://login.example, or a standalone SessionStorage without an origin
+AccountPage.SessionStorage.set: the page (about:blank) is on https://login.example, not on this page object's origin https://shop.example; another origin's sessionStorage is reachable only from a document on it. Use the page object for https://login.example, or a standalone SessionStorage without an origin
 ```
 
 A helper without an origin, `new SessionStorage(page)`, works on whatever origin the page is on. On a page without an
 origin, before the first navigation, every call fails at once: `Shop.SessionStorage.set: the page has no origin yet
-(about:blank); navigate to the origin first or use seed()`.
+(about:blank); navigate to the origin first or use seed()`. A document whose own origin is opaque, such as one served
+with `Content-Security-Policy: sandbox` without `allow-same-origin`, has no session storage at all, so every call there
+fails too, saying so.
 
 ## As a fixture
 
@@ -169,9 +189,11 @@ export const test = base.extend<{ storage: SessionStorage<{ user: Codec<User> }>
 | situation | message |
 | --- | --- |
 | a page without an origin | `Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()` |
+| a sandboxed document | `Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)` |
 | a page on another origin | `AccountPage.SessionStorage.get: the page is on …, not on this page object's origin …` |
-| a value that is not a string, for a key without a codec | `Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it` |
-| a stored value its codec cannot decode | `Shop.SessionStorage.get: value for "user" could not be decoded: {not json` |
+| a value that is not a string, for a key without a codec | `Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)` |
+| a navigation during a batch | `Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)` |
+| a stored value its codec cannot decode | `Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"` |
 
 ## Reference
 

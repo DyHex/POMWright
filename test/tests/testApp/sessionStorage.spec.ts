@@ -32,6 +32,75 @@ const mock = (route: Route) =>
 			'<script>document.getElementById("startup").textContent = window.__startup;</script>',
 	});
 
+test.describe("a popup on about:blank, which inherits its opener's origin", () => {
+	const openPopup = async (page: Page) => {
+		await page.goto(`${A}/teststorage`);
+		const [popup] = await Promise.all([page.waitForEvent("popup"), page.evaluate(() => void window.open())]);
+		expect(popup.url()).toBe("about:blank");
+		return popup;
+	};
+
+	test("a helper bound to another origin refuses it; one bound to the inherited origin writes there", async ({
+		page,
+	}) => {
+		const popup = await openPopup(page);
+		await expect(new SessionStorage(popup, { label: "Second", origin: B }).set("token", "for B")).rejects.toThrow(
+			`Second.SessionStorage.set: the page (about:blank) is on ${A}, not on this page object's origin ${B}; another origin's sessionStorage is reachable only from a document on it. Use the page object for ${A}, or a standalone SessionStorage without an origin`,
+		);
+		await new SessionStorage(popup, { label: "First", origin: A }).set("token", "for A");
+		await popup.goto(`${A}/teststorage`);
+		expect(await current(popup)).toEqual({ token: "for A" });
+	});
+
+	test("a seed for the inherited origin applies, or fails the test where the browser counts the arrival as a return", async ({
+		page,
+		browserName,
+	}) => {
+		test.fail(browserName === "firefox", "Firefox presents the about:blank entry as activation.from: not applied");
+		const popup = await openPopup(page);
+		await new SessionStorage(popup, { origin: A }).seed({ token: "seeded" });
+		await popup.goto(`${A}/teststorage`);
+		expect(await startup(popup)).toEqual({ token: "seeded" });
+	});
+});
+
+test.describe("a sandboxed document", () => {
+	test("set, get and an on-origin seed say the document's origin is opaque", async ({ page, testStorage }) => {
+		await page.goto(`${A}/teststorage/sandboxed`);
+		const opaque = (method: string) =>
+			`TestStorage.SessionStorage.${method}: the document at ${A}/teststorage/sandboxed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)`;
+		await expect(testStorage.sessionStorage.set("token", "x")).rejects.toThrow(opaque("set"));
+		await expect(testStorage.sessionStorage.get("token")).rejects.toThrow(opaque("get"));
+		await expect(testStorage.sessionStorage.seed({ token: "x" })).rejects.toThrow(opaque("seed"));
+	});
+});
+
+test.describe("a batch the page leaves", () => {
+	test("set fails with the label and the keys already written when the page navigates during it", async ({
+		page,
+		browserName,
+		testStorage,
+	}) => {
+		await testStorage.navigation.goto();
+		const entries = Object.fromEntries(Array.from({ length: 60 }, (_, i) => [`k${i}`, `v${i}`]));
+		await page.evaluate((to) => setTimeout(() => (location.href = to), 5), `${B}/teststorage`);
+		const outcome = await testStorage.sessionStorage.set(entries).then(
+			() => "resolved",
+			(error: Error) => error.message,
+		);
+		const navigated =
+			/^TestStorage\.SessionStorage\.set: the page navigated while set\(\) was writing to http:\/\/localhost:9000; \d+ of 60 keys were written/;
+		if (browserName === "webkit") {
+			// WebKit finishes the batch before it leaves (60 of 60 in every probe); either outcome is correct
+			expect(outcome === "resolved" || navigated.test(outcome), outcome).toBe(true);
+		} else {
+			expect(outcome).toMatch(navigated);
+		}
+		await page.waitForURL(onSecondOrigin);
+		expect(await current(page)).toEqual({});
+	});
+});
+
 test.describe("set, get and clear", () => {
 	test("set stores strings as given and declared keys through their codec; the app reads them raw", async ({
 		page,
@@ -140,6 +209,17 @@ test.describe("set, get and clear", () => {
 		);
 	});
 
+	test("a __proto__ key is stored like any other, alone and in a parsed snapshot", async ({ page, testStorage }) => {
+		await testStorage.navigation.goto();
+		await testStorage.sessionStorage.set("__proto__", "saved");
+		expect(await storedItem(page, "__proto__")).toBe("saved");
+
+		await testStorage.sessionStorage.set(JSON.parse('{"__proto__":"snapshot","other":"z"}'));
+		expect(await storedItem(page, "__proto__")).toBe("snapshot");
+		expect(await storedItem(page, "other")).toBe("z");
+		expect(await testStorage.sessionStorage.get("__proto__")).toBe("snapshot");
+	});
+
 	test("codec failures name the key: a stored value that is not valid JSON, and an object for an undeclared key", async ({
 		page,
 		testStorage,
@@ -147,11 +227,12 @@ test.describe("set, get and clear", () => {
 		await testStorage.navigation.goto();
 		await page.evaluate(() => sessionStorage.setItem("user", "{not json"));
 
+		// JSON.parse's own wording differs between Node versions
 		await expect(testStorage.sessionStorage.get("user")).rejects.toThrow(
-			'TestStorage.SessionStorage.get: value for "user" could not be decoded: {not json',
+			/^TestStorage\.SessionStorage\.get: value for "user" could not be decoded \(SyntaxError: .+\); stored value, 9 characters: "\{not json"$/,
 		);
 		await expect(testStorage.sessionStorage.set({ other: { x: 1 } as unknown as string })).rejects.toThrow(
-			'TestStorage.SessionStorage.set: value for "other" is not a string and no codec is declared for it',
+			'TestStorage.SessionStorage.set: value for "other" is not a string and no codec is declared for it; declare one in the schema (a page object\'s sessionStorage.schema option)',
 		);
 	});
 });
@@ -175,6 +256,12 @@ test.describe("seed", () => {
 		await testStorage.navigation.goto();
 		expect(await servedBy(page)).toBe("server");
 		expect(await startup(page)).toEqual({ token: "abc", user: userJson });
+	});
+
+	test("a __proto__ key seeded before the navigation is written on arrival", async ({ page, testStorage }) => {
+		await testStorage.sessionStorage.seed("__proto__", "seeded");
+		await testStorage.navigation.goto();
+		expect(await storedItem(page, "__proto__")).toBe("seeded");
 	});
 
 	test("seed while already on the origin writes at once; the app sees the values on its next load", async ({
@@ -404,6 +491,26 @@ test.describe("seed", () => {
 		expect(served).toEqual([`${B}/teststorage?hop=link`]);
 	});
 
+	test("on the origin, overlapping seeds and overlapping sets write in call order, the later value winning", async ({
+		page,
+		testStorage,
+	}) => {
+		await testStorage.navigation.goto();
+		await Promise.all([
+			testStorage.sessionStorage.seed({ first: "1", shared: "earlier" }),
+			testStorage.sessionStorage.seed({ shared: "later" }),
+		]);
+		expect(await storedItem(page, "shared")).toBe("later");
+
+		await Promise.all([
+			testStorage.sessionStorage.set({ second: "2", shared: "set earlier" }),
+			testStorage.sessionStorage.set({ shared: "set later" }),
+			testStorage.sessionStorage.get("shared"),
+		]);
+		expect(await storedItem(page, "shared")).toBe("set later");
+		expect([await storedItem(page, "first"), await storedItem(page, "second")]).toEqual(["1", "2"]);
+	});
+
 	test("seeds for one origin in a Promise.all merge as awaited ones, and nothing writes them again after a round trip", async ({
 		page,
 		testStorage,
@@ -572,6 +679,149 @@ test.describe("seed", () => {
 		await poc.sessionStorage.seed({ token: "x" }, { origin: B });
 		await poc.navigation.goto(`${B}/teststorage`);
 		expect(await startup(page)).toEqual({ token: "x" });
+	});
+});
+
+test.describe("a navigation to a seeded origin that fails", () => {
+	test.describe.configure({ mode: "serial" });
+	// thrown from a page listener, so the test cannot catch it: a hook hands it to the next test through a file
+	const outcomeFile = () =>
+		path.join(
+			test.info().project.outputDir,
+			`failed-navigation-${test.info().project.name}-${test.info().repeatEachIndex}.json`,
+		);
+	test.afterEach(() => {
+		if (test.info().title.startsWith("the retry") && test.info().expectedStatus !== "skipped") {
+			const [error] = test.info().errors;
+			writeFileSync(outcomeFile(), JSON.stringify({ message: error?.message ?? null, stack: error?.stack ?? "" }));
+		}
+	});
+
+	for (const failure of ["offline", "a refused connection"] as const) {
+		test(`the retry after ${failure} never loads the app without the entries`, async ({
+			page,
+			context,
+			browserName,
+			testStorage,
+			testStorageSecond,
+		}) => {
+			test.skip(
+				browserName === "firefox" && failure === "a refused connection",
+				"Firefox shows an error page for an aborted connection only in some runs; offline it always does",
+			);
+			test.fail(browserName !== "webkit", "Chromium and Firefox cannot apply a seed after a failed navigation there");
+			await testStorage.navigation.goto();
+			await testStorageSecond.sessionStorage.seed({ token: "t" });
+			if (failure === "offline") {
+				await context.setOffline(true);
+			} else {
+				await page.route(`${B}/**`, (route) => route.abort("connectionrefused"), { times: 1 });
+			}
+			const before = page.url();
+			await testStorageSecond.navigation.goto().catch(() => undefined);
+			// Chromium and Firefox commit their error page after goto has rejected (Firefox's then fails this test);
+			// WebKit shows none
+			if (browserName !== "webkit") {
+				await expect.poll(() => page.url()).not.toBe(before);
+			}
+			await context.setOffline(false);
+			await testStorageSecond.navigation.goto();
+			expect(await startup(page)).toEqual({ token: "t" });
+		});
+
+		test(`after ${failure}, the failure gives the reason at the seed's line`, async ({ browserName }) => {
+			test.skip(browserName === "firefox" && failure === "a refused connection", "see the test above");
+			const { message, stack } = JSON.parse(readFileSync(outcomeFile(), "utf8"));
+			rmSync(outcomeFile());
+			if (browserName === "webkit") {
+				expect(message).toBeNull();
+				return;
+			}
+			const reason =
+				browserName === "chromium"
+					? "the browser counted the page's arrival on http://127.0.0.1:9000 as a return there"
+					: "the document that arrived on http://127.0.0.1:9000 has an opaque origin";
+			expect(message).toContain(
+				`TestStorageSecond.SessionStorage.seed: the seed for http://127.0.0.1:9000 (keys: token) was not applied: ${reason}`,
+			);
+			expect(stack.split("\n").find((line: string) => line.trim().startsWith("at "))).toMatch(
+				/sessionStorage\.spec\.ts:\d+:\d+/,
+			);
+		});
+	}
+});
+
+test.describe("a seed's failure and the page's other listeners", () => {
+	test.describe.configure({ mode: "serial" });
+	// the failing test's worker is replaced, so what it saw is handed to the next test through files
+	const file = (name: string) =>
+		path.join(test.info().project.outputDir, `${name}-${test.info().project.name}-${test.info().repeatEachIndex}.txt`);
+	test.afterEach(() => {
+		// a refused write fails the test during its body; a never-applied seed only when the page closes, after this hook
+		if (test.info().title.startsWith("fails the test for a refused write")) {
+			writeFileSync(file("listener-failure"), test.info().errors[0]?.message ?? "");
+		}
+	});
+	const read = (name: string) => {
+		const text = readFileSync(file(name), "utf8");
+		rmSync(file(name));
+		return text;
+	};
+
+	test("fails the test for a seed never applied, and a close listener added after the seed runs", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		test.fail(true, "the never-applied seed fails this test");
+		const marker = file("later-close-listener");
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({ token: "t" });
+		page.on("close", () => writeFileSync(marker, "ran"));
+	});
+
+	test("the later close listener ran", () => {
+		// the failure itself (the never-applied seed, the only one this test can have) is test.fail's expectation above;
+		// its message is fixed by the unit tests
+		expect(read("later-close-listener")).toBe("ran");
+	});
+
+	test("fails the test for a refused write, and a console listener added after the seed runs", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		test.fail(true, "the refused write fails this test");
+		const marker = file("later-console-listener");
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({ big: "x".repeat(12 * 1024 * 1024) });
+		page.on("console", (message) => {
+			if (message.text().startsWith("pomwright-seed-failure:")) {
+				writeFileSync(marker, "ran");
+			}
+		});
+		await testStorageSecond.navigation.goto();
+	});
+
+	test("the later console listener ran, and the failure was the refused write", () => {
+		expect(read("later-console-listener")).toBe("ran");
+		expect(read("listener-failure")).toMatch(
+			/^(Error: )?TestStorageSecond\.SessionStorage\.seed: could not write sessionStorage for http:\/\/127\.0\.0\.1:9000 \(keys: big\)/,
+		);
+	});
+});
+
+test.describe("a page that closes while seed registers", () => {
+	test("seed fails with its label, the keys and its own line", async ({ page, testStorage, testStorageSecond }) => {
+		await testStorage.navigation.goto();
+		const here = Number(/sessionStorage\.spec\.ts:(\d+)/.exec(new Error().stack ?? "")?.[1]);
+		const seeding = testStorageSecond.sessionStorage.seed({ token: "t" }); // the line the stack must start at
+		await page.close();
+		const error = await seeding.catch((e: Error) => e);
+		expect((error as Error).message).toBe(
+			`TestStorageSecond.SessionStorage.seed: the page closed while seed() was registering the seed for ${B} (keys: token); await seed() before the test ends`,
+		);
+		expect((error as Error).stack?.split("\n")[1]).toContain(`sessionStorage.spec.ts:${here + 1}:`);
 	});
 });
 
@@ -897,11 +1147,34 @@ test.describe("seed and the app's own navigations", () => {
 		await page.addInitScript(() => {
 			Reflect.deleteProperty(window, "navigation");
 			Object.defineProperty(window, "navigation", { value: undefined });
+			Reflect.deleteProperty(window, "NavigationActivation");
 		});
 		await testStorage.navigation.goto();
 		await expect(testStorage.sessionStorage.seed({ token: "x" }, { origin: B })).rejects.toThrow(
 			/^TestStorage\.SessionStorage\.seed: seed\(\) needs the Navigation API \(navigation\.activation\) to write only on the first arrival at http:\/\/127\.0\.0\.1:9000, and this browser has none \(.+\); use set\(\) on the origin and reload instead$/,
 		);
+	});
+
+	test("a seed with no entries does nothing, so a test that never goes to its origin passes", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({});
+		await testStorage.sessionStorage.seed({});
+		expect(await current(page)).toEqual({});
+	});
+
+	test("an app that declares its own global navigation does not hide the Navigation API from seed", async ({
+		page,
+		testStorageSecond,
+	}) => {
+		await page.goto(`${A}/teststorage/shadowed-navigation`);
+		await expect(page.locator("#navigation-global")).toHaveText("the app's own");
+		await testStorageSecond.sessionStorage.seed({ token: "seeded" });
+		await testStorageSecond.navigation.goto();
+		expect(await startup(page)).toEqual({ token: "seeded" });
 	});
 
 	test("a write the browser refuses fails the test", async ({ page, testStorage, testStorageSecond }) => {

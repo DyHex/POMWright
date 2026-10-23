@@ -3,7 +3,7 @@ title: POMWright
 description: "Page objects and locator chains for Playwright: one locator per path, the chain built for you, page objects that check themselves."
 template: splash
 hero:
-  tagline: Register one locator per path. POMWright builds the Playwright locator chain from it, and page objects check their locators as they are created.
+  tagline: Register one locator per path. POMWright builds the Playwright locator chain from it, and page objects check their registry as they are created.
   actions:
     - text: Get started
       link: /POMWright/docs/installation/
@@ -30,7 +30,7 @@ objects needs on top of Playwright and keeps Playwright's own arguments, locator
 	<LinkCard
 		title="Page objects"
 		href="/POMWright/docs/page-objects/"
-		description="A base class that registers its locators, checks them as it is created, and navigates to and waits for its URL."
+		description="A base class that registers its locators, checks its registry as it is created, and navigates to and waits for its URL."
 	/>
 	<LinkCard
 		title="Session storage"

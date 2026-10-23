@@ -91,6 +91,25 @@ describe("createNavigation runtime guards", () => {
 		);
 	});
 
+	it("rejects, from JavaScript, a first argument that is neither a URL string nor options, as page.goto does", async () => {
+		const navigation = createNavigation(
+			fakePage,
+			"https://app.example",
+			"/login",
+			"https://app.example/login",
+			"LoginPage",
+			() => null,
+		);
+		const untyped = navigation as unknown as { goto(first: unknown): Promise<void> };
+		await expect(untyped.goto(new URL("https://help.example/faq"))).rejects.toThrow(
+			"LoginPage: goto() takes a URL string or options; received a URL object; pass its href.",
+		);
+		await expect(untyped.goto(42)).rejects.toThrow(
+			"LoginPage: goto() takes a URL string or options; received a number.",
+		);
+		await expect(untyped.goto(null)).rejects.toThrow("LoginPage: goto() takes a URL string or options; received null.");
+	});
+
 	it("rejects a non-absolute target on a RegExp baseUrl", async () => {
 		const matcher = createUrlMatcher(/app\.example/, "/login");
 		const navigation = createNavigation(fakePage, /app\.example/, "/login", matcher, "LoginPage", () => null);

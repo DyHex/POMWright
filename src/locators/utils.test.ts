@@ -28,6 +28,7 @@ import {
 	isLocatorInstance,
 	isReusableLocator,
 	LOCATOR_SCHEMA_PATH_WHITESPACE,
+	mergeOptions,
 	methodForStrategy,
 	normalizeSteps,
 	STRATEGIES,
@@ -468,6 +469,49 @@ describe("copyValue and copyFields", () => {
 		expect(copy.name).not.toBe(name);
 		expect(copy.name).toEqual(/Save/);
 		expect(copy.has).toBe(has);
+	});
+
+	it("reads an object as Playwright does: getters on a class, inherited values, not methods", () => {
+		class SaveButton {
+			level = 2;
+			get name() {
+				return "Save";
+			}
+			describe() {
+				return "a method";
+			}
+		}
+		expect(copyFields(new SaveButton() as object)).toEqual({ level: 2, name: "Save" });
+
+		class ExactSaveButton extends SaveButton {
+			get exact() {
+				return true;
+			}
+		}
+		expect(copyFields(new ExactSaveButton() as object)).toEqual({ level: 2, exact: true, name: "Save" });
+
+		const withDefaults = Object.assign(Object.create({ exact: true }), { name: "Save" });
+		expect(copyFields(withDefaults)).toEqual({ name: "Save", exact: true });
+
+		const bare = Object.assign(Object.create(null), { name: "Save" });
+		expect(copyFields(bare)).toEqual({ name: "Save" });
+	});
+
+	it("an own property shadows the prototype's, and keeps its place", () => {
+		const options = Object.assign(Object.create({ name: "Inherited", exact: true }), { name: "Own" });
+		expect(Object.entries(copyFields(options))).toEqual([
+			["name", "Own"],
+			["exact", true],
+		]);
+	});
+
+	it("merges a patch read the same way", () => {
+		class Patch {
+			get name() {
+				return "Cancel";
+			}
+		}
+		expect(mergeOptions({ name: "Save", exact: true }, new Patch() as object)).toEqual({ name: "Cancel", exact: true });
 	});
 });
 

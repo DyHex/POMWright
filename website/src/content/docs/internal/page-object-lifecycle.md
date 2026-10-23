@@ -57,6 +57,11 @@ An error in `defineLocators()` or in the check after it is wrapped once, as
 half-registered page object can never be used. When the scheduled check finds the error, it throws it with the stack
 of the construction site, so the report points at the line that created the page object, not at the microtask.
 
+The scheduled check cannot tell an instance whose subclass constructor threw after `super(…)` from one that was
+returned: nothing reaches `PageObject` when a constructor below it throws. So the check runs on the abandoned instance
+too, and fails the test with a second error. *Page objects* says to check the arguments before `super(…)` (see
+[what the definition cannot see](/POMWright/docs/page-objects/#when-definelocators-runs)).
+
 A page object built in a fixture therefore fails the fixture before the test body runs. One built in `beforeEach` or
 `beforeAll` fails the tests the hook runs for, but the hook itself does not fail: each test body runs until its first
 use of the page object, which throws the kept error again.

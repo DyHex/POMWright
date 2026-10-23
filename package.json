@@ -25,6 +25,10 @@
 			"require": {
 				"types": "./dist/index.d.ts",
 				"default": "./dist/index.js"
+			},
+			"default": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
 			}
 		},
 		"./package.json": "./package.json"
@@ -41,7 +45,7 @@
 		"lint": "biome check --error-on-warnings .",
 		"format": "biome format --write .",
 		"harness:install": "bash pack-build.sh && pnpm -C test install --frozen-lockfile",
-		"typecheck": "tsc --noEmit -p test && tsc -p test/tsconfig.declarations.json && node scripts/check-doc-snippets.mjs && node scripts/check-api-coverage.mjs",
+		"typecheck": "tsc --noEmit -p test && tsc -p test/tsconfig.declarations.json && tsc -p test/tsconfig.legacyDecorators.json && node scripts/check-doc-snippets.mjs && node scripts/check-api-coverage.mjs",
 		"pack-test": "bash pack-test.sh",
 		"pack:version": "bash scripts/pack-version.sh",
 		"test:unit": "vitest run",

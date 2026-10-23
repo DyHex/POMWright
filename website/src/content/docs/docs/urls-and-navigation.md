@@ -22,12 +22,30 @@ checked like a literal:
 ```text
 LoginPage: baseUrl must be an origin such as "https://example.com" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "shop.example".
 LoginPage: urlPath must be "" or start with exactly one "/"; received "login".
+LoginPage: urlPath must be a path on the page object's origin; received "/\\login.example/account", which names the host "login.example" instead. A "/" followed by another "/" or a "\", also with a tab or line break between them, starts a host.
 LoginPage: baseUrl must be a string or a RegExp; received undefined.
 ```
 
 `localhost:9000` without a scheme and a base with a path are rejected: Playwright could not resolve paths against the
-first, and would drop the path of the second for every path that starts with `/`. A path that starts with `//` would
-name another host.
+first, and would drop the path of the second for every path that starts with `/`. A base that ends in a bare `?` or
+`#` is rejected too, and so is a scheme without an origin in the URL standard, such as `chrome-extension://…/` or
+`file://…/`: there is no origin to resolve paths against or compare URLs with. A path that starts with `//` names another host, and so does one whose first `/` is followed by a
+backslash, or by a tab or line break and then `/` or a backslash: the URL standard reads a backslash as `/` and drops
+tabs and line breaks. The constructor resolves the path and rejects it when it leaves the base's origin.
+
+:::note
+A base with credentials, `http://user:secret@shop.example`, is accepted and works: browsers send them when the server
+asks. But the credentials are part of every URL the page object shows, `fullUrl`, step titles and error messages, so
+they reach reports and traces:
+
+```text
+AccountPage: expected to have left "http://user:secret@shop.example/account"; found "http://user:secret@shop.example/account" (page.waitForURL: Timeout 500ms exceeded.)
+```
+
+Give them to Playwright instead, with the `httpCredentials` option
+([HTTP authentication](https://playwright.dev/docs/network#http-authentication)), and keep the base an origin without
+them.
+:::
 
 ## `fullUrl`
 
@@ -39,6 +57,11 @@ For two strings, `fullUrl` is `new URL(urlPath, baseUrl).href`, the URL in the f
 | `"https://shop.example/"` | `"/login"` | `https://shop.example/login` |
 | `"https://shop.example"` | `"/søk"` | `https://shop.example/s%C3%B8k` |
 | `"http://localhost:9000"` | `"/orders?tab=1"` | `http://localhost:9000/orders?tab=1` |
+
+One character is reported differently by the browsers: Chromium writes a `|` in the path as `%7C`, where Firefox,
+WebKit and `new URL` keep it. Another differs between Node versions: every browser writes a `^` in the path as `%5E`,
+as `new URL` does on Node 24, while Node 20 and 22 keep it. A string `urlPath` with `|` or `^` matches both forms, so
+its page object works the same on every browser and Node version.
 
 ## Navigating
 
@@ -66,9 +89,11 @@ As with `page.goto`, a complete URL is used as it is, so `goto(target)` also lea
 `loginPage.navigation.goto("https://help.example/faq")` goes from `https://shop.example` to the help site.
 
 A page's identity is its exact URL: `/orders?tab=1` is not `/orders` for `expectThisPage`, and counts as another page
-for `expectAnotherPage`. When the URL is already right, `page.waitForURL` returns at once, after the requested load
-state, so calling `expectThisPage()` after a navigation that has already landed is fine. A `goto(target)` whose target
-happens to equal `fullUrl` is ordinary navigation and does not run the actions.
+for `expectAnotherPage`. The same holds for an empty query or fragment, `/orders?` or `/orders#`, as it does for
+Playwright's `toHaveURL`; a page that may carry one has a RegExp path such as `/^\/orders\??$/`. When the URL is
+already right, `page.waitForURL` returns at once, after the requested load state, so calling `expectThisPage()` after
+a navigation that has already landed is fine. A `goto(target)` whose target happens to equal `fullUrl` is ordinary
+navigation and does not run the actions.
 
 Each call is a step of the report (`LoginPage: Navigate to this Page`, `LoginPage: Expect this Page`, …), shown at the
 line that called it.

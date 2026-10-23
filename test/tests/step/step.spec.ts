@@ -1,7 +1,7 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import TestPage from "@page-object-models/testApp/pages/testPage.page";
 
-// These tests need to be verified manually by checking the test report
+// Where the report places these steps is checked by test/step-locations, run by pack-test.sh after the harness.
 
 test("stepNoArgs should return the expected message", async ({ testPage }) => {
 	await expect(testPage.stepNoArgs()).resolves.toBe("Hello, World!");

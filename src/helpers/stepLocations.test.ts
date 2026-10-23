@@ -21,6 +21,10 @@ const fakePage = (url: string) =>
 		goto: async () => null,
 		waitForURL: async () => {},
 		url: () => url,
+		// a seed on the origin passes through the seed registry, which watches the main frame while it waits its turn
+		mainFrame: () => ({ url: () => url }),
+		on: () => undefined,
+		off: () => undefined,
 		sessionStorage: {
 			setItem: async (key: string, value: string) => {
 				store.set(key, value);

@@ -96,7 +96,8 @@ export class LocatorQueryBuilderInternal<
 	 * @returns An update builder whose methods return this query.
 	 * @throws When `subPath` is not a registered segment of the chain (`"main.button@save" is not a valid sub-path of
 	 * "main.list.item".`), or when it is skipped in this query (`update() cannot apply to "main.list": it is skipped in
-	 * this query; call unskip("main.list") first.`).
+	 * this query; call unskip("main.list") first.`), at this call or, for a builder kept while the segment was skipped,
+	 * when the builder's method applies the change.
 	 *
 	 * @example
 	 * ```ts
@@ -284,6 +285,8 @@ export class LocatorQueryBuilderInternal<
 		subPath: SubPath,
 		updates: LocatorUpdate,
 	) {
+		// checked again here: a builder kept from before a skip() must not change the skipped segment
+		this.ensureNotSkipped("update", subPath);
 		const merged = mergeLocatorDefinition(this.ensureSubPath(subPath), updates, subPath);
 		this.definitions.set(subPath, cloneLocatorStrategyDefinition(merged));
 		return this;
@@ -299,7 +302,8 @@ export class LocatorQueryBuilderInternal<
 	 * @returns An update builder whose methods return this query.
 	 * @throws When `subPath` is not a registered segment of the chain (`"main.button@save" is not a valid sub-path of
 	 * "main.list.item".`), or when it is skipped in this query (`replace() cannot apply to "main.list": it is skipped in
-	 * this query; call unskip("main.list") first.`).
+	 * this query; call unskip("main.list") first.`), at this call or, for a builder kept while the segment was skipped,
+	 * when the builder's method applies the change.
 	 *
 	 * @example
 	 * ```ts
@@ -333,6 +337,7 @@ export class LocatorQueryBuilderInternal<
 		subPath: SubPath,
 		updates: LocatorUpdate,
 	) {
+		this.ensureNotSkipped("replace", subPath);
 		const nextDefinition = buildReplacementDefinition(updates, subPath);
 		// the any-frame form has no element: it cannot be what this query resolves, nor carry steps
 		if (isAnyFrameDefinition(nextDefinition)) {

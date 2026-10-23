@@ -59,8 +59,30 @@ const isOrigin = (value: string): boolean => {
 	} catch {
 		return false;
 	}
-	return url.host !== "" && url.pathname === "/" && url.search === "" && url.hash === "";
+	// a bare "?" or "#" leaves search and hash empty but stays in href; a scheme such as chrome-extension: or file: has a
+	// host but no origin in the URL standard ("null"), so nothing could be resolved or compared against it
+	return (
+		url.host !== "" &&
+		url.pathname === "/" &&
+		url.search === "" &&
+		url.hash === "" &&
+		url.href.endsWith("/") &&
+		url.origin !== "null"
+	);
 };
+
+/** True when `value` is a URL with a host whose scheme gives it no origin, for the error message. */
+const hasNoUrlOrigin = (value: string): boolean => {
+	try {
+		const url = new URL(value);
+		return url.host !== "" && url.origin === "null";
+	} catch {
+		return false;
+	}
+};
+
+/** The base a string path resolves against when the page object's base is a RegExp, for checks and the matcher. */
+const PLACEHOLDER_BASE = "http://h";
 
 /** Throws unless `value` is a string or a RegExp, the two forms of `baseUrl` and `urlPath`. */
 export const assertUrlPart = (name: "baseUrl" | "urlPath", value: unknown, label: string): void => {
@@ -73,15 +95,36 @@ export const assertUrlPart = (name: "baseUrl" | "urlPath", value: unknown, label
 /** Throws unless `value` is a non-empty origin (`scheme://host[:port]`, optional trailing slash). */
 export const assertBaseUrl = (value: string, label: string): void => {
 	if (!isOrigin(value)) {
-		throw new Error(`${label}: ${BASE_URL_RULE}; received ${JSON.stringify(value)}.`);
+		const why = hasNoUrlOrigin(value) ? ", whose scheme has no URL origin" : "";
+		throw new Error(`${label}: ${BASE_URL_RULE}; received ${JSON.stringify(value)}${why}.`);
 	}
 };
 
-/** Throws unless `value` is "" or starts with exactly one "/" (a leading "//" would change host). */
-export const assertUrlPath = (value: string, label: string): void => {
+/**
+ * Throws unless `value` is "" or a path on the base's origin: it starts with exactly one "/", and resolving it keeps
+ * the origin. The URL standard reads a backslash as "/" and drops tabs and line breaks, so a backslash, or a tab and a
+ * "/", after the first "/" name a host as "//host" does.
+ */
+export const assertUrlPath = (value: string, base: string | RegExp, label: string): void => {
 	if (value !== "" && (!value.startsWith("/") || value.startsWith("//"))) {
 		throw new Error(`${label}: urlPath must be "" or start with exactly one "/"; received ${JSON.stringify(value)}.`);
 	}
+	const origin = new URL(typeof base === "string" ? base : PLACEHOLDER_BASE).origin;
+	let host: string | undefined;
+	try {
+		const resolved = new URL(value, origin);
+		if (resolved.origin === origin) {
+			return;
+		}
+		host = resolved.host;
+	} catch {
+		// a lone "/" and backslash name an empty host, which new URL rejects
+	}
+	throw new Error(
+		`${label}: urlPath must be a path on the page object's origin; received ${JSON.stringify(value)}, which names ${
+			host ? `the host ${JSON.stringify(host)}` : "a host"
+		} instead. A "/" followed by another "/" or a "\\", also with a tab or line break between them, starts a host.`,
+	);
 };
 
 /** True when `input` starts with a URL scheme, so `new URL` will ignore any base. */
@@ -98,7 +141,30 @@ export const resolveUrl = (input: string, baseUrl: string): string => {
 	}
 };
 
-const restOf = (url: URL): string => url.pathname + url.search + url.hash;
+/**
+ * The URL after its origin, as `href` writes it: path, query and fragment, an empty "?" or "#" included, as Playwright's
+ * own URL matching sees them (`pathname + search + hash` reports an empty query or fragment as "").
+ */
+const restOf = (url: URL): string => {
+	const credentials =
+		url.username === "" && url.password === ""
+			? ""
+			: `${url.username}${url.password === "" ? "" : `:${url.password}`}@`;
+	const start = `${url.protocol}//${credentials}${url.host}`;
+	return url.href.startsWith(start) ? url.href.slice(start.length) : url.pathname + url.search + url.hash;
+};
+
+/**
+ * The rest of a URL in the one form a string path is compared in. Chromium reports a "|" in the path as "%7C", where
+ * `new URL`, Firefox and WebKit keep it; every browser reports a "^" in the path as "%5E", which `new URL` writes too
+ * from Node 24 (ada 4) but keeps on Node 20 and 22. A sweep of every printable ASCII character in the path, query and
+ * fragment on the three browsers found no other difference (`test/tests/testApp/urlForms.spec.ts` keeps checking).
+ */
+const comparable = (rest: string): string => {
+	const end = rest.search(/[?#]/);
+	const path = (end === -1 ? rest : rest.slice(0, end)).replaceAll("|", "%7C").replaceAll("^", "%5E");
+	return end === -1 ? path : path + rest.slice(end);
+};
 
 const toUrl = (input: string | URL): URL => (typeof input === "string" ? new URL(input) : input);
 
@@ -109,7 +175,8 @@ const testRegExp = (regExp: RegExp, value: string): boolean => {
 
 /**
  * Builds the matcher for a base and a path. A string base is exact origin equality after URL
- * normalisation; a string path is exact against `pathname + search + hash` in the form `new URL` gives it,
+ * normalisation; a string path is exact against the rest of the URL, path, query and fragment, in the form `new URL`
+ * gives it (an empty "?" or "#" included),
  * with "" meaning "/".
  * A RegExp base is tested against the origin and a RegExp path against the rest, as written.
  */
@@ -117,12 +184,14 @@ export const createUrlMatcher = (base: string | RegExp, path: string | RegExp): 
 	const expectedOrigin = typeof base === "string" ? new URL(base).origin : undefined;
 	// a string path as the browser reports it: percent-encoded, dot segments resolved, as fullUrl is
 	const expectedRest =
-		typeof path === "string" ? restOf(new URL(path || "/", typeof base === "string" ? base : "http://h")) : undefined;
+		typeof path === "string"
+			? comparable(restOf(new URL(path || "/", typeof base === "string" ? base : PLACEHOLDER_BASE)))
+			: undefined;
 
 	const matches = (url: URL): boolean => {
 		const rest = restOf(url);
 		const baseMatches = base instanceof RegExp ? testRegExp(base, url.origin) : url.origin === expectedOrigin;
-		const pathMatches = path instanceof RegExp ? testRegExp(path, rest) : rest === expectedRest;
+		const pathMatches = path instanceof RegExp ? testRegExp(path, rest) : comparable(rest) === expectedRest;
 		return baseMatches && pathMatches;
 	};
 

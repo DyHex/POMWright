@@ -37,13 +37,14 @@ export const parseUpdateArguments = <Primary, Patch>(
 	return { primary: primaryOrOptions as Primary | undefined, options: undefined, hasOptions: false as const };
 };
 
+// `undefined` as the primary means "not provided", as in any JavaScript call: the registered one is kept
 type UpdateArgsWithOptions<Primary, Options> =
 	| []
-	| [Primary]
+	| [Primary | undefined]
 	| [OptionsPatch<Options> | null]
-	| [Primary, OptionsPatch<Options> | null | undefined];
+	| [Primary | undefined, OptionsPatch<Options> | null | undefined];
 
-type UpdateArgsWithoutOptions<Primary> = [] | [Primary];
+type UpdateArgsWithoutOptions<Primary> = [] | [Primary | undefined];
 
 /** `update` patches the registered definition; `replace` installs a complete one of any strategy. */
 export type LocatorUpdateMode = "update" | "replace";

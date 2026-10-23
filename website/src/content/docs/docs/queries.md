@@ -119,6 +119,7 @@ returns the query:
 | `update().getByRole({ name: null })` | `getByRole("button", { exact: true })`: one option deleted |
 | `update().getByRole("button", null)` or `update().getByRole(null)` | `getByRole("button")`: every option deleted |
 | `update().getByRole({ name: undefined })`, `update().getByRole("button", undefined)`, `update().getByRole()` | unchanged: `undefined` is "not given", as in Playwright |
+| `update().getByRole(undefined, { name: "Cancel" })`, `update().getByRole(role, { name: "Cancel" })` with `role` undefined | `getByRole("button", { name: "Cancel", exact: true })`: an `undefined` first argument keeps the registered one, so an optional value can be passed through |
 
 Another strategy's method throws and says what to use instead:
 
@@ -211,7 +212,8 @@ query.unskip("main.list").getNestedLocator();
 ```
 
 The query's own path cannot be skipped: TypeScript does not offer it, and from JavaScript it throws. A skipped segment
-rejects changes until it is unskipped, since they would have no effect:
+rejects changes until it is unskipped, since they would have no effect, also from an `update()` or `replace()` builder
+taken before the `skip`:
 
 ```text
 filter() cannot apply to "main.list": it is skipped in this query; call unskip("main.list") first.

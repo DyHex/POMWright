@@ -74,7 +74,7 @@ Use the result of a seed's method: `row.nth(0);` on its own line does nothing.
 
 A path that reuses a seed may change the seed's definition once, with the method of the seed's strategy, as `update()`
 patches a definition (see [Queries](/POMWright/docs/queries/#patching-a-definition-update)): a value replaces, `null`
-deletes, an omitted value keeps the seed's. `filter`, `nth` and `describe` follow as usual:
+deletes, an omitted or `undefined` value, the first argument included, keeps the seed's. `filter`, `nth` and `describe` follow as usual:
 
 ```ts
 import type { LocatorRegistry } from "pomwright";

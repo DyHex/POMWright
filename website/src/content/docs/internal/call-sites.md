@@ -26,17 +26,28 @@ consumer files of those names.
 
 ## Steps at the test's line
 
-The report shows a step at a location Playwright takes from the stack. A `@step` row shows the line that called the
-method. The helpers' steps (`LoginPage: Navigate to this Page`, `Shop.SessionStorage.set:`) pass `{ box: true }` to
-`test.step`, which makes Playwright report them at the line that called the helper too: the location of a boxed step
-is taken from the async stack after its first frame. Two things keep that frame chain intact in `SessionStorage`, whose
-methods open their step through one helper:
+The report shows a step at a location Playwright takes from the async stack when the step opens, after an internal
+`await`: only `async` functions that are waiting are on it, not plain ones. An unboxed step is shown at the first frame;
+a boxed step (`{ box: true }`) at the frame after it, since the first is taken for the helper that opened the step. So a
+boxed step is shown at the line that called the helper exactly when one `async` POMWright frame sits between the caller
+and `test.step`:
 
-- the helper that calls `test.step` is not `async`, since an `async` helper would itself be that first frame;
-- each method `await`s it, and `get` writes `return await`: returning the helper's Promise without awaiting it cuts
-  the async stack, and the step shows no location.
+- **`@step`**: the method is replaced by a wrapper that opens the step. Without `box`, the wrapper is a plain function,
+  so the first frame is the caller's. With `box`, it is `async` and awaits the step, so its own frame is the one left
+  out. A plain wrapper with `box` would leave out the caller's frame: a method called from a test showed no location,
+  and its error lost its stack.
+- **The navigation helper**: `goto`, `expectThisPage` and `expectAnotherPage` are `async` and open their boxed steps
+  themselves.
+- **`SessionStorage`**: its methods are `async` and open their step through one helper, which is not `async` (it would
+  be a second frame), and which each method `await`s; `get` writes `return await`, since returning the helper's Promise
+  without awaiting it cuts the async stack, and the step shows no location.
 
-The unit tests in `src/helpers/stepLocations.test.ts` check the option, the titles and the non-async helper.
+`test/step-locations/` checks the result where only the runner can: a spec marks each probed call with
+`// LOCATION <id>`, and a reporter fails the run when a step or an error with that id is reported on another line. It
+covers `@step` with and without `box`, from a test and from another method, a boxed step that throws, `goto` and
+`set`. It runs without a browser, from `test/playwright.steps.config.ts`, which `pack-test.sh` runs after the harness,
+so a `--reporter` given to the harness cannot switch it off; CI runs it at the Playwright pin and at the latest 1.x.
+The unit tests in `src/helpers/stepLocations.test.ts` check the option and the titles.
 
 ## Alternatives weighed
 

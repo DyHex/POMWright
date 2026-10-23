@@ -43,7 +43,9 @@ export class OrderPage extends PageObject<"main", { urlPathType: RegExp; storage
 [SessionStorageSchema](/POMWright/api/class-sessionstorage/#sessionstorageschema) *(optional)*
 
 The type of the session storage schema, `typeof schema`, so `sessionStorage.set`, `get` and `seed` are typed per key.
-The schema itself goes in the constructor's `sessionStorage` option.
+The schema itself goes in the constructor's `sessionStorage` option. Pass both: without the value, the declared keys
+are stored and read without their codecs (see
+[through a page object](/POMWright/docs/session-storage/#through-a-page-object)).
 
 ### urlPathType
 

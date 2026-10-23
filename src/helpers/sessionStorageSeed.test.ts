@@ -41,16 +41,19 @@ describe("seedScript", () => {
 	/** Runs the script in a stubbed document and returns what it stored and logged. */
 	const run = (document: {
 		origin: string;
+		selfOrigin?: string;
 		top?: boolean;
 		from?: unknown;
 		setItem?: (key: string, value: string) => void;
 	}) => {
-		const stored: Record<string, string> = {};
+		const stored: Record<string, string> = Object.create(null);
 		const logged: string[] = [];
+		const reported: string[] = [];
 		const window: { top?: unknown } = {};
 		window.top = document.top === false ? {} : window;
 		vi.stubGlobal("window", window);
 		vi.stubGlobal("location", { origin: document.origin });
+		vi.stubGlobal("self", { origin: document.selfOrigin ?? document.origin });
 		vi.stubGlobal("navigation", { activation: { from: document.from ?? null } });
 		vi.stubGlobal("sessionStorage", {
 			setItem:
@@ -62,18 +65,46 @@ describe("seedScript", () => {
 		vi.spyOn(console, "error").mockImplementation((message: string) => {
 			logged.push(message);
 		});
-		seedScript({ origin: B, entries: { token: "abc", user: '{"name":"Ada"}' }, prefix: FAILURE_PREFIX });
-		return { stored, logged };
+		vi.spyOn(console, "debug").mockImplementation((message: string) => {
+			reported.push(message);
+		});
+		seedScript({
+			origin: B,
+			entries: [
+				["token", "abc"],
+				["user", '{"name":"Ada"}'],
+				["__proto__", "kept"],
+			],
+			prefix: FAILURE_PREFIX,
+		});
+		return { stored, logged, reported };
 	};
 
-	it("writes every entry verbatim on the first arrival in the main frame on the origin", () => {
-		expect(run({ origin: B })).toEqual({ stored: { token: "abc", user: '{"name":"Ada"}' }, logged: [] });
+	it("writes every entry verbatim on the first arrival in the main frame on the origin, a __proto__ key included", () => {
+		const { stored, logged } = run({ origin: B });
+		expect(Object.entries(stored)).toEqual([
+			["token", "abc"],
+			["user", '{"name":"Ada"}'],
+			["__proto__", "kept"],
+		]);
+		expect(logged).toEqual([]);
 	});
 
 	it("writes nothing in a sub-frame, on another origin, or after a document on the origin (a reload, a hop within it)", () => {
 		expect(run({ origin: B, top: false }).stored).toEqual({});
 		expect(run({ origin: A }).stored).toEqual({});
 		expect(run({ origin: B, from: { url: `${B}/before` } }).stored).toEqual({});
+	});
+
+	it("reports a skip on its origin: an opaque document (an error page) and a return there; nothing elsewhere", () => {
+		const opaque = run({ origin: B, selfOrigin: "null" });
+		expect(opaque.stored).toEqual({});
+		expect(opaque.reported).toEqual([`${FAILURE_PREFIX}${JSON.stringify({ origin: B, skipped: "opaque" })}`]);
+		const back = run({ origin: B, from: { url: `${B}/before` } });
+		expect(back.reported).toEqual([`${FAILURE_PREFIX}${JSON.stringify({ origin: B, skipped: "return" })}`]);
+		expect(run({ origin: B, top: false }).reported).toEqual([]);
+		expect(run({ origin: A }).reported).toEqual([]);
+		expect(run({ origin: B }).reported).toEqual([]);
 	});
 
 	it("logs a refused write under the failure prefix, with the origin and the browser's error", () => {
@@ -168,7 +199,12 @@ const fakePage = (options: { navigationApi?: boolean } = {}) => {
 		},
 		domContentLoaded: () => emit("domcontentloaded"),
 		console: (text: string) => emit("console", { text: () => text } as unknown as ConsoleMessage),
-		close: () => emit("close"),
+		closed: false,
+		isClosed: () => page.closed,
+		close: () => {
+			page.closed = true;
+			emit("close");
+		},
 	};
 	return page satisfies SeedPage;
 };
@@ -182,17 +218,14 @@ const refused = (origin: string) =>
 
 const setup = (options: { outcome?: () => TestOutcome | undefined; navigationApi?: boolean } = {}) => {
 	const page = fakePage({ navigationApi: options.navigationApi });
-	const registry = new SeedRegistry(page, options.outcome ?? (() => passed));
-	return { page, registry };
-};
-
-const caught = (run: () => unknown): Error | undefined => {
-	try {
+	const failures: Error[] = [];
+	const registry = new SeedRegistry(page, options.outcome ?? (() => passed), (error) => failures.push(error));
+	/** Runs `run` and returns the failure it made the registry report, if any. */
+	const failure = (run: () => unknown): Error | undefined => {
 		run();
-	} catch (error) {
-		return error as Error;
-	}
-	return undefined;
+		return failures.shift();
+	};
+	return { page, registry, failure };
 };
 
 /** Lets every pending promise callback and timer of the current turn run. */
@@ -203,13 +236,20 @@ describe("SeedRegistry", () => {
 		const { page, registry } = setup();
 		await registry.add(B, { token: "1", keep: "k" }, title, site);
 		expect(page.scripts.map((s) => s.arg)).toEqual([
-			{ origin: B, entries: { token: "1", keep: "k" }, prefix: FAILURE_PREFIX },
+			{
+				origin: B,
+				entries: [
+					["token", "1"],
+					["keep", "k"],
+				],
+				prefix: FAILURE_PREFIX,
+			},
 		]);
 		expect(page.listeners.map((l) => l.event)).toEqual(["framenavigated", "domcontentloaded", "console", "close"]);
 
 		await registry.add(B, { token: "2" }, "Other.SessionStorage.seed", site);
 		await registry.add(C, { other: "x" }, title, site);
-		expect(page.scripts.map((s) => [s.arg.origin, s.arg.entries, s.disposed])).toEqual([
+		expect(page.scripts.map((s) => [s.arg.origin, Object.fromEntries(s.arg.entries), s.disposed])).toEqual([
 			[B, { token: "1", keep: "k" }, true],
 			[B, { token: "2", keep: "k" }, false],
 			[C, { other: "x" }, false],
@@ -217,6 +257,19 @@ describe("SeedRegistry", () => {
 		expect(page.listeners).toHaveLength(4);
 		expect(registry.pendingOrigins).toEqual([B, C]);
 		expect(page.evaluations).toBe(1);
+	});
+
+	it("keeps a __proto__ key through the merge of pending seeds and into the script's pairs", async () => {
+		const { page, registry } = setup();
+		await registry.add(B, Object.fromEntries([["__proto__", "x"]]), title, site);
+		await registry.add(B, { other: "y" }, title, site);
+		expect(page.scripts.map((s) => s.arg.entries)).toEqual([
+			[["__proto__", "x"]],
+			[
+				["__proto__", "x"],
+				["other", "y"],
+			],
+		]);
 	});
 
 	it("disposes of an origin's script when the main frame commits there, and ignores sub-frames, other origins and documents without an origin", async () => {
@@ -250,6 +303,47 @@ describe("SeedRegistry", () => {
 			finish(page);
 			expect(page.listeners).toEqual([]);
 		}
+	});
+
+	it("decides from the page at the call: a commit before the call's turn counts, and on the origin it writes at once", async () => {
+		const { page, registry } = setup();
+		// the step overlay's wait: the call is made on about:blank, and B commits before the step's body runs
+		const atCall = registry.snapshot();
+		page.navigate(`${B}/`);
+		let wrote = false;
+		const error = await registry
+			.add(
+				B,
+				{ token: "t" },
+				title,
+				site,
+				async () => {
+					wrote = true;
+				},
+				atCall,
+			)
+			.catch((e: Error) => e);
+		atCall.stop();
+		expect(wrote).toBe(false);
+		expect((error as Error).message).toBe(inFlightError(title, B, site).message);
+		expect(page.scripts).toEqual([]);
+
+		// made on the origin, a hop within it before the turn is not an arrival: it writes at once
+		const onOrigin = registry.snapshot();
+		page.navigate(`${B}/another`);
+		await registry.add(
+			B,
+			{ token: "t" },
+			title,
+			site,
+			async () => {
+				wrote = true;
+			},
+			onOrigin,
+		);
+		onOrigin.stop();
+		expect(wrote).toBe(true);
+		expect(page.listeners.filter((l) => l.event === "framenavigated")).toEqual([]);
 	});
 
 	it("throws from add when the main frame commits on the origin while the script is being registered, and disposes of it", async () => {
@@ -300,7 +394,8 @@ describe("SeedRegistry", () => {
 	});
 
 	describe("overlapping calls for one origin", () => {
-		const scriptsOf = (page: ReturnType<typeof fakePage>) => page.scripts.map((s) => [s.arg.entries, s.disposals]);
+		const scriptsOf = (page: ReturnType<typeof fakePage>) =>
+			page.scripts.map((s) => [Object.fromEntries(s.arg.entries), s.disposals]);
 		const otherFrame = "    at Object.<anonymous> (/suite/tests/login.spec.ts:13:5)";
 		const otherSite = Object.assign(new Error(), { stack: `Error\n${otherFrame}` });
 
@@ -324,7 +419,7 @@ describe("SeedRegistry", () => {
 		});
 
 		it("after a pending seed, merge every key in call order, later calls winning, and the never-applied message lists them all", async () => {
-			const { page, registry } = setup();
+			const { page, registry, failure } = setup();
 			await registry.add(B, { a: "1", k: "first" }, title, site);
 			await Promise.all([
 				registry.add(B, { b: "2", k: "second" }, "Second.SessionStorage.seed", site),
@@ -335,7 +430,7 @@ describe("SeedRegistry", () => {
 				[{ a: "1", k: "second", b: "2" }, 1],
 				[{ a: "1", k: "third", b: "2", c: "3" }, 0],
 			]);
-			expect(caught(() => page.close())?.message).toBe(
+			expect(failure(() => page.close())?.message).toBe(
 				`${title}: the seed for ${B} (keys: a, k, b, c) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
 			);
 		});
@@ -399,7 +494,7 @@ describe("SeedRegistry", () => {
 				registry.add(B, { c: "3" }, title, site),
 			]);
 			expect(failed.status === "rejected" && (failed.reason as Error).message).toBe(
-				"page.addInitScript: Target page, context or browser has been closed",
+				`${title}: page.addInitScript: Target page, context or browser has been closed`,
 			);
 			expect(next.status).toBe("fulfilled");
 			expect(scriptsOf(page)).toEqual([
@@ -410,6 +505,20 @@ describe("SeedRegistry", () => {
 
 			await registry.add(B, { d: "4" }, title, site);
 			expect(scriptsOf(page).at(-1)).toEqual([{ a: "1", c: "3", d: "4" }, 0]);
+		});
+
+		it("name the call and point at its line when the page closes while a seed registers", async () => {
+			const { page, registry } = setup();
+			page.closed = true;
+			page.failNextAdd = new Error("page.addInitScript: Target page, context or browser has been closed");
+			const error = await registry.add(B, { token: "t", locale: "nb" }, title, site).catch((e: Error) => e);
+			expect((error as Error).message).toBe(
+				`${title}: the page closed while seed() was registering the seed for ${B} (keys: token, locale); await seed() before the test ends`,
+			);
+			expect((error as Error).cause).toEqual(
+				new Error("page.addInitScript: Target page, context or browser has been closed"),
+			);
+			expect((error as Error).stack?.split("\n")[1]).toBe(siteFrame);
 		});
 
 		it("do not hold back calls for another origin", async () => {
@@ -426,10 +535,10 @@ describe("SeedRegistry", () => {
 
 	describe("a write the browser refused", () => {
 		it("fails the test from the console listener, naming the origin and the keys and pointing at the seed call", async () => {
-			const { page, registry } = setup();
+			const { page, registry, failure } = setup();
 			await registry.add(B, { token: "1", user: "u" }, title, site);
 			page.navigate(`${B}/app`);
-			const error = caught(() => page.console(refused(B)));
+			const error = failure(() => page.console(refused(B)));
 			expect(error?.message).toBe(
 				`${title}: could not write sessionStorage for ${B} (keys: token, user): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries`,
 			);
@@ -438,28 +547,63 @@ describe("SeedRegistry", () => {
 		});
 
 		it("is ignored after the applied document has loaded or another has committed, and for other messages", async () => {
-			const { page, registry } = setup();
+			const { page, registry, failure } = setup();
 			await registry.add(B, { token: "1" }, title, site);
 			await registry.add(C, { other: "x" }, title, site);
-			expect(caught(() => page.console(refused(B)))).toBeUndefined(); // not applied yet
+			expect(failure(() => page.console(refused(B)))).toBeUndefined(); // not applied yet
 			page.navigate(`${B}/app`);
-			expect(caught(() => page.console("the app's own message"))).toBeUndefined();
-			expect(caught(() => page.console(`${FAILURE_PREFIX}not json`))).toBeUndefined();
-			expect(caught(() => page.console(refused(C)))).toBeUndefined();
+			expect(failure(() => page.console("the app's own message"))).toBeUndefined();
+			expect(failure(() => page.console(`${FAILURE_PREFIX}not json`))).toBeUndefined();
+			expect(failure(() => page.console(refused(C)))).toBeUndefined();
 			page.domContentLoaded();
-			expect(caught(() => page.console(refused(B)))).toBeUndefined();
+			expect(failure(() => page.console(refused(B)))).toBeUndefined();
 			page.navigate(`${C}/app`);
 			page.navigate(`${C}/next`);
-			expect(caught(() => page.console(refused(C)))).toBeUndefined();
+			expect(failure(() => page.console(refused(C)))).toBeUndefined();
+		});
+	});
+
+	describe("a document that took the seed and did not write it", () => {
+		const skipped = (origin: string, reason: string) =>
+			`${FAILURE_PREFIX}${JSON.stringify({ origin, skipped: reason })}`;
+
+		it("fails the test from the console listener with the reason, pointing at the seed call", async () => {
+			for (const [reason, why] of [
+				[
+					"opaque",
+					`the document that arrived on ${B} has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)`,
+				],
+				[
+					"return",
+					`the browser counted the page's arrival on ${B} as a return there (navigation.activation.from is set), as after a failed navigation to it`,
+				],
+			] as const) {
+				const { page, registry, failure } = setup();
+				await registry.add(B, { token: "1" }, title, site);
+				page.navigate(`${B}/app`);
+				const error = failure(() => page.console(skipped(B, reason)));
+				expect(error?.message).toBe(`${title}: the seed for ${B} (keys: token) was not applied: ${why}`);
+				expect(error?.stack).toBe(`Error: ${error?.message}\n${siteFrame}`);
+				expect(page.listeners).toEqual([]);
+			}
+		});
+
+		it("is ignored for a document that did not take a seed", async () => {
+			const { page, registry, failure } = setup();
+			await registry.add(B, { token: "1" }, title, site);
+			expect(failure(() => page.console(skipped(B, "return")))).toBeUndefined(); // still pending
+			page.navigate(`${B}/app`);
+			page.domContentLoaded();
+			expect(failure(() => page.console(skipped(B, "return")))).toBeUndefined(); // applied and loaded
 		});
 	});
 
 	describe("page close", () => {
 		it("fails a passing test when a seed was never applied, naming origins and keys and pointing at the seed call", async () => {
-			const { page, registry } = setup();
+			const { page, registry, failure } = setup();
 			await registry.add(B, { token: "1", user: "u" }, title, site);
 			await registry.add(C, { other: "x" }, "Other.SessionStorage.seed", site);
-			const error = caught(() => page.close());
+			const error = failure(() => page.close());
 			expect(error?.message).toBe(
 				`${title}: the seed for ${B} (keys: token, user) and the seed for ${C} (keys: other) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
 			);
@@ -474,17 +618,17 @@ describe("SeedRegistry", () => {
 				(): TestOutcome | undefined => ({ status: "passed", errors: [new Error("soft")] }),
 				(): TestOutcome | undefined => undefined,
 			]) {
-				const { page, registry } = setup({ outcome });
+				const { page, registry, failure } = setup({ outcome });
 				await registry.add(B, { token: "1" }, title, site);
-				expect(() => page.close()).not.toThrow();
+				expect(failure(() => page.close())).toBeUndefined();
 			}
 		});
 
 		it("stays quiet when every seed was applied", async () => {
-			const { page, registry } = setup();
+			const { page, registry, failure } = setup();
 			await registry.add(B, { token: "1" }, title, site);
 			page.navigate(`${B}/app`);
-			expect(() => page.close()).not.toThrow();
+			expect(failure(() => page.close())).toBeUndefined();
 		});
 	});
 

@@ -760,28 +760,35 @@ describe("a seeded builder held in a variable", () => {
 });
 
 describe("a registration ends at the next call on the registry", () => {
-	const ended = (method: string, path: string) =>
-		`${method}() cannot apply to "${path}": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.`;
+	const ended = (method: string, path: string, by: string, resolvedPath?: string) =>
+		method === "filter" && resolvedPath !== undefined && resolvedPath !== path
+			? `filter() cannot apply to "${path}": its registration was ended by ${by}. If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "${resolvedPath}" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.`
+			: `${method}() cannot apply to "${path}": its registration was ended by ${by}; give a registration all its steps in its add(…) chain, or query the path for one use.`;
 	const steps = {
 		filter: (view: { filter: (filter: { hasText: string }) => unknown }) => view.filter({ hasText: "x" }),
 		nth: (view: { nth: (index: number) => unknown }) => view.nth(0),
 		describe: (view: { describe: (description: string) => unknown }) => view.describe("d"),
 	};
-	const enders: [string, (registry: LocatorRegistryInternal<Paths>) => unknown][] = [
-		["another add", (registry) => registry.add("x").locator("p")],
-		["getLocator", (registry) => registry.getLocator("list")],
-		["getNestedLocator of the path itself", (registry) => registry.getNestedLocator("btn")],
-		["getLocatorSchema", (registry) => registry.getLocatorSchema("list.item")],
-		["verify", (registry) => registry.verify()],
+	const enders: [string, (registry: LocatorRegistryInternal<Paths>) => unknown, string, string?][] = [
+		["another add", (registry) => registry.add("x").locator("p"), 'add("x")'],
+		["getLocator", (registry) => registry.getLocator("list"), 'getLocator("list")', "list"],
+		[
+			"getNestedLocator of the path itself",
+			(registry) => registry.getNestedLocator("btn"),
+			'getNestedLocator("btn")',
+			"btn",
+		],
+		["getLocatorSchema", (registry) => registry.getLocatorSchema("list.item"), 'getLocatorSchema("list.item")'],
+		["verify", (registry) => registry.verify(), "verify()"],
 	];
 
-	for (const [label, end] of enders) {
-		it(`ends at ${label}: filter, nth and describe throw, and the record stays`, () => {
+	for (const [label, end, by, resolvedPath] of enders) {
+		it(`ends at ${label}: filter, nth and describe throw, naming it, and the record stays`, () => {
 			for (const [method, step] of Object.entries(steps)) {
 				const registry = createRegistry();
 				const view = registry.add("btn").getByRole("button");
 				end(registry);
-				expect(() => step(view as never)).toThrowError(ended(method, "btn"));
+				expect(() => step(view as never)).toThrowError(ended(method, "btn", by, resolvedPath));
 				expect(registry.get("btn")).toEqual({
 					locatorSchemaPath: "btn",
 					definition: { type: "role", role: "button" },
@@ -797,8 +804,22 @@ describe("a registration ends at the next call on the registry", () => {
 			const query = registry.getLocatorSchema("list.item");
 			const view = registry.add("btn").getByRole("button");
 			query[resolve]();
-			expect(() => view.nth(0)).toThrowError(ended("nth", "btn"));
+			expect(() => view.nth(0)).toThrowError(ended("nth", "btn", `a query's resolution of "list.item"`));
 		}
+	});
+
+	it("ends at a getLocator in a filter's own arguments, and the message shows both ways to write the filter", () => {
+		const registry = createRegistry();
+		expect(() =>
+			registry
+				.add("btn")
+				.getByRole("button")
+				.filter({ has: registry.getLocator("list") }),
+		).toThrowError(ended("filter", "btn", 'getLocator("list")', "list"));
+		const resolvedFirst = registry.getLocator("list");
+		registry.add("row").locator("tr").filter({ has: resolvedFirst });
+		registry.add("x").locator("td").filter({ has: "list" });
+		expect(chain(registry.getLocator("x"))).toBe("locator('td').filter({ has: locator('ul') })");
 	});
 
 	it("a locator method on a kept add(path) after another call throws and registers nothing", () => {
@@ -818,7 +839,7 @@ describe("a registration ends at the next call on the registry", () => {
 			const registry = createRegistry();
 			const pending = registry.add("btn") as unknown as Record<string, (...rest: unknown[]) => unknown>;
 			registry.add("x").locator("p");
-			expect(() => pending[method]?.(...args)).toThrowError(ended(method, "btn"));
+			expect(() => pending[method]?.(...args)).toThrowError(ended(method, "btn", 'add("x")'));
 			expect(registry.getIfExists("btn")).toBeUndefined();
 		}
 	});
@@ -828,7 +849,7 @@ describe("a registration ends at the next call on the registry", () => {
 		const seed = registry.createReusable.getByRole("button", { name: "Save" });
 		const held = registry.add("seeded", { reuse: seed });
 		registry.add("x").locator("p");
-		expect(() => held.getByRole({ name: "Cancel" })).toThrowError(ended("getByRole", "seeded"));
+		expect(() => held.getByRole({ name: "Cancel" })).toThrowError(ended("getByRole", "seeded", 'add("x")'));
 		expect(registry.get("seeded").definition).toEqual({ type: "role", role: "button", options: { name: "Save" } });
 	});
 
@@ -836,7 +857,7 @@ describe("a registration ends at the next call on the registry", () => {
 		const registry = createRegistry();
 		const source = registry.add("btn").getByRole("button");
 		registry.add("x", { reuse: "btn" }).nth("last");
-		expect(() => source.filter({ hasText: "Open" })).toThrowError(ended("filter", "btn"));
+		expect(() => source.filter({ hasText: "Open" })).toThrowError(ended("filter", "btn", 'add("x")'));
 		expect(chain(registry.getLocator("btn"))).toBe("getByRole('button')");
 		expect(chain(registry.getLocator("x"))).toBe("getByRole('button').last()");
 	});
@@ -847,8 +868,8 @@ describe("a registration ends at the next call on the registry", () => {
 		registry.add("x").frameLocator();
 		const copy = registry.add("row", { reuse: "x" });
 		registry.verify();
-		expect(() => view.describe(null as never)).toThrowError(ended("describe", "btn"));
-		expect(() => copy.filter({ hasText: "x" })).toThrowError(ended("filter", "row"));
+		expect(() => view.describe(null as never)).toThrowError(ended("describe", "btn", 'add("x")'));
+		expect(() => copy.filter({ hasText: "x" })).toThrowError(ended("filter", "row", "verify()"));
 	});
 
 	it("stays open for steps right after add, in a loop and under a condition", () => {

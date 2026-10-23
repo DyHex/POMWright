@@ -4,13 +4,14 @@
  * `SessionStorage.seed()` hands the entries to one registry per page. The registry adds a Playwright init script for
  * each pending origin. The script runs in every new document of the page and stores the entries only in the main frame,
  * on the origin, on the first arrival there, before the document's first script. When the main frame commits on the
- * origin, the registry disposes of the script. Calls for one origin run one after the other, in the order they were
- * made, so overlapping calls merge as awaited ones do. Navigations are never intercepted. Nothing is registered on a
+ * origin, the registry disposes of the script. Calls for one origin take turns with every other session storage call
+ * for it on the page, in the order they were made, so overlapping calls merge as awaited ones do. Navigations are never intercepted. Nothing is registered on a
  * page that never seeds, and everything is removed once the last seed has been applied and its document has had the
  * chance to report a write the browser refused.
  */
 import type { ConsoleMessage, Frame } from "@playwright/test";
 import { atCallSite } from "./callSite";
+import { takeTurn } from "./storageTurns";
 
 /** Removes what `addInitScript` added. Playwright's `Disposable` satisfies it. */
 export type SeedDisposable = { dispose(): Promise<void> };
@@ -31,6 +32,7 @@ export interface SeedPage {
 	off(event: "console", listener: (message: ConsoleMessage) => void): unknown;
 	off(event: "close", listener: () => void): unknown;
 	mainFrame(): Frame;
+	isClosed(): boolean;
 }
 
 /** What the registry needs to know about the running test when the page closes. */
@@ -51,6 +53,9 @@ export type PendingSeed = {
 	disposable: SeedDisposable;
 };
 
+/** The page as a `seed` call found it, and the origins its main frame has committed on since. See `snapshot()`. */
+export type CallSnapshot = { origin: string | undefined; committed: Set<string>; stop(): void };
+
 /** A seed whose document has committed and may still report a write the browser refused. */
 type AppliedSeed = { keys: string[]; title: string; site: Error };
 
@@ -65,14 +70,17 @@ export const originOf = (url: string): string | undefined => {
 	return origin === "null" ? undefined : origin;
 };
 
-/** The start of the console message the init script logs when the browser refuses a write. */
+/** The start of the console message the init script logs when it skips a document on its origin or a write is refused. */
 export const FAILURE_PREFIX = "pomwright-seed-failure:";
 
 export type SeedScriptArg = {
 	/** The origin whose documents receive the entries. */
 	origin: string;
-	/** The encoded entries. */
-	entries: Record<string, string>;
+	/**
+	 * The encoded entries as `[key, value]` pairs. A key is never a property name on the way to the page, where
+	 * Playwright's serialisation of an argument drops an own `__proto__` key.
+	 */
+	entries: [key: string, value: string][];
 	/** `FAILURE_PREFIX`, passed in because the script is serialised and refers to nothing outside its body. */
 	prefix: string;
 };
@@ -80,18 +88,25 @@ export type SeedScriptArg = {
 /**
  * The init script. It runs in every new document of the page while a seed for `origin` waits and writes only in the
  * main frame, on the origin, on the first arrival there: after a reload or a hop within the origin,
- * `navigation.activation.from` is the previous document's entry, so a value the app wrote meanwhile is kept. A write
- * the browser refuses is logged for the registry's `console` listener.
+ * `navigation.activation.from` is the previous document's entry, so a value the app wrote meanwhile is kept. A document
+ * on the origin's URL whose own origin is opaque (the error page a browser shows for a failed navigation, or a
+ * sandboxed document) gets nothing either. Each of those two skips, and a write the browser refuses, is logged for the
+ * registry's `console` listener, which fails the test when it concerns the document that took the seed out of pending.
  */
 export const seedScript = ({ origin, entries, prefix }: SeedScriptArg): void => {
 	if (window !== window.top || location.origin !== origin) {
 		return;
 	}
+	if (self.origin !== origin) {
+		console.debug(`${prefix}${JSON.stringify({ origin, skipped: "opaque" })}`);
+		return;
+	}
 	if (globalThis.navigation?.activation?.from) {
+		console.debug(`${prefix}${JSON.stringify({ origin, skipped: "return" })}`);
 		return;
 	}
 	try {
-		for (const [key, value] of Object.entries(entries)) {
+		for (const [key, value] of entries) {
 			sessionStorage.setItem(key, value);
 		}
 	} catch (error) {
@@ -128,6 +143,22 @@ export const writeFailedError = (applied: AppliedSeed, origin: string, cause: st
 		applied.site,
 	);
 
+/** Why the document that took a seed out of pending did not write it, as `seedScript` reports it. */
+export type SkipReason = "opaque" | "return";
+
+export const notAppliedError = (applied: AppliedSeed, origin: string, reason: SkipReason): Error =>
+	atCallSite(
+		new Error(
+			`${applied.title}: the seed for ${origin} (keys: ${describeKeys(applied.keys)}) was not applied: ` +
+				(reason === "opaque"
+					? `the document that arrived on ${origin} has an opaque origin (the browser's error page after a failed ` +
+						"navigation, or a sandboxed document)"
+					: `the browser counted the page's arrival on ${origin} as a return there (navigation.activation.from ` +
+						"is set), as after a failed navigation to it"),
+		),
+		applied.site,
+	);
+
 export const neverAppliedError = (pendings: readonly (readonly [string, PendingSeed])[]): Error => {
 	const [first] = pendings;
 	if (first === undefined) {
@@ -145,19 +176,30 @@ export const neverAppliedError = (pendings: readonly (readonly [string, PendingS
 	);
 };
 
+/**
+ * Fails the running test with an error found in a page listener. Thrown in the listener, it would also stop the page's
+ * later listeners for that event (Playwright's emitter calls them in turn, without a `try`); rethrown in a microtask, it
+ * still fails the test at once, and the other listeners run.
+ */
+const rethrowLater = (error: Error): void => {
+	queueMicrotask(() => {
+		throw error;
+	});
+};
+
 /** One per page, shared by every `SessionStorage` on it. See the module comment. */
 export class SeedRegistry {
 	private readonly pending = new Map<string, PendingSeed>();
 	/** Applied seeds whose document may still report a refused write: until its DOMContentLoaded or the next commit. */
 	private readonly confirming = new Map<string, AppliedSeed>();
-	/** Per origin, the settled end of the chain of `add` calls: each call runs once the previous one has settled. */
-	private readonly queues = new Map<string, Promise<void>>();
 	private navigationApiChecked = false;
 	private listening = false;
 
 	constructor(
 		private readonly page: SeedPage,
 		private readonly readTestOutcome: ReadTestOutcome,
+		/** How a failure found in a page listener fails the test; unit tests collect them instead. */
+		private readonly fail: (error: Error) => void = rethrowLater,
 	) {}
 
 	/** Origins with a pending seed, oldest first. */
@@ -167,37 +209,88 @@ export class SeedRegistry {
 
 	/**
 	 * Registers the init script for `origin` with the entries merged into any pending ones, then disposes of the
-	 * previous script. Calls for one origin run one after the other in the order they were made, so calls that overlap
-	 * merge exactly as awaited ones do; a call that fails leaves the pending seed as it was. Throws when the browser
-	 * lacks the Navigation API, and when the main frame commits on the origin between the call and the end of the
-	 * script's registration: that document may or may not have run it.
+	 * previous script. The call takes its turn among the page's session storage calls for the origin (`takeTurn`), so
+	 * calls that overlap merge exactly as awaited ones do; a call that fails before its script is registered leaves the
+	 * pending seed as it was. An error from the page gets the title and the call site (`fromPage`). Throws
+	 * when the browser lacks the Navigation API, and when the main frame commits on the origin between the call and the
+	 * end of the script's registration: that document may or may not have run it.
+	 *
+	 * With `writeOnOrigin`, a call made while the page is on the origin writes there in its turn instead, if the page is
+	 * still there; a navigation within the origin while it waits is not an arrival.
 	 */
-	add(origin: string, entries: Record<string, string>, title: string, site: Error): Promise<void> {
-		// watched from the call on, so the wait for earlier calls and the Navigation API check are covered too
-		let committed = false;
+	/**
+	 * The page as a `seed` call finds it: the main frame's origin, and every origin the main frame commits on from then
+	 * on. `seed()` takes it synchronously at the call, before its step's body, because Playwright may await work of its
+	 * own before running the body (the step overlay of `video.show.test` makes a round trip to the browser); a commit
+	 * then must still count as one during the call. Stop it when the call settles.
+	 */
+	snapshot(): CallSnapshot {
+		const committed = new Set<string>();
 		const watch = (frame: Frame): void => {
-			if (frame === this.page.mainFrame() && originOf(frame.url()) === origin) {
-				committed = true;
+			const origin = frame === this.page.mainFrame() ? originOf(frame.url()) : undefined;
+			if (origin !== undefined) {
+				committed.add(origin);
 			}
 		};
 		this.page.on("framenavigated", watch);
-		const call = (this.queues.get(origin) ?? Promise.resolve())
-			.then(() => this.register(origin, entries, title, site, () => committed))
-			.finally(() => {
-				this.page.off("framenavigated", watch);
-			});
-		// the next call for the origin waits for this one, whether it succeeds or fails
-		const settled = call.then(
-			() => undefined,
-			() => undefined,
-		);
-		this.queues.set(origin, settled);
-		settled.then(() => {
-			if (this.queues.get(origin) === settled) {
-				this.queues.delete(origin);
+		return {
+			origin: originOf(this.page.mainFrame().url()),
+			committed,
+			stop: () => this.page.off("framenavigated", watch),
+		};
+	}
+
+	add(
+		origin: string,
+		entries: Record<string, string>,
+		title: string,
+		site: Error,
+		writeOnOrigin?: () => Promise<void>,
+		atCall?: CallSnapshot,
+	): Promise<void> {
+		// watched from the call on, so the wait for earlier calls and the Navigation API check are covered too
+		const snapshot = atCall ?? this.snapshot();
+		const wasOnOrigin = writeOnOrigin !== undefined && snapshot.origin === origin;
+		return takeTurn(this.page, origin, async () => {
+			try {
+				if (wasOnOrigin) {
+					// a navigation within the origin while the call waited is not an arrival
+					snapshot.committed.delete(origin);
+					if (originOf(this.page.mainFrame().url()) === origin) {
+						await writeOnOrigin?.();
+						return;
+					}
+				}
+				await this.register(origin, entries, title, site, () => snapshot.committed.has(origin));
+			} catch (error) {
+				throw this.fromPage(error, origin, entries, title, site);
+			} finally {
+				if (atCall === undefined) {
+					snapshot.stop();
+				}
 			}
 		});
-		return call;
+	}
+
+	/**
+	 * An error from a call into the page while a seed registers, with the title and the call site, so it points at the
+	 * `seed` line as every other `seed` failure does. Errors already titled, the registry's and the helper's, pass through.
+	 */
+	private fromPage(
+		error: unknown,
+		origin: string,
+		entries: Record<string, string>,
+		title: string,
+		site: Error,
+	): unknown {
+		if (error instanceof Error && error.message.startsWith(`${title}: `)) {
+			return error;
+		}
+		const message = this.page.isClosed()
+			? `${title}: the page closed while seed() was registering the seed for ${origin} ` +
+				`(keys: ${describeKeys(Object.keys(entries))}); await seed() before the test ends`
+			: `${title}: ${error instanceof Error ? error.message : String(error)}`;
+		return atCallSite(new Error(message, { cause: error }), site);
 	}
 
 	/** One call's turn: read the pending seed, register the merged script, store it, dispose of the previous one. */
@@ -214,7 +307,11 @@ export class SeedRegistry {
 		}
 		const previous = this.pending.get(origin);
 		const merged = { ...previous?.entries, ...entries };
-		const disposable = await this.page.addInitScript(seedScript, { origin, entries: merged, prefix: FAILURE_PREFIX });
+		const disposable = await this.page.addInitScript(seedScript, {
+			origin,
+			entries: Object.entries(merged),
+			prefix: FAILURE_PREFIX,
+		});
 		if (committed()) {
 			await disposable.dispose();
 			throw inFlightError(title, origin, site);
@@ -229,14 +326,17 @@ export class SeedRegistry {
 		await previous?.disposable.dispose();
 	}
 
-	/** Once per page: an evaluation in the current document, which works on `about:blank` too. */
+	/**
+	 * Once per page: an evaluation in the current document, which works on `about:blank` too. It tests the interface,
+	 * not `navigation.activation`: an app's own global `navigation` (`var navigation = …`) shadows the latter.
+	 */
 	private async assertNavigationApi(origin: string, title: string, site: Error): Promise<void> {
 		if (this.navigationApiChecked) {
 			return;
 		}
 		const probe = () =>
 			this.page.evaluate(() => ({
-				supported: typeof globalThis.navigation?.activation === "object",
+				supported: typeof NavigationActivation === "function" && "from" in NavigationActivation.prototype,
 				userAgent: navigator.userAgent,
 			}));
 		let support: NavigationSupport;
@@ -302,7 +402,7 @@ export class SeedRegistry {
 		if (!text.startsWith(FAILURE_PREFIX)) {
 			return;
 		}
-		let report: { origin?: unknown; error?: unknown };
+		let report: { origin?: unknown; error?: unknown; skipped?: unknown };
 		try {
 			report = JSON.parse(text.slice(FAILURE_PREFIX.length));
 		} catch {
@@ -315,7 +415,11 @@ export class SeedRegistry {
 		}
 		this.confirming.delete(origin);
 		this.teardownIfIdle();
-		throw writeFailedError(applied, origin, String(report.error)); // thrown from a page listener: fails the test at once
+		this.fail(
+			report.skipped === "opaque" || report.skipped === "return"
+				? notAppliedError(applied, origin, report.skipped)
+				: writeFailedError(applied, origin, String(report.error)),
+		);
 	};
 
 	private readonly onClose = (): void => {
@@ -324,7 +428,7 @@ export class SeedRegistry {
 			return;
 		}
 		if (this.pending.size > 0) {
-			throw neverAppliedError([...this.pending.entries()]);
+			this.fail(neverAppliedError([...this.pending.entries()]));
 		}
 	};
 }

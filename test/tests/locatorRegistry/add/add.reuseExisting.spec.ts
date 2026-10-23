@@ -193,7 +193,7 @@ test.describe("reuse by path of an any-frame path", () => {
 		expect(() => registry.verify()).not.toThrow();
 		// the next add ended the copy's registration: that is what a later call of it reports
 		expect(() => copy.nth(0)).toThrowError(
-			'nth() cannot apply to "frames": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.',
+			'nth() cannot apply to "frames": its registration was ended by add("frames.toggleC"); give a registration all its steps in its add(…) chain, or query the path for one use.',
 		);
 	});
 
