@@ -182,7 +182,12 @@ const fakePage = (options: { navigationApi?: boolean } = {}) => {
 		},
 		domContentLoaded: () => emit("domcontentloaded"),
 		console: (text: string) => emit("console", { text: () => text } as unknown as ConsoleMessage),
-		close: () => emit("close"),
+		closed: false,
+		isClosed: () => page.closed,
+		close: () => {
+			page.closed = true;
+			emit("close");
+		},
 	};
 	return page satisfies SeedPage;
 };
@@ -434,7 +439,7 @@ describe("SeedRegistry", () => {
 				registry.add(B, { c: "3" }, title, site),
 			]);
 			expect(failed.status === "rejected" && (failed.reason as Error).message).toBe(
-				"page.addInitScript: Target page, context or browser has been closed",
+				`${title}: page.addInitScript: Target page, context or browser has been closed`,
 			);
 			expect(next.status).toBe("fulfilled");
 			expect(scriptsOf(page)).toEqual([
@@ -445,6 +450,20 @@ describe("SeedRegistry", () => {
 
 			await registry.add(B, { d: "4" }, title, site);
 			expect(scriptsOf(page).at(-1)).toEqual([{ a: "1", c: "3", d: "4" }, 0]);
+		});
+
+		it("name the call and point at its line when the page closes while a seed registers", async () => {
+			const { page, registry } = setup();
+			page.closed = true;
+			page.failNextAdd = new Error("page.addInitScript: Target page, context or browser has been closed");
+			const error = await registry.add(B, { token: "t", locale: "nb" }, title, site).catch((e: Error) => e);
+			expect((error as Error).message).toBe(
+				`${title}: the page closed while seed() was registering the seed for ${B} (keys: token, locale); await seed() before the test ends`,
+			);
+			expect((error as Error).cause).toEqual(
+				new Error("page.addInitScript: Target page, context or browser has been closed"),
+			);
+			expect((error as Error).stack?.split("\n")[1]).toBe(siteFrame);
 		});
 
 		it("do not hold back calls for another origin", async () => {

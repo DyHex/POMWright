@@ -193,14 +193,15 @@ await loginPage.navigation.goto(); // the app's first script already sees the to
 
 **Throws**
 
-At the call, without an origin, in a browser without the Navigation API, and when the page commits a document on the
-origin while the seed is being registered; later, failing the test with this call's line in the stack, when the
+At the call, without an origin, in a browser without the Navigation API, when the page commits a document on the
+origin while the seed is being registered, and when the page closes before it is registered; later, failing the test with this call's line in the stack, when the
 browser refuses the write or the page closes before the seed was applied:
 
 ```text
 Shop.SessionStorage.seed: an origin is required; pass { origin } or construct the helper with one
 Shop.SessionStorage.seed: the page committed a document on https://pay.example while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it
 Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation) to write only on the first arrival at https://pay.example, and this browser has none (Mozilla/5.0 …); use set() on the origin and reload instead
+Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends
 Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
 ```

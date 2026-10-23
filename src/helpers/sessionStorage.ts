@@ -510,8 +510,10 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * @param entries Several keys and values.
 	 * @param options `{ origin }`: the origin to seed. Defaults to the helper's origin, which a page object's helper has.
 	 * @throws At the call, when there is no origin (`Shop.SessionStorage.seed: an origin is required; pass { origin } or
-	 * construct the helper with one`), when the browser has no Navigation API, and when the page commits a document on
-	 * the origin while the seed is being registered; later, failing the test with the line of this call in the stack,
+	 * construct the helper with one`), when the browser has no Navigation API, when the page commits a document on the
+	 * origin while the seed is being registered, and when the page closes before it is registered (`… the page closed
+	 * while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends`);
+	 * later, failing the test with the line of this call in the stack,
 	 * when the browser refuses the write (the storage quota) or when the page closes before the seed was applied.
 	 *
 	 * @example

@@ -650,6 +650,20 @@ test.describe("seed", () => {
 	});
 });
 
+test.describe("a page that closes while seed registers", () => {
+	test("seed fails with its label, the keys and its own line", async ({ page, testStorage, testStorageSecond }) => {
+		await testStorage.navigation.goto();
+		const here = Number(/sessionStorage\.spec\.ts:(\d+)/.exec(new Error().stack ?? "")?.[1]);
+		const seeding = testStorageSecond.sessionStorage.seed({ token: "t" }); // the line the stack must start at
+		await page.close();
+		const error = await seeding.catch((e: Error) => e);
+		expect((error as Error).message).toBe(
+			`TestStorageSecond.SessionStorage.seed: the page closed while seed() was registering the seed for ${B} (keys: token); await seed() before the test ends`,
+		);
+		expect((error as Error).stack?.split("\n")[1]).toContain(`sessionStorage.spec.ts:${here + 1}:`);
+	});
+});
+
 test.describe("overlapping seeds that are never applied", () => {
 	test.describe.configure({ mode: "serial" });
 	// thrown from the page's close listener; the failing test's worker is replaced, so a file hands the message over

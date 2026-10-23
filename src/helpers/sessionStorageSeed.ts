@@ -32,6 +32,7 @@ export interface SeedPage {
 	off(event: "console", listener: (message: ConsoleMessage) => void): unknown;
 	off(event: "close", listener: () => void): unknown;
 	mainFrame(): Frame;
+	isClosed(): boolean;
 }
 
 /** What the registry needs to know about the running test when the page closes. */
@@ -170,7 +171,8 @@ export class SeedRegistry {
 	/**
 	 * Registers the init script for `origin` with the entries merged into any pending ones, then disposes of the
 	 * previous script. The call takes its turn among the page's session storage calls for the origin (`takeTurn`), so
-	 * calls that overlap merge exactly as awaited ones do; a call that fails leaves the pending seed as it was. Throws
+	 * calls that overlap merge exactly as awaited ones do; a call that fails before its script is registered leaves the
+	 * pending seed as it was. An error from the page gets the title and the call site (`fromPage`). Throws
 	 * when the browser lacks the Navigation API, and when the main frame commits on the origin between the call and the
 	 * end of the script's registration: that document may or may not have run it.
 	 *
@@ -203,10 +205,33 @@ export class SeedRegistry {
 					}
 				}
 				await this.register(origin, entries, title, site, () => committed);
+			} catch (error) {
+				throw this.fromPage(error, origin, entries, title, site);
 			} finally {
 				this.page.off("framenavigated", watch);
 			}
 		});
+	}
+
+	/**
+	 * An error from a call into the page while a seed registers, with the title and the call site, so it points at the
+	 * `seed` line as every other `seed` failure does. Errors already titled, the registry's and the helper's, pass through.
+	 */
+	private fromPage(
+		error: unknown,
+		origin: string,
+		entries: Record<string, string>,
+		title: string,
+		site: Error,
+	): unknown {
+		if (error instanceof Error && error.message.startsWith(`${title}: `)) {
+			return error;
+		}
+		const message = this.page.isClosed()
+			? `${title}: the page closed while seed() was registering the seed for ${origin} ` +
+				`(keys: ${describeKeys(Object.keys(entries))}); await seed() before the test ends`
+			: `${title}: ${error instanceof Error ? error.message : String(error)}`;
+		return atCallSite(new Error(message, { cause: error }), site);
 	}
 
 	/** One call's turn: read the pending seed, register the merged script, store it, dispose of the previous one. */
