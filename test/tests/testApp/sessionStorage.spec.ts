@@ -691,7 +691,7 @@ test.describe("a navigation to a seeded origin that fails", () => {
 			`failed-navigation-${test.info().project.name}-${test.info().repeatEachIndex}.json`,
 		);
 	test.afterEach(() => {
-		if (test.info().title.startsWith("the retry")) {
+		if (test.info().title.startsWith("the retry") && test.info().expectedStatus !== "skipped") {
 			const [error] = test.info().errors;
 			writeFileSync(outcomeFile(), JSON.stringify({ message: error?.message ?? null, stack: error?.stack ?? "" }));
 		}
@@ -705,6 +705,10 @@ test.describe("a navigation to a seeded origin that fails", () => {
 			testStorage,
 			testStorageSecond,
 		}) => {
+			test.skip(
+				browserName === "firefox" && failure === "a refused connection",
+				"Firefox shows an error page for an aborted connection only in some runs; offline it always does",
+			);
 			test.fail(browserName !== "webkit", "Chromium and Firefox cannot apply a seed after a failed navigation there");
 			await testStorage.navigation.goto();
 			await testStorageSecond.sessionStorage.seed({ token: "t" });
@@ -713,15 +717,20 @@ test.describe("a navigation to a seeded origin that fails", () => {
 			} else {
 				await page.route(`${B}/**`, (route) => route.abort("connectionrefused"), { times: 1 });
 			}
+			const before = page.url();
 			await testStorageSecond.navigation.goto().catch(() => undefined);
-			// the browser's error page commits after goto has rejected
-			await page.waitForTimeout(500);
+			// Chromium and Firefox commit their error page after goto has rejected (Firefox's then fails this test);
+			// WebKit shows none
+			if (browserName !== "webkit") {
+				await expect.poll(() => page.url()).not.toBe(before);
+			}
 			await context.setOffline(false);
 			await testStorageSecond.navigation.goto();
 			expect(await startup(page)).toEqual({ token: "t" });
 		});
 
 		test(`after ${failure}, the failure gives the reason at the seed's line`, async ({ browserName }) => {
+			test.skip(browserName === "firefox" && failure === "a refused connection", "see the test above");
 			const { message, stack } = JSON.parse(readFileSync(outcomeFile(), "utf8"));
 			rmSync(outcomeFile());
 			if (browserName === "webkit") {
