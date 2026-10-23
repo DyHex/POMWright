@@ -255,6 +255,19 @@ Playwright gets the label in front of its message and is the `cause`.
 
 ---
 
+## AllEntries
+
+What [`get()`](#get) returns without an argument: every entry, as `Record<string, string>` without a schema; with one,
+the declared keys typed by their codecs and every other key a string.
+
+```ts
+import { json, type AllEntries } from "pomwright";
+
+const accountStorage = { user: json<{ name: string }>() };
+type Everything = AllEntries<typeof accountStorage>;
+// { user?: { name: string } | undefined } & Record<string, string | { name: string }>
+```
+
 ## Codec
 
 `Codec<T>`: how a key's value is stored as a string and read back. Declare one per key in a schema; [`json`](#json) is
@@ -293,6 +306,19 @@ Turns the value into the string to store. It must return a string.
 
 - string
 
+## Decoded
+
+The type of a key's value under a schema: `Decoded<S, K>` is the codec's type when `K` is a declared key of `S`, and
+`string` otherwise. [`get`](#get) returns it (with `null`), and [`set`](#set) and [`seed`](#seed) take it.
+
+```ts
+import { json, type Decoded } from "pomwright";
+
+const accountStorage = { user: json<{ name: string }>() };
+type User = Decoded<typeof accountStorage, "user">; // { name: string }
+type Token = Decoded<typeof accountStorage, "token">; // string
+```
+
 ## json
 
 `json<T>()`: the JSON codec, `JSON.stringify` in and `JSON.parse` out. `T` types the key and is not checked against the
@@ -301,6 +327,39 @@ parsed value. See [codecs for structured values](/POMWright/docs/session-storage
 **Returns**
 
 - [Codec](#codec)\<T\>
+
+## SeedOptions
+
+The options of [`seed`](#seed).
+
+### origin
+
+`string` *(optional)*
+
+The origin to seed. Defaults to the helper's origin.
+
+## SessionStorageOptions
+
+`SessionStorageOptions<S>`: the options of [`new SessionStorage()`](#new-sessionstorage), for a helper of your own
+that forwards them. `S` is the schema's type.
+
+### label
+
+`string` *(optional)*
+
+The prefix of step titles and error messages: `Shop` gives `Shop.SessionStorage.set:`.
+
+### origin
+
+`string` *(optional)*
+
+The origin the helper belongs to: the default origin of `seed`, and the only one `set`, `get` and `clear` touch.
+
+### schema
+
+`S` *(optional)*
+
+Codecs by key, for keys that hold structured values.
 
 ## SessionStorageSchema
 

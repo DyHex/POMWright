@@ -72,6 +72,11 @@ export const json = <T>(): Codec<T> => ({
  */
 export type SessionStorageSchema = Record<string, Codec<unknown>>;
 
+/**
+ * The options of `new SessionStorage(page, options)`: a label, the origin the helper belongs to, and its schema.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#sessionstorageoptions
+ */
 export type SessionStorageOptions<S extends SessionStorageSchema> = {
 	/** Prefix for step titles and error messages. */
 	label?: string;
@@ -81,7 +86,12 @@ export type SessionStorageOptions<S extends SessionStorageSchema> = {
 	schema?: S;
 };
 
-/** The decoded type of key `K`: the codec's type when declared, otherwise `string`. */
+/**
+ * The type of key `K`'s value under schema `S`: the codec's type when the key is declared, otherwise `string`. `get`
+ * returns it, with `null`, and `set` and `seed` take it.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#decoded
+ */
 export type Decoded<S extends SessionStorageSchema, K extends string> = K extends keyof S
 	? S[K] extends Codec<infer T>
 		? T
@@ -94,12 +104,21 @@ export type EntriesFor<S extends SessionStorageSchema, E> = { [K in keyof E]: De
 /** A key list that cannot be the literal `[]`; computed lists, including empty ones, still pass. */
 export type NonEmpty<K extends string> = readonly K[] & ([K] extends [never] ? never : unknown);
 
+/**
+ * The options of `seed`: the origin to seed, when it is not the helper's.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#seedoptions
+ */
 export type SeedOptions = {
 	/** The origin to seed; defaults to the helper's `origin`. */
 	origin?: string;
 };
 
-/** The shape `get()` returns: plain strings without a schema, otherwise declared keys decoded. */
+/**
+ * What `get()` returns: every entry, as plain strings without a schema, otherwise with the declared keys decoded.
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#allentries
+ */
 export type AllEntries<S extends SessionStorageSchema> = [keyof S] extends [never]
 	? Record<string, string>
 	: { [K in keyof S]?: Decoded<S, K & string> } & Record<string, string | Decoded<S, keyof S & string>>;

@@ -5,9 +5,11 @@ import type { Locator, Page } from "@playwright/test";
 import type { UrlTypeOptions } from "pomwright";
 import {
 	type AddAccessor,
+	type AllEntries,
 	type BaseUrlTypeFromOptions,
 	type Codec,
 	createRegistryWithAccessors,
+	type Decoded,
 	type FilterDefinition,
 	type FullUrlTypeFromOptions,
 	type GetLocatorAccessor,
@@ -30,7 +32,9 @@ import {
 	type PageObjectTypeOptions,
 	PlaywrightReportLogger,
 	type ReusableLocator,
+	type SeedOptions,
 	SessionStorage,
+	type SessionStorageOptions,
 	type SessionStorageSchema,
 	type StorageTypeFromOptions,
 	step,
@@ -55,7 +59,14 @@ const typedRegistry: LocatorRegistry<Paths> = registry;
 type Options = { urlPathType: RegExp; storage: { token: Codec<string> } };
 const options: PageObjectTypeOptions = {} as Options;
 type Urls = [BaseUrlTypeFromOptions<Options>, UrlPathTypeFromOptions<Options>, FullUrlTypeFromOptions<Options>];
-type Storage = [StorageTypeFromOptions<Options>, SessionStorageSchema];
+type Storage = [
+	StorageTypeFromOptions<Options>,
+	SessionStorageSchema,
+	SessionStorageOptions<Options["storage"]>,
+	SeedOptions,
+	Decoded<Options["storage"], "token">,
+	AllEntries<Options["storage"]>,
+];
 type Navigation = [NavigationFor<string, string>, NavigationOptions, ThisPageOptions, UrlMatcher];
 type Logging = [LogEntry, LogLevel];
 const values = [json, PageObject, PlaywrightReportLogger, SessionStorage, step, test];

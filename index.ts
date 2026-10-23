@@ -1,7 +1,16 @@
 export { test } from "./src/fixture/base.fixtures";
 export type { NavigationFor, NavigationOptions, ThisPageOptions } from "./src/helpers/navigation";
 export { type LogEntry, type LogLevel, PlaywrightReportLogger } from "./src/helpers/playwrightReportLogger";
-export { type Codec, json, SessionStorage, type SessionStorageSchema } from "./src/helpers/sessionStorage";
+export {
+	type AllEntries,
+	type Codec,
+	type Decoded,
+	json,
+	type SeedOptions,
+	SessionStorage,
+	type SessionStorageOptions,
+	type SessionStorageSchema,
+} from "./src/helpers/sessionStorage";
 export { step } from "./src/helpers/stepDecorator";
 export type { UrlMatcher } from "./src/helpers/url";
 export {

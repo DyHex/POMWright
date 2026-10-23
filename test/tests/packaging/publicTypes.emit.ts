@@ -2,7 +2,15 @@
 // functions return pomwright's builders and seeds without annotations. It emits only if each type can be named
 // from "pomwright". Playwright does not match the file name.
 import type { Page } from "@playwright/test";
-import { createRegistryWithAccessors, type LocatorRegistry, PageObject, type PageObjectOptions, step } from "pomwright";
+import {
+	createRegistryWithAccessors,
+	json,
+	type LocatorRegistry,
+	PageObject,
+	type PageObjectOptions,
+	type SessionStorage,
+	step,
+} from "pomwright";
 
 export type Paths = "main" | "main.heading" | "list" | "list.item";
 
@@ -53,3 +61,8 @@ export abstract class DomainPage<P extends string> extends PageObject<P> {
 }
 
 export const strictOptions = (options?: PageObjectOptions) => ({ ...options, locators: { strictChains: true } });
+
+// a storage module whose readers return what get() returns, without annotations
+const accountStorage = { user: json<{ name: string }>() };
+export const readUser = (storage: SessionStorage<typeof accountStorage>) => storage.get("user");
+export const readEverything = (storage: SessionStorage<typeof accountStorage>) => storage.get();
