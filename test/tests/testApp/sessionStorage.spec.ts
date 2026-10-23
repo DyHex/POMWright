@@ -158,8 +158,9 @@ test.describe("set, get and clear", () => {
 		await testStorage.navigation.goto();
 		await page.evaluate(() => sessionStorage.setItem("user", "{not json"));
 
+		// JSON.parse's own wording differs between Node versions
 		await expect(testStorage.sessionStorage.get("user")).rejects.toThrow(
-			'TestStorage.SessionStorage.get: value for "user" could not be decoded: {not json',
+			/^TestStorage\.SessionStorage\.get: value for "user" could not be decoded \(SyntaxError: .+\); stored value, 9 characters: "\{not json"$/,
 		);
 		await expect(testStorage.sessionStorage.set({ other: { x: 1 } as unknown as string })).rejects.toThrow(
 			'TestStorage.SessionStorage.set: value for "other" is not a string and no codec is declared for it; declare one in the schema (a page object\'s sessionStorage.schema option)',

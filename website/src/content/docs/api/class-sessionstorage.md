@@ -140,7 +140,7 @@ await storage.get(["token", "missing"]); // { token: "abc", missing: null }
 **Throws**
 
 ```text
-Shop.SessionStorage.get: value for "user" could not be decoded: {not json
+Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"
 ```
 
 The codec's error is the `cause`.
@@ -254,7 +254,7 @@ const number = (): Codec<number> => ({
 
 ### parse()
 
-Turns the stored string into the value. An error it throws makes `get` fail, naming the key and the value.
+Turns the stored string into the value. An error it throws makes `get` fail, naming the key, the error and the stored value.
 
 **Arguments**
 

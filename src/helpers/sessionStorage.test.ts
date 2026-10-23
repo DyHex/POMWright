@@ -127,9 +127,25 @@ describe("decodeValue", () => {
 		expect(decodeValue(schema, "attempts", "3", title)).toBe(3);
 	});
 
-	it("names the key and the raw value when the codec fails, with the cause", () => {
+	it("gives the reason, the length and the whole value, quoted, when the codec fails, with the cause", () => {
+		// JSON.parse's own wording differs between Node versions
 		expect(() => decodeValue(schema, "user", "{not json", title)).toThrow(
-			`${title}: value for "user" could not be decoded: {not json`,
+			/^Poc\.SessionStorage\.set: value for "user" could not be decoded \(SyntaxError: .+\); stored value, 9 characters: "\{not json"$/,
+		);
+		expect(() => decodeValue(schema, "attempts", "x", title)).toThrow(
+			`${title}: value for "attempts" could not be decoded (TypeError: not a number: x); stored value, 1 character: "x"`,
+		);
+		// an empty or whitespace value is visible
+		expect(() => decodeValue(schema, "user", "", title)).toThrow(/; stored value, 0 characters: ""$/);
+		expect(() => decodeValue(schema, "user", " \n", title)).toThrow(/; stored value, 2 characters: " \\n"$/);
+		const silent: Codec<string> = {
+			parse: () => {
+				throw new RangeError();
+			},
+			stringify: String,
+		};
+		expect(() => decodeValue({ token: silent }, "token", "v", title)).toThrow(
+			`${title}: value for "token" could not be decoded (RangeError); stored value, 1 character: "v"`,
 		);
 		try {
 			decodeValue(schema, "attempts", "x", title);

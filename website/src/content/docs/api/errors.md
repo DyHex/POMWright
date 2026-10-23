@@ -296,7 +296,7 @@ an origin must be on it.
 Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)
 Shop.SessionStorage.set: value for "user" could not be encoded
 Shop.SessionStorage.set: the codec for "user" returned undefined instead of a string
-Shop.SessionStorage.get: value for "user" could not be decoded: {not json
+Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"
 ```
 
 A key without a codec holds a string; declare a codec for a key that holds anything else. A codec's own error is the

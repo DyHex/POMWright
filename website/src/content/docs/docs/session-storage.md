@@ -85,8 +85,8 @@ const base64Json = <T>(): Codec<T> => ({
 });
 ```
 
-A stored value its codec cannot decode makes `get` fail, naming the key and the value, with the codec's error as
-`cause`.
+A stored value its codec cannot decode makes `get` fail, naming the key and the codec's error, then the stored value,
+whole and quoted, so an empty or whitespace value shows; the codec's error is also the `cause`.
 
 ## The methods
 
@@ -183,7 +183,7 @@ export const test = base.extend<{ storage: SessionStorage<{ user: Codec<User> }>
 | a page without an origin | `Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()` |
 | a page on another origin | `AccountPage.SessionStorage.get: the page is on …, not on this page object's origin …` |
 | a value that is not a string, for a key without a codec | `Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)` |
-| a stored value its codec cannot decode | `Shop.SessionStorage.get: value for "user" could not be decoded: {not json` |
+| a stored value its codec cannot decode | `Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"` |
 
 ## Reference
 

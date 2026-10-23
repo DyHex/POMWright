@@ -27,7 +27,7 @@ import { takeTurn } from "./storageTurns";
  */
 export type Codec<T> = {
 	/**
-	 * Turns the stored string into the value. An error it throws makes `get` fail, naming the key and the value.
+	 * Turns the stored string into the value. An error it throws makes `get` fail, naming the key, the error and the stored value.
 	 *
 	 * @param raw The string as stored.
 	 * @returns The value.
@@ -185,7 +185,14 @@ export const decodeValue = (schema: SessionStorageSchema, key: string, raw: stri
 	try {
 		return codec.parse(raw);
 	} catch (error) {
-		throw new TypeError(`${title}: value for ${JSON.stringify(key)} could not be decoded: ${raw}`, { cause: error });
+		// the reason first, then the whole value last and quoted, so an empty or whitespace value is visible
+		const reason =
+			error instanceof Error ? (error.message ? `${error.name}: ${error.message}` : error.name) : String(error);
+		const length = `${raw.length} character${raw.length === 1 ? "" : "s"}`;
+		throw new TypeError(
+			`${title}: value for ${JSON.stringify(key)} could not be decoded (${reason}); stored value, ${length}: ${JSON.stringify(raw)}`,
+			{ cause: error },
+		);
 	}
 };
 
@@ -351,7 +358,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * @param keys Several keys: returns a record with every key, `null` for each that is missing.
 	 * @returns Without an argument, every entry; otherwise the value or the record.
 	 * @throws When a stored value cannot be decoded by its codec
-	 * (`Shop.SessionStorage.get: value for "user" could not be decoded: {not json`), when the page is on another origin
+	 * (`Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"`), when the page is on another origin
 	 * than the helper's, and when the page has no origin yet.
 	 *
 	 * @example
