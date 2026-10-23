@@ -286,11 +286,12 @@ and method.
 
 ```text
 Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()
+Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)
 AccountPage.SessionStorage.get: the page is on https://login.example, not on this page object's origin https://shop.example; another origin's sessionStorage is reachable only from a document on it. Use the page object for https://login.example, or a standalone SessionStorage without an origin
 ```
 
 `set`, `get` and `clear` work on the page's current origin, so the page must be on one, and a helper that belongs to
-an origin must be on it.
+an origin must be on it. A sandboxed document has no session storage, although its URL has an origin.
 
 ```text
 Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)

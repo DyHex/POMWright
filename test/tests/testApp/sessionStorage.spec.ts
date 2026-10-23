@@ -32,6 +32,17 @@ const mock = (route: Route) =>
 			'<script>document.getElementById("startup").textContent = window.__startup;</script>',
 	});
 
+test.describe("a sandboxed document", () => {
+	test("set, get and an on-origin seed say the document's origin is opaque", async ({ page, testStorage }) => {
+		await page.goto(`${A}/teststorage/sandboxed`);
+		const opaque = (method: string) =>
+			`TestStorage.SessionStorage.${method}: the document at ${A}/teststorage/sandboxed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)`;
+		await expect(testStorage.sessionStorage.set("token", "x")).rejects.toThrow(opaque("set"));
+		await expect(testStorage.sessionStorage.get("token")).rejects.toThrow(opaque("get"));
+		await expect(testStorage.sessionStorage.seed({ token: "x" })).rejects.toThrow(opaque("seed"));
+	});
+});
+
 test.describe("a batch the page leaves", () => {
 	test("set fails with the label and the keys already written when the page navigates during it", async ({
 		page,

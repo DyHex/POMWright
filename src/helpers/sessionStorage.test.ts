@@ -167,7 +167,11 @@ describe("a batch the page leaves", () => {
 				throw failure;
 			}
 		};
-		return { url: () => url, sessionStorage: { setItem: fail, removeItem: fail } } as unknown as Page;
+		return {
+			url: () => url,
+			evaluate: async () => false,
+			sessionStorage: { setItem: fail, removeItem: fail },
+		} as unknown as Page;
 	};
 	const destroyed = new Error(
 		"webStorage.setItem: Execution context was destroyed, most likely because of a navigation",
@@ -224,6 +228,38 @@ describe("a batch the page leaves", () => {
 			.catch((e: Error) => e);
 		expect((error as Error).message).toBe(
 			"Shop.SessionStorage.clear: the page navigated while clear() was removing keys from http://localhost:9000; 1 of 3 keys were removed (token)",
+		);
+	});
+});
+
+describe("a refused storage call", () => {
+	const refused = new Error("webStorage.setItem: SecurityError: The operation is insecure.");
+	const accessOn = (url: string, opaque: boolean) =>
+		new SessionStorage({ url: () => url, evaluate: async () => opaque } as unknown as Page, {
+			label: "Shop",
+		}) as unknown as { access(m: string, call: () => Promise<void>): Promise<void> };
+	const fail = async () => {
+		throw refused;
+	};
+
+	it("on a sandboxed document says its origin is opaque", async () => {
+		await expect(accessOn("http://localhost:9000/sandboxed", true).access("set", fail)).rejects.toThrow(
+			"Shop.SessionStorage.set: the document at http://localhost:9000/sandboxed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)",
+		);
+	});
+
+	it("on a page without an origin says so, without pointing seed at seed()", async () => {
+		await expect(accessOn("about:blank", true).access("get", fail)).rejects.toThrow(
+			"Shop.SessionStorage.get: the page has no origin yet (about:blank); navigate to the origin first or use seed()",
+		);
+		await expect(accessOn("about:blank", true).access("seed", fail)).rejects.toThrow(
+			/^Shop\.SessionStorage\.seed: the page has no origin yet \(about:blank\); navigate to the origin first$/,
+		);
+	});
+
+	it("otherwise labels Playwright's error", async () => {
+		await expect(accessOn("http://localhost:9000/", false).access("clear", fail)).rejects.toThrow(
+			"Shop.SessionStorage.clear: webStorage.setItem: SecurityError: The operation is insecure.",
 		);
 	});
 });

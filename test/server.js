@@ -470,6 +470,17 @@ const renderStoragePage = (req, res) => {
 app.get("/teststorage", renderStoragePage);
 app.post("/teststorage", renderStoragePage);
 
+// A document sandboxed by its Content-Security-Policy: on the origin by URL, with an opaque origin of its own.
+app.get("/teststorage/sandboxed", (_req, res) => {
+	res.set("Cache-Control", "no-store");
+	res.set("Content-Security-Policy", "sandbox allow-scripts");
+	res.send(`<!doctype html>
+    <html>
+      <head><meta charset="utf-8"><title>Sandboxed</title></head>
+      <body><p>sandboxed</p></body>
+    </html>`);
+});
+
 // An app that declares its own global `navigation`, which shadows window.navigation in its document.
 app.get("/teststorage/shadowed-navigation", (_req, res) => {
 	res.set("Cache-Control", "no-store");

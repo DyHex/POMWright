@@ -160,7 +160,9 @@ AccountPage.SessionStorage.get: the page is on https://login.example, not on thi
 
 A helper without an origin, `new SessionStorage(page)`, works on whatever origin the page is on. On a page without an
 origin, before the first navigation, every call fails at once: `Shop.SessionStorage.set: the page has no origin yet
-(about:blank); navigate to the origin first or use seed()`.
+(about:blank); navigate to the origin first or use seed()`. A document whose own origin is opaque, such as one served
+with `Content-Security-Policy: sandbox` without `allow-same-origin`, has no session storage at all, so every call there
+fails too, saying so.
 
 ## As a fixture
 
@@ -183,6 +185,7 @@ export const test = base.extend<{ storage: SessionStorage<{ user: Codec<User> }>
 | situation | message |
 | --- | --- |
 | a page without an origin | `Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()` |
+| a sandboxed document | `Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)` |
 | a page on another origin | `AccountPage.SessionStorage.get: the page is on …, not on this page object's origin …` |
 | a value that is not a string, for a key without a codec | `Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)` |
 | a navigation during a batch | `Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)` |

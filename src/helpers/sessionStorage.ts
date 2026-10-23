@@ -206,13 +206,6 @@ const readTestOutcome: ReadTestOutcome = () => {
 };
 
 /**
- * The browser's refusal to touch storage on a document without an origin, such as `about:blank`: Chromium and
- * WebKit raise a `SecurityError`, Firefox says "The operation is insecure".
- */
-const isNoOriginError = (error: unknown): error is Error =>
-	error instanceof Error && /SecurityError|Access is denied|The operation is insecure/.test(error.message);
-
-/**
  * Playwright's `page.sessionStorage` with batches, report steps, an origin check, per-key codecs and `seed`. Values are
  * strings unless the schema declares a codec for the key. Every page object has one, `sessionStorage`.
  *
@@ -267,14 +260,29 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		return test.step(`${this.title(method)}:`, body, { box: true });
 	}
 
-	/** One call into `page.sessionStorage`; the browser's refusal on a document without an origin is explained. */
+	/**
+	 * One call into `page.sessionStorage`, its failure labelled; a page without an origin and a sandboxed document are
+	 * explained.
+	 */
 	private async access<T>(method: string, call: () => Promise<T>): Promise<T> {
 		try {
 			return await call();
 		} catch (error) {
-			if (isNoOriginError(error) || (error instanceof Error && originOf(this.page.url()) === undefined)) {
+			const url = this.page.url();
+			if (originOf(url) === undefined) {
+				const instead = method === "seed" ? "" : " or use seed()";
 				throw new Error(
-					`${this.title(method)}: the page has no origin yet (${this.page.url()}); navigate to the origin first or use seed()`,
+					`${this.title(method)}: the page has no origin yet (${url}); navigate to the origin first${instead}`,
+					{
+						cause: error,
+					},
+				);
+			}
+			// the browsers word the refusal differently, so the document's own origin tells a sandboxed document apart
+			if (await this.page.evaluate(() => self.origin === "null").catch(() => false)) {
+				throw new Error(
+					`${this.title(method)}: the document at ${url} cannot use sessionStorage: its origin is opaque, as in a ` +
+						"sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)",
 					{ cause: error },
 				);
 			}
@@ -362,6 +370,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * (`… the codec for "user" returned undefined instead of a string`), when the page is on another origin than the
 	 * helper's, when the page has no origin yet
 	 * (`Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()`),
+	 * when the document is sandboxed, so its origin is opaque
+	 * (`Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque, …`),
 	 * and when the page navigates during the batch, which is written one key at a time and stops there
 	 * (`Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)`).
 	 *
