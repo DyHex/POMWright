@@ -155,6 +155,79 @@ describe("decodeValue", () => {
 	});
 });
 
+describe("a batch the page leaves", () => {
+	/** A page whose storage call fails with `failure` on call number `failAt`, after which the page is at `urlAfter`. */
+	const pageFailingAt = (failAt: number, failure: Error, urlAfter = "http://localhost:9000/") => {
+		let calls = 0;
+		let url = "http://localhost:9000/teststorage";
+		const fail = async () => {
+			calls++;
+			if (calls === failAt) {
+				url = urlAfter;
+				throw failure;
+			}
+		};
+		return { url: () => url, sessionStorage: { setItem: fail, removeItem: fail } } as unknown as Page;
+	};
+	const destroyed = new Error(
+		"webStorage.setItem: Execution context was destroyed, most likely because of a navigation",
+	);
+	const write = (page: Page, entries: Record<string, string>) =>
+		(
+			new SessionStorage(page, { label: "Shop" }) as unknown as {
+				write(m: string, e: Record<string, string>): Promise<void>;
+			}
+		).write("set", entries);
+
+	it("names the keys already written when the page navigates during the batch", async () => {
+		const error = await write(pageFailingAt(3, destroyed), { a: "1", b: "2", c: "3", d: "4" }).catch((e: Error) => e);
+		expect((error as Error).message).toBe(
+			"Shop.SessionStorage.set: the page navigated while set() was writing to http://localhost:9000; 2 of 4 keys were written (a, b)",
+		);
+		expect((error as Error).cause).toBe(destroyed);
+	});
+
+	it("says so for a lone key, and when the page has left for another origin", async () => {
+		const error = await write(pageFailingAt(1, new Error("gone"), "http://127.0.0.1:9000/x"), { token: "t" }).catch(
+			(e: Error) => e,
+		);
+		expect((error as Error).message).toBe(
+			"Shop.SessionStorage.set: the page navigated while set() was writing to http://localhost:9000; 0 of 1 key was written",
+		);
+	});
+
+	it("labels any other failure and keeps it as the cause", async () => {
+		const quota = new Error("webStorage.setItem: QuotaExceededError: The quota has been exceeded.");
+		const error = await write(pageFailingAt(2, quota, "http://localhost:9000/teststorage"), { a: "1", b: "2" }).catch(
+			(e: Error) => e,
+		);
+		expect((error as Error).message).toBe(
+			"Shop.SessionStorage.set: webStorage.setItem: QuotaExceededError: The quota has been exceeded.",
+		);
+		expect((error as Error).cause).toBe(quota);
+	});
+
+	it("names the keys already removed when clear() is interrupted", async () => {
+		const helper = new SessionStorage(pageFailingAt(2, destroyed), { label: "Shop" }) as unknown as {
+			eachKey(
+				m: string,
+				k: string[],
+				words: readonly [string, string],
+				call: (key: string) => Promise<void>,
+			): Promise<void>;
+			page: Page;
+		};
+		const error = await helper
+			.eachKey("clear", ["token", "locale", "theme"], ["removing keys from", "removed"], (key) =>
+				helper.page.sessionStorage.removeItem(key),
+			)
+			.catch((e: Error) => e);
+		expect((error as Error).message).toBe(
+			"Shop.SessionStorage.clear: the page navigated while clear() was removing keys from http://localhost:9000; 1 of 3 keys were removed (token)",
+		);
+	});
+});
+
 describe("the origin option", () => {
 	// the constructor only validates; it calls nothing on the page
 	const unusedPage = {} as Page;

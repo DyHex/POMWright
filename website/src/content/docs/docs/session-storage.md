@@ -111,7 +111,9 @@ await storage.clear(["token", "locale"]);
 await storage.clear(); // everything
 ```
 
-`set` encodes every value before it writes any, so a bad value writes nothing. A literal `[]` is a compile error for
+`set` encodes every value before it writes any, so a bad value writes nothing. It then writes one key at a time, as
+Playwright's `setItem` takes one, so a navigation during the batch stops it: the keys written before stay, and the call
+fails, naming them. A literal `[]` is a compile error for
 `get` and `clear`; a list that turns out empty at runtime reads or removes nothing.
 
 Calls for one origin act in the order they were made, also when they overlap. In a `Promise.all`, a `get` after a `set`
@@ -183,6 +185,7 @@ export const test = base.extend<{ storage: SessionStorage<{ user: Codec<User> }>
 | a page without an origin | `Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()` |
 | a page on another origin | `AccountPage.SessionStorage.get: the page is on …, not on this page object's origin …` |
 | a value that is not a string, for a key without a codec | `Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)` |
+| a navigation during a batch | `Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)` |
 | a stored value its codec cannot decode | `Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"` |
 
 ## Reference

@@ -293,6 +293,14 @@ AccountPage.SessionStorage.get: the page is on https://login.example, not on thi
 an origin must be on it.
 
 ```text
+Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)
+Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token)
+```
+
+Playwright writes and removes one key per call, so a navigation can stop a batch; the keys named were done, and stay
+so. Any other error from Playwright gets the label in front of its message and is the `cause`.
+
+```text
 Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)
 Shop.SessionStorage.set: value for "user" could not be encoded
 Shop.SessionStorage.set: the codec for "user" returned undefined instead of a string

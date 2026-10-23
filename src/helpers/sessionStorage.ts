@@ -278,7 +278,40 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 					{ cause: error },
 				);
 			}
-			throw error;
+			throw new Error(`${this.title(method)}: ${error instanceof Error ? error.message : String(error)}`, {
+				cause: error,
+			});
+		}
+	}
+
+	/**
+	 * One storage call per key, in order: Playwright has no batch call, so a navigation can stop the batch partway. The
+	 * failure then says so and names the keys already done, which stay.
+	 */
+	private async eachKey(
+		method: string,
+		keys: readonly string[],
+		[doing, done]: readonly [doing: string, done: string],
+		call: (key: string) => Promise<void>,
+	): Promise<void> {
+		const start = originOf(this.page.url());
+		for (const [index, key] of keys.entries()) {
+			try {
+				await this.access(method, () => call(key));
+			} catch (error) {
+				const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
+				const destroyed = cause instanceof Error && /Execution context was destroyed/.test(cause.message);
+				if (start === undefined || !(destroyed || originOf(this.page.url()) !== start)) {
+					throw error;
+				}
+				const finished = keys.slice(0, index);
+				throw new Error(
+					`${this.title(method)}: the page navigated while ${method}() was ${doing} ${start}; ` +
+						`${finished.length} of ${keys.length} ${keys.length === 1 ? "key was" : "keys were"} ${done}` +
+						(finished.length > 0 ? ` (${finished.join(", ")})` : ""),
+					{ cause },
+				);
+			}
 		}
 	}
 
@@ -310,9 +343,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	}
 
 	private async write(method: string, encoded: Record<string, string>): Promise<void> {
-		for (const [key, value] of Object.entries(encoded)) {
-			await this.access(method, () => this.page.sessionStorage.setItem(key, value));
-		}
+		await this.eachKey(method, Object.keys(encoded), ["writing to", "written"], (key) =>
+			this.page.sessionStorage.setItem(key, encoded[key] as string),
+		);
 	}
 
 	/**
@@ -327,8 +360,10 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * (`Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)`), when a key's codec
 	 * throws (`… value for "user" could not be encoded`) or returns something other than a string
 	 * (`… the codec for "user" returned undefined instead of a string`), when the page is on another origin than the
-	 * helper's, and when the page has no origin yet
-	 * (`Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()`).
+	 * helper's, when the page has no origin yet
+	 * (`Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()`),
+	 * and when the page navigates during the batch, which is written one key at a time and stops there
+	 * (`Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)`).
 	 *
 	 * @example
 	 * ```ts
@@ -418,7 +453,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 *
 	 * @param key One key.
 	 * @param keys Several keys. A literal `[]` does not compile; a list that is empty at run time removes nothing.
-	 * @throws When the page is on another origin than the helper's, and when the page has no origin yet.
+	 * @throws When the page is on another origin than the helper's, when the page has no origin yet, and when the page
+	 * navigates while several keys are being removed
+	 * (`Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token)`).
 	 *
 	 * @example
 	 * ```ts
@@ -439,9 +476,12 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 					await this.access("clear", () => this.page.sessionStorage.clear());
 					return;
 				}
-				for (const key of typeof keyOrKeys === "string" ? [keyOrKeys] : keyOrKeys) {
-					await this.access("clear", () => this.page.sessionStorage.removeItem(key));
-				}
+				await this.eachKey(
+					"clear",
+					typeof keyOrKeys === "string" ? [keyOrKeys] : keyOrKeys,
+					["removing keys from", "removed"],
+					(key) => this.page.sessionStorage.removeItem(key),
+				);
 			});
 		});
 	}

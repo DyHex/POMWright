@@ -86,7 +86,7 @@ Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to t
 
 ### clear()
 
-Removes every entry, one key, or several.
+Removes every entry, one key, or several, one key at a time.
 
 **Usage**
 
@@ -109,6 +109,14 @@ await storage.clear(); // everything
 **Returns**
 
 - Promise\<void\>
+
+**Throws**
+
+```text
+Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token)
+```
+
+When the page navigates while several keys are being removed; the keys it names are gone.
 
 ### get()
 
@@ -202,7 +210,8 @@ Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was n
 ### set()
 
 Writes one entry, or several, each value through its key's codec, or as the string it must be. Every value is
-encoded before any is written, so a bad value writes nothing.
+encoded before any is written, so a bad value writes nothing. The values are then written one key at a time, as
+Playwright's `setItem` takes one: a navigation during the batch stops it, and the keys written before it stay.
 
 **Usage**
 
@@ -231,10 +240,12 @@ await storage.set({ token: "abc", locale: "nb" });
 Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)
 Shop.SessionStorage.set: value for "user" could not be encoded
 Shop.SessionStorage.set: the codec for "user" returned undefined instead of a string
+Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)
 ```
 
 The second when the key's codec throws, with its error as `cause`; the third when it returns something other than a
-string.
+string; the fourth when the page navigates during the batch, naming the keys already written. Any other error from
+Playwright gets the label in front of its message and is the `cause`.
 
 ---
 

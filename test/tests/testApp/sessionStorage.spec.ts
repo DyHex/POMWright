@@ -32,6 +32,32 @@ const mock = (route: Route) =>
 			'<script>document.getElementById("startup").textContent = window.__startup;</script>',
 	});
 
+test.describe("a batch the page leaves", () => {
+	test("set fails with the label and the keys already written when the page navigates during it", async ({
+		page,
+		browserName,
+		testStorage,
+	}) => {
+		await testStorage.navigation.goto();
+		const entries = Object.fromEntries(Array.from({ length: 60 }, (_, i) => [`k${i}`, `v${i}`]));
+		await page.evaluate((to) => setTimeout(() => (location.href = to), 5), `${B}/teststorage`);
+		const outcome = await testStorage.sessionStorage.set(entries).then(
+			() => "resolved",
+			(error: Error) => error.message,
+		);
+		const navigated =
+			/^TestStorage\.SessionStorage\.set: the page navigated while set\(\) was writing to http:\/\/localhost:9000; \d+ of 60 keys were written/;
+		if (browserName === "webkit") {
+			// WebKit finishes the batch before it leaves (60 of 60 in every probe); either outcome is correct
+			expect(outcome === "resolved" || navigated.test(outcome), outcome).toBe(true);
+		} else {
+			expect(outcome).toMatch(navigated);
+		}
+		await page.waitForURL(onSecondOrigin);
+		expect(await current(page)).toEqual({});
+	});
+});
+
 test.describe("set, get and clear", () => {
 	test("set stores strings as given and declared keys through their codec; the app reads them raw", async ({
 		page,
