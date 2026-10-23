@@ -53,6 +53,9 @@ export type PendingSeed = {
 	disposable: SeedDisposable;
 };
 
+/** The page as a `seed` call found it, and the origins its main frame has committed on since. See `snapshot()`. */
+export type CallSnapshot = { origin: string | undefined; committed: Set<string>; stop(): void };
+
 /** A seed whose document has committed and may still report a write the browser refused. */
 type AppliedSeed = { keys: string[]; title: string; site: Error };
 
@@ -179,36 +182,56 @@ export class SeedRegistry {
 	 * With `writeOnOrigin`, a call made while the page is on the origin writes there in its turn instead, if the page is
 	 * still there; a navigation within the origin while it waits is not an arrival.
 	 */
+	/**
+	 * The page as a `seed` call finds it: the main frame's origin, and every origin the main frame commits on from then
+	 * on. `seed()` takes it synchronously at the call, before its step's body, because Playwright may await work of its
+	 * own before running the body (the step overlay of `video.show.test` makes a round trip to the browser); a commit
+	 * then must still count as one during the call. Stop it when the call settles.
+	 */
+	snapshot(): CallSnapshot {
+		const committed = new Set<string>();
+		const watch = (frame: Frame): void => {
+			const origin = frame === this.page.mainFrame() ? originOf(frame.url()) : undefined;
+			if (origin !== undefined) {
+				committed.add(origin);
+			}
+		};
+		this.page.on("framenavigated", watch);
+		return {
+			origin: originOf(this.page.mainFrame().url()),
+			committed,
+			stop: () => this.page.off("framenavigated", watch),
+		};
+	}
+
 	add(
 		origin: string,
 		entries: Record<string, string>,
 		title: string,
 		site: Error,
 		writeOnOrigin?: () => Promise<void>,
+		atCall?: CallSnapshot,
 	): Promise<void> {
-		const wasOnOrigin = writeOnOrigin !== undefined && originOf(this.page.mainFrame().url()) === origin;
 		// watched from the call on, so the wait for earlier calls and the Navigation API check are covered too
-		let committed = false;
-		const watch = (frame: Frame): void => {
-			if (frame === this.page.mainFrame() && originOf(frame.url()) === origin) {
-				committed = true;
-			}
-		};
-		this.page.on("framenavigated", watch);
+		const snapshot = atCall ?? this.snapshot();
+		const wasOnOrigin = writeOnOrigin !== undefined && snapshot.origin === origin;
 		return takeTurn(this.page, origin, async () => {
 			try {
 				if (wasOnOrigin) {
-					committed = false;
+					// a navigation within the origin while the call waited is not an arrival
+					snapshot.committed.delete(origin);
 					if (originOf(this.page.mainFrame().url()) === origin) {
 						await writeOnOrigin?.();
 						return;
 					}
 				}
-				await this.register(origin, entries, title, site, () => committed);
+				await this.register(origin, entries, title, site, () => snapshot.committed.has(origin));
 			} catch (error) {
 				throw this.fromPage(error, origin, entries, title, site);
 			} finally {
-				this.page.off("framenavigated", watch);
+				if (atCall === undefined) {
+					snapshot.stop();
+				}
 			}
 		});
 	}

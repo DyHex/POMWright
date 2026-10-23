@@ -291,6 +291,47 @@ describe("SeedRegistry", () => {
 		}
 	});
 
+	it("decides from the page at the call: a commit before the call's turn counts, and on the origin it writes at once", async () => {
+		const { page, registry } = setup();
+		// the step overlay's wait: the call is made on about:blank, and B commits before the step's body runs
+		const atCall = registry.snapshot();
+		page.navigate(`${B}/`);
+		let wrote = false;
+		const error = await registry
+			.add(
+				B,
+				{ token: "t" },
+				title,
+				site,
+				async () => {
+					wrote = true;
+				},
+				atCall,
+			)
+			.catch((e: Error) => e);
+		atCall.stop();
+		expect(wrote).toBe(false);
+		expect((error as Error).message).toBe(inFlightError(title, B, site).message);
+		expect(page.scripts).toEqual([]);
+
+		// made on the origin, a hop within it before the turn is not an arrival: it writes at once
+		const onOrigin = registry.snapshot();
+		page.navigate(`${B}/another`);
+		await registry.add(
+			B,
+			{ token: "t" },
+			title,
+			site,
+			async () => {
+				wrote = true;
+			},
+			onOrigin,
+		);
+		onOrigin.stop();
+		expect(wrote).toBe(true);
+		expect(page.listeners.filter((l) => l.event === "framenavigated")).toEqual([]);
+	});
+
 	it("throws from add when the main frame commits on the origin while the script is being registered, and disposes of it", async () => {
 		const { page, registry } = setup();
 		page.duringAdd = () => page.navigate(`${B}/app`);

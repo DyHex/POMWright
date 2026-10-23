@@ -272,7 +272,8 @@ from two reviews of 3.0.1.
   step starts, so overlapping calls (a `Promise.all`, a missing `await`) end exactly as awaited ones, across every
   helper on the page; a call that waited checks the origin again when its turn starts, and a failing call leaves the
   pending seed as it was. `seed` decides in its turn whether to write at once (the page was on the origin at the call
-  and still is) or to register. Keys are never property names on the way to the page: a `__proto__` key is stored. `seed` throws at
+  and still is) or to register; it reads the page and starts its commit watch at the call, before its step's body,
+  which Playwright may delay (the step overlay). Keys are never property names on the way to the page: a `__proto__` key is stored. `seed` throws at
   the call in a browser without the Navigation API (checked once per page) and when the main frame commits on the
   origin between the call reaching the registry and the end of its registration; a refused write and a never-applied seed fail the test with the `seed` call site in the stack. Never
   reintroduce JSON-encoding every value, or a write from a `framenavigated` listener (it loses the race against the

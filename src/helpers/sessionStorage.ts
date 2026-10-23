@@ -534,22 +534,27 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 			typeof keyOrEntries === "string"
 				? [{ [keyOrEntries]: valueOrOptions }, maybeOptions]
 				: [keyOrEntries, valueOrOptions as SeedOptions | undefined];
-		await this.step("seed", async () => {
-			const title = this.title("seed");
-			const requested = options?.origin;
-			const origin = requested === undefined ? this.origin : normaliseOrigin(requested, title);
-			if (origin === undefined) {
-				throw new Error(`${title}: an origin is required; pass { origin } or construct the helper with one`);
-			}
-			const encoded = encodeEntries(this.schema, entries, title);
-			if (Object.keys(encoded).length === 0) {
-				// nothing to store, as get([]) and clear([]) read and remove nothing; a seed without keys would only wait
-				return;
-			}
-			// on the origin, the registry writes at once in the call's turn; elsewhere it registers the seed
-			await registryFor(this.page, readTestOutcome).add(origin, encoded, title, site, () =>
-				this.write("seed", encoded),
-			);
-		});
+		// the page as the call finds it, before the step: Playwright may await work of its own before the body runs
+		const registry = registryFor(this.page, readTestOutcome);
+		const atCall = registry.snapshot();
+		try {
+			await this.step("seed", async () => {
+				const title = this.title("seed");
+				const requested = options?.origin;
+				const origin = requested === undefined ? this.origin : normaliseOrigin(requested, title);
+				if (origin === undefined) {
+					throw new Error(`${title}: an origin is required; pass { origin } or construct the helper with one`);
+				}
+				const encoded = encodeEntries(this.schema, entries, title);
+				if (Object.keys(encoded).length === 0) {
+					// nothing to store, as get([]) and clear([]) read and remove nothing; a seed without keys would only wait
+					return;
+				}
+				// on the origin, the registry writes at once in the call's turn; elsewhere it registers the seed
+				await registry.add(origin, encoded, title, site, () => this.write("seed", encoded), atCall);
+			});
+		} finally {
+			atCall.stop();
+		}
 	}
 }

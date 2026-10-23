@@ -95,9 +95,12 @@ sequenceDiagram
   anything is registered. The check tests the `NavigationActivation` interface, not `navigation.activation`: an app's
   own global `navigation` (`var navigation = …`) shadows the latter in its document, which would make `seed` report a
   browser without the API. The script is not affected, since it runs before the document's first script.
-- **A commit during registration.** A temporary `framenavigated` listener watches the main frame from the moment the
-  call reaches the registry until its turn ends, so the wait for earlier calls and the Navigation API check are
-  covered too. If the page commits a document on the origin in that time, it is unknown whether that document ran the
+- **A commit during registration.** A temporary `framenavigated` listener watches the main frame from the moment
+  `seed` is called until its turn ends, so the wait for earlier calls and the Navigation API check are covered too.
+  `seed` also reads whether the page is on the origin at that moment. Both happen before its report step's body runs,
+  because Playwright may await work of its own first: with `video: { show: { test } }`, `test.step` updates an overlay
+  in every page, a round trip to the browser, and a navigation can commit in that gap. Read inside the body, such a
+  commit made the page look as if it had been on the origin all along, and `seed` wrote after the app's first script. If the page commits a document on the origin in that time, it is unknown whether that document ran the
   script: on Chromium, `addInitScript` resolved after such a commit whether or not the document had run it. A call
   that sees the commit before registering throws without registering; one that sees it while `addInitScript` is
   pending disposes of the new script and throws.
