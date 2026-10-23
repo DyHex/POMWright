@@ -36,7 +36,9 @@ test("a token", async ({ loginPage }) => {
 ## Codecs for structured values
 
 A key whose value is JSON, or any other encoding, is declared once with a **codec**, `{ parse, stringify }`. `set`,
-`get` and `seed` then take and return the decoded value, typed by key. `json<T>()` is the one codec POMWright ships:
+`get` and `seed` then take and return the decoded value, typed by key. A key typed `string` rather than a literal
+may be any key, so its value is typed as a string or any declared codec's type; pass the literal, or type the variable
+as the schema's keys (`keyof typeof schema`), to get one codec's type. `json<T>()` is the one codec POMWright ships:
 
 ```ts
 import type { Page } from "@playwright/test";

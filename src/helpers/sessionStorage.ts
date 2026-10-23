@@ -86,17 +86,30 @@ export type SessionStorageOptions<S extends SessionStorageSchema> = {
 	schema?: S;
 };
 
+/** The type of any declared key's value: the union of the schema's codecs' types (`never` without codecs). */
+type AnyDecoded<S extends SessionStorageSchema> = { [P in keyof S]: S[P] extends Codec<infer T> ? T : never }[keyof S];
+
 /**
- * The type of key `K`'s value under schema `S`: the codec's type when the key is declared, otherwise `string`. `get`
- * returns it, with `null`, and `set` and `seed` take it.
+ * The type of key `K`'s value under schema `S`: the codec's type when the key is declared, otherwise `string`. A key
+ * typed `string`, not a literal, may be any key, so its value is a string or any declared codec's type; pass the literal,
+ * or type the key as the schema's keys (`keyof typeof schema`), for one codec's type. `get` returns it, with `null`, and
+ * `set` and `seed` take it.
  *
  * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#decoded
  */
-export type Decoded<S extends SessionStorageSchema, K extends string> = K extends keyof S
-	? S[K] extends Codec<infer T>
-		? T
-		: never
-	: string;
+export type Decoded<S extends SessionStorageSchema, K extends string> = string extends K
+	? string | AnyDecoded<S>
+	: K extends keyof S
+		? S[K] extends Codec<infer T>
+			? T
+			: never
+		: string;
+
+/**
+ * `K`, but not a place TypeScript infers `K` from, so `set(key, value)` takes the key's type from the key alone; inferred
+ * from the value too, `K` could widen to `string` and accept any value. TypeScript's own `NoInfer` needs 5.4.
+ */
+type KeyOnly<K> = [K][K extends unknown ? 0 : never];
 
 /** A record whose every value is typed by its key's codec. */
 export type EntriesFor<S extends SessionStorageSchema, E> = { [K in keyof E]: Decoded<S, K & string> };
@@ -416,7 +429,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#set
 	 */
-	set<K extends string>(key: K, value: Decoded<S, K>): Promise<void>;
+	set<K extends string>(key: K, value: Decoded<S, KeyOnly<K>>): Promise<void>;
 	set<E extends Record<string, unknown>>(entries: EntriesFor<S, E>): Promise<void>;
 	async set(keyOrEntries: string | Record<string, unknown>, value?: unknown): Promise<void> {
 		const entries = typeof keyOrEntries === "string" ? { [keyOrEntries]: value } : keyOrEntries;
@@ -557,7 +570,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * await loginPage.navigation.goto(); // the app's first script already sees the token
 	 * ```
 	 */
-	seed<K extends string>(key: K, value: Decoded<S, K>, options?: SeedOptions): Promise<void>;
+	seed<K extends string>(key: K, value: Decoded<S, KeyOnly<K>>, options?: SeedOptions): Promise<void>;
 	seed<E extends Record<string, unknown>>(entries: EntriesFor<S, E>, options?: SeedOptions): Promise<void>;
 	async seed(
 		keyOrEntries: string | Record<string, unknown>,

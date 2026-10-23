@@ -307,6 +307,8 @@ declare const typed: SessionStorage<typeof schema>;
 declare const plain: SessionStorage;
 declare const computed: string[];
 declare const readonlyComputed: readonly string[];
+declare const dynamicKey: string;
+declare const declaredKey: keyof typeof schema;
 
 const voiceStorage = { voiceCheckout: json<VoiceCheckoutModel>() };
 
@@ -381,8 +383,22 @@ const typeContract = async () => {
 		token: string | null;
 		user: VoiceCheckoutModel | null;
 	}>();
-	expectTypeOf(typed.get(computed)).resolves.toEqualTypeOf<{ [x: string]: string | null }>();
-	expectTypeOf(typed.get(readonlyComputed)).resolves.toEqualTypeOf<{ [x: string]: string | null }>();
+	// a key typed string may be any key: a string or any declared codec's type
+	expectTypeOf(typed.get(computed)).resolves.toEqualTypeOf<{
+		[x: string]: string | VoiceCheckoutModel | number | null;
+	}>();
+	expectTypeOf(typed.get(readonlyComputed)).resolves.toEqualTypeOf<{
+		[x: string]: string | VoiceCheckoutModel | number | null;
+	}>();
+	expectTypeOf(typed.get(dynamicKey)).resolves.toEqualTypeOf<string | VoiceCheckoutModel | number | null>();
+	expectTypeOf(plain.get(dynamicKey)).resolves.toEqualTypeOf<string | null>();
+	expectTypeOf(plain.get(computed)).resolves.toEqualTypeOf<{ [x: string]: string | null }>();
+	expectTypeOf(typed.get(declaredKey)).resolves.toEqualTypeOf<VoiceCheckoutModel | number | null>();
+	await typed.set(dynamicKey, model);
+	await typed.set(dynamicKey, "abc");
+	await typed.seed(dynamicKey, 3);
+	// @ts-expect-error the value may be a declared codec's type, so it is not known to be a string
+	(await typed.get(dynamicKey))?.toUpperCase();
 	expectTypeOf(plain.get()).resolves.toEqualTypeOf<Record<string, string>>();
 	expectTypeOf(typed.get()).resolves.toMatchTypeOf<{ user?: VoiceCheckoutModel; attempts?: number }>();
 	expectTypeOf<AllEntries<typeof schema>["anything"]>().toEqualTypeOf<string | VoiceCheckoutModel | number>();

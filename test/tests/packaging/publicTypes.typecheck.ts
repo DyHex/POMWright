@@ -311,3 +311,14 @@ void [DomainLogin, wrongOptions];
 void [accessors, typedRegistry, options, values, afterUpdate, afterReplace, notAValue, wrongSeed, misspelt];
 void [wellFormed, malformed, ListPage, arrayHas, Steps];
 void [copy, voidCopy, narrowed, strictRegistry, StrictPage];
+
+// a session storage key typed string, not a literal, may be any key: its value is a string or any declared codec's type
+declare const storageWithCodecs: SessionStorage<{ user: Codec<{ name: string }> }>;
+declare const anyKey: string;
+const widenedValue: Promise<string | { name: string } | null> = storageWithCodecs.get(anyKey);
+// @ts-expect-error a declared codec's type may come back, so the value is not known to be a string
+const narrowedValue: Promise<string | null> = storageWithCodecs.get(anyKey);
+const literalValue: Promise<{ name: string } | null> = storageWithCodecs.get("user");
+// @ts-expect-error the key's type comes from the key alone: a declared key keeps its codec's type
+storageWithCodecs.set("user", "a string");
+void [widenedValue, narrowedValue, literalValue];

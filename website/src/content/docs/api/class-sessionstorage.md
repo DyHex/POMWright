@@ -143,7 +143,8 @@ await storage.get(["token", "missing"]); // { token: "abc", missing: null }
 **Returns**
 
 - Promise: every present entry; the value or `null`; or a record with every key asked for, `null` for each missing one.
-  Values are typed by the schema: a declared key as its codec's type, any other key as a string.
+  Values are typed by the schema: a declared key as its codec's type, any other key as a string, and a key typed
+  `string` rather than a literal as a string or any declared codec's type (see [Decoded](#decoded)).
 
 **Throws**
 
@@ -317,7 +318,10 @@ import { json, type Decoded } from "pomwright";
 const accountStorage = { user: json<{ name: string }>() };
 type User = Decoded<typeof accountStorage, "user">; // { name: string }
 type Token = Decoded<typeof accountStorage, "token">; // string
+type AnyKey = Decoded<typeof accountStorage, string>; // string | { name: string }
 ```
+
+A key typed `string` may be any key, so its value is a string or any declared codec's type.
 
 ## json
 
