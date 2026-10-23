@@ -934,11 +934,23 @@ test.describe("seed and the app's own navigations", () => {
 		await page.addInitScript(() => {
 			Reflect.deleteProperty(window, "navigation");
 			Object.defineProperty(window, "navigation", { value: undefined });
+			Reflect.deleteProperty(window, "NavigationActivation");
 		});
 		await testStorage.navigation.goto();
 		await expect(testStorage.sessionStorage.seed({ token: "x" }, { origin: B })).rejects.toThrow(
 			/^TestStorage\.SessionStorage\.seed: seed\(\) needs the Navigation API \(navigation\.activation\) to write only on the first arrival at http:\/\/127\.0\.0\.1:9000, and this browser has none \(.+\); use set\(\) on the origin and reload instead$/,
 		);
+	});
+
+	test("an app that declares its own global navigation does not hide the Navigation API from seed", async ({
+		page,
+		testStorageSecond,
+	}) => {
+		await page.goto(`${A}/teststorage/shadowed-navigation`);
+		await expect(page.locator("#navigation-global")).toHaveText("the app's own");
+		await testStorageSecond.sessionStorage.seed({ token: "seeded" });
+		await testStorageSecond.navigation.goto();
+		expect(await startup(page)).toEqual({ token: "seeded" });
 	});
 
 	test("a write the browser refuses fails the test", async ({ page, testStorage, testStorageSecond }) => {

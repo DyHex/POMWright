@@ -92,7 +92,9 @@ sequenceDiagram
 
 - **The Navigation API**, once per page, by `page.evaluate` in the current document (which works on `about:blank`):
   without `navigation.activation` the script could not tell a first arrival from a reload, so `seed` throws before
-  anything is registered.
+  anything is registered. The check tests the `NavigationActivation` interface, not `navigation.activation`: an app's
+  own global `navigation` (`var navigation = …`) shadows the latter in its document, which would make `seed` report a
+  browser without the API. The script is not affected, since it runs before the document's first script.
 - **A commit during registration.** A temporary `framenavigated` listener watches the main frame from the moment the
   call reaches the registry until its turn ends, so the wait for earlier calls and the Navigation API check are
   covered too. If the page commits a document on the origin in that time, it is unknown whether that document ran the

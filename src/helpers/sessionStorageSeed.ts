@@ -242,14 +242,17 @@ export class SeedRegistry {
 		await previous?.disposable.dispose();
 	}
 
-	/** Once per page: an evaluation in the current document, which works on `about:blank` too. */
+	/**
+	 * Once per page: an evaluation in the current document, which works on `about:blank` too. It tests the interface,
+	 * not `navigation.activation`: an app's own global `navigation` (`var navigation = …`) shadows the latter.
+	 */
 	private async assertNavigationApi(origin: string, title: string, site: Error): Promise<void> {
 		if (this.navigationApiChecked) {
 			return;
 		}
 		const probe = () =>
 			this.page.evaluate(() => ({
-				supported: typeof globalThis.navigation?.activation === "object",
+				supported: typeof NavigationActivation === "function" && "from" in NavigationActivation.prototype,
 				userAgent: navigator.userAgent,
 			}));
 		let support: NavigationSupport;
