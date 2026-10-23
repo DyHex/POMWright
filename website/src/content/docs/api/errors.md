@@ -320,6 +320,9 @@ Shop.SessionStorage.constructor: origin must be an origin such as "https://app.e
 
 ```text
 Shop.SessionStorage.seed: an origin is required; pass { origin } or construct the helper with one
+Shop.SessionStorage.seed: value for "orderId" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)
+Shop.SessionStorage.seed: value for "orderId" could not be encoded
+Shop.SessionStorage.seed: the codec for "orderId" returned undefined instead of a string
 Shop.SessionStorage.seed: the page committed a document on https://pay.example while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it
 Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation) to write only on the first arrival at https://pay.example, and this browser has none (Mozilla/5.0 …); use set() on the origin and reload instead
 Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends
