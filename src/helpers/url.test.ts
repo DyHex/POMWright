@@ -217,6 +217,16 @@ describe("createUrlMatcher", () => {
 		expect(createUrlMatcher("https://shop.example", /^\/a\|b$/).test("https://shop.example/a%7Cb")).toBe(false);
 	});
 
+	it('compares "^" and "%5E" in a string path as one character, as Node 20 and 22 keep the first and browsers report the second', () => {
+		const caret = createUrlMatcher("https://shop.example", "/a^b");
+		expect(caret.test("https://shop.example/a^b")).toBe(true);
+		expect(caret.test("https://shop.example/a%5Eb")).toBe(true);
+		expect(caret.test("https://shop.example/a%5eb")).toBe(false);
+		expect(createUrlMatcher("https://shop.example", "/a%5Eb").test("https://shop.example/a^b")).toBe(true);
+		// only in the path: the query and the fragment are compared as written
+		expect(createUrlMatcher("https://shop.example", "/a?q=x^y").test("https://shop.example/a?q=x%5Ey")).toBe(false);
+	});
+
 	it("finds the rest of a URL with credentials", () => {
 		const orders = createUrlMatcher("https://shop.example", "/orders?tab=1");
 		expect(orders.test("https://user:secret@shop.example/orders?tab=1")).toBe(true);

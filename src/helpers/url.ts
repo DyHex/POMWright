@@ -156,12 +156,14 @@ const restOf = (url: URL): string => {
 
 /**
  * The rest of a URL in the one form a string path is compared in. Chromium reports a "|" in the path as "%7C", where
- * `new URL`, Firefox and WebKit keep it; a sweep of every printable ASCII character in the path, query and fragment on
- * the three browsers found no other difference (`test/tests/testApp/urlForms.spec.ts` keeps checking).
+ * `new URL`, Firefox and WebKit keep it; every browser reports a "^" in the path as "%5E", which `new URL` writes too
+ * from Node 24 (ada 4) but keeps on Node 20 and 22. A sweep of every printable ASCII character in the path, query and
+ * fragment on the three browsers found no other difference (`test/tests/testApp/urlForms.spec.ts` keeps checking).
  */
 const comparable = (rest: string): string => {
 	const end = rest.search(/[?#]/);
-	return end === -1 ? rest.replaceAll("|", "%7C") : rest.slice(0, end).replaceAll("|", "%7C") + rest.slice(end);
+	const path = (end === -1 ? rest : rest.slice(0, end)).replaceAll("|", "%7C").replaceAll("^", "%5E");
+	return end === -1 ? path : path + rest.slice(end);
 };
 
 const toUrl = (input: string | URL): URL => (typeof input === "string" ? new URL(input) : input);

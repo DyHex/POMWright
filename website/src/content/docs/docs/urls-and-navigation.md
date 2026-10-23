@@ -59,8 +59,9 @@ For two strings, `fullUrl` is `new URL(urlPath, baseUrl).href`, the URL in the f
 | `"http://localhost:9000"` | `"/orders?tab=1"` | `http://localhost:9000/orders?tab=1` |
 
 One character is reported differently by the browsers: Chromium writes a `|` in the path as `%7C`, where Firefox,
-WebKit and `new URL` keep it. A string `urlPath` with `|` matches both forms, so its page object works the same on
-every browser.
+WebKit and `new URL` keep it. Another differs between Node versions: every browser writes a `^` in the path as `%5E`,
+as `new URL` does on Node 24, while Node 20 and 22 keep it. A string `urlPath` with `|` or `^` matches both forms, so
+its page object works the same on every browser and Node version.
 
 ## Navigating
 

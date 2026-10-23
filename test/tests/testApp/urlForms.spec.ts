@@ -10,6 +10,13 @@ const BASE = "http://localhost:9000";
  * the sweep below and needs an entry there.
  */
 const KNOWN: Record<string, string[]> = { chromium: ['"|" in the path: /testpath/a%7Cb'], firefox: [], webkit: [] };
+// Node 20 and 22 (ada 2) keep a "^" in a path, which every browser and Node 24 (ada 4) write as "%5E"
+const caretKept = new URL("/a^b", BASE).pathname === "/a^b";
+if (caretKept) {
+	KNOWN.chromium?.unshift('"^" in the path: /testpath/a%5Eb');
+	KNOWN.firefox?.push('"^" in the path: /testpath/a%5Eb');
+	KNOWN.webkit?.push('"^" in the path: /testpath/a%5Eb');
+}
 
 test("the URL each browser reports differs from new URL's only where a string path allows for it", async ({
 	page,
@@ -35,6 +42,26 @@ test("the URL each browser reports differs from new URL's only where a string pa
 		}
 	}
 	expect(differences).toEqual(KNOWN[browserName]);
+});
+
+class CaretPage extends PageObject<"body"> {
+	constructor(page: Page) {
+		super(page, BASE, "/testpath/a^b", { label: "CaretPage" });
+	}
+	protected defineLocators() {
+		this.add("body").locator("body");
+	}
+}
+
+test('a string path with "^" is this page on every browser and Node version, and never another page', async ({
+	page,
+}) => {
+	const caretPage = new CaretPage(page);
+	await caretPage.navigation.goto({ waitUntil: "commit" });
+	await caretPage.navigation.expectThisPage({ waitUntil: "commit" });
+	await expect(caretPage.navigation.expectAnotherPage({ waitUntil: "commit", timeout: 500 })).rejects.toThrow(
+		"CaretPage: expected to have left",
+	);
 });
 
 class PipePage extends PageObject<"body"> {

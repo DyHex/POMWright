@@ -286,8 +286,8 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   string `baseUrl` is a non-empty origin (no bare `?` or `#`, and a scheme with a URL origin, so not `chrome-extension:` or `file:`, as for `SessionStorage`'s `origin`) and a string `urlPath` is `""` or a single-slash path
   that stays on the base's origin once resolved, all validated at construction; two strings resolve with `new URL`,
   and a page is compared as Playwright compares URLs: the rest of the URL as `href` writes it, an empty `?` or `#`
-  included, a string path in the form `new URL` gives it, with `|` and `%7C` equal in its path part (Chromium reports
-  one as the other); a RegExp in either part makes `fullUrl` a `UrlMatcher` (base against the origin, path against the
+  included, a string path in the form `new URL` gives it, with `|` and `%7C`, and `^` and `%5E`, equal in its path part (Chromium reports
+  a `|` as `%7C`; every browser reports a `^` as `%5E`, which `new URL` keeps as `^` before Node 24); a RegExp in either part makes `fullUrl` a `UrlMatcher` (base against the origin, path against the
   rest, each regex as written). `goto` takes a URL string or options, as `page.goto` does. `goto()` without a target is the this-page navigation; `expectThisPage` and
   `expectAnotherPage` are one `page.waitForURL` each. POMWright sets no timeout or `waitUntil` default of its own.
 - Descriptive path names in docs and tests. No anonymous segments.
