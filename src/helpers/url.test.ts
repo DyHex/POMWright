@@ -46,6 +46,20 @@ describe("assertBaseUrl", () => {
 			);
 		}
 	});
+
+	it("rejects a URL whose scheme has no origin, saying so", () => {
+		for (const value of [
+			"chrome-extension://abcdef/",
+			"chrome-extension://abcdef",
+			"app://foo/",
+			"file://host/",
+			"file://host",
+		]) {
+			expect(() => assertBaseUrl(value, "Ext"), value).toThrow(
+				`Ext: baseUrl must be an origin such as "https://example.com" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received ${JSON.stringify(value)}, whose scheme has no URL origin.`,
+			);
+		}
+	});
 });
 
 describe("assertUrlPath", () => {

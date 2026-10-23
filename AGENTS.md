@@ -278,7 +278,7 @@ from two reviews of 3.0.1.
   reintroduce JSON-encoding every value, or a write from a `framenavigated` listener (it loses the race against the
   app's first script).
 - URLs mirror Playwright's `baseURL` handling with one base per page object: each part is a string or a RegExp, a
-  string `baseUrl` is a non-empty origin (no bare `?` or `#`) and a string `urlPath` is `""` or a single-slash path
+  string `baseUrl` is a non-empty origin (no bare `?` or `#`, and a scheme with a URL origin, so not `chrome-extension:` or `file:`, as for `SessionStorage`'s `origin`) and a string `urlPath` is `""` or a single-slash path
   that stays on the base's origin once resolved, all validated at construction; two strings resolve with `new URL`,
   and a page is compared as Playwright compares URLs: the rest of the URL as `href` writes it, an empty `?` or `#`
   included, a string path in the form `new URL` gives it, with `|` and `%7C` equal in its path part (Chromium reports

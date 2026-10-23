@@ -59,8 +59,26 @@ const isOrigin = (value: string): boolean => {
 	} catch {
 		return false;
 	}
-	// a bare "?" or "#" leaves search and hash empty but stays in href
-	return url.host !== "" && url.pathname === "/" && url.search === "" && url.hash === "" && url.href.endsWith("/");
+	// a bare "?" or "#" leaves search and hash empty but stays in href; a scheme such as chrome-extension: or file: has a
+	// host but no origin in the URL standard ("null"), so nothing could be resolved or compared against it
+	return (
+		url.host !== "" &&
+		url.pathname === "/" &&
+		url.search === "" &&
+		url.hash === "" &&
+		url.href.endsWith("/") &&
+		url.origin !== "null"
+	);
+};
+
+/** True when `value` is a URL with a host whose scheme gives it no origin, for the error message. */
+const hasNoUrlOrigin = (value: string): boolean => {
+	try {
+		const url = new URL(value);
+		return url.host !== "" && url.origin === "null";
+	} catch {
+		return false;
+	}
 };
 
 /** The base a string path resolves against when the page object's base is a RegExp, for checks and the matcher. */
@@ -77,7 +95,8 @@ export const assertUrlPart = (name: "baseUrl" | "urlPath", value: unknown, label
 /** Throws unless `value` is a non-empty origin (`scheme://host[:port]`, optional trailing slash). */
 export const assertBaseUrl = (value: string, label: string): void => {
 	if (!isOrigin(value)) {
-		throw new Error(`${label}: ${BASE_URL_RULE}; received ${JSON.stringify(value)}.`);
+		const why = hasNoUrlOrigin(value) ? ", whose scheme has no URL origin" : "";
+		throw new Error(`${label}: ${BASE_URL_RULE}; received ${JSON.stringify(value)}${why}.`);
 	}
 };
 

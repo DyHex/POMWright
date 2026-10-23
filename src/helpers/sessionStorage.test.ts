@@ -7,7 +7,7 @@ import {
 	decodeValue,
 	encodeEntries,
 	json,
-	type SessionStorage,
+	SessionStorage,
 	type SessionStorageSchema,
 } from "./sessionStorage";
 
@@ -135,6 +135,42 @@ describe("decodeValue", () => {
 			decodeValue(schema, "attempts", "x", title);
 		} catch (error) {
 			expect((error as Error).cause).toEqual(new TypeError("not a number: x"));
+		}
+	});
+});
+
+describe("the origin option", () => {
+	// the constructor only validates; it calls nothing on the page
+	const unusedPage = {} as Page;
+	const rule =
+		'Shop.SessionStorage.constructor: origin must be an origin such as "https://app.example" or "http://localhost:9000" ' +
+		"(scheme, host, optional port, no path, query or hash); received";
+
+	it("accepts an origin, with or without a trailing slash", () => {
+		for (const origin of ["https://app.example", "http://localhost:9000/", "https://SHOP.example:8443"]) {
+			expect(() => new SessionStorage(unusedPage, { label: "Shop", origin }), origin).not.toThrow();
+		}
+	});
+
+	it("rejects a URL whose scheme has no origin, saying so", () => {
+		for (const origin of [
+			"chrome-extension://abcdef/",
+			"chrome-extension://abcdef",
+			"app://foo/",
+			"file://host/",
+			"file://host",
+		]) {
+			expect(() => new SessionStorage(unusedPage, { label: "Shop", origin }), origin).toThrow(
+				`${rule} ${JSON.stringify(origin)}, whose scheme has no URL origin`,
+			);
+		}
+	});
+
+	it("rejects a value that is not an origin with the rule alone", () => {
+		for (const origin of ["localhost:9000", "https://app.example/app", "not a url"]) {
+			expect(() => new SessionStorage(unusedPage, { label: "Shop", origin }), origin).toThrow(
+				new RegExp(`received ${JSON.stringify(origin).replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}$`),
+			);
 		}
 	});
 });

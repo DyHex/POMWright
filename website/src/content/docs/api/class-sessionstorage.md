@@ -56,7 +56,8 @@ const payment = new SessionStorage(page, { label: "Payment", origin: "https://pa
   - `origin` string *(optional)*
 
     The origin the helper belongs to: the default origin of `seed`, and the only one `set`, `get` and `clear` touch.
-    Without it, the helper works on whatever origin the page is on, and `seed` needs `{ origin }`.
+    Without it, the helper works on whatever origin the page is on, and `seed` needs `{ origin }`. A scheme without an
+    origin in the URL standard, such as `chrome-extension://…/` or `file://…/`, is rejected.
 
   - `schema` [SessionStorageSchema](#sessionstorageschema) *(optional)*
 
@@ -66,6 +67,7 @@ const payment = new SessionStorage(page, { label: "Payment", origin: "https://pa
 
 ```text
 Shop.SessionStorage.constructor: origin must be an origin such as "https://app.example" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "shop.example"
+Shop.SessionStorage.constructor: origin must be an origin such as "https://app.example" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "chrome-extension://abcdef/", whose scheme has no URL origin
 ```
 
 ---

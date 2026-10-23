@@ -111,16 +111,27 @@ const describeOrigin = (value: string): string | undefined => {
 	} catch {
 		return undefined;
 	}
-	return url.host !== "" && url.pathname === "/" && url.search === "" && url.hash === "" ? url.origin : undefined;
+	// a scheme such as chrome-extension: or file: has a host but no origin in the URL standard ("null"), which no page
+	// URL would ever be compared equal to
+	return url.host !== "" && url.pathname === "/" && url.search === "" && url.hash === "" && url.origin !== "null"
+		? url.origin
+		: undefined;
 };
 
 /** Throws unless `value` is an origin; returns it normalised. */
 const normaliseOrigin = (value: string, title: string): string => {
 	const origin = describeOrigin(value);
 	if (origin === undefined) {
+		let why = "";
+		try {
+			const url = new URL(value);
+			why = url.host !== "" && url.origin === "null" ? ", whose scheme has no URL origin" : "";
+		} catch {
+			// not a URL at all: the rule says enough
+		}
 		throw new Error(
 			`${title}: origin must be an origin such as "https://app.example" or "http://localhost:9000" ` +
-				`(scheme, host, optional port, no path, query or hash); received ${JSON.stringify(value)}`,
+				`(scheme, host, optional port, no path, query or hash); received ${JSON.stringify(value)}${why}`,
 		);
 	}
 	return origin;

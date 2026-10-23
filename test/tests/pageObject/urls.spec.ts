@@ -50,6 +50,14 @@ test("rejects a baseUrl that is not a non-empty origin, naming the page object a
 	);
 });
 
+test("rejects a baseUrl whose scheme has no URL origin, saying so", async ({ page }) => {
+	for (const baseUrl of ["chrome-extension://abcdef/", "app://foo/", "file://host/"]) {
+		expect(() => new Probe(page, baseUrl, "/popup.html"), baseUrl).toThrow(
+			`Probe: ${BASE_URL_RULE}; received ${JSON.stringify(baseUrl)}, whose scheme has no URL origin.`,
+		);
+	}
+});
+
 test("rejects a urlPath without exactly one leading slash", async ({ page }) => {
 	for (const urlPath of ["login", "?tab=1", "#section", "https://app.example/a", "//other.example/x"]) {
 		expect(() => new Probe(page, "https://app.example", urlPath), urlPath).toThrow(

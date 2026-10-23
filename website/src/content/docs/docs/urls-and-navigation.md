@@ -28,7 +28,8 @@ LoginPage: baseUrl must be a string or a RegExp; received undefined.
 
 `localhost:9000` without a scheme and a base with a path are rejected: Playwright could not resolve paths against the
 first, and would drop the path of the second for every path that starts with `/`. A base that ends in a bare `?` or
-`#` is rejected too. A path that starts with `//` names another host, and so does one whose first `/` is followed by a
+`#` is rejected too, and so is a scheme without an origin in the URL standard, such as `chrome-extension://…/` or
+`file://…/`: there is no origin to resolve paths against or compare URLs with. A path that starts with `//` names another host, and so does one whose first `/` is followed by a
 backslash, or by a tab or line break and then `/` or a backslash: the URL standard reads a backslash as `/` and drops
 tabs and line breaks. The constructor resolves the path and rejects it when it leaves the base's origin.
 
