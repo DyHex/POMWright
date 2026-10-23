@@ -48,7 +48,9 @@ new document of the page, in every frame, and writes only when all three hold:
 
 - **the main frame**: `window === window.top`, so an iframe on the seeded origin inside another page, and the
   `srcdoc` or `about:blank` frames that inherit its origin, are left alone;
-- **the origin**: `location.origin` is the seeded one;
+- **the origin**: `location.origin` is the seeded one, and so is the document's own origin, `self.origin`. The error
+  page a browser shows for a failed navigation has the URL's origin but an opaque one of its own (Firefox commits it at
+  the origin's URL), and so does a sandboxed document;
 - **the first arrival**: `navigation.activation.from` is `null`, so the previous document of the main frame was on
   another origin, or there was none.
 
@@ -59,7 +61,15 @@ key overwritten again: about once in a hundred such rounds on every engine. With
 origin has `activation.from` set and is skipped: no overwrite in 300 rounds per engine.
 
 A write the browser refuses (the storage quota) is caught and logged with `console.error` under a prefix of
-POMWright's own, with the origin and the browser's error.
+POMWright's own, with the origin and the browser's error. A document on the origin's URL that the script skips, an
+opaque one or a return, is logged under the same prefix with `console.debug`, so that a test watching the console for
+errors is not disturbed.
+
+A skip matters only for the document that took the seed out of pending. After a navigation to the origin that
+fails, Chromium and Firefox present the error page's history entry as the next document's `activation.from`, so the
+retry looks like a return; Firefox also commits its error page at the origin's URL. Making the retry apply the seed
+would mean treating some commits as error pages and accepting that entry as `from`, which rests on browser behaviour
+without a guarantee. So the registry does not try: such a seed fails the test, and never passes silently.
 
 ## A seeded navigation
 
@@ -86,7 +96,7 @@ sequenceDiagram
 - **The confirming window.** A refused write reaches Node as a console message after the commit. The script runs
   before the document parses, so the message arrives before that document's `domcontentloaded` and before the next
   main-frame commit, on every engine. Until one of those, the applied seed is kept as confirming. A prefixed message
-  for it throws the failure from the `console` listener. Later messages are ignored.
+  for it throws the failure from the `console` listener: a refused write, or a skip. Later messages are ignored.
 
 ## The checks in `seed`
 
@@ -146,7 +156,8 @@ Every failure carries the line of the `seed` call, captured when it was called (
 [call sites](/POMWright/internal/call-sites/)):
 
 - **No Navigation API** and **a commit during registration** are thrown by the `seed` call itself.
-- **A refused write** is thrown from the `console` listener, which fails the test at once.
+- **A refused write**, and **a seed the arriving document skipped** (an opaque document, or a return), are thrown
+  from the `console` listener, which fails the test at once.
 - **Never applied.** When the page closes after a test that has passed so far, a seed still waiting throws, naming the
   origin and the keys.
 

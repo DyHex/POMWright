@@ -195,7 +195,8 @@ await loginPage.navigation.goto(); // the app's first script already sees the to
 
 At the call, without an origin, in a browser without the Navigation API, when the page commits a document on the
 origin while the seed is being registered, and when the page closes before it is registered; later, failing the test with this call's line in the stack, when the
-browser refuses the write or the page closes before the seed was applied:
+browser refuses the write, when the document that arrives on the origin does not take the seed (a failed navigation
+there), or when the page closes before the seed was applied:
 
 ```text
 Shop.SessionStorage.seed: an origin is required; pass { origin } or construct the helper with one
@@ -204,6 +205,8 @@ Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation
 Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends
 Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the document that arrived on https://pay.example has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the browser counted the page's arrival on https://pay.example as a return there (navigation.activation.from is set), as after a failed navigation to it
 ```
 
 [What `seed` cannot do](/POMWright/docs/seeding-session-storage/#what-seed-cannot-do) lists every such case.

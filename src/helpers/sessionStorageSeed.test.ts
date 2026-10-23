@@ -41,16 +41,19 @@ describe("seedScript", () => {
 	/** Runs the script in a stubbed document and returns what it stored and logged. */
 	const run = (document: {
 		origin: string;
+		selfOrigin?: string;
 		top?: boolean;
 		from?: unknown;
 		setItem?: (key: string, value: string) => void;
 	}) => {
 		const stored: Record<string, string> = Object.create(null);
 		const logged: string[] = [];
+		const reported: string[] = [];
 		const window: { top?: unknown } = {};
 		window.top = document.top === false ? {} : window;
 		vi.stubGlobal("window", window);
 		vi.stubGlobal("location", { origin: document.origin });
+		vi.stubGlobal("self", { origin: document.selfOrigin ?? document.origin });
 		vi.stubGlobal("navigation", { activation: { from: document.from ?? null } });
 		vi.stubGlobal("sessionStorage", {
 			setItem:
@@ -62,6 +65,9 @@ describe("seedScript", () => {
 		vi.spyOn(console, "error").mockImplementation((message: string) => {
 			logged.push(message);
 		});
+		vi.spyOn(console, "debug").mockImplementation((message: string) => {
+			reported.push(message);
+		});
 		seedScript({
 			origin: B,
 			entries: [
@@ -71,7 +77,7 @@ describe("seedScript", () => {
 			],
 			prefix: FAILURE_PREFIX,
 		});
-		return { stored, logged };
+		return { stored, logged, reported };
 	};
 
 	it("writes every entry verbatim on the first arrival in the main frame on the origin, a __proto__ key included", () => {
@@ -88,6 +94,17 @@ describe("seedScript", () => {
 		expect(run({ origin: B, top: false }).stored).toEqual({});
 		expect(run({ origin: A }).stored).toEqual({});
 		expect(run({ origin: B, from: { url: `${B}/before` } }).stored).toEqual({});
+	});
+
+	it("reports a skip on its origin: an opaque document (an error page) and a return there; nothing elsewhere", () => {
+		const opaque = run({ origin: B, selfOrigin: "null" });
+		expect(opaque.stored).toEqual({});
+		expect(opaque.reported).toEqual([`${FAILURE_PREFIX}${JSON.stringify({ origin: B, skipped: "opaque" })}`]);
+		const back = run({ origin: B, from: { url: `${B}/before` } });
+		expect(back.reported).toEqual([`${FAILURE_PREFIX}${JSON.stringify({ origin: B, skipped: "return" })}`]);
+		expect(run({ origin: B, top: false }).reported).toEqual([]);
+		expect(run({ origin: A }).reported).toEqual([]);
+		expect(run({ origin: B }).reported).toEqual([]);
 	});
 
 	it("logs a refused write under the failure prefix, with the origin and the browser's error", () => {
@@ -546,6 +563,41 @@ describe("SeedRegistry", () => {
 			page.navigate(`${C}/app`);
 			page.navigate(`${C}/next`);
 			expect(caught(() => page.console(refused(C)))).toBeUndefined();
+		});
+	});
+
+	describe("a document that took the seed and did not write it", () => {
+		const skipped = (origin: string, reason: string) =>
+			`${FAILURE_PREFIX}${JSON.stringify({ origin, skipped: reason })}`;
+
+		it("fails the test from the console listener with the reason, pointing at the seed call", async () => {
+			for (const [reason, why] of [
+				[
+					"opaque",
+					`the document that arrived on ${B} has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)`,
+				],
+				[
+					"return",
+					`the browser counted the page's arrival on ${B} as a return there (navigation.activation.from is set), as after a failed navigation to it`,
+				],
+			] as const) {
+				const { page, registry } = setup();
+				await registry.add(B, { token: "1" }, title, site);
+				page.navigate(`${B}/app`);
+				const error = caught(() => page.console(skipped(B, reason)));
+				expect(error?.message).toBe(`${title}: the seed for ${B} (keys: token) was not applied: ${why}`);
+				expect(error?.stack).toBe(`Error: ${error?.message}\n${siteFrame}`);
+				expect(page.listeners).toEqual([]);
+			}
+		});
+
+		it("is ignored for a document that did not take a seed", async () => {
+			const { page, registry } = setup();
+			await registry.add(B, { token: "1" }, title, site);
+			expect(caught(() => page.console(skipped(B, "return")))).toBeUndefined(); // still pending
+			page.navigate(`${B}/app`);
+			page.domContentLoaded();
+			expect(caught(() => page.console(skipped(B, "return")))).toBeUndefined(); // applied and loaded
 		});
 	});
 

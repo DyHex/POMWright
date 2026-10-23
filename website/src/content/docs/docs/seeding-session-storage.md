@@ -140,6 +140,7 @@ body, the same history entry and navigation type, the same URL fragment. `page.g
 | the seed is still waiting when the page closes | the test fails, naming the origin and the keys: remove the `seed` call, or navigate there before the test ends; do not seed in a fixture that some tests never use |
 | the hop opens a new tab | a new tab has its own session storage and does not run the page's init scripts; the seed waits on and fails the test when the page closes. Seed the new tab yourself with [`browserContext.addInitScript`](https://playwright.dev/docs/api/class-browsercontext#browser-context-add-init-script), or `set` the entries in it and reload it |
 | `seed` is called while the page is already loading a document on the origin, or is not awaited before the hop | `seed` fails when that document may have loaded without the entries. Await the navigation first, or seed before starting it, and await the seed: see [Several seeds](/POMWright/docs/seeding-session-storage/#several-seeds) |
+| a navigation to the origin fails while the seed waits (a refused connection, offline, `route.abort()`) | the browser's error page, and on Chromium the arrival after it, cannot receive the seed: on Chromium and Firefox the test fails, naming the reason; on WebKit the next arrival receives it |
 | a browser without the [Navigation API](https://developer.mozilla.org/en-US/docs/Web/API/NavigationActivation/from) | `seed` fails at the call, before anything is registered: use `set` on the origin and reload instead. Every browser Playwright 1.64 ships has it |
 | the browser refuses the write (the storage quota) | the app loads without the entries and the test fails |
 
@@ -163,9 +164,11 @@ Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation
 Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends
 Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the document that arrived on https://pay.example has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the browser counted the page's arrival on https://pay.example as a return there (navigation.activation.from is set), as after a failed navigation to it
 ```
 
-The first four are thrown by the `seed` call; the last two fail the test later, when the app's document loads or when
+The first four are thrown by the `seed` call; the last four fail the test later, when the app's document loads or when
 the page closes.
 
 ## Reference

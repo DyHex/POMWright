@@ -513,8 +513,10 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * construct the helper with one`), when the browser has no Navigation API, when the page commits a document on the
 	 * origin while the seed is being registered, and when the page closes before it is registered (`… the page closed
 	 * while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends`);
-	 * later, failing the test with the line of this call in the stack,
-	 * when the browser refuses the write (the storage quota) or when the page closes before the seed was applied.
+	 * later, failing the test with the line of this call in the stack, when the browser refuses the write (the storage
+	 * quota), when the document that arrives on the origin does not take the seed (after a navigation there that failed:
+	 * `… was not applied: the document that arrived on https://pay.example has an opaque origin …`), or when the page
+	 * closes before the seed was applied.
 	 *
 	 * @example
 	 * ```ts

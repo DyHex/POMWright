@@ -70,7 +70,7 @@ export const originOf = (url: string): string | undefined => {
 	return origin === "null" ? undefined : origin;
 };
 
-/** The start of the console message the init script logs when the browser refuses a write. */
+/** The start of the console message the init script logs when it skips a document on its origin or a write is refused. */
 export const FAILURE_PREFIX = "pomwright-seed-failure:";
 
 export type SeedScriptArg = {
@@ -88,14 +88,21 @@ export type SeedScriptArg = {
 /**
  * The init script. It runs in every new document of the page while a seed for `origin` waits and writes only in the
  * main frame, on the origin, on the first arrival there: after a reload or a hop within the origin,
- * `navigation.activation.from` is the previous document's entry, so a value the app wrote meanwhile is kept. A write
- * the browser refuses is logged for the registry's `console` listener.
+ * `navigation.activation.from` is the previous document's entry, so a value the app wrote meanwhile is kept. A document
+ * on the origin's URL whose own origin is opaque (the error page a browser shows for a failed navigation, or a
+ * sandboxed document) gets nothing either. Each of those two skips, and a write the browser refuses, is logged for the
+ * registry's `console` listener, which fails the test when it concerns the document that took the seed out of pending.
  */
 export const seedScript = ({ origin, entries, prefix }: SeedScriptArg): void => {
 	if (window !== window.top || location.origin !== origin) {
 		return;
 	}
+	if (self.origin !== origin) {
+		console.debug(`${prefix}${JSON.stringify({ origin, skipped: "opaque" })}`);
+		return;
+	}
 	if (globalThis.navigation?.activation?.from) {
+		console.debug(`${prefix}${JSON.stringify({ origin, skipped: "return" })}`);
 		return;
 	}
 	try {
@@ -132,6 +139,22 @@ export const writeFailedError = (applied: AppliedSeed, origin: string, cause: st
 		new Error(
 			`${applied.title}: could not write sessionStorage for ${origin} (keys: ${describeKeys(applied.keys)}): ` +
 				`${cause}; the app loaded without the entries`,
+		),
+		applied.site,
+	);
+
+/** Why the document that took a seed out of pending did not write it, as `seedScript` reports it. */
+export type SkipReason = "opaque" | "return";
+
+export const notAppliedError = (applied: AppliedSeed, origin: string, reason: SkipReason): Error =>
+	atCallSite(
+		new Error(
+			`${applied.title}: the seed for ${origin} (keys: ${describeKeys(applied.keys)}) was not applied: ` +
+				(reason === "opaque"
+					? `the document that arrived on ${origin} has an opaque origin (the browser's error page after a failed ` +
+						"navigation, or a sandboxed document)"
+					: `the browser counted the page's arrival on ${origin} as a return there (navigation.activation.from ` +
+						"is set), as after a failed navigation to it"),
 		),
 		applied.site,
 	);
@@ -366,7 +389,7 @@ export class SeedRegistry {
 		if (!text.startsWith(FAILURE_PREFIX)) {
 			return;
 		}
-		let report: { origin?: unknown; error?: unknown };
+		let report: { origin?: unknown; error?: unknown; skipped?: unknown };
 		try {
 			report = JSON.parse(text.slice(FAILURE_PREFIX.length));
 		} catch {
@@ -379,7 +402,11 @@ export class SeedRegistry {
 		}
 		this.confirming.delete(origin);
 		this.teardownIfIdle();
-		throw writeFailedError(applied, origin, String(report.error)); // thrown from a page listener: fails the test at once
+		// thrown from a page listener: fails the test at once
+		if (report.skipped === "opaque" || report.skipped === "return") {
+			throw notAppliedError(applied, origin, report.skipped);
+		}
+		throw writeFailedError(applied, origin, String(report.error));
 	};
 
 	private readonly onClose = (): void => {

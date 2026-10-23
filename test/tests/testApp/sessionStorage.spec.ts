@@ -650,6 +650,66 @@ test.describe("seed", () => {
 	});
 });
 
+test.describe("a navigation to a seeded origin that fails", () => {
+	test.describe.configure({ mode: "serial" });
+	// thrown from a page listener, so the test cannot catch it: a hook hands it to the next test through a file
+	const outcomeFile = () =>
+		path.join(
+			test.info().project.outputDir,
+			`failed-navigation-${test.info().project.name}-${test.info().repeatEachIndex}.json`,
+		);
+	test.afterEach(() => {
+		if (test.info().title.startsWith("the retry")) {
+			const [error] = test.info().errors;
+			writeFileSync(outcomeFile(), JSON.stringify({ message: error?.message ?? null, stack: error?.stack ?? "" }));
+		}
+	});
+
+	for (const failure of ["offline", "a refused connection"] as const) {
+		test(`the retry after ${failure} never loads the app without the entries`, async ({
+			page,
+			context,
+			browserName,
+			testStorage,
+			testStorageSecond,
+		}) => {
+			test.fail(browserName !== "webkit", "Chromium and Firefox cannot apply a seed after a failed navigation there");
+			await testStorage.navigation.goto();
+			await testStorageSecond.sessionStorage.seed({ token: "t" });
+			if (failure === "offline") {
+				await context.setOffline(true);
+			} else {
+				await page.route(`${B}/**`, (route) => route.abort("connectionrefused"), { times: 1 });
+			}
+			await testStorageSecond.navigation.goto().catch(() => undefined);
+			// the browser's error page commits after goto has rejected
+			await page.waitForTimeout(500);
+			await context.setOffline(false);
+			await testStorageSecond.navigation.goto();
+			expect(await startup(page)).toEqual({ token: "t" });
+		});
+
+		test(`after ${failure}, the failure gives the reason at the seed's line`, async ({ browserName }) => {
+			const { message, stack } = JSON.parse(readFileSync(outcomeFile(), "utf8"));
+			rmSync(outcomeFile());
+			if (browserName === "webkit") {
+				expect(message).toBeNull();
+				return;
+			}
+			const reason =
+				browserName === "chromium"
+					? "the browser counted the page's arrival on http://127.0.0.1:9000 as a return there"
+					: "the document that arrived on http://127.0.0.1:9000 has an opaque origin";
+			expect(message).toContain(
+				`TestStorageSecond.SessionStorage.seed: the seed for http://127.0.0.1:9000 (keys: token) was not applied: ${reason}`,
+			);
+			expect(stack.split("\n").find((line: string) => line.trim().startsWith("at "))).toMatch(
+				/sessionStorage\.spec\.ts:\d+:\d+/,
+			);
+		});
+	}
+});
+
 test.describe("a page that closes while seed registers", () => {
 	test("seed fails with its label, the keys and its own line", async ({ page, testStorage, testStorageSecond }) => {
 		await testStorage.navigation.goto();
