@@ -443,7 +443,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * Stores entries for an origin before the app's next load there, so the app's first script sees them, without
 	 * leaving the page the test is on; on the origin already, it writes at once. A seed that is still waiting when the
 	 * page closes fails the test. Calls for one origin merge in the order they were made, later values winning per key,
-	 * also when they overlap, on the origin or before the hop. Await it before the action that starts the hop.
+	 * also when they overlap, on the origin or before the hop. Await it before the action that starts the hop. Entries
+	 * that are empty at run time (`seed({})`) do nothing.
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#seed
 	 *
@@ -482,6 +483,10 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 				throw new Error(`${title}: an origin is required; pass { origin } or construct the helper with one`);
 			}
 			const encoded = encodeEntries(this.schema, entries, title);
+			if (Object.keys(encoded).length === 0) {
+				// nothing to store, as get([]) and clear([]) read and remove nothing; a seed without keys would only wait
+				return;
+			}
 			// on the origin, the registry writes at once in the call's turn; elsewhere it registers the seed
 			await registryFor(this.page, readTestOutcome).add(origin, encoded, title, site, () =>
 				this.write("seed", encoded),

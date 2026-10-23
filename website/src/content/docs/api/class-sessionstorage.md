@@ -154,7 +154,8 @@ the page the test is on; on the origin already, it writes at once. See
 Calls for one origin merge in the order they were made, later values winning per key, also when they overlap, on the
 origin or before the hop. Await
 `seed` before the action that starts the hop: see
-[several seeds](/POMWright/docs/seeding-session-storage/#several-seeds).
+[several seeds](/POMWright/docs/seeding-session-storage/#several-seeds). Entries that are empty at run time
+(`seed({})`) do nothing.
 
 **Usage**
 

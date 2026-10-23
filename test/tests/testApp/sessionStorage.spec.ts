@@ -942,6 +942,17 @@ test.describe("seed and the app's own navigations", () => {
 		);
 	});
 
+	test("a seed with no entries does nothing, so a test that never goes to its origin passes", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({});
+		await testStorage.sessionStorage.seed({});
+		expect(await current(page)).toEqual({});
+	});
+
 	test("an app that declares its own global navigation does not hide the Navigation API from seed", async ({
 		page,
 		testStorageSecond,
