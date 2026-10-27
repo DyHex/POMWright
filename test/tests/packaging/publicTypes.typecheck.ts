@@ -673,25 +673,61 @@ export class RegExpBasePage extends PageObject<"main", { baseUrlType: RegExp; ur
 	}
 	protected defineLocators() {}
 }
+export class RegExpBothPage extends PageObject<"main", { baseUrlType: RegExp; urlPathType: RegExp }> {
+	constructor() {
+		super(page, /shop\.example/, /^\/orders\/\d+$/);
+	}
+	protected defineLocators() {}
+}
 declare const stringUrlPage: StringUrlPage;
+declare const regExpBothPage: RegExpBothPage;
 declare const regExpPathPage: RegExpPathPage;
 declare const regExpBasePage: RegExpBasePage;
-// @ts-expect-error a RegExp path's helper has no goto() without a target
-export const regExpPathAsString: NavigationFor<string, string> = regExpPathPage.navigation;
-// @ts-expect-error a RegExp base's helper takes only absolute URLs and has no goto() without a target
-export const regExpBaseAsString: NavigationFor<string, string> = regExpBasePage.navigation;
-export const anyHelpers: NavigationFor<RegExp, UrlMatcher>[] = [
-	stringUrlPage.navigation,
-	regExpPathPage.navigation,
-	regExpBasePage.navigation,
-];
-export const regExpPathHelper: NavigationFor<string, UrlMatcher> = stringUrlPage.navigation;
+// every page kind's helper as every page kind's type: accepted exactly where it has everything that type promises
+// (goto() without a target, from a string fullUrl; goto with any string, from a string baseUrl)
+export const helperMatrix = () => {
+	const stringAsString: NavigationFor<string, string> = stringUrlPage.navigation;
+	const stringAsRegExpPath: NavigationFor<string, UrlMatcher> = stringUrlPage.navigation;
+	const stringAsAny: NavigationFor<RegExp, UrlMatcher> = stringUrlPage.navigation;
+	// @ts-expect-error a RegExp path's helper has no goto() without a target
+	const regExpPathAsString: NavigationFor<string, string> = regExpPathPage.navigation;
+	const regExpPathAsRegExpPath: NavigationFor<string, UrlMatcher> = regExpPathPage.navigation;
+	const regExpPathAsAny: NavigationFor<RegExp, UrlMatcher> = regExpPathPage.navigation;
+	// @ts-expect-error a RegExp base's helper takes only absolute URLs and has no goto() without a target
+	const regExpBaseAsString: NavigationFor<string, string> = regExpBasePage.navigation;
+	// @ts-expect-error a RegExp base's helper takes only absolute URLs
+	const regExpBaseAsRegExpPath: NavigationFor<string, UrlMatcher> = regExpBasePage.navigation;
+	const regExpBaseAsAny: NavigationFor<RegExp, UrlMatcher> = regExpBasePage.navigation;
+	// a RegExp base and a RegExp path: the same helper type as a RegExp base alone
+	// @ts-expect-error takes only absolute URLs and has no goto() without a target
+	const regExpBothAsString: NavigationFor<string, string> = regExpBothPage.navigation;
+	// @ts-expect-error takes only absolute URLs
+	const regExpBothAsRegExpPath: NavigationFor<string, UrlMatcher> = regExpBothPage.navigation;
+	const regExpBothAsAny: NavigationFor<RegExp, UrlMatcher> = regExpBothPage.navigation;
+	return [
+		stringAsString,
+		stringAsRegExpPath,
+		stringAsAny,
+		regExpPathAsString,
+		regExpPathAsRegExpPath,
+		regExpPathAsAny,
+		regExpBaseAsString,
+		regExpBaseAsRegExpPath,
+		regExpBaseAsAny,
+		regExpBothAsString,
+		regExpBothAsRegExpPath,
+		regExpBothAsAny,
+	];
+};
 export const navigationCalls = async () => {
 	await stringUrlPage.navigation.goto();
 	await stringUrlPage.navigation.goto({ waitUntil: "commit" });
 	await stringUrlPage.navigation.goto("/account", { timeout: 1_000 });
 	await regExpPathPage.navigation.goto("/orders/7");
 	await regExpBasePage.navigation.goto("https://shop.example/orders");
+	await regExpBothPage.navigation.goto("https://shop.example/orders/7");
+	// @ts-expect-error no goto() without a target on a RegExp page
+	await regExpBothPage.navigation.goto();
 	// @ts-expect-error no goto() without a target on a RegExp page
 	await regExpPathPage.navigation.goto();
 	// @ts-expect-error a RegExp base takes only an absolute URL

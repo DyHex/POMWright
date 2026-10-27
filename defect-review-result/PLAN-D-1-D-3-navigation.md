@@ -133,3 +133,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 - Docs: none in this step (the API and errors pages take it in plan 30's pass). Changeset `cannot-resolve-label.md`.
 - Checks: `pnpm lint` 0; `pnpm test:unit` 900 passed; `pnpm pack-test --reporter=line` exit 0 (1,605 passed, 3
   skipped; doc snippets 221; api coverage 0 problems; step locations 29).
+
+**After the stop (2026-10-27).** At the maintainer's request, the full matrix in `publicTypes.typecheck.ts`
+(`helperMatrix`): the helper of each page kind (string; RegExp path; RegExp base; RegExp base and path) as each of
+`NavigationFor<string, string>`, `NavigationFor<string, UrlMatcher>` and `NavigationFor<RegExp, UrlMatcher>`, with
+`@ts-expect-error` on the five that must fail (both RegExp-base kinds as either string-base type, the RegExp path as a
+string page's). The RegExp base as `NavigationFor<string, UrlMatcher>` was right before but not asserted. The RegExp
+base and path page also has its calls checked. `pnpm lint` 0; `pnpm typecheck` exit 0 (api coverage 0 problems).
