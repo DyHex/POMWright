@@ -20,8 +20,10 @@ resolution without a browser; nothing in the runtime imports it.
 `test/` is a project of its own that installs the packed package from `.pack/pomwright`, as a consumer would, and runs
 Playwright against an express server, `test/server.js`, with a page per area: filters, frames, ids, navigation and
 session storage across two origins. `pnpm pack-test` builds, packs, installs, type-checks and runs every spec on
-chromium, firefox and webkit. Most `locatorRegistry` specs import the registry from `src/` and test the source; the
-specs that use page objects or import `pomwright` test the packed package. `testApp/urlForms.spec.ts` sweeps every
+chromium, firefox and webkit. 26 `locatorRegistry` specs import the registry from `src/` and test the source, where
+they can read what is stored; each has a packed twin, `<name>.packed.spec.ts`, which runs the same scenarios through
+the public API against the packed package and checks the DOM and the rendered locator instead. The specs that use
+page objects or import `pomwright` test the packed package. `testApp/urlForms.spec.ts` sweeps every
 printable ASCII character through the URL each browser reports, with the known differences listed, so a browser
 that starts reporting a URL differently fails the harness.
 

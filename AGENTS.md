@@ -167,13 +167,16 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   legacy decorator calls as `tsc` emits them (`pnpm typecheck` writes them; the spec fails clearly without); it needs no browser and
   runs from `test/playwright.steps.config.ts`, which `pack-test.sh` runs after the harness, so no `--reporter` given to
   the harness can switch it off. `testApp/sessionStorageOverlay.spec.ts` runs with Playwright's step overlay
-  (`video: { show: { test } }`), which delays a step's body. 57 spec files, about 8,700 lines. One spec file per DSL method,
+  (`video: { show: { test } }`), which delays a step's body. 83 spec files, about 13,000 lines. One spec file per DSL method,
   for example `add.getById.spec.ts` or `getLocatorSchema.update.spec.ts`; one DOM-level spec per fixture page under
   `testApp/`, for example `testIds.spec.ts`.
-- Know what each spec exercises. Most `locatorRegistry/` specs import `LocatorRegistryInternal` from
-  `../../../../src/locators`, so they run against source. Fixture-based specs and anything importing from
-  `pomwright` (the page objects, `testApp/`, `skip`, `replace`, `registry.binding`, `callSite/`, `logging/`) run against the packed
-  tarball. A green source-level spec says nothing about a stale tarball install.
+- Know what each spec exercises. 26 `locatorRegistry/` specs import from `../../../../src/locators`, so they run
+  against source and can read the stored records. Each has a packed twin beside it, `<name>.packed.spec.ts`, with every
+  scenario under the same title through `pomwright`'s public API (`createRegistryWithAccessors`), observed on the DOM,
+  in Playwright's rendering of the same call (`locator.describe("")`) and in `description()`, instead of in the record.
+  Fixture-based specs and anything importing from `pomwright` (the page objects, the twins, `testApp/`, `skip`,
+  `replace`, `registry.binding`, `callSite/`, `logging/`) run against the packed tarball. A green source-level spec says
+  nothing about a stale tarball install.
 - `validation.locatorSchemaPath.typecheck.ts` and `packaging/publicTypes.typecheck.ts` are compile-only probes:
   Playwright does not match the file names, and `pnpm typecheck` (in `pack-test` and CI) enforces their
   `@ts-expect-error` directives. `publicTypes.typecheck.ts` holds the public types against the published declarations

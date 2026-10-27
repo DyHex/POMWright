@@ -67,4 +67,39 @@ The standard checks (PLANS.md, rule 5) after each commit; the twins run in every
 
 ## Execution notes
 
-(filled in at execution, with the table of source-only assertions)
+2026-10-27.
+
+- 26 twins, `<name>.packed.spec.ts` beside each source spec, every scenario under the source's title, importing
+  `pomwright` (and the harness fixtures, themselves on the packed package) instead of `src/`; 227 tests per browser. Ten were
+  written by hand (the eight one-strategy specs, `add.getById`, `add.describe`); sixteen began as a mechanical
+  conversion (the import, `createRegistryWithAccessors<Paths>(page).registry` for `new LocatorRegistryInternal`,
+  `LocatorRegistry` for the class type), and `tsc` then named every internal call, each rewritten by hand.
+- What the source specs read from records is observed publicly: an absent record as `getLocator(path)`'s
+  `No locator schema registered for path "…".`; a definition with its steps as the rendered chain against Playwright's
+  own call with the same arguments (`locator.describe("")`, which drops the description that would stand in for the
+  chain); a description as `description()`; DOM checks through `page.setContent` (as `add.get.clone.spec.ts` and
+  `getLocatorSchema.skip.spec.ts` already do) where a scenario is about matching (the strategies, ids, RegExp flags,
+  a query that leaves the registry unchanged), and the fixture pages the source specs already use.
+- The features of test gap #10 are all twinned: reuse (`add.reuseExisting`, `add.reuseReusable`), frames
+  (`add.frameLocator`), `getById`, cycles (`filter.cycle`), `verify` (`registry.verify`, `registry.strictChains`),
+  `update`'s merge patch (`getLocatorSchema.update`), the query's `describe` and the any-frame query
+  (`getLocatorSchema.describe`, `add.frameLocator`).
+
+Source-only assertions (plan 39 reads this table):
+
+| Source spec | Assertion | Why it stays source-only | What the twin checks instead |
+| --- | --- | --- | --- |
+| every spec with record reads | the record's field names and step objects (`locatorSchemaPath`, `kind`, `{ id, type }`) | the record is internal | Playwright's rendering of the same call: strategy, arguments, flags, options and steps |
+| `add.get.clone` | `registry.get` and `getIfExists` return a copy; changing it leaves the stored record | both methods are internal | a query is a copy: changing it (`update`, `nth`) leaves `getLocator` as registered (DOM and rendering) |
+| `add.reuseExisting` | the internal `replace` of a copy's record leaves the source path unchanged | `replace` is internal; a registered path cannot change publicly | a query's `replace` of the copy changes neither the copy nor the source |
+| `add.reuseReusable` (matching overrides) | the record read between a refused `getById` and the allowed `getByRole` on one registration | any public read ends the registration (the twin's first draft met `its registration was ended by getLocator`) | the later override succeeding, and the result |
+| `add.spec` (regex strategies) | `options: { exact: true }` stored with a RegExp text | Playwright renders `getByText(/Seeded/i)` alike with and without `exact` | the rendering and the DOM match |
+| `add.describe` (defaults at resolution) | the record has no `description` until a resolution | the record is internal | a copy by path made after a resolution defaults to its own path |
+| `validation.locatorSchemaPath` | the escaping of whitespace in messages, through `formatLocatorSchemaPathForError` | the function is internal | a local copy of its rule, the messages compared as before |
+
+- Docs: AGENTS.md §4 (the 26 source specs and their twins; the spec count, 83 files, about 13,000 lines); *Internal →
+  Tests and checks* (the twins).
+- Checks: every source spec and its twin list the same number of tests (227 in 26 files); `pnpm lint` 0;
+  `pnpm pack-test --reporter=line` exit 0 (2,286 passed: 1,605 before and 227 twins on each of three browsers, 3
+  skipped; doc snippets 221; api coverage 0 problems; step locations 29); `pnpm docs:build` 0. Committed in three
+  folders: `add/`; the resolution and query specs; `registry/` and `validation/` with the docs and these notes.
