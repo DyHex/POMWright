@@ -67,7 +67,12 @@ Publishing waits for `CI` on `main`, so nothing is published past a red run, and
 the same green run (see [documentation](/POMWright/internal/documentation/#building-and-publishing)). A run that
 `workflow_run` starts checks out the newest commit on `main`, which may be newer than the one `CI` tested, so
 `publish.yaml` first compares the two and goes no further when `main` has moved on: the newer commit's own `CI` run
-starts Publish again. `pages.yaml` builds the tested commit itself. Checking out the tested commit in `publish.yaml`
+starts Publish again, which continues the release and publishes only when no changeset is pending. When the tested
+commit is a release commit (its version differs from its parent's) and that version is not on npm, it would never be
+published, so the run fails and names the commit to revert. Publish authenticates to npm with Trusted Publishing, and
+warns after publishing when a version has no provenance attestation (the version appears once the maintainer approves
+it on npmjs.com, which can take longer than the check waits). `pages.yaml` builds the tested commit itself, and only
+while it is `main`'s tip. Checking out the tested commit in `publish.yaml`
 too was rejected: the changesets action would then run on a detached head, and whether its Version Packages branch logic
 still works there cannot be tried without a release.
 

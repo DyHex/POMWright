@@ -1,4 +1,10 @@
 name: Publish
+
+# Versions and publishes the package after CI succeeds on a push to main, with changesets/action: while changesets are
+# pending it opens or updates the "Version Packages" pull request; once that is merged, the next run publishes the new
+# version. npm authenticates this workflow by Trusted Publishing (OIDC), so no npm token is stored, and pnpm publish
+# records provenance from the same identity. A published version appears on npm once the maintainer approves it there.
+
 on:
   workflow_run:
     workflows: [CI]
@@ -10,7 +16,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 permissions:
   contents: write
   pull-requests: write
-  id-token: write # npm provenance: the published tarball names this workflow run and its commit
+  id-token: write # npm Trusted Publishing (OIDC): npm authenticates this workflow and records provenance
 
 jobs:
   publish:
@@ -24,17 +30,34 @@ jobs:
     steps:
       # a workflow_run checks out the newest commit on main, which may not be the one this CI run tested
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the guard reads the tested commit's package.json and its parent's
+      # On the commit CI tested, the release goes on. When main has moved on, the newer commit's own run continues the
+      # release, and publishes only when no changeset is pending, so this run stops. If the tested commit is a release
+      # commit (its version differs from its parent's) whose version is not on npm, that version would never be
+      # published: the run fails and says how to recover.
       - name: Continue only on the commit CI tested
         id: tested
         env:
           TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          if [ "$(git rev-parse HEAD)" = "$TESTED_SHA" ]; then
+          head="$(git rev-parse HEAD)"
+          if [ "$head" = "$TESTED_SHA" ]; then
             echo "current=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "main has moved past $TESTED_SHA to $(git rev-parse HEAD); that commit's own CI run publishes"
-            echo "current=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          echo "current=false" >> "$GITHUB_OUTPUT"
+          version="$(git show "$TESTED_SHA:package.json" | jq -r .version)"
+          parent="$(git show "$TESTED_SHA^:package.json" | jq -r .version)"
+          if [ "$version" != "$parent" ]; then
+            published="$(npm view pomwright versions --json)"
+            if ! jq -e --arg v "$version" 'if type == "array" then any(.[]; . == $v) else . == $v end' \
+              <<<"$published" >/dev/null; then
+              echo "::error::Version $version of commit $TESTED_SHA was not published: main moved past it before its Publish run. Revert $TESTED_SHA before merging the next Version Packages pull request."
+              exit 1
+            fi
+          fi
+          echo "main has moved past $TESTED_SHA to $head; the newer commit's own run continues the release, and publishes only when no changeset is pending"
       - if: steps.tested.outputs.current == 'true'
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
@@ -47,14 +70,35 @@ jobs:
 
       - if: steps.tested.outputs.current == 'true'
         run: pnpm install --frozen-lockfile
+      # changesets/action v2 fails the run when the publish script fails; pnpm publish authenticates with the
+      # workflow's OIDC token (id-token: write above)
       - name: Create Release Pull Request or Publish
         if: steps.tested.outputs.current == 'true'
         id: changesets
-        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
-          publish: pnpm run release
+          publish-script: pnpm run release
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      # Every version published here should carry a provenance attestation. This warns rather than fails: the version
+      # appears on npm only once the maintainer approves it on npmjs.com, which can take longer than this waits.
+      - name: Check the provenance of what was published
+        if: steps.changesets.outputs.published == 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          # changeset publish runs pnpm publish, which hands the upload to npm with this environment
-          NPM_CONFIG_PROVENANCE: "true"
+          PUBLISHED: ${{ steps.changesets.outputs.published-packages }}
+        run: |
+          for version in $(jq -r '.[] | select(.name == "pomwright") | .version' <<<"$PUBLISHED"); do
+            url="https://registry.npmjs.org/-/npm/v1/attestations/pomwright@$version"
+            found=false
+            for _ in $(seq 1 20); do
+              if [ "$(curl -s -o /dev/null -w '%{http_code}' "$url")" = "200" ]; then
+                found=true
+                break
+              fi
+              sleep 30
+            done
+            if [ "$found" = true ]; then
+              echo "pomwright@$version has a provenance attestation: $url"
+            else
+              echo "::warning::No provenance attestation for pomwright@$version after 10 minutes. Once the release is approved on npmjs.com, check $url or run: npm view pomwright@$version dist --json"
+            fi
+          done

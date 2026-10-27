@@ -13,7 +13,8 @@ permissions:
 # One run at a time, in push order, so publish.yaml and pages.yaml, which start when a run succeeds, follow the order
 # of the commits: an older commit's run can never finish after a newer one's and deploy its site over the newer site.
 # A run that is waiting gives way to a newer push (GitHub keeps one waiting run per group); a running one is never
-# cancelled, so every run that starts finishes its checks.
+# cancelled, so every run that starts finishes its checks. A re-run of an older run keeps its commit, so pages.yaml
+# deploys only main's tip and publish.yaml goes on only on it: deployments follow commit order, re-runs included.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false

@@ -149,4 +149,32 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+- **Packages**: `@changesets/cli` 3.0.3 and `@changesets/changelog-github` 1.0.1 (`^3.0.3`, `^1.0.1`); CLI 3 depends on
+  `@changesets/config` 4.0.1, whose schema allows every key of `.changeset/config.json`; `$schema` now
+  `https://unpkg.com/@changesets/config@4.0.1/schema.json` (200). `pnpm changeset status --verbose`: the 29 pending
+  changesets parse, all `patch`, pomwright → 3.0.2.
+- **Trusted Publishing with pnpm, confirmed**: CLI 3 publishes a pnpm project with `pnpm publish <tarball> --json
+  --access public --tag latest --no-git-checks` (`@changesets/cli` 3.0.3 `dist/getPublishPlan.mjs`). pnpm 12.14.0's
+  native binary holds GitHub's `ACTIONS_ID_TOKEN_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` and npm's
+  `/-/npm/v1/oidc/token`, and its changelog describes trusted publishing for `pnpm publish` (an `NPM_ID_TOKEN` checked
+  against the registry; `--no-provenance` turns provenance off under trusted publishing, so it is on by default). pnpm
+  does the exchange itself, so no npm CLI version is needed and no npm step was added.
+- **The guard**, run locally in a scratch clone against the real registry (the run block extracted from the workflow):
+  tested commit is HEAD → `current=true`; an ordinary commit after `main` moved → quiet, exit 0; a release commit to a
+  released version (3.0.0 → 3.0.1) → quiet, exit 0; a release commit to an unreleased version (3.0.1 → 9.9.9) →
+  `::error::Version 9.9.9 of commit … was not published: …`, exit 1.
+- **The attestation check**, run locally with one quick poll: pomwright 3.0.1 (404) → the warning, exit 0; the endpoint
+  answers 200 for a version with provenance (`@changesets/cli@3.0.3`).
+- **Pages**: the build job's `deploy` output; for a `workflow_run`, `git ls-remote origin refs/heads/main` against
+  `head_sha`; every later step and the deploy job run only on `deploy == 'true'`; a manual run always deploys.
+- **Dependabot**: every group `patterns: ["*"]` with `update-types: [minor, patch]`; `typescript` (root) and
+  `@types/node` (root, `test/`) majors ignored, with comments naming #54 and #55; `website/` has neither.
+- **Changeset** `trusted-publishing.md`; AGENTS.md §2 (workflows and Dependabot) and §7 (the guard's two outcomes, the
+  merge rule after a release with its recovery, Trusted Publishing and checking the attestation); *Internal → Tests and
+  checks* and *Internal → Documentation*; `main.yaml`'s concurrency comment.
+- Checks: `pnpm lint` 0; actionlint (with shellcheck) 0; `pnpm test:unit` 782 passed; `pnpm pack-test --reporter=line`
+  exit 0 (1,509 passed, 3 skipped; doc snippets 215; api coverage 0 problems; step locations 7); `pnpm docs:build` 0.
+- Not testable before the merge (decision 8): a real publish, the attestation, a Pages re-run; the maintainer's actions
+  in PLANS.md cover them.
