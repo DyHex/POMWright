@@ -184,6 +184,11 @@ instead, which fails the running test at once all the same.
   all before the disposal arrives: the return is a first arrival again. Forced on localhost with a page that bounces
   back as its first script runs, it never happened: no overwrite in 350 rounds per engine, 300 of them with six parallel
   workers.
+- **A back/forward-cache restore.** A document restored from the cache runs no script, so a back navigation that
+  restored one on a seeded origin would take the seed out of pending at `framenavigated` with no document to write or
+  report. It is untested, since no browser Playwright drives restores one reproducibly: Playwright turns the cache off
+  in Chromium, and in Firefox and WebKit a back navigation to a seeded page that could be cached was a fresh load,
+  and was seeded.
 
 ## Why not a route
 

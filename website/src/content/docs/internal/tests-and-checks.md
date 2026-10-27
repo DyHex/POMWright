@@ -27,6 +27,12 @@ page objects or import `pomwright` test the packed package. `testApp/urlForms.sp
 printable ASCII character through the URL each browser reports, with the known differences listed, so a browser
 that starts reporting a URL differently fails the harness.
 
+Some outcomes belong to a run, not to a test: where a broken page object is built decides which tests fail, how far
+each body gets and which tests do not run. A test cannot observe that about itself, and marking it `test.fail()` would
+change it, since a serial group goes on after an expected failure. So `pageObject/lifecycle.outcomes.spec.ts` starts
+`test/lifecycle-outcomes/` as a Playwright run of its own, on its project's browser, and compares that run's JSON report
+with the table in [Page objects](/POMWright/docs/page-objects/#how-a-mistake-is-reported).
+
 After the harness, `pack-test` runs `test/playwright.steps.config.ts`: where the report places a step and its error,
 which only the runner computes. Its spec marks each probed call with `// LOCATION <id>`, and its reporter fails the run
 when a step or an error with that id is reported on another line (see

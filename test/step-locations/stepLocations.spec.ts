@@ -68,17 +68,18 @@ class Widget {
 	}
 }
 
-/** A page that answers what the helpers ask of it, so the probes need no browser. */
-const fakePage = () =>
+/** A page that answers what the helpers ask of it, so the probes need no browser; it reports `url` as its URL. */
+const fakePage = (url = "https://shop.example/probe") =>
 	({
 		goto: async () => null,
-		url: () => "https://shop.example/probe",
+		url: () => url,
+		waitForURL: async () => undefined,
 		sessionStorage: { setItem: async () => undefined },
 	}) as never;
 
 class ProbePage extends PageObject<"body"> {
-	constructor(label = "LOCATION goto") {
-		super(fakePage(), "https://shop.example", "/probe", { label });
+	constructor(label = "LOCATION goto", page = fakePage()) {
+		super(page, "https://shop.example", "/probe", { label });
 	}
 	// no locators: the registry check would resolve them, and the fake page has none
 	protected defineLocators() {}
@@ -101,6 +102,9 @@ test("a boxed @step that throws: the step and the error at the line that called 
 test("the navigation and session storage helpers' steps are reported where they were called", async () => {
 	const probePage = new ProbePage();
 	await probePage.navigation.goto(); // LOCATION goto
+	await new ProbePage("LOCATION expect-this").navigation.expectThisPage(); // LOCATION expect-this
+	const leftPage = new ProbePage("LOCATION expect-another", fakePage("https://shop.example/other"));
+	await leftPage.navigation.expectAnotherPage(); // LOCATION expect-another
 	const storage = new SessionStorage(fakePage(), { label: "LOCATION set", origin: "https://shop.example" });
 	await storage.set("token", "abc"); // LOCATION set
 });

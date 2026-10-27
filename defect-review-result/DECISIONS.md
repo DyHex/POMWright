@@ -2018,3 +2018,18 @@ plan 6. Agreed by the maintainer.
 
 **Why**: actionlint uses whichever `shellcheck` is on `PATH`; GitHub's image had 0.9.0, older than the version the local
 checks used, and would change with the image.
+
+## 68. The lifecycle table's outcomes are tested by a run of their own (2026-10-28, during plan 28)
+
+**Settles**: decision 60, point 1, the `beforeAll` and worker-scoped rows, which planned failing tests marked
+`test.fail()` handing their result over through a file.
+
+**Decided**: `pageObject/lifecycle.outcomes.spec.ts` starts `test/lifecycle-outcomes/` (a page object with a `has` typo
+built in a test-scoped and a worker-scoped fixture, `beforeEach`, `beforeAll`, and `beforeAll` in a serial group) as a
+Playwright run of its own on the project's browser, and compares its JSON report with the table: the status of each
+test, how far each body got (annotations), and that every error is the labelled message. Taken during execution;
+reported to the maintainer at plan 28's stop.
+
+**Why**: the serial row says the later tests do not run, and Playwright skips the rest of a serial group only after an
+unexpected failure: with the first test marked `test.fail()`, the second ran (probe). Which tests fail, how far their
+bodies get and which do not run are outcomes of the run, which no test sees of itself.

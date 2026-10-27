@@ -152,7 +152,10 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   exposes them to specs.
 - Specs live under `tests/`: `locatorRegistry/` (`add`, `getLocator`, `getLocatorSchema`, `getNestedLocator`,
   `registry`, `validation`), `pageObject/` (construction-time URL validation, registry verification, the lifecycle,
-  the actions hook, and `callSite/`: errors raised after the consumer's line point at it even in consumer files named
+  the actions hook, `lifecycle.outcomes.spec.ts`, which runs `test/lifecycle-outcomes/` as a Playwright run of its own on
+  its project's browser and compares the JSON report with the docs' table of where a broken page object is built (which
+  tests fail, how far each body gets, which do not run: what a test cannot see of itself, and what `test.fail()` would
+  change), and `callSite/`: errors raised after the consumer's line point at it even in consumer files named
   `pageObject.ts` and `sessionStorage.ts`; a page object's check at the `new` line, with a base class too, and the `add`
   lines in its `cause`), `logging/` (the `log` fixture's attachments, read by an auto fixture torn
   down after it), `step/`, `testApp/`, `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
@@ -160,14 +163,16 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   package's exact file list; `publicTypes.typecheck.ts` and `publicTypes.emit.ts`, compile-only). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through
   `playwright.bench.config.ts`, never by `pack-test`. `testApp/urlForms.spec.ts` sweeps the printable ASCII
   characters through the URL each browser reports (but `# ? / % \`), with the known differences listed: Chromium's `|`
-  in a path, and, on Node 20 and 22, whose `new URL` keeps a `^`, every browser's `%5E`.
+  in a path, and, on Node 20 and 22, whose `new URL` keeps a `^`, every browser's `%5E`. `testApp/urlHosts.spec.ts`
+  takes each host form `new URL` normalizes (case, default ports, IDN, IPv6, IPv4 shorthands, credentials) through a page
+  object, every request fulfilled by `page.route`; with credentials, `toHaveURL` sees the document's URL, which has none.
   `test/step-locations/` is the step-location check: its specs mark each probed call with `// LOCATION <id>` (a step
   titled by its class and method is marked with that title), and its reporter fails the run when a step or an error
   with that id is reported on another line, or a marked line is never reported; `legacyDecorators.spec.ts` runs `@step`'s
   legacy decorator calls as `tsc` emits them (`pnpm typecheck` writes them; the spec fails clearly without); it needs no browser and
   runs from `test/playwright.steps.config.ts`, which `pack-test.sh` runs after the harness, so no `--reporter` given to
   the harness can switch it off. `testApp/sessionStorageOverlay.spec.ts` runs with Playwright's step overlay
-  (`video: { show: { test } }`), which delays a step's body. 83 spec files, about 13,000 lines. One spec file per DSL method,
+  (`video: { show: { test } }`), which delays a step's body. 85 spec files, about 13,300 lines. One spec file per DSL method,
   for example `add.getById.spec.ts` or `getLocatorSchema.update.spec.ts`; one DOM-level spec per fixture page under
   `testApp/`, for example `testIds.spec.ts`.
 - Know what each spec exercises. 26 `locatorRegistry/` specs import from `../../../../src/locators`, so they run
