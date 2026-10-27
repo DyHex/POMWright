@@ -20,7 +20,7 @@ report logging and steps build on that, and each part works on its own.
 An orders page lists the orders the app keeps in session storage, in a table. The rows are registered once; two methods
 narrow them to one order, and each reaches a different element in that row:
 
-```ts
+```ts title="orders.page.ts"
 // orders.page.ts
 import { expect, type Page } from "@playwright/test";
 import { json, PageObject, step } from "pomwright";
@@ -74,7 +74,7 @@ export class OrdersPage extends PageObject<Paths, { storage: typeof ordersStorag
 The test receives the page object as a Playwright fixture, seeds the orders and logs them to the report, then opens the
 page:
 
-```ts
+```ts title="orders.spec.ts"
 // orders.spec.ts
 import { expect } from "@playwright/test";
 import { test as base } from "pomwright";

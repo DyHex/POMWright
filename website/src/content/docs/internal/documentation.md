@@ -18,9 +18,15 @@ the same facts as the API pages.
 - **Examples compile.** `scripts/check-doc-snippets.mjs` takes every `ts` block, one small project per page, and
   compiles it against the installed package with the harness's options and `declaration: true`. A block with
   `title="name.ts"` is that file, which the page's other blocks import; lines up to `// ---cut---` are compiled but not
-  shown; a `nocheck` block is skipped and listed (only the 2.x code on *Upgrading from 2.x*); a deliberate error is
-  shown with `// @ts-expect-error`, which the check enforces. The example app in `website/snippets/`, four page
-  objects on `shop.example` and their fixtures, can be imported from every page.
+  shown; a `nocheck` block is skipped and listed, and only the 2.x code on *Upgrading from 2.x* may be one; a
+  deliberate error is shown with `// @ts-expect-error`, which the check enforces. The example app in
+  `website/snippets/`, four page objects on `shop.example` and their fixtures, can be imported from every page. The
+  README's examples are compiled as one more page, their blocks titled in the fence (`title="orders.page.ts"`), which
+  GitHub and npm do not show.
+- **Nothing is skipped silently.** A TypeScript block the check would not compile fails it, with the fix in the
+  message: one in a `~~~` fence (write it as a ` ```ts ` block), one labelled `tsx`, `mts` or `cts` (write it as
+  `ts`), and `nocheck` on any other page (make the example compile, with `// ---cut---` for the setup lines and
+  `// @ts-expect-error` for a deliberate error). Blocks in other languages, `js`, `sh` or `text`, are not checked.
 - **The API is complete.** `scripts/check-api-coverage.mjs` reads the installed declarations and fails on an export
   without a page or section, a member without a heading, a doc comment without a summary or a `@param`, a method or
   class property without a `@see` to its heading, and a link to the site whose page or heading does not exist. So an

@@ -59,4 +59,29 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-28.
+
+- Step 1: the fence pattern takes backticks or tildes; a block labelled `ts`, `typescript`, `tsx`, `mts` or `cts` is
+  collected. Rejected, each with its page and line, after the compile (so type errors and rejections show in one run):
+  a TypeScript block in a `~~~` fence (`a TypeScript block in a ~~~ fence is not compiled; write it as a ```ts block`), a
+  block labelled `tsx`, `mts` or `cts` (`a block labelled mts is not compiled; write the example as a ```ts block`: "a
+  block labelled …" reads for every label, where "a mts block" did not), and `nocheck` outside
+  `docs/upgrading-from-2x.md` (`nocheck is only for the 2.x code of Upgrading from 2.x; make the example compile:
+  // ---cut--- hides the setup lines it needs, and // @ts-expect-error marks a deliberate compile error`). The header
+  comment says what is rejected and that other languages are not checked.
+- Step 2: `README.md` is read as one more page (project `README/`); its blocks are `title="orders.page.ts"` and
+  `title="orders.spec.ts"` in the fence meta, the first-line comments kept. The README's `orders.page.ts` replaces the
+  example app's in that project. Both compile: 223 checked (221 and the README's 2), 12 skipped, all on *Upgrading from
+  2.x*.
+- Step 3: a temporary `docs/planted.md` (scope G's page plus `~~~typescript`, `mts`, `cts`, and a `~~~js` and an `sh`
+  block that must be ignored) failed the check with exit 1: the control block's type error (`planted.md:53:7 … TS2322`)
+  and six rejections (two tilde fences, `tsx`, `mts`, `cts`, `nocheck`); the `js` and `sh` blocks were not reported.
+  Page removed; the check is back at 0 problems.
+- Step 4: AGENTS.md §2 (`scripts/`), §3 (`pnpm typecheck`), §9 (the README line; the snippet check's paragraph);
+  *Internal → Tests and checks* (item 5) and *Internal → Documentation* (*Examples compile*, and a new *Nothing is
+  skipped silently*).
+- **Not in the plan**: §9's snippet paragraph said the `site` job "runs on every change to code or to `website/`",
+  stale since plan 3 made every job run on every run; the clause is gone in the rewritten paragraph ("and in CI's `site`
+  job"). Plan 40 did not list it.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 900 passed; `pnpm pack-test --reporter=line` exit 0 (2,367 passed, 3
+  skipped; doc snippets 223; api coverage 0 problems; step locations 31); `pnpm docs:build` 0.

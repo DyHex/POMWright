@@ -52,8 +52,8 @@ its own so that no `--reporter` given to the harness can switch it off.
    [call sites](/POMWright/internal/call-sites/#steps-at-the-tests-line)). Decorated code compiled by `tsc` with
    `experimentalDecorators`, such as a page-object package, makes these calls; a unit test with a hand-made descriptor
    cannot show that they run.
-5. `scripts/check-doc-snippets.mjs`: every TypeScript example of the documentation, compiled against the installed
-   package (see [documentation](/POMWright/internal/documentation/)).
+5. `scripts/check-doc-snippets.mjs`: every TypeScript example of the documentation and the README, compiled against
+   the installed package (see [documentation](/POMWright/internal/documentation/)).
 6. `scripts/check-api-coverage.mjs`: every export of the installed declarations has an API page or section, every
    member a heading on it, every export and member a doc comment with a summary and its parameters, every method and
    class property a `@see` to its heading, and every link to the site a page and heading that exist.

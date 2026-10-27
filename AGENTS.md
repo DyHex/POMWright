@@ -47,7 +47,7 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
 | `.changeset/` | Changesets config. `CHANGELOG.md` is generated from changesets at release time. | config only |
 | `.github/workflows/` | `checks.yaml` (reusable), every job on every run, whatever changed, so a run always tests what it reports on (on a pull request, GitHub's merge commit): `lint` (biome, then actionlint, its version and SHA-256 pinned in the step and moved by hand), `package` (unit tests, build and pack once, the tarball as a run artifact) and `harness` (the browsers the caller passes, each at the Playwright pin and at the latest 1.x, each testing that tarball), and with the `node-floor` input, which `pr.yaml` and `main.yaml` set, `harness-node-floor` (chromium at the pin on Node 20, the `engines` floor); every third-party action is pinned to a commit with its version in a comment, kept current by `.github/dependabot.yml` (monthly, minor and patch updates grouped, each major as a pull request of its own), which also proposes the npm versions of the root, `test/` and `website/`, never `@playwright/test`, and holds the majors of `typescript` (issue #54) and `@types/node` (issue #55); `consumer` (`scripts/consumer-check.sh`): the tarball installed with npm into projects of its own, TypeScript under each module resolution, attw, Playwright's runner in a CommonJS and a `"type": "module"` project, TypeScript 5.0 to the latest release in both decorator modes, then on Node 20 `import` and `require` sharing one copy; `site`: the tarball installed into `test/`, the snippet and coverage checks, the site's frozen install and build on Node 24, and every diagram rendered (`scripts/check-diagrams.mjs`). `pr.yaml` (`PR`) runs it for every pull request, draft or not, with the harness on chromium only; `main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit, one run at a time in push order (a `concurrency` group without `cancel-in-progress`, so Publish and Pages follow the order of the commits and an older run never deploys over a newer site; a waiting run gives way to a newer push); both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs `changesets/action` v2 (`@changesets/cli` 3, `@changesets/changelog-github` 1) after `CI` succeeds on a push to `main`, guarded by its job condition and by a step that goes no further when `main` has moved past the commit that run tested (a `workflow_run` checks out the newest commit; the newer commit's own run continues the release, and publishes only when no changeset is pending), and fails when that commit is a release commit (its version differs from its parent's) whose version is not on npm, saying to revert it; it publishes with npm Trusted Publishing (`id-token: write`; no npm token is stored; `pnpm publish` exchanges the workflow's OIDC token and records provenance), and after publishing warns when a version has no provenance attestation. `pages.yaml` builds `website/` and deploys it to GitHub Pages (`https://dyhex.github.io/POMWright/`) after `CI` succeeds on a push to `main`, guarded as `publish.yaml` is and building the commit that run tested, only while that commit is `main`'s tip (a re-run of an older run deploys nothing), or by `workflow_dispatch`. | yes |
 | `pack-build.sh`, `pack-extract.sh`, `pack-test.sh`, `playwright.base.ts` | Build and pack the tarball and extract it into `.pack/pomwright`; the extraction; run the harness (section 3); shared Playwright config. | yes |
-| `scripts/` | `write-esm-entry.mjs` (part of `pnpm build`), `check-doc-snippets.mjs` (compiles the docs' TypeScript examples) and `check-api-coverage.mjs` (the API reference and the doc comments against the installed declarations), both part of `pnpm typecheck` (section 9), `benchmark.mjs` (`pnpm bench`, the tables of *Internal → Performance*), `pack-version.sh` (`pnpm pack:version`, a tarball with a chosen version for trying a build elsewhere), `ci-playwright-version.sh` (the harness job's Playwright version for its `pin` or `latest` row, and the skip of a `latest` row equal to the pin; runs locally as it is), `consumer-check.sh` with its fixtures in `consumer/` (the `consumer` job's checks, run by hand as `bash scripts/consumer-check.sh [--node-floor] <tarball>`), `check-diagrams.mjs` (the `site` job's diagram check, `pnpm docs:diagrams`). | yes |
+| `scripts/` | `write-esm-entry.mjs` (part of `pnpm build`), `check-doc-snippets.mjs` (compiles the TypeScript examples of the docs and the README) and `check-api-coverage.mjs` (the API reference and the doc comments against the installed declarations), both part of `pnpm typecheck` (section 9), `benchmark.mjs` (`pnpm bench`, the tables of *Internal → Performance*), `pack-version.sh` (`pnpm pack:version`, a tarball with a chosen version for trying a build elsewhere), `ci-playwright-version.sh` (the harness job's Playwright version for its `pin` or `latest` row, and the skip of a `latest` row equal to the pin; runs locally as it is), `consumer-check.sh` with its fixtures in `consumer/` (the `consumer` job's checks, run by hand as `bash scripts/consumer-check.sh [--node-floor] <tarball>`), `check-diagrams.mjs` (the `site` job's diagram check, `pnpm docs:diagrams`). | yes |
 | `vitest.config.ts` | Unit-test discovery limited to `src/**/*.test.ts`, node environment, so Playwright specs are never picked up; typecheck mode on, so `expectTypeOf` and `// @ts-expect-error` assertions are enforced, in `src/**/*.test.ts` and in the type-only `src/**/*.test-d.ts`. | yes |
 | `tsconfig.vitest.json` | The tsconfig vitest's typecheck uses: extends the root, scoped to `src/`, target `es2024` (the root has no `include` and would sweep `dist/` and `test/`). | yes |
 | `biome.json`, `tsconfig.json`, `.editorconfig` | Lint and format, strict TypeScript, tabs for code and two spaces for YAML and Markdown. | yes |
@@ -92,8 +92,8 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   `experimentalDecorators` (`tests/packaging/stepLegacyDecorators.typecheck.ts`, also compiled under the standard
   decorators by the first `tsc`); then `tsc -p test/tsconfig.legacyDecorators.emit.json`, which emits
   `step-locations/legacy/legacyWidget.ts` with `experimentalDecorators`, as CommonJS, into `test/.legacy-decorators/` for
-  the step-location check; then `scripts/check-doc-snippets.mjs`, every `ts` block of `website/src/content/docs` against
-  the installed package, and `scripts/check-api-coverage.mjs`, the API reference and the doc comments against the
+  the step-location check; then `scripts/check-doc-snippets.mjs`, every `ts` block of `website/src/content/docs` and the
+  README against the installed package, and `scripts/check-api-coverage.mjs`, the API reference and the doc comments against the
   installed declarations (section 9). `pack-test.sh` runs all six, and after the harness
   `playwright test -c playwright.steps.config.ts` (section 4).
 - `pnpm pack:version <version>` (`scripts/pack-version.sh`, run by hand only) builds and packs the package with the
@@ -472,8 +472,8 @@ Rules:
   content in `website/src/content/docs/`, in three sections: `docs/` to learn, `api/` to look up, `internal/` to
   understand. The 2.x docs are linked at the tag,
   `https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2`. The README says what POMWright is, shows one example, and
-  links the site rather than repeating it; its examples are compiled by hand when they change, since the snippet check
-  reads only the site.
+  links the site rather than repeating it; the snippet check compiles its examples as one more page, each block titled
+  in its fence meta (`title="orders.page.ts"`), which GitHub and npm do not show.
 - The doc comments in `src/` are the API reference in the editor, written from the same facts as the API pages: every
   export and every public or protected member has a summary, `@param` for each parameter (nested options as
   `@param options.label`), `@returns` where the type does not say it, `@throws` with the real message, an `@example`,
@@ -521,13 +521,14 @@ Rules:
   `defineLocators()`, a locator module, a query in a page object's method) is shown as such; TypeScript with two-space
   indentation, `*.example` hosts and descriptive paths; a rendered chain or message goes in a comment or a `text`
   block.
-- `scripts/check-doc-snippets.mjs` compiles every `ts` block, one project per page with the example app, against the
-  installed package with the harness's options and `declaration: true`, in `test/.doc-snippets/`. `title="name.ts"`
-  makes a block a file the page's other blocks import; lines up to `// ---cut---` are compiled but hidden on the site
-  and only declare what the visible lines use; `nocheck` skips a block and lists it (used only for 2.x code on
-  *Upgrading from 2.x*); a deliberate error is shown with `// @ts-expect-error`, which the check enforces.
-  It runs in `pnpm typecheck` (so in every harness job) and in CI's `site` job, which runs on every change to code or
-  to `website/`.
+- `scripts/check-doc-snippets.mjs` compiles every `ts` block of the site and the README, one project per page with the
+  example app, against the installed package with the harness's options and `declaration: true`, in
+  `test/.doc-snippets/`. `title="name.ts"` makes a block a file the page's other blocks import; lines up to
+  `// ---cut---` are compiled but hidden on the site and only declare what the visible lines use; `nocheck` skips a
+  block and lists it, and fails the check on any page but *Upgrading from 2.x*, whose 2.x code it is for; a deliberate
+  error is shown with `// @ts-expect-error`, which the check enforces. A TypeScript block the check would not compile,
+  in a `~~~` fence or labelled `tsx`, `mts` or `cts`, fails it with the fix. It runs in `pnpm typecheck` (so in every
+  harness job) and in CI's `site` job.
 - `scripts/check-api-coverage.mjs` reads the installed declarations (`.pack/pomwright/dist/index.d.ts`, the extracted
   tarball in CI; a path argument overrides it) and fails on an export without an API page (its `title`) or a `## Name`
   section, a public or protected member without a `### member` heading on that page, or an export, member or
