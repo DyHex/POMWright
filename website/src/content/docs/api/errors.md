@@ -225,9 +225,11 @@ update("main.button@save") cannot change the strategy from "role" to "locator"; 
 replace() cannot apply to "main.frame@payment": it is the path this query resolves, and frameLocator() without a selector has no element to resolve to; replace an ancestor instead.
 replace() cannot apply to "main.list": it has filter or nth steps, and frameLocator() without a selector takes none; call clearSteps("main.list") first.
 filter() cannot apply to "anyFrame": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
+describe() cannot apply to "anyFrame": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
 ```
 
-The any-frame form has no element: it cannot be the query's own path, carry steps, or be filtered or indexed.
+The any-frame form has no element: it cannot be the query's own path, carry steps, or be filtered, indexed or
+described.
 
 ---
 

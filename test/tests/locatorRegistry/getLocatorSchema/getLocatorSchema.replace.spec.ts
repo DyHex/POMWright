@@ -49,3 +49,20 @@ test("replace accepts ids verbatim and RegExp ids as patterns", async ({ page })
 	);
 	expect(() => getLocatorSchema("root.target").replace("root.target").getById(/x/y)).not.toThrow();
 });
+
+test("a query's describe() on the any-frame path throws at the call; replaced first, the query describes", async ({
+	page,
+}) => {
+	type Paths = "frame@payment" | "frame@payment.button@pay";
+	const { add, getLocatorSchema } = createRegistry<Paths>(page);
+	add("frame@payment").frameLocator();
+	add("frame@payment.button@pay").getByRole("button", { name: "Pay" });
+
+	expect(() => getLocatorSchema("frame@payment").describe("all frames")).toThrowError(
+		'describe() cannot apply to "frame@payment": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.',
+	);
+	// a described locator renders as its description, as Playwright's do
+	const replaced = getLocatorSchema("frame@payment").replace().locator("iframe").describe("the payment frame");
+	expect(`${replaced.getNestedLocator()}`).toBe("the payment frame");
+	expect(`${replaced.describe("").getNestedLocator()}`).toBe("locator('iframe')");
+});

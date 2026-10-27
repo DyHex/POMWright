@@ -266,6 +266,15 @@ describe("the any-frame form in a query", () => {
 		);
 	});
 
+	it("describe() on a query of the any-frame path throws at the call, as filter() and nth() do", () => {
+		const query = createFrameRegistry().getLocatorSchema("any");
+		expect(() => query.describe("all frames")).toThrowError(anyFrameSteps("describe()", "any"));
+		expect(() => createFrameRegistry().getLocatorSchema("any").describe("")).toThrowError(
+			anyFrameSteps("describe()", "any"),
+		);
+		expect(() => createFrameRegistry().getLocatorSchema("any.btn").describe("a button")).not.toThrow();
+	});
+
 	it("after clearSteps the replacement resolves; query methods chain in any order", () => {
 		const query = createFrameRegistry()
 			.getLocatorSchema("frame.btn")

@@ -269,7 +269,9 @@ export class LocatorQueryBuilderInternal<
 	 * @param description A string; `""` removes the description.
 	 * @returns This query.
 	 * @throws When the description is not a string (from JavaScript):
-	 * `describe requires a string for "main.list.item"; pass "" to remove the description.`
+	 * `describe requires a string for "main.list.item"; pass "" to remove the description.`; when the query's path is the
+	 * any-frame `frameLocator()`, which has no element to describe (replace the path first):
+	 * `describe() cannot apply to "anyFrame": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.`
 	 *
 	 * @example
 	 * ```ts
@@ -280,6 +282,7 @@ export class LocatorQueryBuilderInternal<
 	 */
 	describe(description: LocatorDescription): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring> {
 		assertDescription(description, { method: "describe", path: this.path });
+		this.ensureStepTarget("describe", this.path);
 		this.descriptions.set(this.path, description);
 		return this;
 	}
@@ -483,8 +486,8 @@ export class LocatorQueryBuilderInternal<
 		}
 	}
 
-	/** An any-frame segment has no element, so a filter or index step on it is rejected at the call. */
-	private ensureStepTarget(method: "filter" | "nth", subPath: string) {
+	/** An any-frame segment has no element, so a filter, an index or a description on it is rejected at the call. */
+	private ensureStepTarget(method: "filter" | "nth" | "describe", subPath: string) {
 		if (isAnyFrameDefinition(this.ensureSubPath(subPath))) {
 			throw new Error(anyFrameStepsMessage(`${method}()`, subPath));
 		}

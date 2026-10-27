@@ -98,6 +98,16 @@ registry.getLocatorSchema("main.list.item").describe("First order").getNestedLoc
 
 - LocatorQueryBuilder
 
+**Throws**
+
+```text
+describe requires a string for "main.list.item"; pass "" to remove the description.
+describe() cannot apply to "anyFrame": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
+```
+
+The second when the query's path is the any-frame `frameLocator()`, which has no element to describe; replace the path
+first.
+
 ### filter()
 
 Adds a [`locator.filter()`](https://playwright.dev/docs/api/class-locator#locator-filter) step to a segment, after

@@ -80,4 +80,16 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+**Step 1 (C-6).** `ensureStepTarget` takes `"describe"`; the query's `describe` calls it after `assertDescription`;
+its doc comment `@throws` names the message. Unit test (*the any-frame form in a query*): `describe("all frames")` and
+`describe("")` on a query of the any-frame path throw `describe() cannot apply to "any": …`, a query of a path inside it
+describes. **Deviation, small:** the plan put "one line in `add.frameLocator.spec.ts` against the packed package", but
+that spec imports `LocatorRegistryInternal` from `src` (one of the 26 source-level specs). The line went there anyway,
+beside its `nth` and `filter` lines, and a packed case went into `getLocatorSchema.replace.spec.ts`, which imports
+`pomwright`: the throw, and a query replaced first that describes (a described locator renders as its description, as
+Playwright's do, so the chain is checked with `describe("")`). Docs: `api/class-locatorquerybuilder.md`, `describe()`
+**Throws**; `api/errors.md`, *Queries* (the line, and "described"). Changeset `query-describe-any-frame.md`. Checks:
+`pnpm lint` 0; `pnpm test:unit` 822 passed; `pnpm pack-test --reporter=line` exit 0 (1,524 passed, 3 skipped; doc
+snippets 217; api coverage 0 problems; step locations 7); `pnpm docs:build` 0.

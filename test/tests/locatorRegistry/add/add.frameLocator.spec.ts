@@ -194,6 +194,9 @@ test("the any-frame segment has no element: no terminal form, no reference, no s
 	expect(() => registry.getLocatorSchema("anyFrame.button").filter("anyFrame", { visible: true })).toThrowError(
 		anyFrameSteps("filter()", "anyFrame"),
 	);
+	expect(() => registry.getLocatorSchema("anyFrame").describe("all frames")).toThrowError(
+		anyFrameSteps("describe()", "anyFrame"),
+	);
 	// replacing with the any-frame form is refused at the call where it can never resolve
 	expect(() => registry.getLocatorSchema("anyFrame.button").replace().frameLocator()).toThrowError(
 		'replace() cannot apply to "anyFrame.button": it is the path this query resolves, and frameLocator() without a selector has no element to resolve to; replace an ancestor instead.',

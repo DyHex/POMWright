@@ -55,8 +55,8 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 8 | [Reuse by path: the self-reuse check for a single literal only](PLAN-B-4-reuse-by-path-types.md) | 21 | patch | | done | `ff6495e` |
 | 9 | [Path rules as pattern checks reporting every rule; a locator method that throws changes nothing](PLAN-B-3-B-2-path-rules-and-persist.md) | 22, 27 | patch | | done | `2d2c504`, `f46b982` |
 | 10 | [An ended registration's hint for `locator()` options and for queries](PLAN-B-5-C-2-ended-registration.md) | 25 | patch | | done | `890dbd8` |
-| 11 | [Own non-enumerable options are read](PLAN-B-1-C-5-own-non-enumerable.md) | 15 | patch | | done | (filled by the next commit) |
-| 12 | [A query's `describe()` on an any-frame terminal; a kept query's sub-path message](PLAN-C-6-C-7-query-checks.md) | 28, 29 | patch | | planned | |
+| 11 | [Own non-enumerable options are read](PLAN-B-1-C-5-own-non-enumerable.md) | 15 | patch | | done | `b990969` |
+| 12 | [A query's `describe()` on an any-frame terminal; a kept query's sub-path message](PLAN-C-6-C-7-query-checks.md) | 28, 29 | patch | | step 1 done | (filled by the next commit) |
 | 13 | [`AddAccessor` as an interface, `ReusableLocatorFactory`; every public member emits](PLAN-F-2-emit-every-member.md) | 24 | patch | | planned | |
 | 14 | [`@step` on generic methods](PLAN-E-5-generic-step.md) | 11 | patch | | planned | |
 | 15 | [`StepDecorator` exported](PLAN-F-1-step-decorator-type.md) | 23 | patch | | planned | |
@@ -124,7 +124,7 @@ in plan 41 (decision 2, gate 3).
 | `reuse-path-variables.md` | 8 | `reuse` compiles with path variables | done |
 | `long-path-literals.md` | 9 | any length compiles; every broken rule named; `add` throws for a bad path | done |
 | `failed-locator-method-unchanged.md` | 9 | a locator method that throws leaves the registration as it was | done |
-| `query-describe-any-frame.md` | 12 | a query's `describe()` on an any-frame terminal throws at the call | planned |
+| `query-describe-any-frame.md` | 12 | a query's `describe()` on an any-frame terminal throws at the call | done |
 | `kept-query-sub-path-message.md` | 12 | a kept query's sub-path message | planned |
 | `declaration-emit-registry.md` | 13 | the registry's values emit; `ReusableLocatorFactory` exported | planned |
 | `step-generic-methods.md` | 14 | `@step` on generic methods | planned |
