@@ -66,4 +66,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27. As planned: `.editorconfig` with the two space sections and a reworded header comment; the snippets file
+deleted (`git rm`); AGENTS.md §2's `.editorconfig` row and a new `.vscode/` row. Checks: `pnpm lint` 0 (160 files, one
+fewer: biome had checked the snippets file); `pnpm test:unit` 782 passed; `pnpm pack-test --reporter=line` exit 0
+(1,509 passed, 3 skipped; doc snippets 215; api coverage 0 problems; step locations 7). No site change, so no
+`docs:build`.
