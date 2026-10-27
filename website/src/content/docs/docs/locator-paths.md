@@ -56,6 +56,56 @@ LocatorSchemaPath must be a string; received 42.
 
 A whitespace character that is hard to see is shown escaped: a no-break space reads `main\u00A0.form`.
 
+## Paths with a dynamic part
+
+List every path in full where you can: a full path is what an error message and the report show, and a text search or
+your editor's rename finds it as written. A page that repeats one element for a few known values, such as a toolbar's
+buttons, can compose those paths from one `const` array with a template literal type:
+
+```ts
+import type { Page } from "@playwright/test";
+import { PageObject } from "pomwright";
+
+const actions = ["save", "publish", "discard"] as const;
+type Action = (typeof actions)[number];
+
+type Paths = "main" | "main.toolbar" | `main.toolbar.button@${Action}`;
+
+export class EditorPage extends PageObject<Paths> {
+  constructor(page: Page) {
+    super(page, "https://cms.example", "/editor");
+  }
+
+  protected defineLocators(): void {
+    this.add("main").locator("main");
+    this.add("main.toolbar").getByRole("toolbar");
+    for (const action of actions) {
+      this.add(`main.toolbar.button@${action}`).getByRole("button", { name: action });
+    }
+  }
+
+  async run(action: Action) {
+    await this.getNestedLocator(`main.toolbar.button@${action}`).click();
+  }
+}
+```
+
+`Paths` is then the union of the full paths, `main.toolbar.button@save` and the others, so TypeScript checks each one
+as it checks a path written out, and a query of one takes its ancestors as sub-paths
+([Queries](/POMWright/docs/queries/#sub-paths)).
+
+:::note
+A composed path is not found where it is composed. An error message or the report shows `main.toolbar.button@save`,
+and a text search or a rename of that path does not find `` `main.toolbar.button@${action}` ``. A search for the
+prefix, `main.toolbar.button@`, still finds it, and a value changed in the array changes every path built from it.
+List paths in full unless a page repeats an element for enough values to be worth it, and weigh both before you compose
+them.
+:::
+
+A member with an open part, `` `main.list.item@${string}` ``, accepts any value. Only its prefix is offered as a
+completion, any id compiles, an id that was never registered fails when it is resolved, and it has the same search
+cost.
+
 ## Segments without a locator
 
 Only the paths you resolve need a locator: a segment without one is a name that groups paths, and resolution leaves it
@@ -205,8 +255,8 @@ Every page object has its own registry and offers its methods: `this.add(path)` 
 `getNestedLocator`, `getLocator` and `getLocatorSchema` resolve one. The registry is created with the page object and
 checked right after `defineLocators()` has run.
 
-Without a page object, `createRegistryWithAccessors(page)` creates a registry for a Playwright page and returns it with
-the same methods bound to it:
+Without a page object, `createRegistryWithAccessors<Paths>(page)` creates a registry for a Playwright page and returns
+it with the same methods bound to it:
 
 ```ts
 import type { Page } from "@playwright/test";
@@ -227,6 +277,17 @@ await getNestedLocator("main.button@save").click();
 
 A registry you create yourself is checked when you call `registry.verify()`, once everything is registered; a page
 object calls it for you. See [Verifying a registry](/POMWright/docs/verifying-registries/).
+
+The path union is a required type argument of both, `PageObject<Paths>` and `createRegistryWithAccessors<Paths>(page)`.
+A registry created without it takes no path, and its first path says what is missing:
+
+```text
+Argument of type '"main"' is not assignable to parameter of type '"createRegistryWithAccessors needs its paths as a type argument: createRegistryWithAccessors<Paths>(page)"'.
+```
+
+`<string>` is accepted, and best avoided: it gives up every check TypeScript makes on paths (completions, the rules of a
+path, paths not in the union, sub-paths), which POMWright then makes at run time only. It suits paths known only at run
+time, such as locators loaded from JSON, and a gradual move from untyped code, such as 2.x.
 
 ## From `add` to a locator
 

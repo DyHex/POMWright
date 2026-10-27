@@ -50,8 +50,8 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 3 | [CI without the docs-only skip; actionlint in the lint job](PLAN-G-2-G-1-checks-workflow.md) | 31, 32, 8 | none | stop | done, PR run green | `f866325` |
 | 4 | [Release tooling: changesets 3, action v2, Trusted Publishing, the publish and Pages guards, Dependabot](PLAN-G-3-G-10-G-5-G-8-release-workflows.md) | 1, 3, 4, 53 | patch (note) | stop | done, PR run green | `3284aa4`, `8beb9d0` |
 | 5 | [A `consumer` job: the packaging probes and TypeScript 5.0 to latest](PLAN-T14-consumer-job.md) | 58 | none | stop | done, PR run green | `612a62a` |
-| 6 | [Mermaid 12, and a render check of every diagram in the site job](PLAN-G-3-T15-mermaid.md) | 1, 59 | none | stop | done, awaiting the PR run | (filled by the next commit) |
-| 7 | [Sub-path types per member of the path union; the required type argument; generic bases](PLAN-C-1-sub-path-types.md) | 20 | patch | | planned | |
+| 6 | [Mermaid 12, and a render check of every diagram in the site job](PLAN-G-3-T15-mermaid.md) | 1, 59 | none | stop | done, PR run green | `54cf090`; follow-ups `2607cf7`, `fd0db4c`, `b47a255` |
+| 7 | [Sub-path types per member of the path union; the required type argument; generic bases](PLAN-C-1-sub-path-types.md) | 20 | patch | | done | (filled by the next commit) |
 | 8 | [Reuse by path: the self-reuse check for a single literal only](PLAN-B-4-reuse-by-path-types.md) | 21 | patch | | planned | |
 | 9 | [Path rules as pattern checks reporting every rule; a locator method that throws changes nothing](PLAN-B-3-B-2-path-rules-and-persist.md) | 22, 27 | patch | | planned | |
 | 10 | [An ended registration's hint for `locator()` options and for queries](PLAN-B-5-C-2-ended-registration.md) | 25 | patch | | planned | |
@@ -119,8 +119,8 @@ in plan 41 (decision 2, gate 3).
 | Changeset | Plan | Says | Status |
 | --- | --- | --- | --- |
 | `trusted-publishing.md` | 4 | releases use Trusted Publishing and provenance; 3.0.0 and 3.0.1 have no attestation | done |
-| `sub-path-template-members.md` | 7 | sub-paths on template members, on `<string>`, and in a generic base (restored from 1.x) | planned |
-| `registry-requires-paths.md` | 7 | `createRegistryWithAccessors` requires its paths as a type argument | planned |
+| `sub-path-template-members.md` | 7 | sub-paths on template members, on `<string>`, and in a generic base (restored from 1.x) | done |
+| `registry-requires-paths.md` | 7 | `createRegistryWithAccessors` requires its paths as a type argument | done |
 | `reuse-path-variables.md` | 8 | `reuse` compiles with path variables | planned |
 | `long-path-literals.md` | 9 | any length compiles; every broken rule named; `add` throws for a bad path | planned |
 | `failed-locator-method-unchanged.md` | 9 | a locator method that throws leaves the registration as it was | planned |

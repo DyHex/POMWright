@@ -74,7 +74,10 @@ export class OrdersPage extends PageObject<Paths> {
 ## Sub-paths
 
 Most methods take a sub-path: the query's own path or one of its registered ancestors. Without one they work on the
-query's own path. A path outside the chain, or a segment of it without a locator, throws at the call:
+query's own path. TypeScript offers the sub-paths of the chain for each member of the path union: a path written out
+when it is a segment of the chain, a [template member](/POMWright/docs/locator-paths/#paths-with-a-dynamic-part) for
+each segment it matches, the query's own path included. On a registry typed `<string>` any sub-path compiles, and the
+check below is the only one. A path outside the chain, or a segment of it without a locator, throws at the call:
 
 ```text
 "main.button@save" is not a valid sub-path of "main.list.item".

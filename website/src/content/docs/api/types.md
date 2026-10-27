@@ -186,7 +186,9 @@ TypeScript shows in the error:
 Argument of type 'string' is not assignable to parameter of type 'LocatorSchemaPathError<"main..list", "String can't contain consecutive '.'">'.
 ```
 
-A wide `string` is not checked by the type; the same rules are checked at run time for every path. See
+A wide `string` is not checked by the type; the same rules are checked at run time for every path. A registry typed
+`<string>` gives up every compile-time check of its paths, and is best kept to paths known only at run time (see
+[the registry](/POMWright/docs/locator-paths/#the-registry)). See
 [the rules of a path](/POMWright/docs/locator-paths/#the-rules-of-a-path).
 
 ## LocatorSchemaPathArgument

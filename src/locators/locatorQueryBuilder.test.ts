@@ -3,6 +3,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { createFakePage, type FakeLocator } from "./fakePage";
 import type { LocatorQueryBuilder } from "./locatorQueryBuilder";
 import { LocatorRegistryInternal } from "./locatorRegistry";
+import type { LocatorChainPaths } from "./types";
 
 type Paths = "main" | "list" | "list.item";
 // Building a query never touches the page; resolution is covered by the integration specs.
@@ -27,6 +28,22 @@ describe("types", () => {
 		expectTypeOf(query.describe("d")).toEqualTypeOf<LocatorQueryBuilder<Paths, "list.item">>();
 		expectTypeOf(query.update().getByRole("listitem")).toEqualTypeOf<LocatorQueryBuilder<Paths, "list.item">>();
 		expectTypeOf(query.replace().getByRole("listitem")).toEqualTypeOf<LocatorQueryBuilder<Paths, "list.item">>();
+	});
+
+	it("sub-paths are typed per member of the path union: literals, template members and string", () => {
+		// a literal member when it is a segment of the chain, never a namespace that is not a declared path
+		expectTypeOf<LocatorChainPaths<"main" | "main.form.submit" | "footer", "main.form.submit">>().toEqualTypeOf<
+			"main" | "main.form.submit"
+		>();
+		// a template member for each segment it matches: the query's own path and template ancestors
+		expectTypeOf<
+			LocatorChainPaths<"main" | "main.orders" | `main.orders.row@${string}`, "main.orders.row@1042">
+		>().toEqualTypeOf<"main" | "main.orders" | "main.orders.row@1042">();
+		expectTypeOf<LocatorChainPaths<"main" | `main.tab@${string}`, "main.tab@open.title">>().toEqualTypeOf<
+			"main" | "main.tab@open" | "main.tab@open.title"
+		>();
+		// a string member as any string, which the runtime checks
+		expectTypeOf<LocatorChainPaths<string, "main.list.item">>().toEqualTypeOf<string>();
 	});
 });
 
@@ -189,6 +206,20 @@ describe("sub-path errors", () => {
 			message = (error as Error).message;
 		}
 		expect(message).toBe('"main" is not a valid sub-path of "a.b.c".');
+	});
+
+	it("are thrown at run time on a registry typed <string>, where every sub-path compiles", () => {
+		const registry = new LocatorRegistryInternal<string>({} as Page);
+		registry.add("main").locator("main");
+		registry.add("main.list").getByRole("list");
+		registry.add("main.list.item").getByRole("listitem");
+		registry.add("footer").locator("footer");
+		const query = registry.getLocatorSchema("main.list.item");
+		expect(() => query.nth("footer", 0)).toThrowError('"footer" is not a valid sub-path of "main.list.item".');
+		expect(() => query.skip("main.list.item")).toThrowError(
+			'skip() cannot skip "main.list.item": it is the path this query resolves; skip one of its ancestors.',
+		);
+		expect(() => query.nth("main.list", 0)).not.toThrow();
 	});
 });
 

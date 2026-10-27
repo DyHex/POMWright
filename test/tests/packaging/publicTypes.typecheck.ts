@@ -322,3 +322,83 @@ const literalValue: Promise<{ name: string } | null> = storageWithCodecs.get("us
 // @ts-expect-error the key's type comes from the key alone: a declared key keeps its codec's type
 storageWithCodecs.set("user", "a string");
 void [widenedValue, narrowedValue, literalValue];
+
+// sub-path arguments, typed per member of the path union
+// a literal member: a segment of the chain; a namespace that is not a declared path is never accepted
+const shop = createRegistryWithAccessors<"main" | "main.form.submit" | "footer">(page);
+shop.getLocatorSchema("main.form.submit").nth("main", 0);
+shop.getLocatorSchema("main.form.submit").nth("main.form.submit", 0);
+// @ts-expect-error "main.form" is a namespace, not a declared path
+shop.getLocatorSchema("main.form.submit").nth("main.form", 0);
+// @ts-expect-error "footer" is not in the chain
+shop.getLocatorSchema("main.form.submit").nth("footer", 0);
+shop.getLocatorSchema("main.form.submit").skip("main");
+// @ts-expect-error the query's own path cannot be skipped
+shop.getLocatorSchema("main.form.submit").skip("main.form.submit");
+// a template member: the query's own path, and a literal ancestor
+const orders = createRegistryWithAccessors<"main" | "main.orders" | `main.orders.row@${string}`>(page);
+orders.getLocatorSchema("main.orders.row@1042").nth("main.orders", 0);
+orders.getLocatorSchema("main.orders.row@1042").nth("main.orders.row@1042", 0);
+orders.getLocatorSchema("main.orders.row@1042").update("main.orders.row@1042");
+orders.getLocatorSchema("main.orders.row@1042").filter("main.orders.row@1042", { hasText: "Open" });
+// @ts-expect-error another row is not in the chain
+orders.getLocatorSchema("main.orders.row@1042").nth("main.orders.row@1043", 0);
+// @ts-expect-error the query's own path cannot be skipped
+orders.getLocatorSchema("main.orders.row@1042").skip("main.orders.row@1042");
+// a template ancestor
+const tabs = createRegistryWithAccessors<"main" | `main.tab@${string}`>(page);
+tabs.getLocatorSchema("main.tab@open.title").nth("main.tab@open", 0);
+tabs.getLocatorSchema("main.tab@open.title").skip("main.tab@open");
+// @ts-expect-error another tab is not in the chain
+tabs.getLocatorSchema("main.tab@open.title").nth("main.tab@closed", 0);
+// a finite template union, registered in a loop and used through a method over the union
+const actions = ["confirm", "cancel"] as const;
+type Action = (typeof actions)[number];
+const dialog = createRegistryWithAccessors<"dialog" | `dialog.button@${Action}`>(page);
+for (const action of actions) dialog.add(`dialog.button@${action}`).getByRole("button", { name: action });
+dialog.getLocatorSchema("dialog.button@confirm").nth("dialog", 0);
+// @ts-expect-error another button is not in the chain
+dialog.getLocatorSchema("dialog.button@confirm").nth("dialog.button@cancel", 0);
+// @ts-expect-error not declared
+dialog.getNestedLocator("dialog.button@delete");
+// <string>: any sub-path compiles, and the runtime checks it
+const untypedPaths = createRegistryWithAccessors<string>(page);
+untypedPaths.getLocatorSchema("main.list.item").nth("main.list", 0);
+untypedPaths.getLocatorSchema("main.list.item").update("main.list.item");
+untypedPaths.getLocatorSchema("main.list.item").skip("main.list");
+untypedPaths.getLocatorSchema("main.list.item").nth("footer", 0);
+// a registry created without its paths takes none
+const noPaths = createRegistryWithAccessors(page);
+noPaths.registry.verify();
+// @ts-expect-error createRegistryWithAccessors needs its paths as a type argument
+noPaths.add("main").locator("main");
+// @ts-expect-error createRegistryWithAccessors needs its paths as a type argument
+noPaths.getNestedLocator("main");
+// a generic wrapper passes its own paths
+const registryFor = <P extends string>(target: Page) => createRegistryWithAccessors<P>(target);
+registryFor<"main">(page).getNestedLocator("main");
+// a generic base that adds common paths: sub-paths on the common paths compile in its methods
+type CommonPaths = "header" | "dialog@consent" | "dialog@consent.button@accept";
+abstract class SitePage<PagePaths extends string> extends PageObject<PagePaths | CommonPaths> {
+	acceptCookies() {
+		this.getLocatorSchema("dialog@consent.button@accept").filter("dialog@consent", { hasText: "Cookies" });
+		this.getLocatorSchema("dialog@consent.button@accept").nth("dialog@consent.button@accept", 0);
+		this.getLocatorSchema("dialog@consent.button@accept").skip("dialog@consent");
+		this.getLocatorSchema("dialog@consent.button@accept").clearSteps("dialog@consent");
+		// @ts-expect-error "header" is not in the chain
+		this.getLocatorSchema("dialog@consent.button@accept").filter("header", { hasText: "x" });
+		// @ts-expect-error "dialog@consent.button" is a namespace
+		this.getLocatorSchema("dialog@consent.button@accept").nth("dialog@consent.button", 0);
+		// @ts-expect-error the query's own path cannot be skipped
+		this.getLocatorSchema("dialog@consent.button@accept").skip("dialog@consent.button@accept");
+		// @ts-expect-error a descendant is not a sub-path
+		this.getLocatorSchema("dialog@consent").nth("dialog@consent.button@accept", 0);
+	}
+}
+abstract class OrdersListPage extends SitePage<"main.list@orders" | "main.list@orders.row"> {
+	firstRow() {
+		this.getLocatorSchema("main.list@orders.row").nth("main.list@orders", 0);
+		this.getLocatorSchema("dialog@consent.button@accept").filter("dialog@consent", { hasText: "Cookies" });
+	}
+}
+void [OrdersListPage];

@@ -30,7 +30,9 @@ import {
 /**
  * A query, what `getLocatorSchema(path)` returns: a private copy of the path's chain to change for one use and then
  * resolve. Its methods change this query and return it; the registry never changes. A method that takes a `subPath`
- * works on that segment of the chain, the path itself or a registered ancestor; without one, on the path itself.
+ * works on that segment of the chain, the path itself or a registered ancestor; without one, on the path itself. The
+ * `subPath` is typed per member of the path union: a literal member when it is a segment of the chain, a template member
+ * for each segment it matches, and a `string` member as any string, which the runtime checks.
  *
  * @example
  * ```ts

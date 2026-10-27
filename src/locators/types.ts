@@ -57,8 +57,9 @@ export type LocatorSchemaPathValid<Path extends string> = Path extends unknown
 		: never
 	: never;
 
-export type RegistryPath<LocatorSchemaPathType extends string> = LocatorSchemaPathType &
-	LocatorSchemaPathValid<LocatorSchemaPathType>;
+export type RegistryPath<LocatorSchemaPathType extends string> = LocatorSchemaPathType extends unknown
+	? LocatorSchemaPathType & LocatorSchemaPathValid<LocatorSchemaPathType>
+	: never;
 
 export type ExtractSubPaths<Path extends string> = Path extends `${infer Head}.${infer Tail}`
 	? Head | `${Head}.${ExtractSubPaths<Tail>}`
@@ -67,8 +68,16 @@ export type ExtractSubPaths<Path extends string> = Path extends `${infer Head}.$
 export type LocatorChainPaths<
 	LocatorSchemaPathType extends string,
 	LocatorSubstring extends LocatorSchemaPathType | undefined,
-> = LocatorSubstring extends string
-	? Extract<LocatorSchemaPathType, LocatorSubstring | ExtractSubPaths<LocatorSubstring>>
+> = LocatorSubstring extends string ? SubPathsPerMember<LocatorSchemaPathType, LocatorSubstring> : never;
+
+/** Per member of the path union: a literal when it is a segment of the chain, a pattern for each segment it matches. */
+type SubPathsPerMember<Member extends string, Path extends string> = Member extends unknown
+	? string extends Member
+		? string
+		: // biome-ignore lint/complexity/noBannedTypes: {} fits Record<Member, unknown> only when Member is a pattern, not a literal
+			{} extends Record<Member, unknown>
+			? Extract<ExtractSubPaths<Path>, Member>
+			: Extract<Member, ExtractSubPaths<Path>>
 	: never;
 
 export type RoleDefinition = {

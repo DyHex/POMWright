@@ -275,6 +275,15 @@ registry.add("main.heading@orders", { reuse: heading.filter({ hasText: "Orders" 
 it with its `add`, `getLocator`, `getNestedLocator` and `getLocatorSchema` as functions of their own. Call
 `registry.verify()` once the locators are registered. See [the registry](/POMWright/docs/locator-paths/#the-registry).
 
+The path union is a required type argument. Without it, the registry takes no path, and the first path is a compile
+error:
+
+```text
+Argument of type '"main"' is not assignable to parameter of type '"createRegistryWithAccessors needs its paths as a type argument: createRegistryWithAccessors<Paths>(page)"'.
+```
+
+`<string>` is accepted, and gives up every compile-time check of the paths, which the runtime still makes.
+
 **Usage**
 
 ```ts

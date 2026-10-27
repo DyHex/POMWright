@@ -40,9 +40,17 @@ import {
 } from "./utils";
 
 /**
+ * The default of `createRegistryWithAccessors`' type parameter: a registry created without its paths takes no path, and
+ * the compile error at its first path says what is missing. `<string>` keeps paths unchecked at compile time.
+ */
+type NeedsPaths =
+	"createRegistryWithAccessors needs its paths as a type argument: createRegistryWithAccessors<Paths>(page)";
+
+/**
  * The type of the path parameter of `add` and the resolving methods: the path itself when it is well-formed,
  * otherwise the tuple of `LocatorSchemaPathFormat` naming the rule it breaks. A helper in a base class that is generic
- * in its paths takes its path parameter with it, so a misspelt path is a compile error where the helper is called.
+ * in its paths takes its path parameter with it, so a misspelt path is a compile error where the helper is called. On a
+ * registry created without its paths, every path is a compile error saying so.
  *
  * @example
  * ```ts
@@ -55,8 +63,11 @@ import {
  *
  * @see https://dyhex.github.io/POMWright/api/types/#locatorschemapathargument
  */
-export type LocatorSchemaPathArgument<Path extends string> =
-	LocatorSchemaPathFormat<Path> extends Path ? Path : LocatorSchemaPathFormat<Path>;
+export type LocatorSchemaPathArgument<Path extends string> = [Path] extends [NeedsPaths]
+	? NeedsPaths
+	: LocatorSchemaPathFormat<Path> extends Path
+		? Path
+		: LocatorSchemaPathFormat<Path>;
 
 type InvalidReusePath<Path extends string> = [
 	`Invalid reuse path, reuse path cannot be the same as registration path: ${Path}`,
@@ -450,11 +461,11 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 */
 	getLocatorSchema<Path extends LocatorSchemaPathType>(
 		path: LocatorSchemaPathArgument<Path>,
-	): LocatorQueryBuilder<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>> {
+	): LocatorQueryBuilder<LocatorSchemaPathType, Path & RegistryPath<LocatorSchemaPathType>> {
 		this.endOpenRegistration("getLocatorSchema", String(path));
-		return new LocatorQueryBuilderInternal<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>>(
+		return new LocatorQueryBuilderInternal<LocatorSchemaPathType, Path & RegistryPath<LocatorSchemaPathType>>(
 			this,
-			path as Extract<Path, RegistryPath<LocatorSchemaPathType>>,
+			path as Path & RegistryPath<LocatorSchemaPathType>,
 		);
 	}
 
@@ -655,7 +666,7 @@ export type AddAccessor<LocatorSchemaPathType extends string> = LocatorRegistryI
  */
 export type GetLocatorSchemaAccessor<LocatorSchemaPathType extends string> = <Path extends LocatorSchemaPathType>(
 	path: LocatorSchemaPathArgument<Path>,
-) => LocatorQueryBuilder<LocatorSchemaPathType, Extract<Path, RegistryPath<LocatorSchemaPathType>>>;
+) => LocatorQueryBuilder<LocatorSchemaPathType, Path & RegistryPath<LocatorSchemaPathType>>;
 
 /**
  * The registry's `getNestedLocator` as a function of its own, as `createRegistryWithAccessors` returns it and a page
@@ -690,8 +701,11 @@ export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
 
 /**
  * Creates a locator registry on a page, without a page object, and returns it with its `add`, `getLocator`,
- * `getNestedLocator` and `getLocatorSchema` as functions of their own. Pass the path union as the type argument.
- * Call `registry.verify()` once the locators are registered; a page object does that itself.
+ * `getNestedLocator` and `getLocatorSchema` as functions of their own. The path union is a required type argument:
+ * without it, the first path is a compile error (`createRegistryWithAccessors needs its paths as a type argument`).
+ * `<string>` is accepted for paths known only at run time, or while migrating untyped code: it gives up every compile
+ * time check of the paths (suggestions, the format, undeclared paths, sub-paths), which the runtime still makes. Call
+ * `registry.verify()` once the locators are registered; a page object does that itself.
  *
  * @param page The Playwright page the locators resolve on.
  * @param options `{ strictChains }`: `true` makes `verify()` require every ancestor of every path to be registered.
@@ -708,7 +722,10 @@ export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
  *
  * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#createregistrywithaccessors
  */
-export const createRegistryWithAccessors = <Paths extends string>(page: Page, options?: LocatorRegistryOptions) => {
+export const createRegistryWithAccessors = <Paths extends string = NeedsPaths>(
+	page: Page,
+	options?: LocatorRegistryOptions,
+) => {
 	const registryInstance = new LocatorRegistryInternal<Paths>(page, options);
 	const add: LocatorRegistryInternal<Paths>["add"] = registryInstance.add.bind(registryInstance);
 	const getLocator: GetLocatorAccessor<Paths> = registryInstance.getLocator.bind(registryInstance);

@@ -113,4 +113,33 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+- `…/c1/patch3.diff` applied cleanly. **Deviation, fixed in this plan:** the patch put `type NeedsPaths` between
+  `createRegistryWithAccessors`' doc comment and the function, so the comment would have attached to the type and the
+  editor's hover lost it; `NeedsPaths` now sits above `LocatorSchemaPathArgument`, which uses it, with a comment of its
+  own. **Lint:** biome's `noBannedTypes` flags the `{} extends Record<Member, unknown>` pattern test the walkthrough
+  settled on; a `// biome-ignore` with its one-line reason (AGENTS.md §5), and a one-line comment on `SubPathsPerMember`.
+- Doc comments: `LocatorSchemaPathArgument`, `createRegistryWithAccessors` (the required type argument, its compile
+  error, `<string>`), and the `LocatorQueryBuilder` type (sub-paths per member, once, rather than in seven `@param`s,
+  which describe what a sub-path is, unchanged).
+- **The walkthrough's `variations.after.out` came from an earlier variant** (it rejected `<string>` sub-paths, which
+  decision 20 admits), so the rows were re-run on the applied patch instead: `publicTypes.typecheck.ts` gains a section
+  of literal, template-member, template-ancestor, finite-union, `<string>`, untyped, generic-wrapper and generic-base
+  rows, every `@ts-expect-error` used and nothing else failing (`tsc -p test`, exit 0). The compile error of an untyped
+  registry, from a probe against the packed build: `Argument of type '"main"' is not assignable to parameter of type
+  '"createRegistryWithAccessors needs its paths as a type argument: createRegistryWithAccessors<Paths>(page)"'.`
+- Unit tests: `LocatorChainPaths` per member (`expectTypeOf`), and a `<string>` registry's runtime sub-path errors
+  (`"footer" is not a valid sub-path of "main.list.item".`; `skip()`'s own-path message).
+- `scripts/consumer-check.sh` (PLANS.md rule 5): every case `ok`, TypeScript 5.0.4 to 7.0.2.
+- The two external consumer projects, in scratch copies with their dependencies, `node_modules/pomwright` replaced by
+  this build: the same errors before (their 3.0.2-rc.2 tarball) and after: 2 in one (none from POMWright's types; the
+  walkthrough's 5 were against another build), 0 in the other.
+- Docs: *Locator paths* (*Paths with a dynamic part*, new, with the trade-off note and `${string}` members; *The
+  registry*: `<Paths>`, the required type argument with its compile error, `<string>` advised against with its two
+  uses); *Locator modules* (`<Paths>` at the module overload sentence; `ShopPage` gains `acceptCookiesFor`, a query with
+  a sub-path on the common locators); *Queries*, *Sub-paths*; `api/class-locatorregistry.md`
+  (*createRegistryWithAccessors*); `api/types.md` (the wide-string sentence). Changesets `sub-path-template-members.md`
+  and `registry-requires-paths.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 786 passed; `pnpm pack-test --reporter=line` exit 0 (1,509 passed, 3 skipped;
+  doc snippets 216; api coverage 0 problems; step locations 7); `pnpm docs:build` 0.
