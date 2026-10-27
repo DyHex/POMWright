@@ -9,14 +9,6 @@ import { BasedPage, ComposedPage, DirectPage, MalformedPage, MisspeltPage, Modul
 // caught synchronously after `new`. Each line looked for is marked with `// SITE <id>`.
 
 const BUNDLE_FRAME = /[\\/]pomwright[\\/]dist[\\/]index\.(js|mjs|cjs)/;
-/**
- * V8's default `Error.stackTraceLimit`, which Node keeps: a consumer line below more internal frames than this is not in
- * an error's stack at all. Playwright's runner raises the limit to 200 when it installs source maps, so the budget
- * tests set it back for the measurement.
- */
-const STACK_TRACE_LIMIT = 10;
-/** The most frames of POMWright's bundle above the first consumer frame of a registration mistake. */
-const FRAME_BUDGET = 4;
 
 const frames = (error: unknown) =>
 	((error as Error).stack ?? "").split("\n").filter((line) => line.trim().startsWith("at "));
@@ -127,33 +119,5 @@ test.describe("a standalone registry points at the consumer's call", () => {
 			error = thrown;
 		}
 		expect(consumerFrames(error)[0]).toContain(site("checkSite.spec.ts", "standalone-verify"));
-	});
-});
-
-test.describe("the frame budget", () => {
-	/** The cause of a page object's check, with V8's default limit, as outside Playwright's runner. */
-	const causeAtDefaultLimit = (make: () => unknown) => {
-		const limit = Error.stackTraceLimit;
-		Error.stackTraceLimit = STACK_TRACE_LIMIT;
-		try {
-			return causeOf(checkOf(make));
-		} finally {
-			Error.stackTraceLimit = limit;
-		}
-	};
-	const withinBudget = (error: unknown) => {
-		const all = frames(error);
-		const internal = all.findIndex((line) => !BUNDLE_FRAME.test(line));
-		const message = `a change added internal frames that push consumer lines out of the ${STACK_TRACE_LIMIT}-frame stack:\n${all.join("\n")}`;
-		expect(internal, message).toBeGreaterThanOrEqual(0);
-		expect(internal, message).toBeLessThanOrEqual(FRAME_BUDGET);
-	};
-
-	test(`at most ${FRAME_BUDGET} of POMWright's frames above the consumer's line of a chain mistake`, ({ page }) => {
-		withinBudget(causeAtDefaultLimit(() => new ModulePage(page)));
-	});
-
-	test(`at most ${FRAME_BUDGET} of POMWright's frames above the consumer's line of a path-rule mistake`, ({ page }) => {
-		withinBudget(causeAtDefaultLimit(() => new MalformedPage(page)));
 	});
 });

@@ -1217,7 +1217,7 @@ doc comment; five scopes found messages missing from those lists, and two naviga
 **Depends on / affects**: after the decisions in item 4 and R-4; with C-3 (the same pages as C-4); D-3 edits
 `api/class-navigation.md` with D-1's and D-2's docs (decisions 19, 17).
 
-## 37. A page object's failed check points at the `new` line, and the frame budget is tested (2026-10-26)
+## 37. A page object's failed check points at the `new` line (2026-10-26, revised 2026-10-27)
 
 **Settles**: [D-4](D-page-objects-urls-navigation/defect-D-4-check-points-at-base-super.md) and
 [H-9](H-docs-readme-agents/defect-H-9-report-points-at-super-not-new.md) (both Low).
@@ -1229,8 +1229,8 @@ doc comment; five scopes found messages missing from those lists, and two naviga
    class it was the base class's `super(…)`, the same line for every page object). The `[cause]:` block, the original
    error with its full stack, is unchanged.
 2. **Tests** (extended in the walkthrough): a harness spec in `test/tests/pageObject/callSite/` against the packed
-   package (the bundle's frames are what count), with V8's default `Error.stackTraceLimit` (asserted to be 10), catching
-   each error synchronously after `new` (AGENTS.md §3) and asserting on `error.stack` and `error.cause.stack`:
+   package (the bundle's frames are what count), catching each error synchronously after `new` (AGENTS.md §3) and
+   asserting on `error.stack` and `error.cause.stack`:
    - an `add` mistake directly in `defineLocators()`: first frame the `new` line; the cause has the `add` line;
    - the same with a site base class: first frame the `new` line, not the base class's `super(…)`;
    - `add` lines in a locator module: the cause has the module's `add` line and the page object's call line;
@@ -1238,13 +1238,16 @@ doc comment; five scopes found messages missing from those lists, and two naviga
    - a path-rule mistake in a module (thrown at `add`, decision 22): the cause has that `add` line;
    - a mistake only `verify()` finds: first frame the `new` line; the message names both paths;
    - a standalone registry: an `add` mistake's first frame is the `add` line; a verify-only mistake's the `verify()` line;
-   - **the frame budget**: at most 4 frames of POMWright's bundle above the first consumer frame, for a chain mistake and
-     a path-rule mistake, with a failure message saying a change added internal frames that push consumer lines out of
-     the 10-frame stack.
-   The existing file-name case keeps its point (the consumer's `new` in the file named `pageObject.ts`).
+   The existing file-name case keeps its point (the consumer's `new` in the file named `pageObject.ts`). (Revised
+   2026-10-27 at the maintainer's request: the frame budget, at most 4 bundle frames above the first consumer frame, and
+   the assertion that `Error.stackTraceLimit` is 10, are dropped. Playwright's runner raises the limit to 200 whenever it
+   loads a config or a test file (`installSourceMapSupport`, through `requireOrImport`), so internal frames cannot push a
+   consumer's line out of a stack there; the count would fail on harmless refactors; and the assertions above on the
+   cause's lines already fail if consumer lines go missing. Asserting 200 instead would test Playwright's choice, not
+   POMWright.)
 3. **Docs**: *Page objects in tests* (*When a page object has a mistake*) says "the line that created the page object",
    as *Page objects*, *Verifying registries*, `api/errors.md` and *Internal → Page object lifecycle* do; *Internal →
-   Call sites*: the page object's boundary is the class the code constructed, and why the frame budget is tested;
+   Call sites*: the page object's boundary is the class the code constructed, and why no frame budget is tested;
    AGENTS.md §5, if its call-site sentence names `PageObject` as the boundary.
 4. **Changeset**, patch: "A page object's failed locator check points the report at the line that created the page
    object, also when it extends a base class of your own."
@@ -1255,8 +1258,7 @@ with the documented base class, identified no page object (`…-probes/D/zz-prob
 `new.target` passed the 48 `pageObject` unit tests). The walkthrough's probes (`…-probes/R/walkthrough/d4/report.out`,
 `report-modules.out`) showed where each kind of mistake points today: an `add` chain's mistake has the `add` line in the
 cause (the 5th frame, after 4 of POMWright's), through locator modules and compositions, and a verify-only mistake has no
-`add` line (the message names the paths); V8 keeps 10 frames, so added internal frames would push consumer lines out
-silently, hence the budget test. Capturing a stack at every `add` is not adopted (a cost on every registration, for
+`add` line (the message names the paths). Capturing a stack at every `add` is not adopted (a cost on every registration, for
 mistakes that typed paths mostly catch at compile time).
 
 **Depends on / affects**: E-1 (decision 12; *Internal → Call sites* and `callSite.ts`'s docs, written once); B-3

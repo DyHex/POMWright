@@ -192,3 +192,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 - Checks: `pnpm lint` 0; `pnpm test:unit` 842 passed; `pnpm pack-test --reporter=line` exit 0 (1,554 passed, 3
   skipped: the 10 new tests on three browsers; doc snippets 221; api coverage 0 problems; step locations 20);
   `pnpm docs:build` 0.
+
+**After the stop (2026-10-27).** At the maintainer's decision, the two frame-budget tests and the stack-limit setup
+are removed (decision 37 revised): inside Playwright's runner the limit is 200 whenever a config or test file loads
+(`installSourceMapSupport`, through `requireOrImport`), so internal frames cannot push a consumer's line out; the count
+of 4 would fail on harmless refactors; the spec's assertions on the `cause`'s lines already fail if consumer lines go
+missing. Asserting 200 instead was considered and not adopted (it tests Playwright's choice). Every other assertion of
+`checkSite.spec.ts` stays. *Internal → Call sites*: the budget paragraph replaced by one sentence on what the spec checks,
+and the budget listed under *Alternatives weighed*; AGENTS.md §4's `callSite/` entry. Checks: `pnpm lint` 0; `pnpm pack-test --reporter=line` exit 0
+(1,548 passed, 3 skipped: the two budget tests gone on three browsers; step locations 20); `pnpm docs:build` 0.

@@ -151,8 +151,8 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
 - Specs live under `tests/`: `locatorRegistry/` (`add`, `getLocator`, `getLocatorSchema`, `getNestedLocator`,
   `registry`, `validation`), `pageObject/` (construction-time URL validation, registry verification, the lifecycle,
   the actions hook, and `callSite/`: errors raised after the consumer's line point at it even in consumer files named
-  `pageObject.ts` and `sessionStorage.ts`; a page object's check at the `new` line, with a base class too, the `add`
-  lines in its `cause`, and the frame budget, measured at V8's default `Error.stackTraceLimit`), `logging/` (the `log` fixture's attachments, read by an auto fixture torn
+  `pageObject.ts` and `sessionStorage.ts`; a page object's check at the `new` line, with a base class too, and the `add`
+  lines in its `cause`), `logging/` (the `log` fixture's attachments, read by an auto fixture torn
   down after it), `step/`, `testApp/`, `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
   published entries, one shared copy, closed deep imports, the manifest; `packageFiles.spec.ts`, the installed
   package's exact file list; `publicTypes.typecheck.ts` and `publicTypes.emit.ts`, compile-only). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through

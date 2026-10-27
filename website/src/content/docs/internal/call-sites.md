@@ -26,12 +26,10 @@ A consumer's file may be named `pageObject.ts` or `sessionStorage.ts`, like POMW
 never filtered by a consumer-side file name; the boundary decides where the stack starts. The harness checks this with
 consumer files of those names.
 
-The labelled error keeps the original as `cause`, with its own stack: for a mistake in an `add` chain, the `add` line,
-then the lines that called it (a locator module, the module that composed it, the page object's `defineLocators()`).
-Above the first of them sit POMWright's own frames, four for a chain mistake or a path-rule mistake. Playwright's runner
-raises `Error.stackTraceLimit` to 200 when it installs its source maps, but V8's default, which Node keeps, is 10, so
-outside the runner more internal frames would push the consumer's lines out of the stack.
-`test/tests/pageObject/callSite/checkSite.spec.ts` measures them at that default and fails when a change adds more.
+The labelled error keeps the original as `cause`, with its own stack: for a mistake in an `add` chain, POMWright's own
+frames, then the `add` line and the lines that called it (a locator module, the module that composed it, the page
+object's `defineLocators()`). `test/tests/pageObject/callSite/checkSite.spec.ts` checks the `new` line and these lines
+against the packed package.
 
 ## Steps at the test's line
 
@@ -77,6 +75,10 @@ The unit tests in `src/helpers/stepLocations.test.ts` check the option and the t
 - **`{ box: true }` alone, without a `location`.** It gives the right line only when no ancestor step is boxed;
   inside one, Playwright leaves out no frame and the step is shown inside POMWright's bundle. A computed `location`
   costs one captured stack per boxed call, cut at a boundary and never filtered by file name.
+- **A budget of POMWright frames above the consumer's line.** V8 keeps 10 frames by default, so internal frames could
+  push a consumer's line out of a stack. Playwright's runner raises `Error.stackTraceLimit` to 200 whenever it loads a
+  config or a test file, so they cannot there; a fixed count would fail on harmless refactors, and the spec's
+  assertions on the consumer's lines fail if those lines go missing.
 - **A boxed method whose Promise a helper returns without `await`.** Playwright shows such a step at no line; with the
   computed `location` it is shown at the helper's line, the frame below the method. Accepted: it is the line that
   called the method.
