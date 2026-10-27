@@ -112,6 +112,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 - After the stop (decision 69): the credentials case documented (*URLs and navigation*, `fullUrl`'s doc comment and API
   section), and `urlHosts.spec.ts` checks `expectAnotherPage()` for every form (it fails on the page, naming the URL
   with its credentials, and passes after leaving it), in a commit of its own.
+  At the maintainer's request, each of the four sentences then named Playwright's `toHaveURL` (and the browsers) as the
+  cause, which POMWright cannot change, in a further commit.
 - Checks: `pnpm lint` 0; `pnpm test:unit` 900 passed; `pnpm pack-test --reporter=line` exit 0 (2,367 passed, 27 new
   tests on each of three browsers, 3 skipped; doc snippets 221; api coverage 0 problems; step locations 31);
   `pnpm docs:build` 0.
