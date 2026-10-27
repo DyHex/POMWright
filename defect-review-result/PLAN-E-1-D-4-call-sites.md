@@ -157,3 +157,38 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   amended.
 - Checks: `pnpm lint` 0; `pnpm test:unit` 842 passed; `pnpm pack-test --reporter=line` exit 0 (1,524 passed, 3
   skipped; doc snippets 221; api coverage 0 problems; step locations 20, 8 probe tests); `pnpm docs:build` 0.
+
+**Step 2 (D-4).**
+
+- `src/pageObject.ts`: `captureCallSite(new.target)`, with a comment that the site starts at the `new` line, not at a
+  base class's `super(…)`.
+- **Deviation: V8's 10-frame default does not hold inside Playwright's runner.** The plan's spec asserted
+  `Error.stackTraceLimit` to be 10; in the harness it is 200: Playwright sets it when it installs source-map support
+  (`playwright/lib/common/index.js` and `lib/transform/esmLoader.js`, `installSourceMapSupport`), so in a consumer's
+  Playwright run no consumer line is pushed out of an error's stack. Plain Node keeps 10 (`node -p
+  Error.stackTraceLimit`). The budget tests stay, measured with the limit set to 10 for the measurement (the case of a
+  Node script or another runner), and the assertion of 10 is gone; *Internal → Call sites* gives that reason instead of
+  the decision's. Decision 37's premise ("V8 keeps 10 frames") holds only outside the runner.
+- Tests: `test/tests/pageObject/callSite/checkSite.spec.ts` (packed package) with `checkSite.pages.ts` and
+  `checkSite.locators.ts`, each line looked for marked `// SITE <id>`; a page object's scheduled check is captured
+  around `new` (a stand-in `queueMicrotask`, as `src/pageObject.test.ts` does) and run at once, so its error is caught
+  synchronously after `new`. Cases as planned: an `add` mistake in `defineLocators()` (first frame the `new` line, the
+  `add` line in the cause); a project base class (the `new` line, the base class's `super(…)` nowhere in the stack); a
+  locator module (the module's `add` line, then the page object's call); composed modules (the `add` line, the
+  composing call, the page object's call; the module uses the documented `ExternalPaths` overload); a path-rule mistake
+  in a module (the message, that `add` line); a verify-only mistake (the `new` line; the message names `"main.list"`
+  and `"mian"`); a standalone registry (the `add` line; the `verify()` line); the frame budget, at most 4 bundle frames
+  above the first consumer frame for a chain and a path-rule mistake. With the old boundary (`captureCallSite(PageObject)`)
+  the 6 page-object cases fail (checked, then restored). `callSite.spec.ts`'s file-name case keeps its point: the
+  consumer's `new` is now in `callSite/pageObject.ts` (`openBrokenPage`), and the test is titled "points at the new in
+  the consumer's pageObject.ts".
+- Docs: *Page objects in tests*, *When a page object has a mistake* ("the line that created the page object, the
+  fixture's `new`"); *Internal → Page object lifecycle* (cut at `new.target`, not a shared base class's `super(…)`);
+  *Internal → Call sites* (the boundary is the class the code constructed and why; the `cause`'s lines; the frame
+  budget and the runner's limit). *Page objects*, *Verifying registries* and `api/errors.md` already said the line that
+  created the page object. AGENTS.md: §2's `callSite.ts` entry (`new.target`; `callerLocation`), §4's `callSite/` entry
+  and the spec count (57 files, about 8,700 lines; it had stayed at 55 since before plan 1), §5's page-object bullet
+  (the `new` line). Changeset `page-object-check-at-new.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 842 passed; `pnpm pack-test --reporter=line` exit 0 (1,554 passed, 3
+  skipped: the 10 new tests on three browsers; doc snippets 221; api coverage 0 problems; step locations 20);
+  `pnpm docs:build` 0.

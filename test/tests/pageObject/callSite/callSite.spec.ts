@@ -1,7 +1,7 @@
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@fixtures/testApp.fixtures";
-import { BrokenPage } from "./pageObject";
+import { openBrokenPage } from "./pageObject";
 import { seedTooMuch } from "./sessionStorage";
 
 // An error raised after the consumer's line has run (the registry check right after construction, a seed's refused write)
@@ -19,7 +19,7 @@ test.describe("a page object's registry error", () => {
 
 	test("fails the test from the check right after construction", async ({ page }) => {
 		test.fail(true, "the registry mistake fails this test, as it fails a fixture");
-		const broken = new BrokenPage(page);
+		const broken = openBrokenPage(page);
 		await new Promise((resolve) => setTimeout(resolve, 0));
 		try {
 			broken.getNestedLocator("list");
@@ -28,7 +28,7 @@ test.describe("a page object's registry error", () => {
 		}
 	});
 
-	test("points at the super() call in the consumer's pageObject.ts", () => {
+	test("points at the new in the consumer's pageObject.ts", () => {
 		const stack = readFileSync(stackFile(), "utf8");
 		rmSync(stackFile());
 		expect(stack).toMatch(/^Error: BrokenPage: Locator registry verification failed/);

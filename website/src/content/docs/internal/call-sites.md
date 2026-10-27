@@ -14,15 +14,24 @@ they would point at a microtask or a Playwright event handler, not at the test. 
 call instead:
 
 - `captureCallSite(boundary)` creates an `Error` at the call and lets V8's `Error.captureStackTrace` cut its stack at
-  `boundary`, a function: the `PageObject` constructor, or `SessionStorage.prototype.seed`. V8 leaves out that function's
-  frame and every frame above it, so the stack starts in the code that called it, whatever its file is named. The stack
-  is only formatted when it is used.
+  `boundary`, a function: the class the code constructed (`new.target` in `PageObject`'s constructor), or
+  `SessionStorage.prototype.seed`. V8 leaves out that function's frame and every frame above it, so the stack starts in
+  the code that called it, whatever its file is named. The stack is only formatted when it is used. Cut at `PageObject`
+  itself, the stack would start at the first `super(…)` of the class chain: with a base class the project's page
+  objects share, the same line for every page object.
 - `atCallSite(error, site)` gives the later error the captured frames, without the frames of POMWright's published
   bundle (`pomwright/dist/index.js` and its ESM entry), so the report's code frame is the consumer's line.
 
 A consumer's file may be named `pageObject.ts` or `sessionStorage.ts`, like POMWright's own sources, so frames are
 never filtered by a consumer-side file name; the boundary decides where the stack starts. The harness checks this with
 consumer files of those names.
+
+The labelled error keeps the original as `cause`, with its own stack: for a mistake in an `add` chain, the `add` line,
+then the lines that called it (a locator module, the module that composed it, the page object's `defineLocators()`).
+Above the first of them sit POMWright's own frames, four for a chain mistake or a path-rule mistake. Playwright's runner
+raises `Error.stackTraceLimit` to 200 when it installs its source maps, but V8's default, which Node keeps, is 10, so
+outside the runner more internal frames would push the consumer's lines out of the stack.
+`test/tests/pageObject/callSite/checkSite.spec.ts` measures them at that default and fails when a change adds more.
 
 ## Steps at the test's line
 

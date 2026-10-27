@@ -108,8 +108,8 @@ export const test = mergeTests(pomwright, pageObjects);
 
 A page object registers its locators and checks them right after it is constructed, so a mistake that TypeScript
 cannot see, such as a path in the union that was never registered but is used in a filter, fails in the fixture. The
-test fails before its body runs, with the page object's name, every path that failed, and the line of `super(...)` in
-the stack. Here `LoginPage` finds its form as the one that contains the login heading,
+test fails before its body runs, with the page object's name, every path that failed, and the line that created the
+page object, the fixture's `new`, in the stack. Here `LoginPage` finds its form as the one that contains the login heading,
 `locator("form").filter({ has: "main.form@login.heading" })`, and the heading's path is in its union, but
 `defineLocators()` never registers it:
 

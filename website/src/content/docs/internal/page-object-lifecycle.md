@@ -55,7 +55,9 @@ An error in `defineLocators()` or in the check after it is wrapped once, as
 `LoginPage: defineLocators() failed: …` or `LoginPage: Locator registry verification failed …`, with the original as
 `cause`, and kept: every later locator call throws the same error, and the definition never runs a second time, so a
 half-registered page object can never be used. When the scheduled check finds the error, it throws it with the stack
-of the construction site, so the report points at the line that created the page object, not at the microtask.
+of the construction site, cut at the class the code constructed (`new.target`), so the report points at the line that
+created the page object, not at the microtask, and not at the `super(…)` of a base class the project's page objects
+share (see [call sites](/POMWright/internal/call-sites/#errors-raised-later)).
 
 The scheduled check cannot tell an instance whose subclass constructor threw after `super(…)` from one that was
 returned: nothing reaches `PageObject` when a constructor below it throws. So the check runs on the abandoned instance

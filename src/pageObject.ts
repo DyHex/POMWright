@@ -324,8 +324,9 @@ export abstract class PageObject<
 			options?.navOptions,
 		);
 
-		// last, after everything above that can throw: define and verify once the code that called `new` is done
-		const site = captureCallSite(PageObject);
+		// last, after everything above that can throw: define and verify once the code that called `new` is done. The site
+		// is cut at the class the code constructed, so it starts at the `new` line, not at a base class's `super(…)`
+		const site = captureCallSite(new.target);
 		queueMicrotask(() => {
 			if (this.#locators !== "pending") {
 				return;

@@ -15,3 +15,6 @@ export class BrokenPage extends PageObject<"list" | "list.item"> {
 			.filter({ has: "list.titel" as "list" });
 	}
 }
+
+// the `new` the check's error points at, in this file named like POMWright's own
+export const openBrokenPage = (page: Page) => new BrokenPage(page);
