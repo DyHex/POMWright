@@ -2003,3 +2003,16 @@ shellcheck. A separate commit before plan 6's, so one push validates both. Agree
 `.pnpm-store/` at the repository root (pnpm's cache of third-party package files, gitignored, absent from CI's checkout)
 made local lint also check two of pnpm's index files. Local lint now checks the same 162 files as CI. Agreed by the
 maintainer.
+
+## 67. ShellCheck pinned in the lint job, 0.11.0 (2026-10-27, after plan 5)
+
+**Settles**: a question from the PR run after decision 65 (the runner's ShellCheck was 0.9.0, the local runs 0.11.0).
+
+**Decided**: the lint job's actionlint step downloads ShellCheck 0.11.0 (the latest release) by version and SHA-256, as it
+does actionlint, and puts it first on `PATH` for actionlint; the summary prints its version. ShellCheck's releases
+publish no checksum file, so the SHA-256 (`8c3be12b…7198`) was computed from two downloads of the release archive. CI and
+a local run use the same versions, and a runner image update cannot change the result. Committed separately, pushed with
+plan 6. Agreed by the maintainer.
+
+**Why**: actionlint uses whichever `shellcheck` is on `PATH`; GitHub's image had 0.9.0, older than the version the local
+checks used, and would change with the image.
