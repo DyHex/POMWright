@@ -12,8 +12,8 @@ object adds its label in front of a message thrown by `defineLocators()` or the 
 
 ## Paths
 
-Thrown by a locator method of `add(path)` and by the resolving methods, when a path breaks the path rules. TypeScript
-rejects these paths where they are written, so the messages come from JavaScript or from a path built at run time. See
+Thrown by `add(path)` and by the resolving methods, when a path breaks the path rules. TypeScript rejects these paths
+where they are written, so the messages come from JavaScript or from a path built at run time. See
 [paths and the registry](/POMWright/docs/locator-paths/).
 
 ```text
@@ -23,9 +23,11 @@ LocatorSchemaPath string cannot contain whitespace chars: main\u00A0.form
 LocatorSchemaPath string cannot start with a dot: .main
 LocatorSchemaPath string cannot end with a dot: main.
 LocatorSchemaPath string cannot contain consecutive dots: main..list
+LocatorSchemaPath string cannot contain whitespace chars and cannot start with a dot: .main list
 ```
 
-Whitespace is shown escaped, so a non-breaking space is visible. Fix the path.
+A path that breaks several rules gets one message naming them all, in this order. Whitespace is shown escaped, so a
+non-breaking space is visible. Fix the path.
 
 ---
 

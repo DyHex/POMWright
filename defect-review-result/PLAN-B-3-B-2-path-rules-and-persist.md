@@ -125,4 +125,38 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+**Step 1 (B-3).**
+
+- `types.ts`: `BrokenRules` (four template-literal patterns, in the runtime's order) and `JoinRules` replace
+  `_LocatorSchemaPathFormat`; its doc comment says every rule is named. `utils.ts`: `validateLocatorSchemaPath` takes
+  `unknown` (so the assertion function needs no cast) and collects the broken rules: one keeps its message, several give
+  `cannot A, cannot B and cannot C`, the path escaped when whitespace is among them; `schemaPathChain`, the split without
+  a check, and `expandSchemaPath` = check + split for its registry callers.
+- `locatorRegistry.ts`: `assertRegistryPath` at `add` (after `endOpenRegistration`), `getLocatorSchema` and
+  `getLocator`; the seven casts on the call's own path removed (the four other casts, of a reuse path or a filter
+  reference, stay; the existing `as unknown as` at the seed's primary is unrelated). **The query's inner check, which
+  the walkthrough's patch had not dropped:** `LocatorQueryBuilderInternal` now uses `schemaPathChain` (the path was
+  checked at `getLocatorSchema`); `expandSchemaPath` keeps its check for `verify` and resolution.
+- Messages from the build: `LocatorSchemaPath string cannot contain whitespace chars and cannot start with a dot: .a b`;
+  `… cannot start with a dot, cannot end with a dot and cannot contain consecutive dots: ..`; four rules for
+  `.a..b c.`; `… cannot end with a dot and cannot contain consecutive dots: a..b.`; single-rule messages unchanged
+  (`main\u00A0.form` still escaped). `add` throws them at the call. Compile error from the packed build:
+  `… 'LocatorSchemaPathError<".main list", "String can't contain whitespace chars; String can't start with '.'">'.`
+- Tests: `utils.test.ts`, a 999-character and a 2,501-segment literal (built from template literals) compile; every
+  listed whitespace character rejected through a mapped type, U+200B, U+180E and U+2060 not; the four multi-rule paths
+  named alike at compile time and at run time; single-rule messages kept. `locatorRegistry.test.ts`, *path rules at
+  add*: through `string` variables (a literal is checked at compile time even on a `<string>` registry, which the
+  first version of the test met). `validation.locatorSchemaPath.typecheck.ts`: a 999-character path registers and
+  resolves on the packed build; three whitespace characters other than the space are errors.
+- Type-check cost, `…/b3/cost.ts` (300 paths, `add` and `getNestedLocator`) against the packed declarations: 26,679
+  instantiations, 0.10 s check time, 134 MB (the walkthrough: 407,116 and 0.29-0.30 s before, 33,293 and 0.11 s
+  projected).
+- Docs: *Locator paths*, *The rules of a path* (any length; checked at `add`; several rules with both messages);
+  `api/errors.md`, *Paths* (thrown by `add`; the multi-rule form); `api/types.md`, *LocatorSchemaPathFormat*;
+  `api/class-locatorregistry.md`, `add` **Throws**; `api/class-registrationbuilder.md` (a path breaking the rules
+  throws earlier, at `add`); *Internal → Registry records*. Changeset `long-path-literals.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 800 passed; `pnpm pack-test --reporter=line` exit 0 (1,509 passed, 3
+  skipped; doc snippets 217; api coverage 0 problems; step locations 7); `consumer-check.sh` 18 `ok`; `pnpm docs:build`
+  0.

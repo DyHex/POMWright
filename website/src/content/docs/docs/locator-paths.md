@@ -42,8 +42,8 @@ registry.getNestedLocator("main.buton@login");
 
 A path is not empty, does not start or end with a dot, has no two dots in a row and contains no whitespace: none of
 the 25 Unicode whitespace characters (including the no-break space) and not U+FEFF. TypeScript rejects a path literal
-that breaks a rule, and POMWright checks every path again when it is registered or resolved, so a path built at
-runtime is checked too:
+that breaks a rule, whatever its length, and POMWright checks every path again at `add` and when it is resolved, so a
+path built at runtime is checked too:
 
 ```text
 LocatorSchemaPath string cannot be empty
@@ -54,7 +54,13 @@ LocatorSchemaPath string cannot contain whitespace chars: main.form button
 LocatorSchemaPath must be a string; received 42.
 ```
 
-A whitespace character that is hard to see is shown escaped: a no-break space reads `main\u00A0.form`.
+A whitespace character that is hard to see is shown escaped: a no-break space reads `main\u00A0.form`. A path that
+breaks several rules gets all of them, in the order above, from TypeScript and at run time alike:
+
+```text
+Argument of type 'string' is not assignable to parameter of type 'LocatorSchemaPathError<".main list", "String can't contain whitespace chars; String can't start with '.'">'.
+LocatorSchemaPath string cannot contain whitespace chars and cannot start with a dot: .main list
+```
 
 ## Paths with a dynamic part
 

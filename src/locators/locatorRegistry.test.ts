@@ -33,6 +33,21 @@ describe("the duplicate-registration message", () => {
 	});
 });
 
+describe("path rules at add", () => {
+	it("are checked at add, before any locator method, for a path the types did not check", () => {
+		const registry = new LocatorRegistryInternal<string>(createFakePage());
+		// paths known only at run time: a literal is checked at compile time even on a <string> registry
+		const consecutive: string = "main..list";
+		const several: string = ".a b";
+		expect(() => registry.add(consecutive)).toThrowError(
+			"LocatorSchemaPath string cannot contain consecutive dots: main..list",
+		);
+		expect(() => registry.add(several)).toThrowError(
+			"LocatorSchemaPath string cannot contain whitespace chars and cannot start with a dot: .a b",
+		);
+	});
+});
+
 describe("getLocator", () => {
 	it("resolves the terminal alone, with its own steps and description", () => {
 		const locator = createRegistry().getLocator("list.item");

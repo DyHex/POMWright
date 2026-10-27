@@ -23,8 +23,8 @@ import {
 	assertDescription,
 	cloneLocatorStrategyDefinition,
 	copyFilter,
-	expandSchemaPath,
 	isAnyFrameDefinition,
+	schemaPathChain,
 } from "./utils";
 
 /**
@@ -65,7 +65,8 @@ export class LocatorQueryBuilderInternal<
 		private readonly registry: LocatorRegistryInternal<LocatorSchemaPathType>,
 		private readonly path: LocatorSubstring,
 	) {
-		const chain = expandSchemaPath(path);
+		// the path was checked at getLocatorSchema
+		const chain = schemaPathChain(path);
 		this.chain = new Set(chain);
 		let hasTerminal = false;
 		for (const part of chain) {

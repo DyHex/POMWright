@@ -50,8 +50,9 @@ The record holds no ancestors and no `Locator`: it is data, and every resolution
 
 A path is registered by its locator method, not by `add(path)`. The registration builder calls `register` when the
 locator method runs, and each later `filter`, `nth` or `describe` calls `replace` with the record so far. A
-registration that never reaches a locator method registers nothing. `register` checks the path rules and throws for a
-path that already has a record, printing the existing and the attempted record, with a Playwright `Locator` shown as
+registration that never reaches a locator method registers nothing. `add(path)` checks the path rules at the call,
+through an assertion function that also narrows the path's type, so the check and the type cannot drift apart;
+`register` checks them again and throws for a path that already has a record, printing the existing and the attempted record, with a Playwright `Locator` shown as
 Playwright prints it and a RegExp as its source and flags.
 
 Because the builder writes on every call, the registry decides when a record is final. It keeps the registration the

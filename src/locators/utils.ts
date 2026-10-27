@@ -69,37 +69,42 @@ export const formatLocatorSchemaPathForError = (path: string): string =>
 export const describeReceived = (value: unknown): string =>
 	value === null || (typeof value !== "object" && typeof value !== "function") ? String(value) : "an object";
 
-export const validateLocatorSchemaPath = (path: string) => {
+/**
+ * Checks a path against every rule, in a fixed order (whitespace, a leading dot, a trailing dot, consecutive dots), the
+ * order `LocatorSchemaPathFormat` names them at compile time. One broken rule gives its own message; several give one
+ * message naming them all. The path is shown escaped when whitespace is among them.
+ */
+export const validateLocatorSchemaPath = (path: unknown) => {
 	if (typeof path !== "string") {
 		throw new Error(`LocatorSchemaPath must be a string; received ${describeReceived(path)}.`);
 	}
 	if (!path) {
 		throw new Error("LocatorSchemaPath string cannot be empty");
 	}
-
-	// Runtime: reject any Unicode whitespace (aligned with compile-time)
-	if (RUNTIME_WHITESPACE_REGEX.test(path)) {
-		const escaped = formatLocatorSchemaPathForError(path);
-		throw new Error(`LocatorSchemaPath string cannot contain whitespace chars: ${escaped}`);
+	const broken = [
+		RUNTIME_WHITESPACE_REGEX.test(path) && "contain whitespace chars",
+		path.startsWith(".") && "start with a dot",
+		path.endsWith(".") && "end with a dot",
+		path.includes("..") && "contain consecutive dots",
+	].filter((rule) => rule !== false);
+	if (broken.length === 0) {
+		return;
 	}
+	const shown = broken[0] === "contain whitespace chars" ? formatLocatorSchemaPathForError(path) : path;
+	const last = broken.pop();
+	const rules = broken.length === 0 ? `cannot ${last}` : `cannot ${broken.join(", cannot ")} and cannot ${last}`;
+	throw new Error(`LocatorSchemaPath string ${rules}: ${shown}`);
+};
 
-	if (path.startsWith(".")) {
-		throw new Error(`LocatorSchemaPath string cannot start with a dot: ${path}`);
-	}
-
-	if (path.endsWith(".")) {
-		throw new Error(`LocatorSchemaPath string cannot end with a dot: ${path}`);
-	}
-
-	if (path.includes("..")) {
-		throw new Error(`LocatorSchemaPath string cannot contain consecutive dots: ${path}`);
-	}
+/** A path's chain, each ancestor then the path itself, for a path already checked. */
+export const schemaPathChain = (path: string): string[] => {
+	const parts = path.split(".");
+	return parts.map((_part, index) => parts.slice(0, index + 1).join("."));
 };
 
 export const expandSchemaPath = (path: string): string[] => {
 	validateLocatorSchemaPath(path);
-	const parts = path.split(".");
-	return parts.map((_part, index) => parts.slice(0, index + 1).join("."));
+	return schemaPathChain(path);
 };
 
 /**

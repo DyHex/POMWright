@@ -52,8 +52,8 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 5 | [A `consumer` job: the packaging probes and TypeScript 5.0 to latest](PLAN-T14-consumer-job.md) | 58 | none | stop | done, PR run green | `612a62a` |
 | 6 | [Mermaid 12, and a render check of every diagram in the site job](PLAN-G-3-T15-mermaid.md) | 1, 59 | none | stop | done, PR run green | `54cf090`; follow-ups `2607cf7`, `fd0db4c`, `b47a255` |
 | 7 | [Sub-path types per member of the path union; the required type argument; generic bases](PLAN-C-1-sub-path-types.md) | 20 | patch | | done | `49454c6` |
-| 8 | [Reuse by path: the self-reuse check for a single literal only](PLAN-B-4-reuse-by-path-types.md) | 21 | patch | | done | (filled by the next commit) |
-| 9 | [Path rules as pattern checks reporting every rule; a locator method that throws changes nothing](PLAN-B-3-B-2-path-rules-and-persist.md) | 22, 27 | patch | | planned | |
+| 8 | [Reuse by path: the self-reuse check for a single literal only](PLAN-B-4-reuse-by-path-types.md) | 21 | patch | | done | `ff6495e` |
+| 9 | [Path rules as pattern checks reporting every rule; a locator method that throws changes nothing](PLAN-B-3-B-2-path-rules-and-persist.md) | 22, 27 | patch | | step 1 done | (filled by the next commit) |
 | 10 | [An ended registration's hint for `locator()` options and for queries](PLAN-B-5-C-2-ended-registration.md) | 25 | patch | | planned | |
 | 11 | [Own non-enumerable options are read](PLAN-B-1-C-5-own-non-enumerable.md) | 15 | patch | | planned | |
 | 12 | [A query's `describe()` on an any-frame terminal; a kept query's sub-path message](PLAN-C-6-C-7-query-checks.md) | 28, 29 | patch | | planned | |
@@ -122,7 +122,7 @@ in plan 41 (decision 2, gate 3).
 | `sub-path-template-members.md` | 7 | sub-paths on template members, on `<string>`, and in a generic base (restored from 1.x) | done |
 | `registry-requires-paths.md` | 7 | `createRegistryWithAccessors` requires its paths as a type argument | done |
 | `reuse-path-variables.md` | 8 | `reuse` compiles with path variables | done |
-| `long-path-literals.md` | 9 | any length compiles; every broken rule named; `add` throws for a bad path | planned |
+| `long-path-literals.md` | 9 | any length compiles; every broken rule named; `add` throws for a bad path | done |
 | `failed-locator-method-unchanged.md` | 9 | a locator method that throws leaves the registration as it was | planned |
 | `query-describe-any-frame.md` | 12 | a query's `describe()` on an any-frame terminal throws at the call | planned |
 | `kept-query-sub-path-message.md` | 12 | a kept query's sub-path message | planned |

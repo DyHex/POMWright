@@ -6,6 +6,8 @@ import type {
 	IdDefinition,
 	IndexSelector,
 	LocatorBuilderTarget,
+	LocatorSchemaPathError,
+	LocatorSchemaPathFormat,
 	LocatorStep,
 	UnicodeWhitespaceChar,
 } from "./types";
@@ -367,6 +369,83 @@ describe("path whitespace", () => {
 		}
 		expect(() => validateLocatorSchemaPath("main\uFEFF.form")).toThrowError(
 			"LocatorSchemaPath string cannot contain whitespace chars: main\\uFEFF.form",
+		);
+	});
+});
+
+// Paths built from template literals, so the type test holds literals of any length without writing them out.
+type Ten = "abcdefghij";
+type Hundred = `${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}`;
+type Characters999 =
+	`${Hundred}${Hundred}${Hundred}${Hundred}${Hundred}${Hundred}${Hundred}${Hundred}${Hundred}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}abcdefghi`;
+type FiftySegments =
+	"s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.";
+type Segments2501 =
+	`${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}end`;
+
+describe("path rules, at compile time and at run time", () => {
+	it("compile for a well-formed literal of any length", () => {
+		expectTypeOf<Characters999>().toExtend<string>();
+		expectTypeOf<LocatorSchemaPathFormat<Characters999>>().toEqualTypeOf<Characters999>();
+		expectTypeOf<LocatorSchemaPathFormat<Segments2501>>().toEqualTypeOf<Segments2501>();
+	});
+
+	it("reject each of the listed whitespace characters, and only those", () => {
+		type Rejected = {
+			[C in UnicodeWhitespaceChar]: LocatorSchemaPathFormat<`main${C}form`> extends `main${C}form` ? false : true;
+		}[UnicodeWhitespaceChar];
+		expectTypeOf<Rejected>().toEqualTypeOf<true>();
+		// zero-width and joiner characters are not White_Space
+		expectTypeOf<LocatorSchemaPathFormat<"main\u200Bform">>().toEqualTypeOf<"main\u200Bform">();
+		expectTypeOf<LocatorSchemaPathFormat<"main\u180Eform">>().toEqualTypeOf<"main\u180Eform">();
+		expectTypeOf<LocatorSchemaPathFormat<"main\u2060form">>().toEqualTypeOf<"main\u2060form">();
+	});
+
+	it("name every broken rule, in the same order at compile time and at run time", () => {
+		expectTypeOf<LocatorSchemaPathFormat<".a b">>().toEqualTypeOf<
+			LocatorSchemaPathError<".a b", "String can't contain whitespace chars; String can't start with '.'">
+		>();
+		expectTypeOf<LocatorSchemaPathFormat<"..">>().toEqualTypeOf<
+			LocatorSchemaPathError<
+				"..",
+				"String can't start with '.'; String can't end with '.'; String can't contain consecutive '.'"
+			>
+		>();
+		expectTypeOf<LocatorSchemaPathFormat<".a..b c.">>().toEqualTypeOf<
+			LocatorSchemaPathError<
+				".a..b c.",
+				"String can't contain whitespace chars; String can't start with '.'; String can't end with '.'; String can't contain consecutive '.'"
+			>
+		>();
+		expectTypeOf<LocatorSchemaPathFormat<"a..b.">>().toEqualTypeOf<
+			LocatorSchemaPathError<"a..b.", "String can't end with '.'; String can't contain consecutive '.'">
+		>();
+		expect(() => validateLocatorSchemaPath(".a b")).toThrowError(
+			"LocatorSchemaPath string cannot contain whitespace chars and cannot start with a dot: .a b",
+		);
+		expect(() => validateLocatorSchemaPath("..")).toThrowError(
+			"LocatorSchemaPath string cannot start with a dot, cannot end with a dot and cannot contain consecutive dots: ..",
+		);
+		expect(() => validateLocatorSchemaPath(".a..b c.")).toThrowError(
+			"LocatorSchemaPath string cannot contain whitespace chars, cannot start with a dot, cannot end with a dot and cannot contain consecutive dots: .a..b c.",
+		);
+		expect(() => validateLocatorSchemaPath("a..b.")).toThrowError(
+			"LocatorSchemaPath string cannot end with a dot and cannot contain consecutive dots: a..b.",
+		);
+	});
+
+	it("keep the message of a single broken rule", () => {
+		expect(() => validateLocatorSchemaPath("main..list")).toThrowError(
+			"LocatorSchemaPath string cannot contain consecutive dots: main..list",
+		);
+		expect(() => validateLocatorSchemaPath(".main")).toThrowError(
+			"LocatorSchemaPath string cannot start with a dot: .main",
+		);
+		expect(() => validateLocatorSchemaPath("main.")).toThrowError(
+			"LocatorSchemaPath string cannot end with a dot: main.",
+		);
+		expect(() => validateLocatorSchemaPath("main.form button")).toThrowError(
+			"LocatorSchemaPath string cannot contain whitespace chars: main.form button",
 		);
 	});
 });

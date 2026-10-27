@@ -69,6 +69,16 @@ export type LocatorSchemaPathArgument<Path extends string> = [Path] extends [Nee
 		? Path
 		: LocatorSchemaPathFormat<Path>;
 
+/**
+ * Checks a path at the call, since the types may not have (a wide string, JavaScript), and narrows it to a registry
+ * path, so the check and the type cannot be separated by a later change.
+ */
+function assertRegistryPath<Paths extends string, P extends string = Paths>(
+	path: unknown,
+): asserts path is P & RegistryPath<Paths> {
+	validateLocatorSchemaPath(path);
+}
+
 type InvalidReusePath<Path extends string> = [
 	`Invalid reuse path, reuse path cannot be the same as registration path: ${Path}`,
 ];
@@ -203,10 +213,12 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * @param path The dot-delimited path: no empty segment and no whitespace, checked at compile time and at run time.
 	 * @param options `{ reuse }`: a registered path (not this one) or a seed from `createReusable`.
 	 * @returns The registration: the ten locator methods, or after a reuse `filter`, `nth` and `describe`.
-	 * @throws At the locator method, when the path is registered already
-	 * (`A locator schema with the path "main" already exists. …`; with `{ reuse }`, at `add`, which registers at once), when its first argument is missing or an empty
-	 * string where Playwright cannot use one (`locator requires a non-empty selector for "main.list".`), or when the
-	 * path breaks the path rules (`LocatorSchemaPath string cannot contain consecutive dots: main..list`); at `add`, when
+	 * @throws At `add`, when the path breaks the path rules, a literal being a compile error already
+	 * (`LocatorSchemaPath string cannot contain consecutive dots: main..list`, every broken rule named). At the locator
+	 * method, when the path is registered already
+	 * (`A locator schema with the path "main" already exists. …`; with `{ reuse }`, at `add`, which registers at once), or
+	 * when its first argument is missing or an empty string where Playwright cannot use one
+	 * (`locator requires a non-empty selector for "main.list".`). At `add`, when
 	 * a reused path is not registered (`No locator schema registered for path "common.button".`), or is the registration
 	 * path itself (`Locator reuse path cannot be the same as registration path: "main.list".`; a single literal reusing
 	 * itself is a compile error already, a variable is checked here). A method of a registration
@@ -243,6 +255,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 					Extract<Reuse, ReusableLocator<LocatorSchemaPathType>>["type"]
 				> {
 		this.endOpenRegistration("add", String(path));
+		assertRegistryPath<LocatorSchemaPathType>(path);
 		const options = args[0] as
 			| {
 					reuse?:
@@ -256,14 +269,14 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		if (reuse === undefined) {
 			const builder = new LocatorRegistrationBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>, false>(
 				this,
-				path as RegistryPath<LocatorSchemaPathType>,
+				path,
 			);
 			this.openRegistration = builder;
 			return builder as never;
 		}
 
 		if (typeof reuse === "string") {
-			const targetPath = path as RegistryPath<LocatorSchemaPathType>;
+			const targetPath = path;
 			if (reuse === targetPath) {
 				throw new Error(`Locator reuse path cannot be the same as registration path: "${targetPath}".`);
 			}
@@ -294,15 +307,15 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			RegistryPath<LocatorSchemaPathType>
 		> = this.cloneRecordForReuse(
 			{
-				locatorSchemaPath: path as RegistryPath<LocatorSchemaPathType>,
+				locatorSchemaPath: path,
 				definition: reuse.definition,
 				steps: reuse.steps,
 				description: reuse.description,
 			},
-			path as RegistryPath<LocatorSchemaPathType>,
+			path,
 		);
 
-		const builder = this.seededBuilder(path as RegistryPath<LocatorSchemaPathType>, reusedRecord);
+		const builder = this.seededBuilder(path, reusedRecord);
 		this.openRegistration = builder;
 		return builder as never;
 	}
@@ -486,9 +499,10 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		path: LocatorSchemaPathArgument<Path>,
 	): LocatorQueryBuilder<LocatorSchemaPathType, Path & RegistryPath<LocatorSchemaPathType>> {
 		this.endOpenRegistration("getLocatorSchema", String(path));
+		assertRegistryPath<LocatorSchemaPathType, Path>(path);
 		return new LocatorQueryBuilderInternal<LocatorSchemaPathType, Path & RegistryPath<LocatorSchemaPathType>>(
 			this,
-			path as Path & RegistryPath<LocatorSchemaPathType>,
+			path,
 		);
 	}
 
@@ -566,9 +580,8 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 */
 	getLocator<Path extends LocatorSchemaPathType>(path: LocatorSchemaPathArgument<Path>): Locator {
 		this.endOpenRegistration("getLocator", String(path), true);
-		const target = path as RegistryPath<LocatorSchemaPathType>;
-		validateLocatorSchemaPath(target);
-		return this.resolveRecord(target, this.get(target));
+		assertRegistryPath<LocatorSchemaPathType>(path);
+		return this.resolveRecord(path, this.get(path));
 	}
 
 	/**

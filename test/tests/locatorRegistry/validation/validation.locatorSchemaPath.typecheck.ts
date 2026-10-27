@@ -121,3 +121,21 @@ declare const itemId: string;
 listRegistry.add(`list.item@${itemId}`, { reuse: "list.item@first" });
 // @ts-expect-error a literal matching a template member, reusing itself
 listRegistry.add("list.item@first", { reuse: "list.item@first" });
+
+// path rules as patterns: a literal of any length compiles, and every listed whitespace character is rejected
+type TenCharacters = "abcdefghij";
+type HundredCharacters =
+	`${TenCharacters}${TenCharacters}${TenCharacters}${TenCharacters}${TenCharacters}${TenCharacters}${TenCharacters}${TenCharacters}${TenCharacters}${TenCharacters}`;
+type LongSegment =
+	`${HundredCharacters}${HundredCharacters}${HundredCharacters}${HundredCharacters}${HundredCharacters}${HundredCharacters}${HundredCharacters}${HundredCharacters}${HundredCharacters}${TenCharacters}${TenCharacters}${TenCharacters}${TenCharacters}${TenCharacters}${TenCharacters}${TenCharacters}${TenCharacters}${TenCharacters}abcdefghi`;
+declare const longPath: LongSegment;
+const longRegistry = createRegistryWithAccessors<LongSegment>(page);
+longRegistry.add(longPath).locator("body");
+longRegistry.getNestedLocator(longPath);
+const whitespaceRegistry = createRegistryWithAccessors<"main form" | "main form" | "main﻿form">(page);
+// @ts-expect-error a no-break space is whitespace
+whitespaceRegistry.add("main form");
+// @ts-expect-error a line separator is whitespace
+whitespaceRegistry.add("main form");
+// @ts-expect-error U+FEFF is rejected too
+whitespaceRegistry.add("main﻿form");

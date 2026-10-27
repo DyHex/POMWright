@@ -86,9 +86,10 @@ registry.add("main.list.item@last", { reuse: "main.list.items" }).nth("last");
 
 **Throws**
 
-The locator method throws when the path is registered already (with `{ reuse }`, `add` itself throws, since it
-registers at once), when the first argument is missing or is an empty string where Playwright cannot use one, and, from
-JavaScript, when the path breaks the path rules:
+`add` throws when the path breaks the path rules (from JavaScript or a path built at run time; a literal is a compile
+error), naming every rule it breaks. The locator method throws when the path is registered already (with `{ reuse }`,
+`add` itself throws, since it registers at once), and when the first argument is missing or is an empty string where
+Playwright cannot use one:
 
 ```text
 A locator schema with the path "main" already exists.

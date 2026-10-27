@@ -179,11 +179,12 @@ and a number goes to `nth()` as given, `-1` being the last element.
 ## LocatorSchemaPathFormat
 
 `LocatorSchemaPathFormat<Path>`: the path rules as a type. It is `Path` itself when the path is well formed (not
-empty, no leading, trailing or consecutive `.`, no whitespace), and otherwise a tuple naming the rule it breaks, which
-TypeScript shows in the error:
+empty, no leading, trailing or consecutive `.`, no whitespace), and otherwise a tuple naming the rules it breaks, every
+one, in the order the runtime names them, which TypeScript shows in the error. A literal of any length is checked:
 
 ```text
 Argument of type 'string' is not assignable to parameter of type 'LocatorSchemaPathError<"main..list", "String can't contain consecutive '.'">'.
+Argument of type 'string' is not assignable to parameter of type 'LocatorSchemaPathError<".main list", "String can't contain whitespace chars; String can't start with '.'">'.
 ```
 
 A wide `string` is not checked by the type; the same rules are checked at run time for every path. A registry typed

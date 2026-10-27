@@ -29,15 +29,15 @@ The chains on this page are shown without the description, which is the path unl
 
 Each takes the arguments of the Playwright method it is named after and returns the registration, for `filter`, `nth`
 and `describe`. Each throws at the call, naming the method and the path, when its first argument is missing (from
-JavaScript) or is an empty string where Playwright cannot use one, when the path already has a locator, when the
-registration has ended, and, from JavaScript, when the path breaks the path rules:
+JavaScript) or is an empty string where Playwright cannot use one, when the path already has a locator, and when the
+registration has ended. A path that breaks the path rules throws earlier, at `add`
+([`add()`](/POMWright/api/class-locatorregistry/#add)):
 
 ```text
 getByRole requires a role value for "main.button@save".
 A locator schema with the path "main" already exists.
 A locator definition for "main" has already been provided; only one locator type can be set for a registration.
 getByRole() cannot apply to "main.button@save": its registration was ended by add("main.list.item"); give a registration all its steps in its add(…) chain, or query the path for one use.
-LocatorSchemaPath string cannot contain consecutive dots: main..list
 ```
 
 The second message goes on with the existing and the attempted locator; the third is a second locator method on one
