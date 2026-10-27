@@ -134,10 +134,14 @@ and `changeset version` bumps from `package.json`.
 
 1. **The rule, in AGENTS.md §7**: after merging the Version Packages pull request, merge nothing with a changeset until
    that version is on npm (with manual 2FA approval, until it is approved there).
-2. **A safety-net check in `publish.yaml`'s guard**: when the guard stops because `main` has moved on and the tested
-   commit's `package.json` version is not on npm, fail the Publish run with an error naming the version and the commit
-   and saying "revert `<commit>` before merging the next Version Packages pull request". A version already on npm is an
-   ordinary commit and stops quietly, as today.
+2. **A safety-net check in `publish.yaml`'s guard**: when the guard stops because `main` has moved on, the tested commit
+   is a release commit (its `package.json` version differs from its first parent's) and that version is not on npm,
+   fail the Publish run with an error naming the version and the commit and saying "revert `<commit>` before merging the
+   next Version Packages pull request". Any other commit stops quietly, as today. (Refined 2026-10-27 at the maintainer's
+   choice, option B: without the release-commit condition, an ordinary commit merged while a release waits for approval
+   on npm, or after a skipped release, also has an unpublished version, and the check would fail it with an instruction
+   to revert a commit that is not the release. A release commit that never gets a `CI` run, because GitHub drops its
+   waiting run when a newer push arrives, has no Publish run to check; rule 1 covers it.)
 3. **The false promise corrected** in the guard's message, AGENTS.md §2 and *Internal → Tests and checks* ("CI"): the
    newer commit's run continues the release, and publishes only when no changeset is pending.
 4. **Recovery**: revert the release commit V. That restores its changesets, the previous version and the changelog, and
@@ -614,9 +618,9 @@ gap #5's `NavigationFor` part.
    `NavigationFor<string, string>`, so `goto()` without a target is a compile error there too, as the docs say; a
    function that takes any page object's helper types its parameter `NavigationFor<RegExp, UrlMatcher>`.
 
-**Also at implementation**: type-check ice-orderform-web and ice-iceno-web against the fixed build. Neither references
-`NavigationFor` or passes or stores a page object's `navigation` (searched on 2026-10-26; ice-orderform-web has three
-RegExp-path pages, which use their own `navigation`, already typed correctly).
+**Also at implementation**: type-check the two external consumer projects against the fixed build. Neither references
+`NavigationFor` or passes or stores a page object's `navigation` (searched on 2026-10-26; one has three RegExp-path
+pages, which use their own `navigation`, already typed correctly).
 
 **Why**: TypeScript compares method parameters bivariantly, so a RegExp page's single `goto(target: AbsoluteUrl)`
 satisfied a string page's two overloads, and the documented compile error for `goto()` on such a page was lost through
@@ -656,7 +660,7 @@ for the generic-base part (a regression since 2.0.0); test gap #5's sub-path par
    on the error rows: a namespace rejected, template members, finite template unions with the loop, `<string>` sub-paths
    compiling, an untyped `createRegistryWithAccessors` failing at its first path); the generic-base cases of decision 7,
    both those that compile and those still rejected; a generic wrapper; a vitest `expectTypeOf` for the per-member type;
-   the runtime errors on a `<string>` registry; at implementation, the ice projects type-check.
+   the runtime errors on a `<string>` registry; at implementation, the external consumer projects type-check.
 5. **Docs**:
    - *Locator paths*, a new section *Paths with a dynamic part*: paths listed in full first, as the recommendation;
      then finite template unions (`` `main.button@${Button}` `` with `Button` from a `const` array, the loop in
@@ -1310,9 +1314,8 @@ The earlier 3.0.2 work handled only the type-without-value direction (a runtime 
 required broke the generic base class; this fix narrows the option's type instead and adds no conditional parameter to
 `PageObject`. Evidence (`…-probes/R/walkthrough/a7/`): `cases.today.json`, `cases.keys.json`, `cases.presence.json`,
 `cases.required.out`, `corrected.out` (0 errors), `keys-c9-required.diff`; `src` type-checks and the 782 unit tests
-pass; every docs example compiles with the fix (the snippet check, exit 0); ice-orderform-web type-checks with the same
-5 errors as today, none from this (its base class pairs the type and value of a site-wide schema; scratchpad
-`ice-typecheck/`).
+pass; every docs example compiles with the fix (the snippet check, exit 0); an external consumer project type-checks
+with the same 5 errors as today, none from this (its base class pairs the type and value of a site-wide schema).
 
 **Depends on / affects**: H-7 (the *Principles* rewrite names this pairing among the rules only TypeScript checks);
 decision 36's message-coverage check (the new message is a compile error, not thrown: listed as `@step`'s is).

@@ -133,6 +133,6 @@ the second comparison passes in one of the two directions.
     `NavigationFor<BaseUrl, FullUrl>` (the type of `baseUrl`, the type of `fullUrl`), with the three page kinds and their
     helper types, and which parameter type takes which helpers; `NavigationFor`'s doc comment; `### goto()` stays
     findable by `check-api-coverage.mjs` (with B-7's edits to the page).
-  - [x] (added) At implementation, type-check ice-orderform-web and ice-iceno-web against the fixed build (neither
+  - [x] (added) At implementation, type-check the two external consumer projects against the fixed build (neither
     references `NavigationFor`, nor passes or stores a page object's `navigation`; checked on 2026-10-26).
 - **Execution order**: independent of the other D findings.
