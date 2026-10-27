@@ -447,6 +447,44 @@ class WrongSchemaPage extends PageObject<"main.x", { storage: typeof voiceStorag
 	}
 }
 
+class ValueWithoutTypePage extends PageObject<"main.x"> {
+	constructor() {
+		// @ts-expect-error a schema value without its type: declare it, PageObject<Paths, { storage: typeof schema }>
+		super(page, "https://app.example", "/x", { sessionStorage: { schema: voiceStorage } });
+	}
+	protected defineLocators() {}
+}
+
+type OptionalKey = { voiceCheckout: Codec<VoiceCheckoutModel>; token?: Codec<string> };
+class OptionalKeyWithoutCodecPage extends PageObject<"main.x", { storage: OptionalKey }> {
+	constructor() {
+		// @ts-expect-error a declared key, optional or not, needs its codec in the value
+		super(page, "https://app.example", "/x", { sessionStorage: { schema: voiceStorage } });
+	}
+	protected defineLocators() {}
+}
+
+class EmptySchemaPage extends PageObject<"main.x"> {
+	constructor() {
+		// no declared keys: an empty value is the empty schema
+		super(page, "https://app.example", "/x", { sessionStorage: { schema: {} } });
+	}
+	protected defineLocators() {}
+}
+
+// a standalone helper: an explicit schema type needs its value; without a type argument it is taken from the value
+const schemaAgreement = () => {
+	// @ts-expect-error an explicit schema type without its value
+	const typeWithoutValue = new SessionStorage<typeof voiceStorage>(page);
+	// @ts-expect-error options without the schema
+	const optionsWithoutSchema = new SessionStorage<typeof voiceStorage>(page, { label: "Voice" });
+	const typeAndValue = new SessionStorage<typeof voiceStorage>(page, { schema: voiceStorage });
+	const inferred = new SessionStorage(page, { schema: voiceStorage });
+	expectTypeOf(inferred).toEqualTypeOf<SessionStorage<typeof voiceStorage>>();
+	return [typeWithoutValue, optionsWithoutSchema, typeAndValue];
+};
+void [ValueWithoutTypePage, OptionalKeyWithoutCodecPage, EmptySchemaPage, schemaAgreement];
+
 declare const voice: VoicePage;
 declare const account: AccountPage;
 declare const plainPage: PlainPage;

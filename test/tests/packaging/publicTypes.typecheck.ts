@@ -472,3 +472,184 @@ declare const publicItemId: string;
 publicListRegistry.add(`list.item@${publicItemId}`, { reuse: "list.item@first" });
 // @ts-expect-error a literal matching a template member, reusing itself
 publicListRegistry.add("list.item@first", { reuse: "list.item@first" });
+
+// a storage schema's type and value must agree: written once as a value, with its type taken from it
+const schemaUrl = "https://shop.example";
+const userCodec = json<{ name: string }>();
+const tokenCodec = json<string>();
+const accountSchema = { user: userCodec };
+const withTokenSchema = { user: userCodec, token: tokenCodec };
+type OptionalTokenSchema = { user: Codec<{ name: string }>; token?: Codec<string> };
+
+// page objects without a base class
+export class TypeAndValuePage extends PageObject<"main", { storage: typeof accountSchema }> {
+	constructor() {
+		super(page, schemaUrl, "/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export class NeitherPage extends PageObject<"main"> {
+	constructor() {
+		super(page, schemaUrl, "/");
+	}
+	protected defineLocators() {}
+}
+export class EmptyValuePage extends PageObject<"main"> {
+	constructor() {
+		super(page, schemaUrl, "/", { sessionStorage: { schema: {} } });
+	}
+	protected defineLocators() {}
+}
+export class ValueWithoutTypePage extends PageObject<"main"> {
+	constructor() {
+		// @ts-expect-error a value without its type
+		super(page, schemaUrl, "/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+// a type without its value still compiles (the runtime hints at it on a non-string write)
+export class TypeWithoutValuePage extends PageObject<"main", { storage: typeof accountSchema }> {
+	constructor() {
+		super(page, schemaUrl, "/");
+	}
+	protected defineLocators() {}
+}
+export class MissingKeyPage extends PageObject<"main", { storage: typeof withTokenSchema }> {
+	constructor() {
+		// @ts-expect-error the value misses a declared key
+		super(page, schemaUrl, "/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export class InlineExtraKeyPage extends PageObject<"main", { storage: typeof accountSchema }> {
+	constructor() {
+		// @ts-expect-error an inline value with a key the type does not declare
+		super(page, schemaUrl, "/", { sessionStorage: { schema: { user: userCodec, token: tokenCodec } } });
+	}
+	protected defineLocators() {}
+}
+// a variable with an extra key still compiles, as TypeScript's excess property check covers literals only
+export class VariableExtraKeyPage extends PageObject<"main", { storage: typeof accountSchema }> {
+	constructor() {
+		super(page, schemaUrl, "/", { sessionStorage: { schema: withTokenSchema } });
+	}
+	protected defineLocators() {}
+}
+export class OtherCodecPage extends PageObject<"main", { storage: { user: Codec<number> } }> {
+	constructor() {
+		// @ts-expect-error a codec of another type
+		super(page, schemaUrl, "/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export class OptionalKeyWithoutCodecPage extends PageObject<"main", { storage: OptionalTokenSchema }> {
+	constructor() {
+		// @ts-expect-error an optional declared key without its codec
+		super(page, schemaUrl, "/", { sessionStorage: { schema: { user: userCodec } } });
+	}
+	protected defineLocators() {}
+}
+export class OptionalKeyWithCodecPage extends PageObject<"main", { storage: OptionalTokenSchema }> {
+	constructor() {
+		super(page, schemaUrl, "/", { sessionStorage: { schema: { user: userCodec, token: tokenCodec } } });
+	}
+	protected defineLocators() {}
+}
+
+// standalone helpers
+export const inferredStorage = new SessionStorage(page, { schema: accountSchema });
+export const plainStorage = new SessionStorage(page);
+export const explicitStorage = new SessionStorage<typeof accountSchema>(page, { schema: accountSchema });
+// @ts-expect-error an explicit type without its value
+export const explicitWithoutValue = new SessionStorage<typeof accountSchema>(page);
+// @ts-expect-error an explicit type, options without the schema
+export const explicitWithoutSchema = new SessionStorage<typeof accountSchema>(page, { label: "Shop" });
+// a variable with an extra key still compiles, as above
+export const explicitVariableExtra = new SessionStorage<typeof accountSchema>(page, { schema: withTokenSchema });
+// @ts-expect-error an optional declared key without its codec
+export const optionalWithoutCodec = new SessionStorage<OptionalTokenSchema>(page, { schema: { user: userCodec } });
+
+// the documented base class that forwards the options and declares no storage
+export abstract class ForwardingShop<Paths extends string> extends PageObject<Paths> {
+	protected constructor(urlPath: string, options?: PageObjectOptions) {
+		super(page, schemaUrl, urlPath, { navOptions: { waitUntil: "load" }, ...options });
+	}
+}
+export class ForwardingWithValue extends ForwardingShop<"main"> {
+	constructor() {
+		// @ts-expect-error a value the base class cannot type: use the generic base class below
+		super("/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export class ForwardingWithout extends ForwardingShop<"main"> {
+	constructor() {
+		super("/");
+	}
+	protected defineLocators() {}
+}
+
+// the documented generic base class, which passes the storage type through
+type GenericShopOptions<O extends PageObjectTypeOptions> = {
+	baseUrlType: string;
+	urlPathType: UrlPathTypeFromOptions<O>;
+	storage: StorageTypeFromOptions<O>;
+};
+export abstract class GenericShop<
+	Paths extends string,
+	O extends PageObjectTypeOptions = { urlPathType: string },
+> extends PageObject<Paths, GenericShopOptions<O>> {
+	protected constructor(
+		urlPath: UrlPathTypeFromOptions<GenericShopOptions<O>>,
+		options?: PageObjectOptions<GenericShopOptions<O>>,
+	) {
+		super(page, schemaUrl, urlPath, options);
+	}
+}
+export class GenericWithTypeAndValue extends GenericShop<
+	"main",
+	{ urlPathType: string; storage: typeof accountSchema }
+> {
+	constructor() {
+		super("/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export class GenericValueWithoutType extends GenericShop<"main"> {
+	constructor() {
+		// @ts-expect-error a value without its type
+		super("/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export class GenericNeither extends GenericShop<"main"> {
+	constructor() {
+		super("/");
+	}
+	protected defineLocators() {}
+}
+// a type without its value still compiles
+export class GenericTypeWithoutValue extends GenericShop<
+	"main",
+	{ urlPathType: string; storage: typeof accountSchema }
+> {
+	constructor() {
+		super("/");
+	}
+	protected defineLocators() {}
+}
+
+// a base class with one schema for the whole site: its type and value written together
+type SiteOptions = { baseUrlType: string; urlPathType: string; storage: typeof accountSchema };
+export abstract class SiteWidePage<Paths extends string> extends PageObject<Paths, SiteOptions> {
+	protected constructor(urlPath: string) {
+		super(page, schemaUrl, urlPath, { sessionStorage: { schema: accountSchema } });
+	}
+}
+
+// what the agreeing forms type each key as
+export const schemaReads = async (withToken: OptionalKeyWithCodecPage, typed: TypeAndValuePage) => {
+	const name: string | undefined = (await typed.sessionStorage.get("user"))?.name;
+	const token: string | null = await withToken.sessionStorage.get("token");
+	return { name, token };
+};

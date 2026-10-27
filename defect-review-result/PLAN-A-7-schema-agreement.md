@@ -79,4 +79,33 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27. As planned.
+
+- `pageObject.ts`: `SchemaNeedsStorageType` and `SchemaOptionFor<S>` (no declared keys → `Record<string,
+  SchemaNeedsStorageType>`; keys → `Required<S>`), used by `PageObjectOptions["sessionStorage"]["schema"]`, whose doc
+  comment says to take the type from the value. The constructor's hand-off: `SessionStorage` as an untyped constructor
+  and the schema as `StorageTypeFromOptions<Options> | undefined`, with the reason beside it (checked where the options
+  were written; generic here). `sessionStorage.ts`: the constructor's options are a conditional rest tuple, optional
+  without declared keys, `SessionStorageOptions<S> & { schema: Required<S> }` with them; `@param options.schema` says so.
+- The compile error, from the build: `Type '{ user: Codec<{ name: string; }>; }' is not assignable to type
+  'Record<string, "declare the schema's type in the page object's type options: PageObject<Paths, { storage: typeof
+  schema }>">'.`
+- Tests: `test/tests/packaging/publicTypes.typecheck.ts`, every case of the walkthrough's `cases.ts` under readable
+  names (value without type, a forwarding base class's subclass with a value, the generic base class's subclass with a
+  value, an explicit type without its value and with options without it, an optional key without its codec in a page
+  object and a standalone helper, and the existing missing key, inline extra key and other-codec cases) with
+  `@ts-expect-error`; the rest compile (type and value, neither, an empty value, inference, both documented base
+  classes, a site-wide base class, an optional key with its codec, and a type without its value and a variable with an
+  extra key until #58), and `corrected.ts`'s forms are among them, with the reads they type. Unit
+  (`src/helpers/sessionStorage.test.ts`, beside *the schema value must match*): a value without its type, an optional
+  key without its codec, an empty value; the standalone helper's four forms in an uncalled function.
+- The external consumer project with a site-wide schema, in a scratch copy (its dependencies linked, the packed build
+  copied in, so its own Playwright types are used): with its own build, 5 errors; with this branch's packed build
+  (plans 13 to 24), the same 5, none from this.
+- Docs: *Session storage*, *Through a page object* (the rule in one paragraph; the note kept for the type without its
+  value, linking #58); `api/errors.md`, *Session storage* (the compile error once); `api/types.md`,
+  `PageObjectOptions.sessionStorage`; `api/class-sessionstorage.md`, the constructor's `schema`; AGENTS.md §5. Changeset
+  `schema-type-and-value.md`; `storage-schema-hint.md` amended (what the compiler checks now, and what it does not).
+- Checks: `pnpm lint` 0; `pnpm test:unit` 896 passed; `pnpm pack-test --reporter=line` exit 0 (1,602 passed, 3
+  skipped; doc snippets 221; api coverage 0 problems; step locations 29); `consumer-check.sh` 18 `ok`; `pnpm docs:build`
+  0.

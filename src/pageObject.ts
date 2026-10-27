@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { atCallSite, captureCallSite } from "./helpers/callSite";
 import { createNavigation, type NavigationFor, type NavigationOptions } from "./helpers/navigation";
-import { SessionStorage, type SessionStorageSchema } from "./helpers/sessionStorage";
+import { SessionStorage, type SessionStorageOptions, type SessionStorageSchema } from "./helpers/sessionStorage";
 import { isThenable } from "./helpers/thenable";
 import { assertBaseUrl, assertUrlPart, assertUrlPath, composeFullUrl, type UrlMatcher } from "./helpers/url";
 import {
@@ -77,6 +77,18 @@ export type StorageTypeFromOptions<T extends PageObjectTypeOptions> = T extends 
 	? S
 	: Record<never, never>;
 
+/** What a schema value is checked against where the type options declare no keys: no codec may be passed. */
+type SchemaNeedsStorageType =
+	"declare the schema's type in the page object's type options: PageObject<Paths, { storage: typeof schema }>";
+
+/**
+ * The schema value a page object takes: with declared keys, a codec for every one of them; without, none at all, so a
+ * value cannot be passed without its type.
+ */
+type SchemaOptionFor<S extends SessionStorageSchema> = [keyof S] extends [never]
+	? Record<string, SchemaNeedsStorageType>
+	: Required<S>;
+
 /**
  * The options of the `PageObject` constructor, for a base class of your own that forwards them. `Options` is the page
  * object's `PageObjectTypeOptions`, which types the session storage schema.
@@ -97,8 +109,12 @@ export type PageObjectOptions<Options extends PageObjectTypeOptions = { baseUrlT
 	label?: string;
 	/** Defaults for every navigation method of `navigation` (`waitUntil`, `timeout`); a call's own options win. */
 	navOptions?: NavigationOptions;
-	/** `{ schema }`: the codecs of the session storage keys that hold structured values, typed by `Options["storage"]`. */
-	sessionStorage?: { schema?: StorageTypeFromOptions<Options> };
+	/**
+	 * `{ schema }`: the codecs of the session storage keys that hold structured values, the value of the type
+	 * `Options["storage"]` declares, with a codec for every declared key. Take the type from the value:
+	 * `PageObject<Paths, { storage: typeof schema }>`.
+	 */
+	sessionStorage?: { schema?: SchemaOptionFor<StorageTypeFromOptions<Options>> };
 	/**
 	 * The registry's options: `strictChains: true` makes the check after `defineLocators()` require every ancestor of
 	 * every registered path to be registered as well; set it once in a base class of your own.
@@ -310,10 +326,16 @@ export abstract class PageObject<
 		this.getLocator = this.locatorRegistry.getLocator;
 		this.getLocatorSchema = this.locatorRegistry.getLocatorSchema;
 		this.getNestedLocator = this.locatorRegistry.getNestedLocator;
-		this.sessionStorage = new SessionStorage<StorageTypeFromOptions<Options>>(page, {
+		// the schema's type and value were checked where the options were written (SchemaOptionFor); with the schema type
+		// still generic here, SessionStorage's constructor cannot tell whether it has keys, so it is called as untyped
+		const PageSessionStorage = SessionStorage as new (
+			page: Page,
+			options: SessionStorageOptions<SessionStorageSchema>,
+		) => SessionStorage<StorageTypeFromOptions<Options>>;
+		this.sessionStorage = new PageSessionStorage(page, {
 			label,
 			origin: typeof baseUrl === "string" ? new URL(baseUrl).origin : undefined,
-			schema: options?.sessionStorage?.schema,
+			schema: options?.sessionStorage?.schema as StorageTypeFromOptions<Options> | undefined,
 		});
 		this.navigation = createNavigation(
 			this.page,

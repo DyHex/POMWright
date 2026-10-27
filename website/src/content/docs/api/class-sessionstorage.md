@@ -61,7 +61,9 @@ const payment = new SessionStorage(page, { label: "Payment", origin: "https://pa
 
   - `schema` [SessionStorageSchema](#sessionstorageschema) *(optional)*
 
-    Codecs by key, for keys that hold structured values. The helper's type parameter is the schema's type.
+    Codecs by key, for keys that hold structured values. The helper's type parameter is the schema's type, taken from
+    this value; given explicitly (`new SessionStorage<typeof schema>(page, { schema })`), the value is required, with a
+    codec for every declared key.
 
 **Throws**
 

@@ -119,7 +119,13 @@ Defaults for every navigation method (`waitUntil`, `timeout`); a call's own opti
 
 `{ schema?: SessionStorageSchema }` *(optional)*
 
-The codecs of the session storage keys that hold structured values, typed by `Options["storage"]`.
+The codecs of the session storage keys that hold structured values: the value of the type `Options["storage"]`
+declares, with a codec for every declared key, optional ones included. Take the type from the value,
+`PageObject<Paths, { storage: typeof schema }>`. Without declared keys no codec may be passed, a compile error:
+
+```text
+Type '{ user: Codec<{ name: string; }>; }' is not assignable to type 'Record<string, "declare the schema's type in the page object's type options: PageObject<Paths, { storage: typeof schema }>">'.
+```
 
 ---
 

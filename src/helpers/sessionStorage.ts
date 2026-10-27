@@ -278,14 +278,19 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * @param options.label The prefix of step titles and error messages: `Shop` gives `Shop.SessionStorage.set:`.
 	 * @param options.origin The origin the helper belongs to: the default origin of `seed`, and the only one `set`,
 	 * `get` and `clear` touch. Without it the helper works on whatever origin the page is on.
-	 * @param options.schema Codecs by key, for keys that hold structured values.
+	 * @param options.schema Codecs by key, for keys that hold structured values. Required when the helper's schema type
+	 * is given explicitly (`new SessionStorage<typeof schema>(page, { schema })`), with a codec for every declared key;
+	 * without a type argument, the type is taken from it.
 	 * @throws When `origin` is not an origin: `Shop.SessionStorage.constructor: origin must be an origin such as …`
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#new-sessionstorage
 	 */
 	constructor(
 		private readonly page: Page,
-		options: SessionStorageOptions<S> = {},
+		// with declared keys, the schema value is required and holds a codec for every one of them
+		...[options = {}]: [keyof S] extends [never]
+			? [options?: SessionStorageOptions<S>]
+			: [options: SessionStorageOptions<S> & { schema: Required<S> }]
 	) {
 		this.label = options.label;
 		this.schema = options.schema ?? {};

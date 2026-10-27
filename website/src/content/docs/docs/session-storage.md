@@ -157,11 +157,16 @@ export class AccountPage extends PageObject<"main", { storage: typeof accountSto
 }
 ```
 
+Write the schema once, as a value, take the type from it (`storage: typeof accountStorage`), and pass that value.
+TypeScript then holds the two together: a value without its type, and a value missing a codec for a declared key, are
+compile errors, and so is a standalone `new SessionStorage<typeof accountStorage>(page)` without the value.
+
 :::note
-The type and the value go together, and nothing checks that both are there. A page object that declares `storage` but
-passes no `sessionStorage.schema` compiles, and its helper has no codecs: a declared key is stored and read as the raw
-string, so `get("user")` returns the stored text where its type says an object, and a `json<string>()` value is stored
-without its quotes. Only writing a value that is not a string fails, with the message in [Errors](#errors).
+One case still compiles: a page object that declares `storage` but passes no `sessionStorage.schema`. Its helper has no
+codecs: a declared key is stored and read as the raw string, so `get("user")` returns the stored text where its type
+says an object, and a `json<string>()` value is stored without its quotes. Only writing a value that is not a string
+fails, with the message in [Errors](#errors). Making the value required is [planned for the next major
+version](https://github.com/DyHex/POMWright/issues/58).
 :::
 
 A helper that belongs to an origin refuses to touch another one, since another origin's storage can only be reached
