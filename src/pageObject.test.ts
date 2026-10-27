@@ -349,6 +349,57 @@ describe("failures", () => {
 		expect(error.message).toMatch(/^Custom: defineLocators\(\) failed:/);
 	});
 
+	describe("an async definition", () => {
+		const ASYNC =
+			"Async: defineLocators() must register its locators synchronously; it returned a Promise. Read what it needs in the constructor or a fixture, and pass it in.";
+		class Async extends PageObject<Paths> {
+			constructor(
+				page: Page,
+				private readonly fail = false,
+			) {
+				super(page, BASE, "/login", { label: "Async" });
+			}
+			// TypeScript accepts a Promise where the base method returns void
+			protected async defineLocators() {
+				this.add("main").locator("main");
+				await Promise.resolve();
+				if (this.fail) {
+					throw new Error("after the first await");
+				}
+				this.add("main.button").getByRole("button");
+			}
+		}
+
+		it("fails the check with the labelled message, before verify()", () => {
+			const error = caught(construct(() => new Async(createStubPage().page)).runCheck);
+			expect(error.message).toBe(ASYNC);
+			expect(error.cause).toBeUndefined();
+			expect(verifySpy).not.toHaveBeenCalled();
+		});
+
+		it("is kept: later calls throw the same error, also after the rest of the definition has run", async () => {
+			const { instance, runCheck } = construct(() => new Async(createStubPage().page));
+			const first = caught(runCheck);
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			expect(caught(() => instance.getLocator("main"))).toBe(first);
+			expect(caught(() => instance.getNestedLocator("main.button"))).toBe(first);
+		});
+
+		it("leaves no unhandled rejection when the rest of the definition throws", async () => {
+			const unhandled: unknown[] = [];
+			const record = (reason: unknown) => unhandled.push(reason);
+			process.on("unhandledRejection", record);
+			try {
+				const error = caught(construct(() => new Async(createStubPage().page, true)).runCheck);
+				expect(error.message).toBe(ASYNC);
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			} finally {
+				process.off("unhandledRejection", record);
+			}
+			expect(unhandled).toEqual([]);
+		});
+	});
+
 	it("a failure at a first use is thrown there, and the check then does nothing", () => {
 		const { instance, runCheck } = construct(() => new Typo(createStubPage().page));
 		expect(() => instance.getNestedLocator("main")).toThrowError(VERIFICATION);

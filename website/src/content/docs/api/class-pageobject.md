@@ -188,7 +188,11 @@ every later locator call; see [how a mistake is reported](/POMWright/docs/page-o
 LoginPage: defineLocators() failed: A locator schema with the path "main" already exists. …
 LoginPage: Locator registry verification failed for 1 of 5 paths:
   "main.form@login": No locator schema registered for path "main.form@login.heading".
+LoginPage: defineLocators() must register its locators synchronously; it returned a Promise. Read what it needs in the constructor or a fixture, and pass it in.
 ```
+
+The last when `defineLocators()` returns a Promise, as an `async` one does: it registers synchronously; see
+[what the definition cannot see](/POMWright/docs/page-objects/#when-definelocators-runs).
 
 ### pageActionsToPerformAfterNavigation()
 

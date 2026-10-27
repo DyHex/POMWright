@@ -59,6 +59,13 @@ of the construction site, cut at the class the code constructed (`new.target`), 
 created the page object, not at the microtask, and not at the `super(…)` of a base class the project's page objects
 share (see [call sites](/POMWright/internal/call-sites/#errors-raised-later)).
 
+`defineLocators()` registers synchronously. TypeScript accepts an `async` override of a method that returns `void`,
+and such a definition would be verified before the rest of it ran, while an error after its first `await` would escape
+unlabelled and leave a half-registered page object. So a definition that returns a Promise (any value with a `then`
+function) fails the page object at once, `LoginPage: defineLocators() must register its locators synchronously; …`,
+kept like every other failure; the returned Promise's own rejection is handled, since that failure already reports it,
+and the rest of the definition finds the kept failure at its next `add`.
+
 The scheduled check cannot tell an instance whose subclass constructor threw after `super(…)` from one that was
 returned: nothing reaches `PageObject` when a constructor below it throws. So the check runs on the abandoned instance
 too, and fails the test with a second error. *Page objects* says to check the arguments before `super(…)` (see
@@ -83,6 +90,10 @@ microseconds per path (see [Performance](/POMWright/internal/performance/)).
   value the subclass sets, and nothing would report it.
 - **A getter for `locatorRegistry`.** It would run the definition on any read, and a subclass that declares the member
   again fails to compile (TS2610).
+- **Awaiting an `async` definition.** It would make the lifecycle asynchronous, against builders that are synchronous,
+  and every locator call would have to wait for it.
+- **`defineLocators()` typed to return `undefined`.** TypeScript would refuse an `async` definition, but the docs write
+  `protected defineLocators(): void {`, and that code would stop compiling.
 
 The lifecycle state is an ECMAScript `#private` member, `#locators`, rather than a TypeScript `private` one: `PageObject`
 is the class users extend, and a TypeScript-private name is a real property that a subclass member of the same name

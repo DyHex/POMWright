@@ -1,3 +1,5 @@
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
 import { PageObject } from "pomwright";
@@ -138,6 +140,22 @@ class ValidatesBeforeSuper extends PageObject<Paths> {
 const VERIFICATION =
 	'TypoNav: Locator registry verification failed for 1 of 2 paths:\n  "body.heading": No locator schema registered for path "body.headng".';
 
+class AsyncNav extends PageObject<Paths> {
+	constructor(page: Page) {
+		super(page, BASE, "/testnav", { label: "AsyncNav" });
+	}
+
+	// async by mistake: TypeScript accepts a Promise where the base method returns void
+	protected async defineLocators() {
+		this.add("body").locator("body");
+		await Promise.resolve();
+		this.add("body.heading").getByRole("heading", { level: 1 });
+	}
+}
+
+const ASYNC =
+	"AsyncNav: defineLocators() must register its locators synchronously; it returned a Promise. Read what it needs in the constructor or a fixture, and pass it in.";
+
 const caught = (fn: () => unknown) => {
 	try {
 		fn();
@@ -150,7 +168,12 @@ const caught = (fn: () => unknown) => {
 /** Lets the check scheduled after construction run, so a failure in it would fail this test. */
 const afterTheCheck = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-const lifecycleTest = test.extend<{ statefulNav: StatefulNav; typoNav: TypoNav; duplicateNav: DuplicateNav }>({
+const lifecycleTest = test.extend<{
+	statefulNav: StatefulNav;
+	typoNav: TypoNav;
+	duplicateNav: DuplicateNav;
+	asyncNav: AsyncNav;
+}>({
 	statefulNav: async ({ page }, use) => {
 		await use(new StatefulNav(page, "Same page with a hash", "item"));
 	},
@@ -159,6 +182,9 @@ const lifecycleTest = test.extend<{ statefulNav: StatefulNav; typoNav: TypoNav; 
 	},
 	duplicateNav: async ({ page }, use) => {
 		await use(new DuplicateNav(page));
+	},
+	asyncNav: async ({ page }, use) => {
+		await use(new AsyncNav(page));
 	},
 });
 
@@ -248,6 +274,14 @@ test.describe("registry mistakes at a first use", () => {
 		);
 		await afterTheCheck();
 	});
+
+	test("an async definition fails at the use, and stays failed once the rest of it has run", async ({ page }) => {
+		const nav = new AsyncNav(page);
+		const first = caught(() => nav.getLocator("body"));
+		expect(first.message).toBe(ASYNC);
+		await afterTheCheck();
+		expect(caught(() => nav.getNestedLocator("body.heading"))).toBe(first);
+	});
 });
 
 test.describe("registry mistakes in the check right after construction", () => {
@@ -262,6 +296,32 @@ test.describe("registry mistakes in the check right after construction", () => {
 			void duplicateNav;
 		},
 	);
+
+	test.describe("an async definition in a fixture", () => {
+		test.describe.configure({ mode: "serial" });
+		// the failing test's worker is replaced, so its error is handed to the next test through a file
+		const errorFile = () =>
+			path.join(
+				test.info().project.outputDir,
+				`async-define-${test.info().project.name}-${test.info().repeatEachIndex}.txt`,
+			);
+		test.afterEach(() => {
+			const [error] = test.info().errors;
+			if (error?.message !== undefined) {
+				writeFileSync(errorFile(), error.message);
+			}
+		});
+
+		lifecycleTest.fail("fails the test", async ({ asyncNav }) => {
+			void asyncNav;
+		});
+
+		test("with the labelled message", () => {
+			const message = readFileSync(errorFile(), "utf8");
+			rmSync(errorFile());
+			expect(message).toContain(ASYNC);
+		});
+	});
 
 	test.describe("a broken page object built in beforeEach", () => {
 		let nav: TypoNav;

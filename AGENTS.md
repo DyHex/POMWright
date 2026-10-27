@@ -267,11 +267,13 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
 - A `frameLocator(selector)` segment is `locator(selector)` plus its steps, then `contentFrame()` for the descendants
   and the `<iframe>` element as a terminal; `frameLocator()` is Playwright's any-frame locator, first segment only, no
   steps, no terminal form. Never reintroduce `target.frameLocator(selector)` with dropped steps.
-- `PageObject` never calls `defineLocators()` from its constructor: it runs, followed by `verify()`, once per instance,
-  right after construction (a check scheduled as the constructor's last statement) or at the first locator call if
-  that comes earlier; a registry mistake still fails the fixture, labelled `<label>: …` with the original as `cause`
-  and the construction site (the `new` line) in the stack. `pageActionsToPerformAfterNavigation()` is optional and called each time the
-  actions run. A standalone registry calls `verify()` itself. Never move either hook back into the constructor.
+- `PageObject` never calls `defineLocators()` from its constructor: it registers synchronously and runs, followed by
+  `verify()`, once per instance, right after construction (a check scheduled as the constructor's last statement) or at
+  the first locator call if that comes earlier; a registry mistake still fails the fixture, labelled `<label>: …` with
+  the original as `cause` and the construction site (the `new` line) in the stack; a definition that returns a Promise
+  (an `async` one) fails the page object the same way, without a `cause`, and its own rejection is handled.
+  `pageActionsToPerformAfterNavigation()` is optional and called each time the actions run. A standalone registry calls
+  `verify()` itself. Never move either hook back into the constructor.
 - Session storage mirrors `page.sessionStorage`: values are strings stored verbatim unless a codec is declared for the
   key (`json<T>()`, `Codec<T>`), `get` returns `null` for a missing key, a literal `[]` does not compile, and a helper
   with an origin touches only that origin. `seed` never navigates and never intercepts a navigation: away from the

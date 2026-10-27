@@ -105,6 +105,12 @@ export type PageObjectOptions<Options extends PageObjectTypeOptions = { baseUrlT
 	locators?: LocatorRegistryOptions;
 };
 
+/** A value `await` would wait for: an object or a function with a `then` method. */
+const isThenable = (value: unknown): value is PromiseLike<unknown> =>
+	(typeof value === "object" || typeof value === "function") &&
+	value !== null &&
+	typeof (value as { then?: unknown }).then === "function";
+
 /**
  * The base class of a page object: binds a Playwright `Page` to a locator registry, a navigation helper built from the
  * page object's URL, and a session storage helper for its origin. A subclass names its paths in `Paths`, calls the
@@ -349,12 +355,15 @@ export abstract class PageObject<
 		}
 		this.#locators = "defining";
 		let step: "define" | "verify" = "define";
+		let returned: unknown;
 		try {
-			this.defineLocators();
-			step = "verify";
-			registry.verify();
-			this.#locators = "defined";
-			return true;
+			returned = this.defineLocators();
+			if (!isThenable(returned)) {
+				step = "verify";
+				registry.verify();
+				this.#locators = "defined";
+				return true;
+			}
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			const failure = new Error(
@@ -364,13 +373,24 @@ export abstract class PageObject<
 			this.#locators = { failure };
 			throw failure;
 		}
+		// an async definition would be verified before the rest of it ran, and an error after its first await would escape
+		// unlabelled; its own rejection is handled here, since the failure below already reports it
+		returned.then(undefined, () => {});
+		const failure = new Error(
+			`${this.label}: defineLocators() must register its locators synchronously; it returned a Promise. Read what it needs in the constructor or a fixture, and pass it in.`,
+		);
+		this.#locators = { failure };
+		throw failure;
 	}
 
 	/**
 	 * Registers the page object's locators with `this.add(path)`. Every page object implements it. Runs once, right after
 	 * the constructor, so it can use the subclass's constructor arguments and fields; the registry is verified after it,
 	 * and an error in either is labelled with the page object (`LoginPage: defineLocators() failed: …`) and thrown again
-	 * by every later locator call.
+	 * by every later locator call. It registers synchronously: read what it needs in the constructor or a fixture.
+	 *
+	 * @throws When it returns a Promise, as an `async` method does: `LoginPage: defineLocators() must register its locators
+	 * synchronously; it returned a Promise. Read what it needs in the constructor or a fixture, and pass it in.`
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#definelocators
 	 *

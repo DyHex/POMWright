@@ -63,4 +63,24 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27. As planned.
+
+- `src/pageObject.ts`: `isThenable` (an object or function with a `then` function) beside the options type;
+  `#defineLocatorsOnce` keeps what `defineLocators()` returns, verifies only when it is not thenable, and otherwise,
+  after the `try` (so the generic `catch` does not wrap it as `defineLocators() failed: …`), attaches
+  `.then(undefined, () => {})`, keeps and throws `AsyncNav: defineLocators() must register its locators synchronously; it
+  returned a Promise. Read what it needs in the constructor or a fixture, and pass it in.` (no `cause`). The rest of
+  an `async` definition then finds the kept failure at its next `add`, and that rejection is the one handled.
+  `defineLocators()`'s doc comment: it registers synchronously; `@throws` with the message.
+- Tests: `src/pageObject.test.ts`, *an async definition*: the check fails with the message before `verify()` (spied),
+  no `cause`; the failure is kept after the rest of the definition has run; no `unhandledRejection` when the rest of
+  it throws (the test fails without the no-op `catch`: checked, then restored). `test/tests/pageObject/lifecycle.spec.ts`
+  (packed): `AsyncNav` built in a fixture fails the test, and a serial test reads its error, handed over through a file
+  as the call-site spec does, which contains the message; and a first use throws the message and the same error after
+  the rest of the definition ran.
+- Docs: *Page objects*, *When `defineLocators()` runs*, a third "cannot see" item (what it would have to `await`) with
+  the message; `api/class-pageobject.md`, `defineLocators()` **Throws**; `api/errors.md`, *Page objects → Locators*;
+  *Internal → Page object lifecycle* (the synchronous rule and why; awaiting and an `undefined` return type under
+  *Alternatives weighed*); AGENTS.md §5's `PageObject` bullet. Changeset `async-define-locators.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 848 passed; `pnpm pack-test --reporter=line` exit 0 (1,557 passed, 3
+  skipped; doc snippets 221; api coverage 0 problems; step locations 20); `pnpm docs:build` 0.

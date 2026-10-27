@@ -111,6 +111,14 @@ What the definition cannot see:
   definition while the class is still being built: the fields below it and the constructor body have not run yet, so
   the definition reads them as `undefined`. A getter resolves when it is read and is always safe:
   `get submit() { return this.getNestedLocator("main.form@login.button@login"); }`.
+- **What it would have to `await`.** `defineLocators()` registers synchronously, as every registry method does. A
+  definition that returns a Promise, as an `async` one does, would be checked before the rest of it ran, so it fails the
+  page object, as any mistake in the definition does. Read what it needs in the fixture, where `await` works, and pass
+  it to the constructor.
+
+```text
+LoginPage: defineLocators() must register its locators synchronously; it returned a Promise. Read what it needs in the constructor or a fixture, and pass it in.
+```
 
 :::note
 A subclass constructor that throws after `super(…)` leaves an object nobody receives, but the definition that

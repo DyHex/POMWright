@@ -257,10 +257,12 @@ Thrown by the constructor. A string `baseUrl` is an origin with a scheme and not
 LoginPage: defineLocators() failed: A locator schema with the path "main" already exists. …
 LoginPage: Locator registry verification failed for 1 of 5 paths:
   "main.form@login": No locator schema registered for path "main.form@login.heading".
+LoginPage: defineLocators() must register its locators synchronously; it returned a Promise. Read what it needs in the constructor or a fixture, and pass it in.
 ```
 
 An error from `defineLocators()`, or from the check of every path after it, labelled with the page object and with
-the original as `cause`. It fails the fixture that created the page object, before the test body, with the line that
+the original as `cause`; the last, without a `cause`, when `defineLocators()` returns a Promise, as an `async` one does
+(read what it needs in the fixture and pass it to the constructor). It fails the fixture that created the page object, before the test body, with the line that
 constructed the page object in its stack, and every later locator call on the page object throws it again. Fix the
 message after the label. See [page objects](/POMWright/docs/page-objects/#how-a-mistake-is-reported).
 
