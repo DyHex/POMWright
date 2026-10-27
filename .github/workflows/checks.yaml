@@ -200,8 +200,8 @@ jobs:
         run: bash scripts/consumer-check.sh --node-floor "$RUNNER_TEMP/package/pomwright-test-build.tgz"
 
   # The documentation: its TypeScript examples compiled and the API reference checked against the packed package, as
-  # the harness's type check does, then the site built, which fails on a link or an anchor that does not exist.
-  # pages.yaml deploys the same build.
+  # the harness's type check does, then the site built, which fails on a link or an anchor that does not exist, and every
+  # diagram rendered. pages.yaml deploys the same build.
   site:
     name: Documentation and site
     needs: package
@@ -238,3 +238,9 @@ jobs:
         run: |
           pnpm -C website install --frozen-lockfile
           pnpm -C website build
+      # Diagrams render in the browser, so the build cannot catch one that fails: each is opened in Chromium, light and
+      # dark (scripts/check-diagrams.mjs, which pnpm docs:diagrams runs by hand)
+      - name: Render every diagram
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          node scripts/check-diagrams.mjs

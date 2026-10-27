@@ -33,14 +33,17 @@ harness's type check runs the first two as well.
 
 ## Building and publishing
 
-`website/` is a pnpm project of its own, so Astro and Starlight stay out of the library's dependencies. Three scripts
-of the root `package.json` install it and run it: `pnpm docs:dev` serves the pages at
+`website/` is a pnpm project of its own, so Astro and Starlight stay out of the library's dependencies. Scripts of the
+root `package.json` install it and run it: `pnpm docs:dev` serves the pages at
 `http://localhost:4391/POMWright/` and reloads on every edit, but does not check links; `pnpm docs:build` writes
 `website/dist` and checks every link; `pnpm docs:preview` builds and serves that build at
 `http://localhost:4392/POMWright/`, as it will be deployed. The site's configuration is
 `website/astro.config.mjs`; the three sections and their sidebars are `website/sidebar.mjs`, shown as tabs beside the
 title by a component of its own; an Expressive Code plugin hides an example's compile-only prelude; Mermaid diagrams
-render in the browser, so the build does not catch a syntax error in one: open the page.
+render in the browser, so the build does not catch a syntax error in one. `scripts/check-diagrams.mjs` does: it serves
+the built site, opens every page with a diagram in Chromium, in the light and the dark scheme, and fails on a diagram
+without an SVG, Mermaid's error diagram, or an error the page logs. `pnpm docs:diagrams` builds the site and runs it; the
+`site` job of CI runs it after the build. How a diagram looks is still checked by eye.
 
 `.github/workflows/pages.yaml` builds the site the same way and deploys it to GitHub Pages, after `CI` succeeds on a
 push to `main`, from the commit that run tested, so the site follows `main` and never shows a commit whose checks

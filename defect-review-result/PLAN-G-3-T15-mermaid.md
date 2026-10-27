@@ -73,4 +73,22 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+- `website/`: `mermaid` 12.2.0 and `astro-mermaid` 2.2.0 (exact; its peer range is `^10.0.0 || ^11.0.0 || ^12.0.0`).
+- `scripts/check-diagrams.mjs`: serves `website/dist` under `/POMWright/` with `node:http` on a free port; finds the pages
+  whose built HTML holds `<pre class="mermaid"` (13 pages); Chromium from the root's `@playwright/test`; for each page,
+  light and dark, waits up to 15 s until every block holds an `svg` or Mermaid's error text, then fails on a block
+  without an SVG, with `aria-roledescription="error"` or "Syntax error"/"Parse error", or on an error the page logged;
+  fails when it finds no page with a diagram. Biome's `useOptionalChain` warning on the 404 branch was resolved by
+  restructuring it (`inSite`).
+- Result on Mermaid 12: "diagrams: 17 on 13 pages, light and dark, 0 problems"; no diagram needed a change. A planted
+  broken diagram (an unclosed node in the built `docs/frames/index.html`) fails on both schemes ("shows Mermaid's
+  error", plus astro-mermaid's logged parse error), exit 1; the site was rebuilt after.
+- Root `package.json`: `docs:diagrams` (`pnpm docs:build && node scripts/check-diagrams.mjs`). `checks.yaml`, the `site`
+  job: *Render every diagram* after the build (`pnpm exec playwright install --with-deps chromium`, then the script).
+- Docs: AGENTS.md §2 (the `site` job, the script), §3 (`docs:diagrams`), §9 (the render check; how a diagram looks still
+  by eye); *Internal → Documentation* and *Internal → Tests and checks*.
+- Checks: `pnpm lint` 0 (163 files); actionlint 0; `pnpm test:unit` 782 passed; `pnpm pack-test --reporter=line` exit 0
+  (1,509 passed, 3 skipped; doc snippets 215; api coverage 0 problems; step locations 7); `pnpm docs:diagrams` exit 0.
+- The maintainer's own look at every diagram stays before the merge (decision 1).

@@ -53,7 +53,8 @@
 		"test": "pnpm test:unit && pnpm pack-test",
 		"docs:dev": "pnpm -C website install --frozen-lockfile && pnpm -C website dev",
 		"docs:build": "pnpm -C website install --frozen-lockfile && pnpm -C website build",
-		"docs:preview": "pnpm docs:build && pnpm -C website preview"
+		"docs:preview": "pnpm docs:build && pnpm -C website preview",
+		"docs:diagrams": "pnpm docs:build && node scripts/check-diagrams.mjs"
 	},
 	"keywords": [
 		"Playwright",

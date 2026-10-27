@@ -64,7 +64,8 @@ untested merge.
   CommonJS and ESM, `bundler`), attw, Playwright's runner in a CommonJS and a `"type": "module"` project, and TypeScript
   5.0 to the latest release in both decorator modes; then, on Node 20, `import` and `require` sharing one copy.
 - **site**: that tarball installed into `test/`, the documentation's examples compiled, the API reference and the doc
-  comments checked, and the site built, which fails on a link or an anchor that does not exist.
+  comments checked, the site built, which fails on a link or an anchor that does not exist, and every diagram rendered
+  in Chromium, light and dark.
 - **build**: the gate job, the check `main` requires.
 
 Publishing waits for `CI` on `main`, so nothing is published past a red run, and `pages.yaml` deploys the site after
