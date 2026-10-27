@@ -151,3 +151,22 @@ test("options read through a prototype, a class's getter or an inherited default
 	add("button@byPatch").getByRole("button", { name: "Save" });
 	await expect(getLocatorSchema("button@byPatch").update().getByRole(new ExactPatch()).getLocator()).toHaveCount(1);
 });
+
+test("own options that are not enumerable match what Playwright matches, through add and a query's update", async ({
+	page,
+}) => {
+	await page.setContent("<button>Save</button><button>Save draft</button><button>Cancel</button>");
+	type Paths = "button@byHiddenName" | "button@byHiddenPatch";
+	const { add, getLocator, getLocatorSchema } = createRegistryWithAccessors<Paths>(page);
+
+	const hiddenName = {};
+	Object.defineProperty(hiddenName, "name", { value: "Save", enumerable: false });
+	add("button@byHiddenName").getByRole("button", hiddenName);
+	await expect(page.getByRole("button", hiddenName)).toHaveCount(2);
+	await expect(getLocator("button@byHiddenName")).toHaveCount(2);
+
+	const hiddenExact = {};
+	Object.defineProperty(hiddenExact, "exact", { value: true, enumerable: false });
+	add("button@byHiddenPatch").getByRole("button", { name: "Save" });
+	await expect(getLocatorSchema("button@byHiddenPatch").update().getByRole(hiddenExact).getLocator()).toHaveCount(1);
+});

@@ -58,4 +58,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27. As planned.
+
+- `readFields`: own names from `Object.getOwnPropertyNames`; an own non-enumerable value or getter is read by property
+  access, an own non-enumerable method left out; the fast path holds for a plain object whose own names are all
+  enumerable. Doc comment: "own properties, enumerable or not".
+- Tests: unit (`utils.test.ts`), an own non-enumerable value and getter through `copyFields`, an own non-enumerable method
+  left out, a non-enumerable patch through `mergeOptions`; DOM spec in `add.get.clone.spec.ts` (packed package, three
+  browsers): a non-enumerable `name` through `add` matches Playwright's own `getByRole` (2 buttons), and a
+  non-enumerable `exact` through a query's `update` narrows to 1.
+- Docs: *Registering locators* (every property Playwright reads, an own non-enumerable one included); AGENTS.md §5
+  (`readFields`: own properties, enumerable or not). The pending `options-read-like-playwright.md` amended (the
+  non-enumerable case; "own enumerable properties" in its *Before*).
+- Checks: `pnpm lint` 0; `pnpm test:unit` 820 passed; `pnpm pack-test --reporter=line` exit 0 (1,521 passed, 3
+  skipped; doc snippets 217; api coverage 0 problems; step locations 7); `pnpm docs:build` 0.

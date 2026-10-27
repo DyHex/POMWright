@@ -592,6 +592,18 @@ describe("copyValue and copyFields", () => {
 		}
 		expect(mergeOptions({ name: "Save", exact: true }, new Patch() as object)).toEqual({ name: "Cancel", exact: true });
 	});
+
+	it("reads own properties that are not enumerable, a value and a getter, and leaves out an own method", () => {
+		const options = { exact: true };
+		Object.defineProperty(options, "name", { value: "Save", enumerable: false });
+		Object.defineProperty(options, "level", { get: () => 2, enumerable: false });
+		Object.defineProperty(options, "describe", { value: () => "a method", enumerable: false });
+		expect(copyFields(options)).toEqual({ exact: true, name: "Save", level: 2 });
+
+		const patch = {};
+		Object.defineProperty(patch, "name", { value: "Cancel", enumerable: false });
+		expect(mergeOptions({ name: "Save", exact: true }, patch)).toEqual({ name: "Cancel", exact: true });
+	});
 });
 
 describe("cloneLocatorStrategyDefinition", () => {

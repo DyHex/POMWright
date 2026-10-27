@@ -191,17 +191,29 @@ export const copyValue = <Value>(value: Value): Value =>
 
 /**
  * The entries of an options, patch or filter object as Playwright reads them, by property access: the object's own
- * enumerable properties, then the properties of its prototypes up to `Object.prototype`, such as a class's getters or
- * an inherited default. Methods found on a prototype are left out.
+ * properties, enumerable or not, then the properties of its prototypes up to `Object.prototype`, such as a class's
+ * getters or an inherited default. Methods are left out, except an own enumerable one, which `Object.entries` keeps.
  */
 export const readFields = (fields: object): [string, unknown][] => {
 	const entries: [string, unknown][] = Object.entries(fields);
 	let prototype: object | null = Object.getPrototypeOf(fields);
-	// a plain object, the common case, has nothing more to read
-	if (prototype === null || prototype === Object.prototype) {
+	const ownNames = Object.getOwnPropertyNames(fields);
+	// a plain object whose own properties are all enumerable, the common case, has nothing more to read
+	if ((prototype === null || prototype === Object.prototype) && ownNames.length === entries.length) {
 		return entries;
 	}
 	const seen = new Set(entries.map(([key]) => key));
+	// own properties that are not enumerable (Object.defineProperty), which Playwright reads by property access too
+	for (const name of ownNames) {
+		if (seen.has(name)) {
+			continue;
+		}
+		seen.add(name);
+		const value: unknown = (fields as Record<string, unknown>)[name];
+		if (typeof value !== "function") {
+			entries.push([name, value]);
+		}
+	}
 	for (; prototype !== null && prototype !== Object.prototype; prototype = Object.getPrototypeOf(prototype)) {
 		for (const name of Object.getOwnPropertyNames(prototype)) {
 			if (seen.has(name)) {

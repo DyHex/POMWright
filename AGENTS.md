@@ -193,8 +193,8 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   terminal-only `has:` path references. Builders are synchronous. There are no thenables anywhere in `src`; do not
   add any.
 - A registered locator cannot change after registration: builders store copies of the options and filter objects
-  callers pass, read as Playwright reads them (`readFields`: own properties, then those of each prototype up to
-  `Object.prototype`, methods left out), and of every value in them, a RegExp included (`copyValue`: `RegExp.prototype.compile()` rewrites one
+  callers pass, read as Playwright reads them (`readFields`: own properties, enumerable or not, then those of each
+  prototype up to `Object.prototype`, methods left out), and of every value in them, a RegExp included (`copyValue`: `RegExp.prototype.compile()` rewrites one
   in place; a `Locator` is kept, since its methods return new ones), the registration builder keeps its own copy of
   the definition it re-registers from, and every read (`getLocator`, `getNestedLocator`, `getLocatorSchema`, `verify`,
   `has` paths) works on a clone of the record; each `getLocatorSchema` call is a new, independent clone. A

@@ -54,8 +54,8 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 7 | [Sub-path types per member of the path union; the required type argument; generic bases](PLAN-C-1-sub-path-types.md) | 20 | patch | | done | `49454c6` |
 | 8 | [Reuse by path: the self-reuse check for a single literal only](PLAN-B-4-reuse-by-path-types.md) | 21 | patch | | done | `ff6495e` |
 | 9 | [Path rules as pattern checks reporting every rule; a locator method that throws changes nothing](PLAN-B-3-B-2-path-rules-and-persist.md) | 22, 27 | patch | | done | `2d2c504`, `f46b982` |
-| 10 | [An ended registration's hint for `locator()` options and for queries](PLAN-B-5-C-2-ended-registration.md) | 25 | patch | | done | (filled by the next commit) |
-| 11 | [Own non-enumerable options are read](PLAN-B-1-C-5-own-non-enumerable.md) | 15 | patch | | planned | |
+| 10 | [An ended registration's hint for `locator()` options and for queries](PLAN-B-5-C-2-ended-registration.md) | 25 | patch | | done | `890dbd8` |
+| 11 | [Own non-enumerable options are read](PLAN-B-1-C-5-own-non-enumerable.md) | 15 | patch | | done | (filled by the next commit) |
 | 12 | [A query's `describe()` on an any-frame terminal; a kept query's sub-path message](PLAN-C-6-C-7-query-checks.md) | 28, 29 | patch | | planned | |
 | 13 | [`AddAccessor` as an interface, `ReusableLocatorFactory`; every public member emits](PLAN-F-2-emit-every-member.md) | 24 | patch | | planned | |
 | 14 | [`@step` on generic methods](PLAN-E-5-generic-step.md) | 11 | patch | | planned | |
@@ -106,7 +106,7 @@ in plan 41 (decision 2, gate 3).
 | --- | --- | --- | --- |
 | `batch-navigation-message.md` | 20 | every call checked before and after, the keys done and in flight, the final message | planned |
 | `boxed-step-location.md` | 16 | nested boxed steps and the navigation and storage helpers | planned |
-| `options-read-like-playwright.md` | 11 | own non-enumerable properties | planned |
+| `options-read-like-playwright.md` | 11 | own non-enumerable properties | done |
 | `ended-registration-message.md` | 10 | `locator()`'s options and queries | done |
 | `sandboxed-document-message.md` | 22 | the message names the error page too | planned |
 | `storage-string-key-types.md` | 23 | patterns and branded keys, with the migration | planned |
