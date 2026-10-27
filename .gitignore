@@ -53,6 +53,9 @@ test/playwright/.cache/
 # The documentation's TypeScript examples, extracted and compiled by scripts/check-doc-snippets.mjs
 test/.doc-snippets/
 
+# @step's legacy decorators as tsc emits them (test/tsconfig.legacyDecorators.emit.json), run by test/step-locations
+test/.legacy-decorators/
+
 # Astro's generated types of the documentation site (website/dist is ignored by the dist rule)
 website/.astro/
 

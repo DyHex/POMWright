@@ -53,7 +53,7 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
 | `biome.json`, `tsconfig.json`, `.editorconfig` | Lint and format, strict TypeScript, tabs for code and two spaces for YAML and Markdown. | yes |
 | `.vscode/` | Contributor editor settings: `extensions.json` recommends biome's extension, `settings.json` formats and fixes with it on save. | yes |
 | `pnpm-workspace.yaml` | pnpm settings for the root: `allowBuilds`, the dependencies whose install scripts may run (section 3). It lists no packages: `test/` and `website/` stay projects of their own. | yes |
-| `dist/`, `*.tgz`, `.pack/`, `node_modules/`, `.pnpm-store/`, `test/.doc-snippets/`, `website/dist/`, `website/.astro/` | Build and install artefacts, the snippet check's projects and the site's build and generated types, gitignored. | no |
+| `dist/`, `*.tgz`, `.pack/`, `node_modules/`, `.pnpm-store/`, `test/.doc-snippets/`, `test/.legacy-decorators/`, `website/dist/`, `website/.astro/` | Build and install artefacts, the snippet check's projects, `@step`'s legacy decorators as `tsc` emits them, and the site's build and generated types, gitignored. | no |
 
 ## 3. Toolchain and commands
 
@@ -90,9 +90,11 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   `tsc -p test/tsconfig.declarations.json` (`declaration: true`, `noEmit`), the declaration emit of
   `tests/packaging/publicTypes.emit.ts`; then `tsc -p test/tsconfig.legacyDecorators.json`, `@step` under
   `experimentalDecorators` (`tests/packaging/stepLegacyDecorators.typecheck.ts`, also compiled under the standard
-  decorators by the first `tsc`); then `scripts/check-doc-snippets.mjs`, every `ts` block of
-  `website/src/content/docs` against the installed package, and `scripts/check-api-coverage.mjs`, the API reference and
-  the doc comments against the installed declarations (section 9). `pack-test.sh` runs all five, and after the harness
+  decorators by the first `tsc`); then `tsc -p test/tsconfig.legacyDecorators.emit.json`, which emits
+  `step-locations/legacy/legacyWidget.ts` with `experimentalDecorators`, as CommonJS, into `test/.legacy-decorators/` for
+  the step-location check; then `scripts/check-doc-snippets.mjs`, every `ts` block of `website/src/content/docs` against
+  the installed package, and `scripts/check-api-coverage.mjs`, the API reference and the doc comments against the
+  installed declarations (section 9). `pack-test.sh` runs all six, and after the harness
   `playwright test -c playwright.steps.config.ts` (section 4).
 - `pnpm pack:version <version>` (`scripts/pack-version.sh`, run by hand only) builds and packs the package with the
   given semver version in the packed `package.json` only, as `pomwright-<version>.tgz` at the root (gitignored), for
@@ -158,8 +160,10 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   package's exact file list; `publicTypes.typecheck.ts` and `publicTypes.emit.ts`, compile-only). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through
   `playwright.bench.config.ts`, never by `pack-test`. `testApp/urlForms.spec.ts` sweeps the printable ASCII
   characters through the URL each browser reports, with the one known difference (Chromium's `|` in a path) listed.
-  `test/step-locations/` is the step-location check: its spec marks each probed call with `// LOCATION <id>`, and its
-  reporter fails the run when a step or an error with that id is reported on another line; it needs no browser and
+  `test/step-locations/` is the step-location check: its specs mark each probed call with `// LOCATION <id>` (a step
+  titled by its class and method is marked with that title), and its reporter fails the run when a step or an error
+  with that id is reported on another line, or a marked line is never reported; `legacyDecorators.spec.ts` runs `@step`'s
+  legacy decorator calls as `tsc` emits them (`pnpm typecheck` writes them; the spec fails clearly without); it needs no browser and
   runs from `test/playwright.steps.config.ts`, which `pack-test.sh` runs after the harness, so no `--reporter` given to
   the harness can switch it off. `testApp/sessionStorageOverlay.spec.ts` runs with Playwright's step overlay
   (`video: { show: { test } }`), which delays a step's body. 57 spec files, about 8,700 lines. One spec file per DSL method,

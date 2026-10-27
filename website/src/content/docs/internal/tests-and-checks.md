@@ -39,9 +39,14 @@ its own so that no `--reporter` given to the harness can switch it off.
 2. The declaration emit of `publicTypes.emit.ts` with `declaration: true`.
 3. `@step` under `experimentalDecorators` (`tsconfig.legacyDecorators.json`): the same probe compiles under the
    standard decorators in step 1.
-4. `scripts/check-doc-snippets.mjs`: every TypeScript example of the documentation, compiled against the installed
+4. `@step`'s legacy decorator calls as `tsc` writes them (`tsconfig.legacyDecorators.emit.json`): a small decorated
+   module, emitted as CommonJS into `test/.legacy-decorators/`, which the step-location check runs (see
+   [call sites](/POMWright/internal/call-sites/#steps-at-the-tests-line)). Decorated code compiled by `tsc` with
+   `experimentalDecorators`, such as a page-object package, makes these calls; a unit test with a hand-made descriptor
+   cannot show that they run.
+5. `scripts/check-doc-snippets.mjs`: every TypeScript example of the documentation, compiled against the installed
    package (see [documentation](/POMWright/internal/documentation/)).
-5. `scripts/check-api-coverage.mjs`: every export of the installed declarations has an API page or section, every
+6. `scripts/check-api-coverage.mjs`: every export of the installed declarations has an API page or section, every
    member a heading on it, every export and member a doc comment with a summary and its parameters, every method and
    class property a `@see` to its heading, and every link to the site a page and heading that exist.
 

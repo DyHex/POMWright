@@ -107,3 +107,29 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   step); `api/errors.md`, *`@step`*; AGENTS.md §5's `@step` bullet. Changeset `step-promise-at-runtime.md`.
 - Checks: `pnpm lint` 0; `pnpm test:unit` 854 passed; `pnpm pack-test --reporter=line` exit 0 (1,560 passed, 3
   skipped; doc snippets 221; api coverage 0 problems; step locations 20); `pnpm docs:build` 0.
+
+**Step 2 (decision 57).**
+
+- A sibling config, `test/tsconfig.legacyDecorators.emit.json`: `experimentalDecorators`, `module`/`moduleResolution`
+  `nodenext` (CommonJS output, since `test/` is not `"type": "module"`), `verbatimModuleSyntax: false`, emitting
+  `test/step-locations/legacy/legacyWidget.ts` (bare, called, boxed, titled and boxed, static, a method for the detached
+  call, a boxed method that throws, a method returning a plain value behind `@ts-expect-error`) into
+  `test/.legacy-decorators/`; the typecheck probe's own config stays `noEmit`. `pnpm typecheck` and `pack-test.sh` run it
+  after `tsconfig.legacyDecorators.json`, before the step-location run. `.gitignore` and `biome.json` exclude the folder
+  (biome lists `test/.doc-snippets` the same way; tsc's default include skips dot folders).
+- `test/step-locations/legacyDecorators.spec.ts` requires the emitted module (a missing emit throws: checked, "…/legacyWidget.js
+  is missing: pnpm typecheck emits it (tsc -p test/tsconfig.legacyDecorators.emit.json)") and marks each call:
+  bare, called, boxed, static and detached steps are titled by class and method (`LegacyWidget.bare`,
+  `Anonymous.detached`), so `locationReporter.ts` now also takes a marker equal to a step's title (marker ids may hold
+  dots); the plain-value method rejects with step 1's `TypeError` and its step is at the calling line; the throwing
+  boxed method's step and error at the calling line. 29 locations checked. One first-draft line put the call and its
+  `await` on two lines, and the unboxed step was reported at the `await` (Playwright places an unboxed step where the
+  caller waits); the spec keeps them on one line, through a small `rejection()` helper.
+- Docs: AGENTS.md §2 (the gitignored folder), §3 (what `pnpm typecheck` emits; `pack-test.sh` runs six commands), §4
+  (the legacy spec, title markers, the never-reported rule); *Internal → Tests and checks*, the type checks list (the
+  emit as step 4); *Internal → Call sites*, what the step-location check covers.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 854 passed; `pnpm pack-test --reporter=line` from an empty
+  `test/.legacy-decorators/`, exit 0 (1,560 passed, 3 skipped; 11 step-location probe tests, 29 locations; doc snippets
+  221; api coverage 0 problems); `pnpm docs:build` 0.
+- **Beyond the plan, reported after it:** the reporter's title markers (bare `@step` titles carry no `LOCATION` id) and,
+  in step 1, the new `src/helpers/thenable.ts`.

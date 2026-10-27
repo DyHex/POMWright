@@ -35,7 +35,7 @@ export default class LocationReporter implements Reporter {
 			readFileSync(file, "utf8")
 				.split("\n")
 				.forEach((line, index) => {
-					const match = /\/\/ LOCATION ([\w-]+)$/.exec(line.trimEnd());
+					const match = /\/\/ LOCATION ([\w.-]+)$/.exec(line.trimEnd());
 					if (match?.[1] !== undefined) {
 						lines?.set(match[1], index + 1);
 					}
@@ -60,7 +60,13 @@ export default class LocationReporter implements Reporter {
 	}
 
 	onStepEnd(test: TestCase, _result: TestResult, step: TestStep): void {
-		const id = step.category === "test.step" ? ID.exec(step.title)?.[1] : undefined;
+		if (step.category !== "test.step") {
+			return;
+		}
+		// a step titled by its class and method (`@step` without a title) is marked with that title
+		const id =
+			ID.exec(step.title)?.[1] ??
+			(this.markerLine(test.location.file, step.title) === undefined ? undefined : step.title);
 		if (id !== undefined) {
 			this.check("step", test, id, step.location);
 		}

@@ -63,7 +63,9 @@ caller and `test.step`:
 `// LOCATION <id>`, and a reporter fails the run when a step or an error with that id is reported on another line, or
 when a marked line is never reported. It covers `@step` with and without `box`, from a test and from another method, a
 boxed step that throws, `goto` and `set`, and the same boxed steps inside a boxed `@step` and inside a test's own boxed
-step, with an error in a nested boxed step reported at the outermost boxed call. It runs without a browser, from `test/playwright.steps.config.ts`, which `pack-test.sh` runs after the harness,
+step, with an error in a nested boxed step reported at the outermost boxed call; and `@step`'s legacy decorator calls as
+`tsc` emits them with `experimentalDecorators`. A step that `@step` titles by its class and method is marked with that
+title. It runs without a browser, from `test/playwright.steps.config.ts`, which `pack-test.sh` runs after the harness,
 so a `--reporter` given to the harness cannot switch it off; CI runs it at the Playwright pin and at the latest 1.x.
 The unit tests in `src/helpers/stepLocations.test.ts` check the option and the titles.
 
