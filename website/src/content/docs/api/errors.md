@@ -360,7 +360,8 @@ See [what `seed` cannot do](/POMWright/docs/seeding-session-storage/#what-seed-c
 @step decorates methods that return a Promise: make the method async
 ```
 
-A compile error, on a method that does not return a Promise. Make the method `async`.
+A compile error, on a method that does not return a Promise. Make the method `async`. From JavaScript, the same text
+is a `TypeError` thrown in the step, when the method returns something that is not a Promise.
 
 ```text
 @step decorator can only be applied to methods.

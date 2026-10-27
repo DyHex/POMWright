@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { atCallSite, captureCallSite } from "./helpers/callSite";
 import { createNavigation, type NavigationFor, type NavigationOptions } from "./helpers/navigation";
 import { SessionStorage, type SessionStorageSchema } from "./helpers/sessionStorage";
+import { isThenable } from "./helpers/thenable";
 import { assertBaseUrl, assertUrlPart, assertUrlPath, composeFullUrl, type UrlMatcher } from "./helpers/url";
 import {
 	type AddAccessor,
@@ -104,12 +105,6 @@ export type PageObjectOptions<Options extends PageObjectTypeOptions = { baseUrlT
 	 */
 	locators?: LocatorRegistryOptions;
 };
-
-/** A value `await` would wait for: an object or a function with a `then` method. */
-const isThenable = (value: unknown): value is PromiseLike<unknown> =>
-	(typeof value === "object" || typeof value === "function") &&
-	value !== null &&
-	typeof (value as { then?: unknown }).then === "function";
 
 /**
  * The base class of a page object: binds a Playwright `Page` to a locator registry, a navigation helper built from the

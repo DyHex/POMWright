@@ -1,13 +1,18 @@
 import { test } from "@playwright/test";
 import { callerLocation } from "./callSite";
+import { isThenable } from "./thenable";
 
 type AnyMethod<This = unknown, Args extends unknown[] = unknown[], Return = unknown> = (
 	this: This,
 	...args: Args
 ) => Return;
 
-/** What TypeScript reports for a method that does not return a Promise (the parameter type of the last overloads). */
-type StepRequiresPromise = "@step decorates methods that return a Promise: make the method async";
+/**
+ * What TypeScript reports for a method that does not return a Promise (the parameter type of the last overloads), and
+ * what the wrapper throws when such a method reaches it anyway, from JavaScript.
+ */
+const STEP_REQUIRES_PROMISE = "@step decorates methods that return a Promise: make the method async";
+type StepRequiresPromise = typeof STEP_REQUIRES_PROMISE;
 
 /**
  * A method `@step` can wrap: `test.step` always returns a Promise, so the method must return one too. The decorator
@@ -108,15 +113,23 @@ const createWrappedMethod = <T extends AnyMethod>(
 		const className = rawClassName && rawClassName !== "Object" ? rawClassName : "Anonymous";
 		return `${className}.${String(methodName)}`;
 	};
+	// the step's body: from JavaScript a method that returns a plain value gets here, and test.step would resolve it
+	const run = (self: ThisParameterType<T>, methodArgs: Parameters<T>) => {
+		const result: unknown = original.apply(self, methodArgs);
+		if (!isThenable(result)) {
+			throw new TypeError(STEP_REQUIRES_PROMISE);
+		}
+		return result;
+	};
 	if (options?.box) {
 		const boxed = async function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
 			const location = options.location ?? callerLocation(boxed);
-			return await test.step(titleFor(this), () => original.apply(this, methodArgs), { ...options, location });
+			return await test.step(titleFor(this), () => run(this, methodArgs), { ...options, location });
 		};
 		return boxed as T;
 	}
 	return function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
-		return test.step(titleFor(this), () => original.apply(this, methodArgs), options) as ReturnType<T>;
+		return test.step(titleFor(this), () => run(this, methodArgs), options) as ReturnType<T>;
 	} as T;
 };
 
@@ -163,7 +176,9 @@ const createStepDecorator =
  * @param propertyKey With `experimentalDecorators` and without parentheses: the method's name.
  * @param descriptor With `experimentalDecorators` and without parentheses: the method's property descriptor.
  * @returns The decorator, a `StepDecorator`.
- * @throws From JavaScript, on something that is not a method: `@step decorator can only be applied to methods.`
+ * @throws From JavaScript, on something that is not a method: `@step decorator can only be applied to methods.` From
+ * JavaScript, when the decorated method returns something that is not a Promise, its call rejects with
+ * `TypeError: @step decorates methods that return a Promise: make the method async`, the compile error's text.
  *
  * @see https://dyhex.github.io/POMWright/api/step/
  */

@@ -70,6 +70,25 @@ describe("@step, stage-3 decorators", () => {
 		expect(recorded.map((entry) => entry.title)).toEqual(["Account.bare"]);
 	});
 
+	it("rejects, in the step, a method that returns a plain value, boxed or not, with the compile error's text", async () => {
+		const message = "@step decorates methods that return a Promise: make the method async";
+		for (const decorator of [step(), step({ box: true })]) {
+			const plain = stage3(decorator, () => 42, context("total", false));
+			const error = await (plain.call(new Account()) as Promise<unknown>).catch((thrown: unknown) => thrown);
+			expect(error).toBeInstanceOf(TypeError);
+			expect((error as TypeError).message).toBe(message);
+		}
+		// the step opened, and the error is its body's
+		expect(recorded.map((entry) => entry.title)).toEqual(["Account.total", "Account.total"]);
+	});
+
+	it("accepts a method that returns a thenable that is not a Promise", async () => {
+		// biome-ignore lint/suspicious/noThenProperty: the test needs a thenable that is not a Promise
+		const thenable = { then: (resolve: (value: number) => void) => resolve(7) };
+		const wrapped = stage3(step(), () => thenable, context("later", false));
+		await expect(wrapped.call(new Account())).resolves.toBe(7);
+	});
+
 	it("rejects anything that is not a method", () => {
 		for (const kind of ["getter", "setter", "field", "accessor"]) {
 			expect(() => stage3(step(), async () => 1, context("value", false, kind)), kind).toThrowError(
@@ -101,6 +120,13 @@ describe("@step, legacy decorators (experimentalDecorators)", () => {
 			"Account.create",
 			"Account.createBare",
 		]);
+	});
+
+	it("rejects, in the step, a method that returns a plain value", async () => {
+		const plain = legacy(step(), Account.prototype, "total", () => 42);
+		const error = await (plain.call(new Account()) as Promise<unknown>).catch((thrown: unknown) => thrown);
+		expect(error).toBeInstanceOf(TypeError);
+		expect((error as TypeError).message).toBe("@step decorates methods that return a Promise: make the method async");
 	});
 
 	it("rejects a descriptor without a function", () => {

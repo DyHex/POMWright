@@ -89,4 +89,21 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+**Step 1 (decision 40).**
+
+- `stepDecorator.ts`: one constant, `STEP_REQUIRES_PROMISE`, whose type is the overloads' `StepRequiresPromise`; the
+  wrapper's step body (`run`, shared by the boxed and the unboxed wrapper) calls the original and throws
+  `new TypeError(STEP_REQUIRES_PROMISE)` when the result is not thenable. `isThenable` moved from `pageObject.ts` (plan 17)
+  to a new `src/helpers/thenable.ts`, used by both; AGENTS.md §2 lists it (19 runtime files, about 6,700 lines). `step`'s
+  doc comment `@throws` gives the runtime form.
+- Tests: unit (`stepDecorator.test.ts`): a plain value rejects with a `TypeError` and the message, boxed and unboxed,
+  after the step opened; a thenable that is not a Promise is accepted (behind a `biome-ignore` for `noThenProperty`);
+  the legacy form rejects too. Harness (`test/tests/step/step.spec.ts`, packed): a class whose decorations carry
+  `@ts-expect-error` (standing in for JavaScript), unboxed and boxed, rejects with the `TypeError` and the message.
+- Docs: *Principles* ("Every rule about a value is checked at runtime"; the two rules about types, TypeScript's
+  alone); *Test steps*, *Only methods that return a Promise* (from JavaScript, the same text as a `TypeError` in the
+  step); `api/errors.md`, *`@step`*; AGENTS.md §5's `@step` bullet. Changeset `step-promise-at-runtime.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 854 passed; `pnpm pack-test --reporter=line` exit 0 (1,560 passed, 3
+  skipped; doc snippets 221; api coverage 0 problems; step locations 20); `pnpm docs:build` 0.

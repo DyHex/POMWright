@@ -42,9 +42,11 @@ page object and every path at fault. See
 
 ## Check at runtime; types where they cost nothing
 
-Every rule is checked at runtime, so a value from a variable, an environment or JavaScript code is checked like a
-literal. TypeScript adds what it can check for free: paths that are not in the union, misspelt `has` references, a
-`replace()` without its first argument. POMWright does not add a type that would make ordinary code harder to write in
+Every rule about a value is checked at runtime, so a value from a variable, an environment or JavaScript code is
+checked like a literal. TypeScript adds what it can check for free: paths that are not in the union, misspelt `has`
+references, a `replace()` without its first argument. The rules about types themselves are TypeScript's alone, since
+types do not exist at run time: a storage schema's type and its value agree, and `createRegistryWithAccessors` takes
+its paths as a type argument. POMWright does not add a type that would make ordinary code harder to write in
 exchange for an error the runtime reports anyway.
 
 ## No hidden state, one meaning per method

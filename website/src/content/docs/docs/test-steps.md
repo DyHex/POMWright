@@ -68,7 +68,8 @@ export class Checkout {
 
 `test.step` always returns a Promise and runs its body later, so a method that returned a plain value would hand its
 caller a Promise, and its errors would escape the caller's `try`. TypeScript therefore rejects `@step` on such a
-method, and the error names the fix:
+method, and the error names the fix. From JavaScript, where nothing checks the types, the call rejects with the same
+text, as a `TypeError` thrown in the step:
 
 ```ts
 import { step } from "pomwright";
