@@ -173,9 +173,10 @@ AccountPage.SessionStorage.set: the page (about:blank) is on https://login.examp
 
 A helper without an origin, `new SessionStorage(page)`, works on whatever origin the page is on. On a page without an
 origin, before the first navigation, every call fails at once: `Shop.SessionStorage.set: the page has no origin yet
-(about:blank); navigate to the origin first or use seed()`. A document whose own origin is opaque, such as one served
-with `Content-Security-Policy: sandbox` without `allow-same-origin`, has no session storage at all, so every call there
-fails too, saying so.
+(about:blank); navigate to the origin first or use seed()`. A document whose own origin is opaque has no session
+storage at all, so every call there fails too, saying so: a document served with `Content-Security-Policy: sandbox`
+without `allow-same-origin`, or the error page Firefox shows at the origin's URL after a failed navigation. The message
+names both, since nothing a browser guarantees tells them apart.
 
 ## As a fixture
 
@@ -198,7 +199,7 @@ export const test = base.extend<{ storage: SessionStorage<{ user: Codec<User> }>
 | situation | message |
 | --- | --- |
 | a page without an origin | `Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()` |
-| a sandboxed document | `Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)` |
+| a document with an opaque origin | `Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)` |
 | a page on another origin | `AccountPage.SessionStorage.get: the page is on …, not on this page object's origin …` |
 | a value that is not a string, for a key without a codec | `Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)` |
 | a navigation during a call | `Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1); k2 was being written and may have reached the new document` |

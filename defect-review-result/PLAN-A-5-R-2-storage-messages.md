@@ -79,4 +79,26 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+**Step 1 (A-5).**
+
+- `access`: `… the document at <url> cannot use sessionStorage: its origin is opaque (the browser's error page after a
+  failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)`, with a comment
+  that nothing guaranteed tells the two apart; the method's own comment and `set`'s `@throws` say "a document with an
+  opaque origin".
+- Probe (a temporary spec, deleted after the run, three repeats per browser): after `context.setOffline(true)` and a
+  failed `goto` to A from a page on B, a `set` from a helper bound to A, once the error page has committed: Firefox
+  `url=http://localhost:9000/teststorage` and the new message; Chromium `url=chrome-error://chromewebdata/` and
+  `… the page has no origin yet (chrome-error://chromewebdata/); navigate to the origin first or use seed()`; WebKit stays
+  on B and gives the origin message. A first run without waiting for the commit gave the origin message on all three:
+  Chromium and Firefox commit their error page a moment after `goto` rejects, so the spec waits for it
+  (`waitForURL(…, { waitUntil: "commit" })`) on those two.
+- Tests: harness (`sessionStorage.spec.ts`, three browsers), the describe renamed *a document with an opaque origin*:
+  the new case, each browser's message through the `browserName` fixture; the sandboxed case (renamed *a sandboxed
+  document: …*) and the unit test take the new text.
+- Docs: *Session storage* (*Through a page object*, both documents and why the message names both; the *Errors* row,
+  "a document with an opaque origin"); `api/class-sessionstorage.md`, `set()` **Throws**; `api/errors.md`, *Session
+  storage*. `.changeset/sandboxed-document-message.md` amended (the error page, the new text).
+- Checks: `pnpm lint` 0; `pnpm test:unit` 886 passed; `pnpm pack-test --reporter=line` exit 0 (1,596 passed, 3
+  skipped; doc snippets 221; api coverage 0 problems; step locations 29); `pnpm docs:build` 0.

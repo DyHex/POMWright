@@ -293,8 +293,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	}
 
 	/**
-	 * One call into `page.sessionStorage`, its failure labelled; a page without an origin and a sandboxed document are
-	 * explained.
+	 * One call into `page.sessionStorage`, its failure labelled; a page without an origin and a document with an opaque
+	 * origin are explained.
 	 */
 	private async access<T>(method: string, call: () => Promise<T>): Promise<T> {
 		try {
@@ -310,11 +310,13 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 					},
 				);
 			}
-			// the browsers word the refusal differently, so the document's own origin tells a sandboxed document apart
+			// the browsers word the refusal differently, so the document's own origin tells it apart; an error page and a
+			// sandboxed document both have an opaque origin at the origin's URL, and nothing guaranteed tells them apart
 			if (await this.page.evaluate(() => self.origin === "null").catch(() => false)) {
 				throw new Error(
-					`${this.title(method)}: the document at ${url} cannot use sessionStorage: its origin is opaque, as in a ` +
-						"sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)",
+					`${this.title(method)}: the document at ${url} cannot use sessionStorage: its origin is opaque (the ` +
+						"browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: " +
+						"sandbox without allow-same-origin)",
 					{ cause: error },
 				);
 			}
@@ -460,8 +462,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * (`… the codec for "user" returned undefined instead of a string`), when the page is on another origin than the
 	 * helper's, when the page has no origin yet
 	 * (`Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()`),
-	 * when the document is sandboxed, so its origin is opaque
-	 * (`Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque, …`),
+	 * when the document's origin is opaque, as the browser's error page after a failed navigation and a sandboxed
+	 * document have
+	 * (`Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`),
 	 * and when the page leaves the origin during the batch, which is written one key at a time and stops there; the key in
 	 * flight may have reached the new document
 	 * (`Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1); k2 was being written and may have reached the new document`).

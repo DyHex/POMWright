@@ -337,7 +337,7 @@ describe("a refused storage call", () => {
 
 	it("on a sandboxed document says its origin is opaque", async () => {
 		await expect(accessOn("http://localhost:9000/sandboxed", true).access("set", fail)).rejects.toThrow(
-			"Shop.SessionStorage.set: the document at http://localhost:9000/sandboxed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)",
+			"Shop.SessionStorage.set: the document at http://localhost:9000/sandboxed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)",
 		);
 	});
 

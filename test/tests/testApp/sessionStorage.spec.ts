@@ -84,11 +84,41 @@ test.describe("a popup on about:blank, which inherits its opener's origin", () =
 	});
 });
 
-test.describe("a sandboxed document", () => {
-	test("set, get and an on-origin seed say the document's origin is opaque", async ({ page, testStorage }) => {
+test.describe("a document with an opaque origin", () => {
+	test("after a failed navigation to the origin, each browser's page: Firefox's error page is opaque", async ({
+		page,
+		context,
+		browserName,
+		testStorage,
+	}) => {
+		await page.goto(`${B}/testpath`);
+		await context.setOffline(true);
+		await page.goto(`${A}/teststorage`).catch(() => undefined);
+		if (browserName !== "webkit") {
+			// Chromium and Firefox commit an error page; WebKit stays on the page it was on
+			await page.waitForURL((url) => url.href !== `${B}/testpath`, { waitUntil: "commit" });
+		}
+		const outcome = await testStorage.sessionStorage.set("token", "x").then(
+			() => "resolved",
+			(error: Error) => error.message,
+		);
+		await context.setOffline(false);
+		const expected = {
+			firefox: `TestStorage.SessionStorage.set: the document at ${A}/teststorage cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)`,
+			chromium:
+				"TestStorage.SessionStorage.set: the page has no origin yet (chrome-error://chromewebdata/); navigate to the origin first or use seed()",
+			webkit: `TestStorage.SessionStorage.set: the page is on ${B}, not on this page object's origin ${A}; another origin's sessionStorage is reachable only from a document on it. Use the page object for ${B}, or a standalone SessionStorage without an origin`,
+		}[browserName];
+		expect(outcome).toBe(expected);
+	});
+
+	test("a sandboxed document: set, get and an on-origin seed say its origin is opaque", async ({
+		page,
+		testStorage,
+	}) => {
 		await page.goto(`${A}/teststorage/sandboxed`);
 		const opaque = (method: string) =>
-			`TestStorage.SessionStorage.${method}: the document at ${A}/teststorage/sandboxed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)`;
+			`TestStorage.SessionStorage.${method}: the document at ${A}/teststorage/sandboxed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)`;
 		await expect(testStorage.sessionStorage.set("token", "x")).rejects.toThrow(opaque("set"));
 		await expect(testStorage.sessionStorage.get("token")).rejects.toThrow(opaque("get"));
 		await expect(testStorage.sessionStorage.seed({ token: "x" })).rejects.toThrow(opaque("seed"));

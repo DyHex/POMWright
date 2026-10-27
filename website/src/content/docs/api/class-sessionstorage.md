@@ -257,12 +257,13 @@ await storage.set({ token: "abc", locale: "nb" });
 Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)
 Shop.SessionStorage.set: value for "user" could not be encoded
 Shop.SessionStorage.set: the codec for "user" returned undefined instead of a string
-Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)
+Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)
 Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1); k2 was being written and may have reached the new document
 ```
 
 The second when the key's codec throws, with its error as `cause`; the third when it returns something other than a
-string; the fourth on a sandboxed document, whose origin is opaque, as from `get`, `clear` and `seed` there; the fifth
+string; the fourth on a document whose origin is opaque, a sandboxed one or the browser's error page after a failed
+navigation, as from `get`, `clear` and `seed` there; the fifth
 when the page leaves the origin during the batch, naming the keys already written and the one in flight. Any other error from
 Playwright gets the label in front of its message and is the `cause`.
 
