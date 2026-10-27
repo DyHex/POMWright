@@ -93,3 +93,14 @@ Playwright's do, so the chain is checked with `describe("")`). Docs: `api/class-
 **Throws**; `api/errors.md`, *Queries* (the line, and "described"). Changeset `query-describe-any-frame.md`. Checks:
 `pnpm lint` 0; `pnpm test:unit` 822 passed; `pnpm pack-test --reporter=line` exit 0 (1,524 passed, 3 skipped; doc
 snippets 217; api coverage 0 problems; step locations 7); `pnpm docs:build` 0.
+
+**Step 2 (C-7).** `LocatorRegistryInternal.has(path)` (a `Map.has`, with a comment; outside `LocatorRegistry`'s `Pick`,
+and `check-api-coverage.mjs` still reports 0 problems, so no public member was added); `ensureSubPath`'s failure branch
+asks it for a chain segment and picks the message. Messages from the build: never registered, unchanged (`"shell.list"
+is not a valid sub-path of "shell.list.item". It is a segment of that path, but no locator schema is registered for
+it.`); registered later, `… It is a segment of that path, and it was registered after this query was taken; take a new
+query with getLocatorSchema("shell.list.item") to use it.` Unit test (*sub-path errors*): the later form, and a fresh
+query that takes the sub-path (the later segment registered through a `<string>` view, since it is outside the test's
+`ChainPaths`). Docs: `api/errors.md` and `api/class-locatorquerybuilder.md` (*Errors of every method*). Changeset
+`kept-query-sub-path-message.md`. Checks: `pnpm lint` 0; `pnpm test:unit` 824 passed; `pnpm pack-test --reporter=line`
+exit 0 (1,524 passed, 3 skipped; doc snippets 217; api coverage 0 problems; step locations 7); `pnpm docs:build` 0.

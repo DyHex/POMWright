@@ -201,9 +201,11 @@ Thrown at the call by the methods of a [query](/POMWright/api/class-locatorquery
 ```text
 "main.button@save" is not a valid sub-path of "main.list.item".
 "main.form" is not a valid sub-path of "main.form.button@save". It is a segment of that path, but no locator schema is registered for it.
+"shell.list" is not a valid sub-path of "shell.list.item". It is a segment of that path, and it was registered after this query was taken; take a new query with getLocatorSchema("shell.list.item") to use it.
 ```
 
-A `subPath` must be the query's path or one of its registered ancestors.
+A `subPath` must be the query's path or one of its registered ancestors. A query copies the chain when it is taken, so
+an ancestor registered after that is not in it: take a new query.
 
 ```text
 filter() cannot apply to "main.list": it is skipped in this query; call unskip("main.list") first.

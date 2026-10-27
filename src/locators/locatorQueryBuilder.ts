@@ -472,9 +472,12 @@ export class LocatorQueryBuilderInternal<
 		if (definition !== undefined) {
 			return definition;
 		}
-		const reason = this.chain.has(subPath)
-			? " It is a segment of that path, but no locator schema is registered for it."
-			: "";
+		// the query reads its own copy, taken at getLocatorSchema; the registry may have the segment by now
+		const reason = !this.chain.has(subPath)
+			? ""
+			: this.registry.has(subPath)
+				? ` It is a segment of that path, and it was registered after this query was taken; take a new query with getLocatorSchema("${this.path}") to use it.`
+				: " It is a segment of that path, but no locator schema is registered for it.";
 		throw new Error(`"${subPath}" is not a valid sub-path of "${this.path}".${reason}`);
 	}
 

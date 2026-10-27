@@ -373,6 +373,11 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		return record;
 	}
 
+	/** Whether a path has a record now, without copying it: a kept query's error asks, since its own copy is older. */
+	has(path: string): boolean {
+		return this.schemas.has(path as RegistryPath<LocatorSchemaPathType>);
+	}
+
 	getIfExists(
 		path: RegistryPath<LocatorSchemaPathType>,
 	): LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>> | undefined {

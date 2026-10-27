@@ -208,6 +208,22 @@ describe("sub-path errors", () => {
 		expect(message).toBe('"main" is not a valid sub-path of "a.b.c".');
 	});
 
+	it("say when the segment was registered after the query was taken, and how to see it", () => {
+		const registry = createChainRegistry();
+		const query = registry.getLocatorSchema("a.b.c") as unknown as {
+			filter: (path: string, filter: object) => unknown;
+		};
+		// "a.b" is outside ChainPaths: registered through a wide view of the registry, as run-time paths are
+		(registry as unknown as LocatorRegistryInternal<string>).add("a.b").locator("div");
+		expect(() => query.filter("a.b", { hasText: "x" })).toThrowError(
+			'"a.b" is not a valid sub-path of "a.b.c". It is a segment of that path, and it was registered after this query was taken; take a new query with getLocatorSchema("a.b.c") to use it.',
+		);
+		const fresh = registry.getLocatorSchema("a.b.c") as unknown as {
+			filter: (path: string, filter: object) => unknown;
+		};
+		expect(() => fresh.filter("a.b", { hasText: "x" })).not.toThrow();
+	});
+
 	it("are thrown at run time on a registry typed <string>, where every sub-path compiles", () => {
 		const registry = new LocatorRegistryInternal<string>({} as Page);
 		registry.add("main").locator("main");

@@ -383,9 +383,11 @@ update("main.button@save") cannot change the strategy from "role" to "locator"; 
 
 ## Errors of every method
 
-A `subPath` outside the query's chain, or a segment of it without a locator, throws at the call:
+A `subPath` outside the query's chain, or a segment of it without a locator, throws at the call; so does a segment
+registered after the query was taken, since the query reads its own copy of the chain:
 
 ```text
 "main.button@save" is not a valid sub-path of "main.list.item".
 "main.form" is not a valid sub-path of "main.form.button@save". It is a segment of that path, but no locator schema is registered for it.
+"shell.list" is not a valid sub-path of "shell.list.item". It is a segment of that path, and it was registered after this query was taken; take a new query with getLocatorSchema("shell.list.item") to use it.
 ```
