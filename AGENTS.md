@@ -69,7 +69,8 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
 - `pnpm lint` runs `biome check --error-on-warnings .`, so a warning fails it and CI (lint, import order and format check over the whole repository; biome does not
   process `.md`; `test/test-data` and `.pack` are excluded). `pnpm format` (`biome format --write .`) rewrites
   formatting only; import order and lint fixes come from `biome check --write`.
-- `pnpm build` runs `tsup index.ts --format cjs --dts` into `dist/`, then `scripts/write-esm-entry.mjs`.
+- `pnpm build` runs `tsup index.ts --format cjs --dts --clean`, which empties `dist/` first, then
+  `scripts/write-esm-entry.mjs`, so a local pack holds exactly what the source produces, as CI's fresh checkout does.
 - `pnpm test:unit` runs the vitest unit tests for the pure helpers in seconds and type-checks the test files and
   what they import (vitest typecheck mode; `vitest` is pinned exactly because the mode is experimental). `pnpm test`
   runs them and then `pack-test`.
@@ -149,8 +150,8 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   the actions hook, and `callSite/`: errors raised after the consumer's line point at it even in consumer files named
   `pageObject.ts` and `sessionStorage.ts`), `logging/` (the `log` fixture's attachments, read by an auto fixture torn
   down after it), `step/`, `testApp/`, `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
-  published entries, one shared copy, closed deep imports, the manifest; `publicTypes.typecheck.ts` and
-  `publicTypes.emit.ts`, compile-only). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through
+  published entries, one shared copy, closed deep imports, the manifest; `packageFiles.spec.ts`, the installed
+  package's exact file list; `publicTypes.typecheck.ts` and `publicTypes.emit.ts`, compile-only). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through
   `playwright.bench.config.ts`, never by `pack-test`. `testApp/urlForms.spec.ts` sweeps the printable ASCII
   characters through the URL each browser reports, with the one known difference (Chromium's `|` in a path) listed.
   `test/step-locations/` is the step-location check: its spec marks each probed call with `// LOCATION <id>`, and its
@@ -365,13 +366,13 @@ Rules:
   `main` before it is ready to release, the site is ahead of npm only until the Version Packages pull request is
   merged.
 - Pending changesets are the files in `.changeset/` other than `config.json` and `README.md`.
-- Before a release, outside CI, the packaging probes run against the packed tarball in a scratchpad project: the packed
-  file list (`dist/index.js` and `dist/index.d.ts` from tsup, `dist/index.mjs` and `dist/index.d.mts` from
-  `scripts/write-esm-entry.mjs`, nothing else in `dist`); Node 20 and 24 loading `index.js` for `require` and
-  `index.mjs` for `import` with one shared `PageObject`; TypeScript under `node10`, `node16`, `nodenext` and `bundler`
-  resolution; attw (`@arethetypeswrong/cli`, downloaded, never a dependency) reporting no problem; Playwright's runner in
-  a CommonJS and a `"type": "module"` project; and, when `engines` changes, npm's `EBADENGINE` warning on a Node
-  version below the new floor.
+- Before a release, outside CI, the packaging probes run against the packed tarball in a scratchpad project (the packed
+  file list is asserted by the harness, `packaging/packageFiles.spec.ts`: `dist/index.js` and `dist/index.d.ts` from
+  tsup, `dist/index.mjs` and `dist/index.d.mts` from `scripts/write-esm-entry.mjs`, nothing else in `dist`): Node 20 and
+  24 loading `index.js` for `require` and `index.mjs` for `import` with one shared `PageObject`; TypeScript under
+  `node10`, `node16`, `nodenext` and `bundler` resolution; attw (`@arethetypeswrong/cli`, downloaded, never a
+  dependency) reporting no problem; Playwright's runner in a CommonJS and a `"type": "module"` project; and, when
+  `engines` changes, npm's `EBADENGINE` warning on a Node version below the new floor.
 - Work planned for later is tracked as open GitHub issues labelled `backlog` (`gh issue list --label backlog`), not in
   this file: read them before planning a release, and turn a working folder's deferred items into issues before the
   folder is deleted. A breaking item also carries `breaking`.

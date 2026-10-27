@@ -40,7 +40,7 @@
 		"CHANGELOG.md"
 	],
 	"scripts": {
-		"build": "tsup index.ts --format cjs --dts && node scripts/write-esm-entry.mjs",
+		"build": "tsup index.ts --format cjs --dts --clean && node scripts/write-esm-entry.mjs",
 		"release": "pnpm run build && changeset publish",
 		"lint": "biome check --error-on-warnings .",
 		"format": "biome format --write .",

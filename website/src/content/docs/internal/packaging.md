@@ -9,8 +9,8 @@ explains the build, the package's entry points and its declarations. How to inst
 
 ## One build, two entries
 
-`pnpm build` runs tsup on `index.ts`, which writes one CommonJS build, `dist/index.js`, and its declarations,
-`dist/index.d.ts`. Then `scripts/write-esm-entry.mjs` writes the ESM entry: `dist/index.mjs` imports the CommonJS build
+`pnpm build` runs tsup on `index.ts`, which empties `dist/` and writes one CommonJS build, `dist/index.js`, and its
+declarations, `dist/index.d.ts`. Then `scripts/write-esm-entry.mjs` writes the ESM entry: `dist/index.mjs` imports the CommonJS build
 and re-exports each of its names, and `dist/index.d.mts` re-exports its declarations. The names are read from the built
 module, so the ESM entry cannot drift from `index.ts`.
 

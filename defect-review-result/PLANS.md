@@ -45,7 +45,7 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 
 | # | Plan | Decisions | Bump | Stop | Status | Commits |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [Every build from an empty `dist/`; the packed file list asserted](PLAN-G-4-clean-build.md) | 33 | none | | planned | |
+| 1 | [Every build from an empty `dist/`; the packed file list asserted](PLAN-G-4-clean-build.md) | 33 | none | | done | (filled by the next commit) |
 | 2 | [`.editorconfig` for YAML and Markdown; the VS Code snippets file deleted](PLAN-G-9-R-1-repository-hygiene.md) | 34, 35 | none | | planned | |
 | 3 | [CI without the docs-only skip; actionlint in the lint job](PLAN-G-2-G-1-checks-workflow.md) | 31, 32, 8 | none | stop | planned | |
 | 4 | [Release tooling: changesets 3, action v2, Trusted Publishing, the publish and Pages guards, Dependabot](PLAN-G-3-G-10-G-5-G-8-release-workflows.md) | 1, 3, 4, 53 | patch (note) | stop | planned | |

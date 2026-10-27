@@ -61,4 +61,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+- `package.json`'s `build` has `--clean`. Probe 1: a planted `dist/old-chunk.js` is gone after `pnpm build`; `npm pack
+  --dry-run` and `pnpm pack:version 9.9.9-probe` list exactly `CHANGELOG.md`, `LICENSE`, `README.md`, the four `dist/`
+  files and `package.json`. Probe 2: with `--dts` removed, `pack-build.sh` packs no `dist/index.d.ts` and `tsc --noEmit
+  -p test` fails with 1,000 errors (exit 2), as from an empty `dist/`; restored with `pnpm harness:install`.
+- **Unexpected, fixed in this plan:** the installed package's directory also holds `node_modules/.bin/playwright`: pnpm
+  links the peer dependency's bin into the installed package's own `node_modules`. npm never packs a package's
+  `node_modules`, so `packageFiles.spec.ts` leaves that one directory (at the package root) out of its walk, with a
+  comment saying why. A planted `.pack/pomwright/dist/stray.js` fails the spec (`+ "dist/stray.js"`).
+- Checks: `pnpm lint` 0; `pnpm test:unit` 782 passed; `pnpm pack-test --reporter=line` exit 0 (1,509 passed, 3 skipped
+  as before; doc snippets 215 checked; api coverage 0 problems; step locations 7 checked); `pnpm docs:build` exit 0.
