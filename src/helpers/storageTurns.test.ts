@@ -158,7 +158,10 @@ describe("SessionStorage calls for one origin take turns", () => {
 		};
 		const first = storage.set("a", "1");
 		const second = storage.set("b", "2");
-		await first;
+		// the page left while the first call was in flight: it fails too, saying so
+		await expect(first).rejects.toThrow(
+			`Account.SessionStorage.set: the page navigated while set() was writing to ${A}; 0 of 1 key was written; a was being written and may have reached the new document`,
+		);
 		await expect(second).rejects.toThrow(
 			`Account.SessionStorage.set: the page is on ${B}, not on this page object's origin ${A}`,
 		);

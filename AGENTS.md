@@ -292,7 +292,9 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   `clear`, `seed`) takes its turn on a per-page, per-origin chain (`storageTurns.ts`) that it joins synchronously when its
   step starts, so overlapping calls (a `Promise.all`, a missing `await`) end exactly as awaited ones, across every
   helper on the page; a call that waited checks the origin again when its turn starts, and a failing call leaves the
-  pending seed as it was. `seed` decides in its turn whether to write at once (the page was on the origin at the call
+  pending seed as it was. Every storage call (each key of a batch, a single call, each read of `get(keys)`) reads the
+  page's origin before and after it (`page.url()`, no round trip) and fails with the navigation message when it moved,
+  whether or not the call threw, naming the keys done and the one in flight; a call in flight is detected, not prevented. `seed` decides in its turn whether to write at once (the page was on the origin at the call
   and still is) or to register; it reads the page and starts its commit watch at the call, before its step's body,
   which Playwright may delay (the step overlay). Keys are never property names on the way to the page: a `__proto__` key is stored. `seed` throws at
   the call in a browser without the Navigation API (checked once per page) and when the main frame commits on the

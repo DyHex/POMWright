@@ -22,6 +22,8 @@ const navigation = (page: Page) => readJson(page, "navigation");
 const servedBy = (page: Page) => page.locator("#served-by").textContent();
 const onSecondOrigin = (url: URL) => url.origin === B && url.pathname === "/teststorage";
 const storedItem = (page: Page, key: string) => page.evaluate((k) => sessionStorage.getItem(k), key);
+// the storage of the origin the page is on now, not what its document rendered at load
+const liveStorage = (page: Page) => page.evaluate(() => Object.fromEntries(Object.entries(sessionStorage)));
 // a whole-page mock whose document snapshots its storage as the fixture page does
 const mock = (route: Route) =>
 	route.fulfill({
@@ -97,7 +99,92 @@ test.describe("a batch the page leaves", () => {
 			expect(outcome).toMatch(navigated);
 		}
 		await page.waitForURL(onSecondOrigin);
-		expect(await current(page)).toEqual({});
+		// the other origin's live storage: at most the key that was in flight when the page left, which the message names
+		const inFlight = /; (k\d+) was being written and may have reached the new document$/.exec(outcome)?.[1];
+		expect(Object.keys(await liveStorage(page)).filter((key) => key !== inFlight)).toEqual([]);
+	});
+
+	test.describe("the page commits on the other origin between two calls that both succeed", () => {
+		/** After the helper's call number `calls` to `method` returns, the page commits on B before the call resolves. */
+		const commitOnBAfter = (page: Page, method: "setItem" | "removeItem" | "getItem" | "clear", calls: number) => {
+			const storage = page.sessionStorage as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>;
+			const original = storage[method]?.bind(storage);
+			let count = 0;
+			storage[method] = async (...args: unknown[]) => {
+				const result = await original?.(...args);
+				if (++count === calls) {
+					await page.goto(`${B}/testpath`, { waitUntil: "commit" });
+				}
+				return result;
+			};
+		};
+		const keys = ["k0", "k1", "k2", "k3", "k4", "k5"];
+		const onB = async (page: Page, entries: Record<string, string> = {}) => {
+			await page.goto(`${B}/testpath`);
+			await page.evaluate((stored) => {
+				sessionStorage.clear();
+				for (const [key, value] of Object.entries(stored)) sessionStorage.setItem(key, value);
+			}, entries);
+		};
+		const outcomeOf = (call: Promise<unknown>) =>
+			call.then(
+				() => "resolved",
+				(error: Error) => error.message,
+			);
+
+		test("set stops, and nothing after the commit reaches the other origin", async ({ page, testStorage }) => {
+			await onB(page);
+			await testStorage.navigation.goto();
+			commitOnBAfter(page, "setItem", 3);
+			expect(await outcomeOf(testStorage.sessionStorage.set(Object.fromEntries(keys.map((key) => [key, "A"]))))).toBe(
+				`TestStorage.SessionStorage.set: the page navigated while set() was writing to ${A}; 2 of 6 keys were written (k0, k1); k2 was being written and may have reached the new document`,
+			);
+			expect(await liveStorage(page)).toEqual({});
+		});
+
+		test("clear(keys) stops, and the other origin keeps its entries", async ({ page, testStorage }) => {
+			const own = Object.fromEntries(keys.map((key) => [key, "B's own"]));
+			await onB(page, own);
+			await testStorage.navigation.goto();
+			commitOnBAfter(page, "removeItem", 3);
+			expect(await outcomeOf(testStorage.sessionStorage.clear(keys))).toBe(
+				`TestStorage.SessionStorage.clear: the page navigated while clear() was removing keys from ${A}; 2 of 6 keys were removed (k0, k1); k2 was being removed and may have reached the new document`,
+			);
+			expect(await liveStorage(page)).toEqual(own);
+		});
+
+		test("clear() fails, and the other origin keeps its entries", async ({ page, testStorage }) => {
+			await onB(page, { token: "B's own" });
+			await testStorage.navigation.goto();
+			commitOnBAfter(page, "clear", 1);
+			expect(await outcomeOf(testStorage.sessionStorage.clear())).toBe(
+				`TestStorage.SessionStorage.clear: the page navigated while clear() was removing every entry from ${A}; it may have reached the new document`,
+			);
+			expect(await liveStorage(page)).toEqual({ token: "B's own" });
+		});
+
+		test("get(keys) fails instead of returning what it read", async ({ page, testStorage }) => {
+			await onB(page, { k0: "B's own" });
+			await testStorage.navigation.goto();
+			await testStorage.sessionStorage.set({ k0: "A", k1: "A", k2: "A" });
+			commitOnBAfter(page, "getItem", 2);
+			expect(await outcomeOf(testStorage.sessionStorage.get(["k0", "k1", "k2"]))).toMatch(
+				/^TestStorage\.SessionStorage\.get: the page navigated while get\(\) was reading "k[012]" from http:\/\/localhost:9000; it may have read the new document$/,
+			);
+		});
+
+		test("an on-origin seed stops, and nothing after the commit reaches the other origin", async ({
+			page,
+			testStorage,
+		}) => {
+			await onB(page);
+			await testStorage.navigation.goto();
+			commitOnBAfter(page, "setItem", 3);
+			expect(await outcomeOf(testStorage.sessionStorage.seed(Object.fromEntries(keys.map((key) => [key, "A"]))))).toBe(
+				`TestStorage.SessionStorage.seed: the page navigated while seed() was writing to ${A}; 2 of 6 keys were written (k0, k1); k2 was being written and may have reached the new document`,
+			);
+			expect(await liveStorage(page)).toEqual({});
+		});
 	});
 });
 

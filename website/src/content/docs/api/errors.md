@@ -306,12 +306,15 @@ AccountPage.SessionStorage.get: the page is on https://login.example, not on thi
 an origin must be on it. A sandboxed document has no session storage, although its URL has an origin.
 
 ```text
-Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)
-Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token)
+Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1); k2 was being written and may have reached the new document
+Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token); locale was being removed and may have reached the new document
+Shop.SessionStorage.get: the page navigated while get() was reading "token" from https://shop.example; it may have read the new document
+Shop.SessionStorage.clear: the page navigated while clear() was removing every entry from https://shop.example; it may have reached the new document
 ```
 
-Playwright writes and removes one key per call, so a navigation can stop a batch; the keys named were done, and stay
-so. Any other error from Playwright gets the label in front of its message and is the `cause`.
+Every call checks the page's origin before and after each storage call, so a navigation to another origin stops it,
+whether or not the storage call failed. The keys named as done stay so; the one in flight, or a single call, may have
+reached the new document, and a `get` fails rather than return what it may have read there. Any other error from Playwright gets the label in front of its message and is the `cause`.
 
 ```text
 Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)

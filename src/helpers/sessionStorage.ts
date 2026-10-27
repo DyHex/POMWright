@@ -325,8 +325,53 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	}
 
 	/**
+	 * One storage call, checked against a navigation: the page's URL is read before and after it (a field Playwright's
+	 * client keeps current, so no round trip), and when its origin moved, or the call failed because the document went
+	 * away, the call fails with `navigated(from)`, whether or not it threw. A call in flight when the page leaves may have
+	 * acted on the new document: it is detected, not prevented. A URL without an origin (an `about:blank` popup) is
+	 * compared whole.
+	 */
+	private async guarded<T>(
+		method: string,
+		call: () => Promise<T>,
+		navigated: (from: string, cause: unknown) => Error,
+	): Promise<T> {
+		const before = this.page.url();
+		const from = originOf(before);
+		const moved = () => {
+			const after = this.page.url();
+			return from === undefined ? after !== before : originOf(after) !== from;
+		};
+		let result: T;
+		try {
+			result = await this.access(method, call);
+		} catch (error) {
+			const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
+			const destroyed = cause instanceof Error && /Execution context was destroyed/.test(cause.message);
+			if (destroyed || moved()) {
+				throw navigated(from ?? before, cause);
+			}
+			throw error;
+		}
+		if (moved()) {
+			throw navigated(from ?? before, undefined);
+		}
+		return result;
+	}
+
+	/** The failure of a single call the page left: what it was doing, and what it may have done to the new document. */
+	private navigatedDuring(method: string, doing: string, consequence: string) {
+		return (from: string, cause: unknown) =>
+			new Error(
+				`${this.title(method)}: the page navigated while ${method}() was ${doing} ${from}; ${consequence}`,
+				cause === undefined ? undefined : { cause },
+			);
+	}
+
+	/**
 	 * One storage call per key, in order: Playwright has no batch call, so a navigation can stop the batch partway. The
-	 * failure then says so and names the keys already done, which stay.
+	 * failure then says so, names the keys already done, which stay, and the key in flight, which may have reached the
+	 * new document.
 	 */
 	private async eachKey(
 		method: string,
@@ -334,24 +379,21 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		[doing, done]: readonly [doing: string, done: string],
 		call: (key: string) => Promise<void>,
 	): Promise<void> {
-		const start = originOf(this.page.url());
 		for (const [index, key] of keys.entries()) {
-			try {
-				await this.access(method, () => call(key));
-			} catch (error) {
-				const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
-				const destroyed = cause instanceof Error && /Execution context was destroyed/.test(cause.message);
-				if (start === undefined || !(destroyed || originOf(this.page.url()) !== start)) {
-					throw error;
-				}
-				const finished = keys.slice(0, index);
-				throw new Error(
-					`${this.title(method)}: the page navigated while ${method}() was ${doing} ${start}; ` +
-						`${finished.length} of ${keys.length} ${keys.length === 1 ? "key was" : "keys were"} ${done}` +
-						(finished.length > 0 ? ` (${finished.join(", ")})` : ""),
-					{ cause },
-				);
-			}
+			await this.guarded(
+				method,
+				() => call(key),
+				(from, cause) => {
+					const finished = keys.slice(0, index);
+					return new Error(
+						`${this.title(method)}: the page navigated while ${method}() was ${doing} ${from}; ` +
+							`${finished.length} of ${keys.length} ${keys.length === 1 ? "key was" : "keys were"} ${done}` +
+							(finished.length > 0 ? ` (${finished.join(", ")})` : "") +
+							`; ${key} was being ${done} and may have reached the new document`,
+						cause === undefined ? undefined : { cause },
+					);
+				},
+			);
 		}
 	}
 
@@ -418,8 +460,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * (`Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()`),
 	 * when the document is sandboxed, so its origin is opaque
 	 * (`Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque, …`),
-	 * and when the page navigates during the batch, which is written one key at a time and stops there
-	 * (`Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)`).
+	 * and when the page leaves the origin during the batch, which is written one key at a time and stops there; the key in
+	 * flight may have reached the new document
+	 * (`Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1); k2 was being written and may have reached the new document`).
 	 *
 	 * @example
 	 * ```ts
@@ -451,7 +494,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * @returns Without an argument, every entry; otherwise the value or the record.
 	 * @throws When a stored value cannot be decoded by its codec
 	 * (`Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"`), when the page is on another origin
-	 * than the helper's, and when the page has no origin yet.
+	 * than the helper's, when the page has no origin yet, and when the page leaves the origin during the read, rather than
+	 * return what it may have read from the new document
+	 * (`Shop.SessionStorage.get: the page navigated while get() was reading "token" from https://shop.example; it may have read the new document`).
 	 *
 	 * @example
 	 * ```ts
@@ -476,32 +521,28 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	/** What `get` reads, in its turn: one key, several, or every entry, each through its key's codec. */
 	private async read(keyOrKeys: string | readonly string[] | undefined): Promise<unknown> {
 		const title = this.title("get");
-		if (typeof keyOrKeys === "string") {
-			return decodeValue(
-				this.schema,
-				keyOrKeys,
-				await this.access("get", () => this.page.sessionStorage.getItem(keyOrKeys)),
-				title,
+		// a read the page left may have come from the new document: it fails instead of returning that
+		const readKey = (key: string) =>
+			this.guarded(
+				"get",
+				() => this.page.sessionStorage.getItem(key),
+				this.navigatedDuring("get", `reading ${JSON.stringify(key)} from`, "it may have read the new document"),
 			);
+		if (typeof keyOrKeys === "string") {
+			return decodeValue(this.schema, keyOrKeys, await readKey(keyOrKeys), title);
 		}
 		if (keyOrKeys !== undefined) {
+			// in parallel; the first that fails rejects the whole read
 			const pairs = await Promise.all(
-				keyOrKeys.map(
-					async (key) =>
-						[
-							key,
-							decodeValue(
-								this.schema,
-								key,
-								await this.access("get", () => this.page.sessionStorage.getItem(key)),
-								title,
-							),
-						] as const,
-				),
+				keyOrKeys.map(async (key) => [key, decodeValue(this.schema, key, await readKey(key), title)] as const),
 			);
 			return Object.fromEntries(pairs);
 		}
-		const items = await this.access("get", () => this.page.sessionStorage.items());
+		const items = await this.guarded(
+			"get",
+			() => this.page.sessionStorage.items(),
+			this.navigatedDuring("get", "reading every entry from", "it may have read the new document"),
+		);
 		return Object.fromEntries(items.map((item) => [item.name, decodeValue(this.schema, item.name, item.value, title)]));
 	}
 
@@ -512,8 +553,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * @param key One key.
 	 * @param keys Several keys. A literal `[]` does not compile; a list that is empty at run time removes nothing.
 	 * @throws When the page is on another origin than the helper's, when the page has no origin yet, and when the page
-	 * navigates while several keys are being removed
-	 * (`Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token)`).
+	 * leaves the origin during the call; the keys named as removed are gone, and the one in flight may have reached the
+	 * new document
+	 * (`Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token); locale was being removed and may have reached the new document`).
 	 *
 	 * @example
 	 * ```ts
@@ -532,7 +574,11 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 			this.assertOnOrigin("clear");
 			await this.inTurn("clear", async () => {
 				if (keyOrKeys === undefined) {
-					await this.access("clear", () => this.page.sessionStorage.clear());
+					await this.guarded(
+						"clear",
+						() => this.page.sessionStorage.clear(),
+						this.navigatedDuring("clear", "removing every entry from", "it may have reached the new document"),
+					);
 					return;
 				}
 				await this.eachKey(
@@ -562,8 +608,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * construct the helper with one`), when a value cannot be encoded, as for `set`
 	 * (`… value for "orderId" is not a string and no codec is declared for it; …`, `… could not be encoded`,
 	 * `… the codec for "orderId" returned undefined instead of a string`), when the browser has no Navigation API, when the page commits a document on the
-	 * origin while the seed is being registered, and when the page closes before it is registered (`… the page closed
-	 * while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends`);
+	 * origin while the seed is being registered, when the page closes before it is registered (`… the page closed
+	 * while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends`),
+	 * and, on the origin already, when the page leaves it during the write, as for `set`;
 	 * later, failing the test with the line of this call in the stack, when the browser refuses the write (the storage
 	 * quota), when the document that arrives on the origin does not take the seed (after a navigation there that failed:
 	 * `… was not applied: the document that arrived on https://pay.example has an opaque origin …`), or when the page

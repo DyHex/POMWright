@@ -113,10 +113,12 @@ await storage.clear(); // everything
 **Throws**
 
 ```text
-Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token)
+Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token); locale was being removed and may have reached the new document
+Shop.SessionStorage.clear: the page navigated while clear() was removing every entry from https://shop.example; it may have reached the new document
 ```
 
-When the page navigates while several keys are being removed; the keys it names are gone.
+When the page leaves the origin during the call: the keys it names as removed are gone, and the one in flight, or
+`clear()`'s, may have reached the new document.
 
 ### get()
 
@@ -150,9 +152,11 @@ await storage.get(["token", "missing"]); // { token: "abc", missing: null }
 
 ```text
 Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"
+Shop.SessionStorage.get: the page navigated while get() was reading "token" from https://shop.example; it may have read the new document
 ```
 
-The codec's error is the `cause`.
+The codec's error is the `cause`. The second when the page leaves the origin during the read: it fails rather than
+return what it may have read from the new document.
 
 ### seed()
 
@@ -196,7 +200,8 @@ await loginPage.navigation.goto(); // the app's first script already sees the to
 
 At the call, without an origin, for a value its key's codec cannot encode (or a value that is not a string, for a key
 without a codec), in a browser without the Navigation API, when the page commits a document on the
-origin while the seed is being registered, and when the page closes before it is registered; later, failing the test with this call's line in the stack, when the
+origin while the seed is being registered, when the page closes before it is registered, and, on the origin already,
+when the page leaves it during the write, as for `set`; later, failing the test with this call's line in the stack, when the
 browser refuses the write, when the document that arrives on the origin does not take the seed (a failed navigation
 there), or when the page closes before the seed was applied:
 
@@ -208,6 +213,7 @@ Shop.SessionStorage.seed: the codec for "orderId" returned undefined instead of 
 Shop.SessionStorage.seed: the page committed a document on https://pay.example while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it
 Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation) to write only on the first arrival at https://pay.example, and this browser has none (Mozilla/5.0 …); use set() on the origin and reload instead
 Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends
+Shop.SessionStorage.seed: the page navigated while seed() was writing to https://pay.example; 1 of 2 keys were written (orderId); amount was being written and may have reached the new document
 Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the document that arrived on https://pay.example has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)
@@ -220,7 +226,8 @@ Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was n
 
 Writes one entry, or several, each value through its key's codec, or as the string it must be. Every value is
 encoded before any is written, so a bad value writes nothing. The values are then written one key at a time, as
-Playwright's `setItem` takes one: a navigation during the batch stops it, and the keys written before it stay.
+Playwright's `setItem` takes one: a navigation to another origin stops it, the keys written before it stay, and the
+one in flight may have reached the new document.
 
 **Usage**
 
@@ -250,12 +257,12 @@ Shop.SessionStorage.set: value for "user" is not a string and no codec is declar
 Shop.SessionStorage.set: value for "user" could not be encoded
 Shop.SessionStorage.set: the codec for "user" returned undefined instead of a string
 Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)
-Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)
+Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1); k2 was being written and may have reached the new document
 ```
 
 The second when the key's codec throws, with its error as `cause`; the third when it returns something other than a
 string; the fourth on a sandboxed document, whose origin is opaque, as from `get`, `clear` and `seed` there; the fifth
-when the page navigates during the batch, naming the keys already written. Any other error from
+when the page leaves the origin during the batch, naming the keys already written and the one in flight. Any other error from
 Playwright gets the label in front of its message and is the `cause`.
 
 ---

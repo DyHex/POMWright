@@ -186,7 +186,7 @@ describe("a batch the page leaves", () => {
 	it("names the keys already written when the page navigates during the batch", async () => {
 		const error = await write(pageFailingAt(3, destroyed), { a: "1", b: "2", c: "3", d: "4" }).catch((e: Error) => e);
 		expect((error as Error).message).toBe(
-			"Shop.SessionStorage.set: the page navigated while set() was writing to http://localhost:9000; 2 of 4 keys were written (a, b)",
+			"Shop.SessionStorage.set: the page navigated while set() was writing to http://localhost:9000; 2 of 4 keys were written (a, b); c was being written and may have reached the new document",
 		);
 		expect((error as Error).cause).toBe(destroyed);
 	});
@@ -196,7 +196,7 @@ describe("a batch the page leaves", () => {
 			(e: Error) => e,
 		);
 		expect((error as Error).message).toBe(
-			"Shop.SessionStorage.set: the page navigated while set() was writing to http://localhost:9000; 0 of 1 key was written",
+			"Shop.SessionStorage.set: the page navigated while set() was writing to http://localhost:9000; 0 of 1 key was written; token was being written and may have reached the new document",
 		);
 	});
 
@@ -227,7 +227,100 @@ describe("a batch the page leaves", () => {
 			)
 			.catch((e: Error) => e);
 		expect((error as Error).message).toBe(
-			"Shop.SessionStorage.clear: the page navigated while clear() was removing keys from http://localhost:9000; 1 of 3 keys were removed (token)",
+			"Shop.SessionStorage.clear: the page navigated while clear() was removing keys from http://localhost:9000; 1 of 3 keys were removed (token); locale was being removed and may have reached the new document",
+		);
+	});
+});
+
+describe("a call the page leaves while it succeeds", () => {
+	/** A page whose storage calls all succeed; the page is at `urlAfter` once call number `moveAt` has run. */
+	const pageMovingAt = (moveAt: number, urlAfter: string, urlBefore = "http://localhost:9000/teststorage") => {
+		let calls = 0;
+		let url = urlBefore;
+		const written: string[] = [];
+		const answer = <T>(value: T) => {
+			calls++;
+			if (calls === moveAt) {
+				url = urlAfter;
+			}
+			return Promise.resolve(value);
+		};
+		const page = {
+			url: () => url,
+			evaluate: async () => false,
+			sessionStorage: {
+				setItem: (key: string) => {
+					written.push(key);
+					return answer(undefined);
+				},
+				removeItem: () => answer(undefined),
+				getItem: (key: string) => answer(`value of ${key}`),
+				items: () => answer([{ name: "token", value: "abc" }]),
+				clear: () => answer(undefined),
+			},
+		} as unknown as Page;
+		return { page, written };
+	};
+	type Internals = {
+		write(m: string, e: Record<string, string>): Promise<void>;
+		read(keys: string | readonly string[] | undefined): Promise<unknown>;
+		guarded<T>(m: string, call: () => Promise<T>, navigated: (from: string, cause: unknown) => Error): Promise<T>;
+		navigatedDuring(m: string, doing: string, consequence: string): (from: string, cause: unknown) => Error;
+	};
+	const internals = (page: Page) => new SessionStorage(page, { label: "Shop" }) as unknown as Internals;
+	const failure = (promise: Promise<unknown>) => promise.then(() => undefined).catch((error: Error) => error);
+
+	it("stops a batch whose page left for another origin between two calls that both resolved", async () => {
+		const { page, written } = pageMovingAt(2, "http://127.0.0.1:9000/");
+		const error = await failure(internals(page).write("set", { a: "1", b: "2", c: "3" }));
+		expect(error?.message).toBe(
+			"Shop.SessionStorage.set: the page navigated while set() was writing to http://localhost:9000; 1 of 3 keys were written (a); b was being written and may have reached the new document",
+		);
+		expect(error?.cause).toBeUndefined();
+		expect(written).toEqual(["a", "b"]);
+	});
+
+	it("goes on after a navigation within the origin, whose storage is the same", async () => {
+		const { page, written } = pageMovingAt(1, "http://localhost:9000/elsewhere");
+		await internals(page).write("set", { a: "1", b: "2" });
+		expect(written).toEqual(["a", "b"]);
+	});
+
+	it("fails a read that came from the new origin instead of returning its value, one key, several or all", async () => {
+		const one = await failure(internals(pageMovingAt(1, "http://127.0.0.1:9000/").page).read("token"));
+		expect(one?.message).toBe(
+			'Shop.SessionStorage.get: the page navigated while get() was reading "token" from http://localhost:9000; it may have read the new document',
+		);
+		const several = await failure(internals(pageMovingAt(2, "http://127.0.0.1:9000/").page).read(["a", "b", "c"]));
+		expect(several?.message).toMatch(
+			/^Shop\.SessionStorage\.get: the page navigated while get\(\) was reading "[abc]" from http:\/\/localhost:9000; it may have read the new document$/,
+		);
+		const all = await failure(internals(pageMovingAt(1, "http://127.0.0.1:9000/").page).read(undefined));
+		expect(all?.message).toBe(
+			"Shop.SessionStorage.get: the page navigated while get() was reading every entry from http://localhost:9000; it may have read the new document",
+		);
+	});
+
+	it("names a single call by what it was doing", async () => {
+		const { page } = pageMovingAt(1, "http://127.0.0.1:9000/");
+		const helper = internals(page);
+		const error = await failure(
+			helper.guarded(
+				"clear",
+				() => page.sessionStorage.clear(),
+				helper.navigatedDuring("clear", "removing every entry from", "it may have reached the new document"),
+			),
+		);
+		expect(error?.message).toBe(
+			"Shop.SessionStorage.clear: the page navigated while clear() was removing every entry from http://localhost:9000; it may have reached the new document",
+		);
+	});
+
+	it("compares a URL without an origin whole", async () => {
+		const { page } = pageMovingAt(1, "http://localhost:9000/", "about:blank");
+		const error = await failure(internals(page).write("set", { a: "1" }));
+		expect(error?.message).toBe(
+			"Shop.SessionStorage.set: the page navigated while set() was writing to about:blank; 0 of 1 key was written; a was being written and may have reached the new document",
 		);
 	});
 });

@@ -114,9 +114,18 @@ await storage.clear(); // everything
 ```
 
 `set` encodes every value before it writes any, so a bad value writes nothing. It then writes one key at a time, as
-Playwright's `setItem` takes one, so a navigation during the batch stops it: the keys written before stay, and the call
-fails, naming them. A literal `[]` is a compile error for
-`get` and `clear`; a list that turns out empty at runtime reads or removes nothing.
+Playwright's `setItem` takes one. A literal `[]` is a compile error for `get` and `clear`; a list that turns out empty at
+runtime reads or removes nothing.
+
+Every call checks the page's origin before and after each storage call it makes, so a navigation to another origin stops
+it: the call fails, naming the keys done, which stay, and the one in flight. That one may have reached the new
+document, since a call already sent cannot be taken back; the check detects it, but cannot prevent it. A `get` the page
+left fails rather than return what it may have read there:
+
+```text
+Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1); k2 was being written and may have reached the new document
+Shop.SessionStorage.get: the page navigated while get() was reading "token" from https://shop.example; it may have read the new document
+```
 
 Calls for one origin act in the order they were made, also when they overlap. In a `Promise.all`, a `get` after a `set`
 reads what the `set` wrote, and two `set` calls for one key leave the later value. The order holds across helpers:
@@ -192,7 +201,7 @@ export const test = base.extend<{ storage: SessionStorage<{ user: Codec<User> }>
 | a sandboxed document | `Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque, as in a sandboxed document (Content-Security-Policy: sandbox without allow-same-origin)` |
 | a page on another origin | `AccountPage.SessionStorage.get: the page is on …, not on this page object's origin …` |
 | a value that is not a string, for a key without a codec | `Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)` |
-| a navigation during a batch | `Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1)` |
+| a navigation during a call | `Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1); k2 was being written and may have reached the new document` |
 | a stored value its codec cannot decode | `Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"` |
 
 ## Reference
