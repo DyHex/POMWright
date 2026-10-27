@@ -86,4 +86,37 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+**Step 1 (D-1).**
+
+- `navigation.ts`: `NavigationBase` holds `expectThisPage`, `expectAnotherPage` and `goto` as a property of function
+  type (a comment says why); `NavigationFor<BaseUrl, FullUrl>` is `FullUrl extends string ? NavigationBase<…> & { goto:
+  (options?) => … } : NavigationBase<…>`, every member keeping its doc comment, and `NavigationFor`'s own comment lists
+  the three helper types and the one for any page.
+- **Deviation: the base is typed by the `goto` target, not by `BaseUrl`.** With the sketch's `Base<BaseUrl>` (`goto:
+  (target: GotoTarget<BaseUrl>, …)`), a string page's helper was rejected as `NavigationFor<RegExp, UrlMatcher>`
+  (`Type 'NavigationBase<string>' is not assignable to type 'NavigationBase<RegExp>'. Type 'string' is not assignable
+  to type 'RegExp'.`): TypeScript compared the two instantiations by the variance it measured for `BaseUrl`, which runs
+  through the conditional `GotoTarget`, not structurally. `NavigationBase<Target extends string>` with `goto: (target:
+  Target, …)`, and `NavigationFor` passing `GotoTarget<BaseUrl>`, gives a plain contravariant parameter: a string base's
+  helper (any string) fits where an absolute URL is all that is passed, and not the reverse. The contract holds as
+  decided; the type's shape differs from the sketch. The conditional stays inside an intersection,
+  `NavigationBase<GotoTarget<BaseUrl>> & (FullUrl extends string ? { goto: … } : object)`, as the type was: with the
+  conditional at the top, as the sketch had it, `check-api-coverage.mjs` sees no members (a conditional type is opaque
+  to it) and stopped checking `NavigationFor`'s three (108 members became 105); the intersection keeps them checked and
+  every case below passes the same.
+- Tests: `publicTypes.typecheck.ts` (packed build): a string page, a RegExp-path page and a RegExp-base page; the two
+  RegExp helpers rejected as `NavigationFor<string, string>` (`@ts-expect-error`); all three accepted as
+  `NavigationFor<RegExp, UrlMatcher>`, the string page's as `NavigationFor<string, UrlMatcher>`; every call form, and
+  `goto()` on a RegExp page and a relative target on a RegExp base still errors. Against the old type both rejections
+  compile (checked, then restored). The declaration emit check passes unchanged.
+- External consumer projects, in scratch copies with the packed build: the first, the same 5 errors as with its own
+  build; the second, 0 errors as configured, and the same 42 (pre-existing, unrelated) with its `tests/` included,
+  under both builds.
+- Docs: `api/class-navigation.md`, the summary (the type of `baseUrl`, then of `fullUrl`) and *NavigationFor* (the three
+  page kinds, their helpers and calls, which parameter type takes which helpers, and an example taking any page's
+  helper, compiled by the snippet check). Changeset `navigation-for-goto.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 898 passed; `pnpm pack-test --reporter=line` exit 0 (1,602 passed, 3
+  skipped; doc snippets 221; api coverage 108 members, 0 problems; step locations 29); `consumer-check.sh` 18 `ok`;
+  `pnpm docs:build` 0.

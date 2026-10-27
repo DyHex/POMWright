@@ -45,20 +45,11 @@ export type ThisPageOptions = NavigationOptions & {
 type GotoTarget<BaseUrl> = BaseUrl extends string ? string : AbsoluteUrl;
 
 /**
- * A page object's navigation helper, `navigation`, narrowed by its URL types: `goto()` without a target exists only
- * when `fullUrl` is a string, and `goto(target)` takes any string on a string `baseUrl` but only an absolute URL on a
- * RegExp `baseUrl`. Each method is one Playwright call, shown as a step of the report at the line that called it.
- *
- * @example
- * ```ts
- * await loginPage.navigation.goto();
- * await loginPage.logIn("ada@shop.example", "correct horse");
- * await loginPage.navigation.expectAnotherPage();
- * ```
- *
- * @see https://dyhex.github.io/POMWright/api/class-navigation/#navigationfor
+ * What every page object's navigation helper has, whatever its URL types; `Target` is what `goto(target)` takes. Typed
+ * by the target, not by `BaseUrl` through `GotoTarget`, so TypeScript compares two helpers by their `goto` parameter:
+ * a string base's helper, which takes any string, then fits where an absolute URL is all that is passed.
  */
-export type NavigationFor<BaseUrl, FullUrl> = {
+type NavigationBase<Target extends string> = {
 	/**
 	 * Waits until the browser is on this page, with one `page.waitForURL`, then runs the actions of
 	 * `pageActionsToPerformAfterNavigation()`.
@@ -92,6 +83,7 @@ export type NavigationFor<BaseUrl, FullUrl> = {
 	 * @see https://dyhex.github.io/POMWright/api/class-navigation/#expectanotherpage
 	 */
 	expectAnotherPage(options?: NavigationOptions): Promise<void>;
+	// a property, not a method: TypeScript then compares it strictly, so a RegExp page's helper is not a string page's
 	/**
 	 * Navigates to a target with `page.goto`, resolved against the page object's `baseUrl` exactly as Playwright
 	 * resolves a target against `baseURL` (`"/account"`, `"?tab=2"`, or an absolute URL). Never runs the page object's
@@ -112,27 +104,47 @@ export type NavigationFor<BaseUrl, FullUrl> = {
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-navigation/#goto
 	 */
-	goto(target: GotoTarget<BaseUrl>, options?: NavigationOptions): Promise<void>;
-} & (FullUrl extends string
-	? {
-			/**
-			 * Navigates to this page, `fullUrl`, with `page.goto`, then runs the actions of
-			 * `pageActionsToPerformAfterNavigation()`. Exists when `fullUrl` is a string.
-			 *
-			 * @param options `waitUntil`, `timeout` and `runPostNavigationActions`; each defaults to the page object's
-			 * `navOptions`.
-			 * @throws What `page.goto` throws.
-			 *
-			 * @example
-			 * ```ts
-			 * await loginPage.navigation.goto();
-			 * ```
-			 *
-			 * @see https://dyhex.github.io/POMWright/api/class-navigation/#goto
-			 */
-			goto(options?: ThisPageOptions): Promise<void>;
-		}
-	: object);
+	goto: (target: Target, options?: NavigationOptions) => Promise<void>;
+};
+
+/**
+ * A page object's navigation helper, `navigation`, narrowed by its URL types: `goto()` without a target exists only
+ * when `fullUrl` is a string, and `goto(target)` takes any string on a string `baseUrl` but only an absolute URL on a
+ * RegExp `baseUrl`. Each method is one Playwright call, shown as a step of the report at the line that called it. A
+ * page object's helper is `NavigationFor<string, string>` for two string parts, `NavigationFor<string, UrlMatcher>` for
+ * a RegExp path and `NavigationFor<RegExp, UrlMatcher>` for a RegExp base; a function that takes any page object's
+ * helper types its parameter as the last.
+ *
+ * @example
+ * ```ts
+ * await loginPage.navigation.goto();
+ * await loginPage.logIn("ada@shop.example", "correct horse");
+ * await loginPage.navigation.expectAnotherPage();
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-navigation/#navigationfor
+ */
+export type NavigationFor<BaseUrl, FullUrl> = NavigationBase<GotoTarget<BaseUrl>> &
+	(FullUrl extends string
+		? {
+				/**
+				 * Navigates to this page, `fullUrl`, with `page.goto`, then runs the actions of
+				 * `pageActionsToPerformAfterNavigation()`. Exists when `fullUrl` is a string.
+				 *
+				 * @param options `waitUntil`, `timeout` and `runPostNavigationActions`; each defaults to the page object's
+				 * `navOptions`.
+				 * @throws What `page.goto` throws.
+				 *
+				 * @example
+				 * ```ts
+				 * await loginPage.navigation.goto();
+				 * ```
+				 *
+				 * @see https://dyhex.github.io/POMWright/api/class-navigation/#goto
+				 */
+				goto: (options?: ThisPageOptions) => Promise<void>;
+			}
+		: object);
 
 type GotoArguments = [options?: ThisPageOptions] | [target: string, options?: NavigationOptions];
 

@@ -69,8 +69,8 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 22 | [The opaque-origin message; the never-applied message for several seeds](PLAN-A-5-R-2-storage-messages.md) | 26, 30 | patch | | done | `186bc5f`, `c35eae4` |
 | 23 | [Storage values typed per key member](PLAN-A-4-key-types.md) | 18 | patch | | done | `f422b77` |
 | 24 | [A schema's type and value must agree](PLAN-A-7-schema-agreement.md) | 38 | patch | | done | `e05b84d` |
-| 25 | [A string `fullUrl` writes `^` as `%5E`; `\|` documented](PLAN-D-2-H-4-fullurl.md) | 17 | patch | | done | (filled by the next commit) |
-| 26 | [`NavigationFor` declares `goto` as a property; the labelled `Cannot resolve` message](PLAN-D-1-D-3-navigation.md) | 19, 36 (point 2) | patch | | planned | |
+| 25 | [A string `fullUrl` writes `^` as `%5E`; `\|` documented](PLAN-D-2-H-4-fullurl.md) | 17 | patch | | done | `3bf7a19` |
+| 26 | [`NavigationFor` declares `goto` as a property; the labelled `Cannot resolve` message](PLAN-D-1-D-3-navigation.md) | 19, 36 (point 2) | patch | | in progress | (step 1 filled by the next commit) |
 | 27 | [Packed twins of the source-level locator specs](PLAN-T10-packed-twins.md) | 55 (phase 1) | none | | planned | |
 | 28 | [The smaller untested behaviours](PLAN-T16-smaller-specs.md) | 60 | none | | planned | |
 | 29 | [The snippet check rejects what it would skip, and compiles the README](PLAN-T12-T15-snippet-check.md) | 56, 59 (point 1) | none | | planned | |

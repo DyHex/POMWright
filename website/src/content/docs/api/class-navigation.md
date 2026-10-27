@@ -4,8 +4,8 @@ description: "A page object's navigation helper, of the type NavigationFor: goto
 ---
 
 Every page object has a navigation helper, `navigation`, built from its `baseUrl` and `urlPath`. Its type,
-[`NavigationFor<BaseUrl, FullUrl>`](#navigationfor), follows the page object's URL types: `goto()` without a target
-exists only when `fullUrl` is a string, and on a RegExp `baseUrl` `goto(target)` takes an absolute URL only. Each method
+[`NavigationFor<BaseUrl, FullUrl>`](#navigationfor), takes the type of `baseUrl`, then of `fullUrl`: `goto()` without a
+target exists only when `fullUrl` is a string, and on a RegExp `baseUrl` `goto(target)` takes an absolute URL only. Each method
 is one Playwright call, with Playwright's waits and timeouts, and a step of the report at the line that called it.
 
 ```ts
@@ -25,20 +25,36 @@ Guide: [URLs and navigation](/POMWright/docs/urls-and-navigation/).
 
 ## NavigationFor
 
-The type of a page object's `navigation`, from its `baseUrl` type and its `fullUrl` type. A page object with string
-URLs has a `NavigationFor<string, string>`. Name the type to take the helper as a parameter:
+The type of a page object's `navigation`, from its `baseUrl` type and its `fullUrl` type:
+
+| page object | its helper | takes |
+| --- | --- | --- |
+| string `baseUrl` and `urlPath` | `NavigationFor<string, string>` | `goto()`, `goto(target)` |
+| string `baseUrl`, RegExp `urlPath` | `NavigationFor<string, UrlMatcher>` | `goto(target)` |
+| RegExp `baseUrl` | `NavigationFor<RegExp, UrlMatcher>` | `goto(absoluteUrl)` |
+
+A parameter of one of these types takes the helpers that have everything it uses: `NavigationFor<string, string>` only
+a page object with string URLs, `NavigationFor<RegExp, UrlMatcher>` any page object's. Name the type to take the
+helper as a parameter:
 
 ```ts
-import type { NavigationFor } from "pomwright";
+import type { NavigationFor, UrlMatcher } from "pomwright";
 import { test } from "./fixtures";
 
+// a page object with string URLs: goto() without a target
 async function openAndLeave(navigation: NavigationFor<string, string>) {
   await navigation.goto();
   await navigation.expectAnotherPage();
 }
 
+// any page object's helper
+async function leave(navigation: NavigationFor<RegExp, UrlMatcher>) {
+  await navigation.expectAnotherPage();
+}
+
 test("the login page redirects", async ({ loginPage }) => {
   await openAndLeave(loginPage.navigation);
+  await leave(loginPage.navigation);
 });
 ```
 

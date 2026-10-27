@@ -653,3 +653,47 @@ export const schemaReads = async (withToken: OptionalKeyWithCodecPage, typed: Ty
 	const token: string | null = await withToken.sessionStorage.get("token");
 	return { name, token };
 };
+
+// NavigationFor: a RegExp page's helper is not a string page's, and every page's helper fits the type for any page
+export class StringUrlPage extends PageObject<"main"> {
+	constructor() {
+		super(page, schemaUrl, "/orders");
+	}
+	protected defineLocators() {}
+}
+export class RegExpPathPage extends PageObject<"main", { baseUrlType: string; urlPathType: RegExp }> {
+	constructor() {
+		super(page, schemaUrl, /^\/orders\/\d+$/);
+	}
+	protected defineLocators() {}
+}
+export class RegExpBasePage extends PageObject<"main", { baseUrlType: RegExp; urlPathType: string }> {
+	constructor() {
+		super(page, /shop\.example/, "/orders");
+	}
+	protected defineLocators() {}
+}
+declare const stringUrlPage: StringUrlPage;
+declare const regExpPathPage: RegExpPathPage;
+declare const regExpBasePage: RegExpBasePage;
+// @ts-expect-error a RegExp path's helper has no goto() without a target
+export const regExpPathAsString: NavigationFor<string, string> = regExpPathPage.navigation;
+// @ts-expect-error a RegExp base's helper takes only absolute URLs and has no goto() without a target
+export const regExpBaseAsString: NavigationFor<string, string> = regExpBasePage.navigation;
+export const anyHelpers: NavigationFor<RegExp, UrlMatcher>[] = [
+	stringUrlPage.navigation,
+	regExpPathPage.navigation,
+	regExpBasePage.navigation,
+];
+export const regExpPathHelper: NavigationFor<string, UrlMatcher> = stringUrlPage.navigation;
+export const navigationCalls = async () => {
+	await stringUrlPage.navigation.goto();
+	await stringUrlPage.navigation.goto({ waitUntil: "commit" });
+	await stringUrlPage.navigation.goto("/account", { timeout: 1_000 });
+	await regExpPathPage.navigation.goto("/orders/7");
+	await regExpBasePage.navigation.goto("https://shop.example/orders");
+	// @ts-expect-error no goto() without a target on a RegExp page
+	await regExpPathPage.navigation.goto();
+	// @ts-expect-error a RegExp base takes only an absolute URL
+	await regExpBasePage.navigation.goto("/orders");
+};
