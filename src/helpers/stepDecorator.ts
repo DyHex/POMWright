@@ -8,12 +8,20 @@ type AnyMethod<This = unknown, Args extends unknown[] = unknown[], Return = unkn
 /** What TypeScript reports for a method that does not return a Promise (the parameter type of the last overloads). */
 type StepRequiresPromise = "@step decorates methods that return a Promise: make the method async";
 
-/** A method `@step` can wrap: `test.step` always returns a Promise, so the method must return one too. */
-type AsyncMethod<This = unknown, Args extends unknown[] = unknown[], Return = unknown> = AnyMethod<
-	This,
-	Args,
-	Promise<Return>
->;
+/**
+ * A method `@step` can wrap: `test.step` always returns a Promise, so the method must return one too. The decorator
+ * takes the method's own type, generic or not, and returns it unchanged. Its parameters are `any`, as in the constraint
+ * `ClassMethodDecoratorContext` puts on a method: an `unknown[]` parameter list refuses a method with typed parameters.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: the constraint ClassMethodDecoratorContext puts on a method, see above
+type AsyncMethod<This = never> = (this: This, ...args: any) => Promise<unknown>;
+
+/**
+ * The method, when it returns a Promise. Checked on its return type, since the constraint alone lets a generic method
+ * through: against `any` arguments, `<T>(value: T) => T` returns `any`. `ReturnType` reads a type parameter as its
+ * constraint instead, so `unknown`, which is not a Promise.
+ */
+type ReturnsPromise<M extends AsyncMethod> = ReturnType<M> extends Promise<unknown> ? M : StepRequiresPromise;
 
 type StepTitle = Parameters<typeof test.step>[0];
 type StepOptions = Parameters<typeof test.step>[2];
@@ -25,15 +33,15 @@ type LegacyMethodDecoratorArgs<T extends AnyMethod = AnyMethod> = [object, strin
 type Stage3MethodDecoratorArgs<T extends AnyMethod = AnyMethod> = [T, ClassMethodDecoratorContext<unknown, T>];
 
 interface StepDecoratorFactory {
-	<This, Args extends unknown[], Return>(
-		value: AsyncMethod<This, Args, Return>,
-		context: ClassMethodDecoratorContext<This, AsyncMethod<This, Args, Return>>,
-	): AsyncMethod<This, Args, Return> | undefined;
-	<This, Args extends unknown[], Return>(
+	<This, M extends AsyncMethod<This>>(
+		value: ReturnsPromise<M>,
+		context: ClassMethodDecoratorContext<This, M>,
+	): M | undefined;
+	<M extends AsyncMethod>(
 		target: object,
 		propertyKey: string | symbol,
-		descriptor: TypedPropertyDescriptor<AsyncMethod<This, Args, Return>>,
-	): TypedPropertyDescriptor<AsyncMethod<This, Args, Return>> | undefined;
+		descriptor: TypedPropertyDescriptor<ReturnsPromise<M>>,
+	): TypedPropertyDescriptor<M> | undefined;
 	// last, so that a method returning something else is reported with this message
 	<This, Args extends unknown[], Return>(
 		value: StepRequiresPromise,
@@ -146,21 +154,21 @@ export function step(): StepDecoratorFactory;
 export function step(title: StepTitle): StepDecoratorFactory;
 export function step(options: StepOptions): StepDecoratorFactory;
 export function step(title: StepTitle, options: StepOptions): StepDecoratorFactory;
-export function step<This, Args extends unknown[], Return>(
-	value: AsyncMethod<This, Args, Return>,
-	context: ClassMethodDecoratorContext<This, AsyncMethod<This, Args, Return>>,
-): AsyncMethod<This, Args, Return> | undefined;
+export function step<This, M extends AsyncMethod<This>>(
+	value: ReturnsPromise<M>,
+	context: ClassMethodDecoratorContext<This, M>,
+): M | undefined;
 export function step<This, Args extends unknown[], Return>(
 	value: StepRequiresPromise,
 	context: ClassMethodDecoratorContext<This, AnyMethod<This, Args, Return>>,
 ): undefined;
 // experimentalDecorators: a bare @step is called with the target, the key and the descriptor; after the two-argument
 // forms, so a standard decorator's error still comes from the message overload above
-export function step<This, Args extends unknown[], Return>(
+export function step<M extends AsyncMethod>(
 	target: object,
 	propertyKey: string | symbol,
-	descriptor: TypedPropertyDescriptor<AsyncMethod<This, Args, Return>>,
-): TypedPropertyDescriptor<AsyncMethod<This, Args, Return>> | undefined;
+	descriptor: TypedPropertyDescriptor<ReturnsPromise<M>>,
+): TypedPropertyDescriptor<M> | undefined;
 export function step(target: object, propertyKey: string | symbol, descriptor: StepRequiresPromise): undefined;
 // the overloads above are what a caller passes and gets; the implementation tells the forms apart with its type guards
 export function step(...args: unknown[]): unknown {

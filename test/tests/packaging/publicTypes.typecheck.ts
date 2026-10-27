@@ -197,6 +197,10 @@ class Steps {
 	promised(): Promise<number> {
 		return Promise.resolve(1);
 	}
+	@step({ box: true })
+	async generic<T extends string>(value: T): Promise<T> {
+		return value;
+	}
 	// @ts-expect-error "@step decorates methods that return a Promise: make the method async"
 	@step()
 	sync(): number {

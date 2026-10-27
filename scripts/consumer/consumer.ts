@@ -1,7 +1,7 @@
 // A consumer's module, compiled by scripts/consumer-check.sh against the installed package under each module resolution
 // (copied to consumer.ts, consumer.mts and consumer.cts) and each TypeScript version, in both decorator modes. Values and
-// types come from the package root, as the docs say; the @ts-expect-error fails the compile if the package's types were
-// lost (typed any) or a wrong path were accepted.
+// types come from the package root, as the docs say; the @ts-expect-error lines fail the compile if the package's types
+// were lost (typed any), a wrong path were accepted, or @step took a method that does not return a Promise.
 import type { Page } from "@playwright/test";
 import {
 	type AllEntries,
@@ -44,7 +44,20 @@ export class ShopPage extends PageObject<Paths, { storage: typeof schema }> {
 	async firstItem(): Promise<string | null> {
 		return await this.getNestedLocator("main.list.item").first().textContent();
 	}
+
+	@step()
+	async choose<Method extends "card" | "invoice">(method: Method): Promise<Method> {
+		return method;
+	}
+
+	// @ts-expect-error a generic method that does not return a Promise
+	@step()
+	plain<T>(value: T): T {
+		return value;
+	}
 }
+
+export const chosen = (shop: ShopPage): Promise<"card"> => shop.choose("card");
 
 export const lastItem = (page: Page): LocatorQueryBuilder<Paths, "main.list.item"> =>
 	createRegistryWithAccessors<Paths>(page).getLocatorSchema("main.list.item").nth("last");

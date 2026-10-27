@@ -52,6 +52,11 @@ export class Steps {
 	async load(): Promise<number> {
 		return 1;
 	}
+
+	@step({ box: true })
+	async choose<Method extends "card" | "invoice">(method: Method): Promise<Method> {
+		return method;
+	}
 }
 
 // a domain base class that forwards the constructor options by name

@@ -65,4 +65,41 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+- As planned: `AsyncMethod<This = never>` is now `(this: This, ...args: any) => Promise<unknown>`, behind a
+  `biome-ignore` whose reason points at its doc comment (the constraint `ClassMethodDecoratorContext` puts on a method;
+  an `unknown[]` parameter list refuses typed parameters); the standard overloads take `<This, M extends
+  AsyncMethod<This>>` and return `M | undefined`, the legacy ones `<M extends AsyncMethod>` and return
+  `TypedPropertyDescriptor<M> | undefined`, in `step` and in `StepDecoratorFactory`; the message overloads and the
+  implementation signature are unchanged.
+- **Deviation: the sketch let a generic method that does not return a Promise through.** The new test-d case
+  `plainGeneric<T>(value: T): T` compiled under `@step()`: checked against the constraint's `any` arguments, a generic
+  signature is instantiated with `T = any`, so it returns `any`, which passes as a Promise. A probe of 13 accepted and 13
+  rejected forms in both modes (scratch copies of `…-probes/E/types/` plus new cases) found five forms the sketch
+  accepted that the plan's contract rejects: `<T>(value: T): T` (called and bare), `<T extends number>(value: T): T`,
+  `<T>(): T` and `<T>(value: T): T | Promise<T>`. Two alternatives with `never` parameters let the same five through
+  and break `ClassMethodDecoratorContext`'s own constraint. The fix adopted: the value (standard) and the descriptor
+  (legacy) are typed `ReturnsPromise<M>`, `ReturnType<M> extends Promise<unknown> ? M : StepRequiresPromise`.
+  `ReturnType` reads a type parameter as its constraint (`unknown`, not a Promise), so the five are refused with the
+  readable message in both modes, and `M` is still inferred from the context or the descriptor and returned unchanged.
+  Every accepted form of the probe still compiles (generic called, bare and boxed; a constrained type parameter;
+  overloads; `Promise<this>`; a `this` parameter; typed, optional and rest parameters; a non-`async` Promise; a static
+  and a private method; a generic returning `Promise<number>`), and a call keeps its type arguments.
+- Probes against the built package, both modes (`…-probes/E/types/` `generic`, `stepForms`, `messages`, and the new
+  cases): `generic`, `stepForms` and the cases exit 0, every `@ts-expect-error` used; `messages` exits 2 with its 8
+  expected errors, the message in each (as the sketch's `fixed.out`).
+- Tests: `src/helpers/stepDecorator.test-d.ts`, a `Generic` class (called, bare, boxed, constrained, overloaded,
+  `Promise<this>`, a `this` parameter) with `expectTypeOf` on its calls and two `@ts-expect-error` calls (a type
+  argument and a constraint still hold), and a `Rejected` class with the getter, setter, field, `PromiseLike`,
+  `Promise | number` and plain generic forms; `stepLegacyDecorators.typecheck.ts`, a constrained and a boxed generic
+  method, a plain generic one refused, calls keeping their types; `publicTypes.typecheck.ts` and
+  `publicTypes.emit.ts`, a generic method in their `Steps` classes. Beyond the plan: `scripts/consumer/consumer.ts`
+  gains a generic `@step` method and a refused plain generic one, so TypeScript 5.0 to the latest release checks the
+  new types in both decorator modes (the `consumer` job runs it; the script itself is unchanged).
+- Docs: *Test steps* (generic methods keep their type parameters; the `Checkout` example gains `choose<Method>()`);
+  `api/step.md`'s summary names generic methods too. The doc comments of `step` unchanged. Changeset
+  `step-generic-methods.md`, which also says a generic method that does not return a Promise is still refused.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 828 passed; `pnpm pack-test --reporter=line` exit 0 (1,524 passed, 3
+  skipped; doc snippets 218; api coverage 0 problems; step locations 7); `consumer-check.sh` 18 `ok` (TypeScript 5.0 to
+  the latest release, both decorator modes, with the generic method and the refused one); `pnpm docs:build` 0.

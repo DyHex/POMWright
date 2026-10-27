@@ -5,8 +5,8 @@ description: "The @step decorator: a method that returns a Promise runs as Playw
 
 `@step` runs a method as Playwright's [`test.step()`](https://playwright.dev/docs/api/class-test#test-step), titled
 `ClassName.methodName` unless given a title, so the report shows the method as a step, with what it did inside it. It
-works with TypeScript's standard decorators, the default, and with `experimentalDecorators: true`, on any class and
-on static methods, which are titled by their class (`AccountPage.create`).
+works with TypeScript's standard decorators, the default, and with `experimentalDecorators: true`, on any class, on
+generic methods and on static methods, which are titled by their class (`AccountPage.create`).
 
 ```ts
 import type { Page } from "@playwright/test";

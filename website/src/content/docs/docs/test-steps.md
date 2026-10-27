@@ -34,7 +34,8 @@ export class LoginPage extends PageObject<Paths> {
 ```
 
 The report shows `LoginPage.submit` as a step, with the click inside it, at the line that called `submit()`. `@step`
-works on any class, page object or not, and on static methods, which are titled by their class (`AccountPage.create`).
+works on any class, page object or not, on generic methods, which keep their type parameters, and on static methods,
+which are titled by their class (`AccountPage.create`).
 
 ## Title and options
 
@@ -55,6 +56,11 @@ export class Checkout {
 
   @step("Wait for the receipt", { timeout: 10_000 })
   async receipt() {}
+
+  @step("Choose how to pay")
+  async choose<Method extends "card" | "invoice">(method: Method): Promise<Method> {
+    return method; // choose("card") is a Promise<"card">
+  }
 }
 ```
 
