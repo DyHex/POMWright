@@ -10,7 +10,7 @@
  * chance to report a write the browser refused.
  */
 import type { ConsoleMessage, Frame } from "@playwright/test";
-import { atCallSite } from "./callSite";
+import { atCallSite, siteText } from "./callSite";
 import { takeTurn } from "./storageTurns";
 
 /** Removes what `addInitScript` added. Playwright's `Disposable` satisfies it. */
@@ -164,15 +164,28 @@ export const neverAppliedError = (pendings: readonly (readonly [string, PendingS
 	if (first === undefined) {
 		throw new Error("neverAppliedError needs at least one pending seed");
 	}
-	const details = pendings
-		.map(([origin, pending]) => `the seed for ${origin} (keys: ${describeKeys(Object.keys(pending.entries))})`)
-		.join(" and ");
+	const [origin, pending] = first;
+	if (pendings.length === 1) {
+		return atCallSite(
+			new Error(
+				`${pending.title}: the seed for ${origin} (keys: ${describeKeys(Object.keys(pending.entries))}) was never ` +
+					"applied: the page closed without navigating there; remove the seed call, or navigate to the origin before " +
+					"the test ends",
+			),
+			pending.site,
+		);
+	}
+	// one error, since Playwright reports only a test's first unhandled one: each seed with its helper and its call
+	const seeds = pendings.map(([each, seed]) => {
+		const at = siteText(seed.site);
+		return `  ${seed.title}${at === undefined ? "" : ` at ${at}`}, for ${each} (keys: ${describeKeys(Object.keys(seed.entries))})`;
+	});
 	return atCallSite(
 		new Error(
-			`${first[1].title}: ${details} was never applied: the page closed without navigating there; ` +
-				"remove the seed call, or navigate to the origin before the test ends",
+			`${pending.title}: ${pendings.length} seeds were never applied: the page closed without navigating to their ` +
+				`origins; remove the seed calls, or navigate to the origins before the test ends:\n${seeds.join("\n")}`,
 		),
-		first[1].site,
+		pending.site,
 	);
 };
 

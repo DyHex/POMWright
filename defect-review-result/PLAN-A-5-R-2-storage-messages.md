@@ -102,3 +102,26 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   storage*. `.changeset/sandboxed-document-message.md` amended (the error page, the new text).
 - Checks: `pnpm lint` 0; `pnpm test:unit` 886 passed; `pnpm pack-test --reporter=line` exit 0 (1,596 passed, 3
   skipped; doc snippets 221; api coverage 0 problems; step locations 29); `pnpm docs:build` 0.
+
+**Step 2 (R-2).**
+
+- `callSite.ts`: `siteText(site)`, a captured site's first frame outside POMWright's bundle as `file:line:column`, the
+  path relative to the working directory when the file is inside it and as it is otherwise (a path outside would read
+  `../../…`).
+- `neverAppliedError`: one pending seed, today's text; several: `<first seed's title>: <n> seeds were never applied: the
+  page closed without navigating to their origins; remove the seed calls, or navigate to the origins before the test
+  ends:` and one indented line per seed, `<title> at <file:line:column>, for <origin> (keys: …)` (the `at` part left out
+  when the site has no frame); the error's call site stays the first seed's. Message from the build (chromium):
+  `TestStorageSecond.SessionStorage.seed: 2 seeds were never applied: …:` /
+  `  TestStorageSecond.SessionStorage.seed at tests/testApp/sessionStorage.spec.ts:1005:42, for http://127.0.0.1:9000 (keys: a)` /
+  `  Pay.SessionStorage.seed at tests/testApp/sessionStorage.spec.ts:1006:83, for https://pay.example (keys: orderId)`
+  (the harness's working directory is `test/`).
+- Tests: unit (`sessionStorageSeed.test.ts`): the old two-origin case becomes two helpers and three origins, a site
+  inside the working directory (relative) and one outside (as it is), the stack at the first seed's call;
+  `callSite.test.ts`, `siteText` (a bundle frame skipped; relative and absolute; no frame). Harness
+  (`sessionStorage.spec.ts`, *overlapping seeds that are never applied*): seeds for two origins from two helpers, the
+  error handed over through the describe's file, the whole message matched with each call's `file:line:column`.
+- Docs: `api/errors.md`, *seed* (the several-seed form); *Seeding session storage*, *Errors* (one sentence). Changeset
+  `never-applied-several-seeds.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 890 passed; `pnpm pack-test --reporter=line` exit 0 (1,602 passed, 3
+  skipped; doc snippets 221; api coverage 0 problems; step locations 29); `pnpm docs:build` 0.

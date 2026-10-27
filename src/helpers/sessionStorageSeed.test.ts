@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { ConsoleMessage, Frame } from "@playwright/test";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -20,6 +21,7 @@ import {
 const A = "http://localhost:9000";
 const B = "http://127.0.0.1:9000";
 const C = "http://127.0.0.2:9000";
+const D = "http://127.0.0.3:9000";
 
 describe("originOf", () => {
 	it("returns the origin of a URL and undefined for URLs without one", () => {
@@ -613,14 +615,23 @@ describe("SeedRegistry", () => {
 	});
 
 	describe("page close", () => {
-		it("fails a passing test when a seed was never applied, naming origins and keys and pointing at the seed call", async () => {
+		it("fails a passing test when seeds for several origins were never applied, listing each seed's helper and call", async () => {
 			const { page, registry, failure } = setup();
+			// a call inside the working directory is shown relative to it; one outside it, as it is
+			const inside = Object.assign(new Error(), {
+				stack: `Error\n    at Object.<anonymous> (${path.join(process.cwd(), "tests", "popup.spec.ts")}:20:5)`,
+			});
 			await registry.add(B, { token: "1", user: "u" }, title, site);
-			await registry.add(C, { other: "x" }, "Other.SessionStorage.seed", site);
+			await registry.add(C, { other: "x" }, "Popup.SessionStorage.seed", inside);
+			await registry.add(D, { k: "v" }, "Popup.SessionStorage.seed", inside);
 			const error = failure(() => page.close());
 			expect(error?.message).toBe(
-				`${title}: the seed for ${B} (keys: token, user) and the seed for ${C} (keys: other) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
+				`${title}: 3 seeds were never applied: the page closed without navigating to their origins; remove the seed calls, or navigate to the origins before the test ends:\n` +
+					`  ${title} at /suite/tests/login.spec.ts:12:34, for ${B} (keys: token, user)\n` +
+					`  Popup.SessionStorage.seed at ${path.join("tests", "popup.spec.ts")}:20:5, for ${C} (keys: other)\n` +
+					`  Popup.SessionStorage.seed at ${path.join("tests", "popup.spec.ts")}:20:5, for ${D} (keys: k)`,
 			);
+			// the report's code frame stays at the first seed's call
 			expect(error?.stack).toBe(`Error: ${error?.message}\n${siteFrame}`);
 		});
 

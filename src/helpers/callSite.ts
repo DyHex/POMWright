@@ -1,3 +1,4 @@
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** POMWright's published bundle: its frames never point at the consumer's code. */
@@ -73,3 +74,19 @@ export const siteLocation = (site: Error): StepLocation | undefined => {
  * `location` it is given is used whatever the ancestors are.
  */
 export const callerLocation = (boundary: Boundary): StepLocation | undefined => siteLocation(captureCallSite(boundary));
+
+/**
+ * Where a captured site points, as `file:line:column` for a message: its first frame with a file outside POMWright's
+ * bundle, the path relative to the working directory when the file is inside it. `undefined` when no frame has one.
+ */
+export const siteText = (site: Error): string | undefined => {
+	for (const frame of (site.stack ?? "").split("\n").slice(1)) {
+		const location = BUNDLE_FRAME.test(frame) ? undefined : frameLocation(frame);
+		if (location !== undefined) {
+			const relative = path.relative(process.cwd(), location.file);
+			const file = relative.startsWith("..") || path.isAbsolute(relative) ? location.file : relative;
+			return `${file}:${location.line}:${location.column}`;
+		}
+	}
+	return undefined;
+};

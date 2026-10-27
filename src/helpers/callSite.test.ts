@@ -1,6 +1,7 @@
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
-import { atCallSite, callerLocation, captureCallSite, frameLocation } from "./callSite";
+import { atCallSite, callerLocation, captureCallSite, frameLocation, siteText } from "./callSite";
 
 // A consumer file may be named like a POMWright module; only the boundary decides what is left out.
 function pageObject() {
@@ -83,5 +84,28 @@ describe("callerLocation", () => {
 	it("is undefined when the boundary is not on the stack", () => {
 		function notCalled() {}
 		expect(callerLocation(notCalled)).toBeUndefined();
+	});
+});
+
+describe("siteText", () => {
+	const siteWith = (...frames: string[]) => Object.assign(new Error(), { stack: ["Error", ...frames].join("\n") });
+
+	it("is the first frame outside POMWright's bundle, relative to the working directory when inside it", () => {
+		const inside = path.join(process.cwd(), "tests", "pay.spec.ts");
+		expect(
+			siteText(
+				siteWith(
+					"    at seed (/n/node_modules/pomwright/dist/index.js:1:1)",
+					`    at Object.<anonymous> (${inside}:20:5)`,
+				),
+			),
+		).toBe(`${path.join("tests", "pay.spec.ts")}:20:5`);
+	});
+
+	it("keeps a path outside the working directory as it is, and is undefined without a frame", () => {
+		expect(siteText(siteWith("    at Object.<anonymous> (/suite/tests/pay.spec.ts:20:5)"))).toBe(
+			"/suite/tests/pay.spec.ts:20:5",
+		);
+		expect(siteText(siteWith())).toBeUndefined();
 	});
 });

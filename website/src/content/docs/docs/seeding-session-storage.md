@@ -174,7 +174,8 @@ Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was n
 ```
 
 The first seven are thrown by the `seed` call; the last four fail the test later, when the app's document loads or when
-the page closes.
+the page closes. When seeds for several origins are never applied, one error lists each with its helper and the line that
+called it (`2 seeds were never applied: …`, then one line per seed).
 
 ## Reference
 

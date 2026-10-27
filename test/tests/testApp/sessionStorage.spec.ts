@@ -994,6 +994,31 @@ test.describe("overlapping seeds that are never applied", () => {
 			`Error: TestStorageSecond.SessionStorage.seed: the seed for ${B} (keys: a, b, c) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
 		);
 	});
+
+	test("seeds for two origins from two helpers fail the test when the page closes", async ({
+		page,
+		testStorage,
+		testStorageSecond,
+	}) => {
+		test.fail(true, "the never-applied seeds must fail this test at close");
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({ a: "1" });
+		await new SessionStorage(page, { label: "Pay", origin: "https://pay.example" }).seed({ orderId: "42" });
+		await page.close();
+	});
+
+	test("and the message lists each seed with its helper and the line that called it", () => {
+		const message = readFileSync(messageFile(), "utf8");
+		rmSync(messageFile());
+		const at = "at tests/testApp/sessionStorage\\.spec\\.ts:\\d+:\\d+";
+		expect(message).toMatch(
+			new RegExp(
+				"^Error: TestStorageSecond\\.SessionStorage\\.seed: 2 seeds were never applied: the page closed without navigating to their origins; remove the seed calls, or navigate to the origins before the test ends:\\n" +
+					`  TestStorageSecond\\.SessionStorage\\.seed ${at}, for http://127\\.0\\.0\\.1:9000 \\(keys: a\\)\\n` +
+					`  Pay\\.SessionStorage\\.seed ${at}, for https://pay\\.example \\(keys: orderId\\)$`,
+			),
+		);
+	});
 });
 
 test.describe("seed and the URL fragment", () => {

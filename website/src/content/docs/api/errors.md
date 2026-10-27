@@ -354,6 +354,15 @@ Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was n
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the browser counted the page's arrival on https://pay.example as a return there (navigation.activation.from is set): the document before it was already on the origin, as after a failed navigation to it
 ```
 
+When seeds for several origins are never applied, one error lists each seed with its helper and the line that called
+it; the stack points at the first:
+
+```text
+Shop.SessionStorage.seed: 2 seeds were never applied: the page closed without navigating to their origins; remove the seed calls, or navigate to the origins before the test ends:
+  Shop.SessionStorage.seed at tests/checkout.spec.ts:12:5, for https://pay.example (keys: orderId)
+  Login.SessionStorage.seed at tests/checkout.spec.ts:13:5, for https://login.example (keys: consent)
+```
+
 See [what `seed` cannot do](/POMWright/docs/seeding-session-storage/#what-seed-cannot-do).
 
 ---
