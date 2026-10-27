@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  actions: read # checks.yaml reads the runs of this workflow to find the last green commit
 
 # One run at a time, in push order, so publish.yaml and pages.yaml, which start when a run succeeds, follow the order
 # of the commits: an older commit's run can never finish after a newer one's and deploy its site over the newer site.
@@ -24,7 +23,6 @@ jobs:
     uses: ./.github/workflows/checks.yaml
     with:
       browsers: '["chromium", "firefox", "webkit"]'
-      workflow: main.yaml
       node-floor: true # the chromium harness on Node 20 as well
 
   # The gate. Its job id is the required status check of main ("build"): do not rename it without changing the

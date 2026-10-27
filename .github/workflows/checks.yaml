@@ -1,11 +1,8 @@
 name: Checks
 
-# The jobs of every CI run, called by pr.yaml (pull requests) and main.yaml (pushes to main). Lint always runs. The
-# changes job compares the commit with the last green commit of the branch (the newest commit whose run of the
-# caller's workflow succeeded) and, on a pull request, with its base, never with the previous push alone (that would let
-# a docs-only push turn a red run green): code is a change outside website/ that is not *.md, site is code or a change
-# under website/. The package job runs on either; the harness on code; the site job on site. A skipped job is reported
-# as success. A change to the documentation's pages only runs lint, the package and the site job.
+# The jobs of every CI run, called by pr.yaml (pull requests) and main.yaml (pushes to main). Every job runs on every
+# run, whatever changed, so a run always tests what it reports on (on a pull request, GitHub's merge commit); skipping
+# jobs by what changed saved minutes on docs-only pushes only. Lint runs biome and actionlint.
 # The package job builds and packs once; every harness job and the site job test that tarball. The harness runs on the
 # browsers the caller asks for, each at the Playwright pin and at the latest 1.x, and with node-floor (set by pr.yaml and
 # main.yaml) also on chromium at the pin on Node 20, the floor of package.json's engines (the unit tests stay on Node 24:
@@ -19,10 +16,6 @@ on:
         description: JSON array of the Playwright projects the harness runs, each at the pin and at the latest version
         type: string
         default: '["chromium", "firefox", "webkit"]'
-      workflow:
-        description: The caller's workflow file (pr.yaml or main.yaml), whose successful runs mark the green commits
-        type: string
-        required: true
       node-floor:
         description: Also run the harness on chromium at the Playwright pin on Node 20, the engines floor
         type: boolean
@@ -30,37 +23,8 @@ on:
 
 permissions:
   contents: read
-  actions: read # the runs API, to find the last green commit
 
 jobs:
-  changes:
-    name: Changes
-    runs-on: ubuntu-latest
-    outputs:
-      code: ${{ steps.changes.outputs.code }}
-      site: ${{ steps.changes.outputs.site }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-      - id: green
-        name: Last green commit of the branch
-        env:
-          GH_TOKEN: ${{ github.token }}
-          WORKFLOW: ${{ inputs.workflow }}
-          EVENT: ${{ github.event_name }}
-          BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
-          HEAD_REPO: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
-          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-        run: echo "sha=$(bash scripts/ci-last-green.sh "$GITHUB_REPOSITORY" "$WORKFLOW" "$EVENT" "$BRANCH" "$HEAD_REPO" "$HEAD_SHA")" >>"$GITHUB_OUTPUT"
-      - id: changes
-        name: Which jobs does the change need?
-        env:
-          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          GREEN: ${{ steps.green.outputs.sha }}
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
-        run: bash scripts/ci-changes.sh "$HEAD_SHA" "$GREEN" "$PR_BASE"
-
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -75,11 +39,22 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      # actionlint over .github/workflows. GitHub's runners have shellcheck, so it also checks the run: scripts. The
+      # version and its checksum are pinned here and move together, by hand: Dependabot does not see them.
+      - name: Lint the workflows
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          echo "${ACTIONLINT_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color
 
   package:
     name: Unit tests and package
-    needs: changes
-    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.site == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -103,8 +78,7 @@ jobs:
 
   harness:
     name: Harness (${{ matrix.browser }}, Playwright ${{ matrix.playwright }})
-    needs: [changes, package]
-    if: needs.changes.outputs.code == 'true'
+    needs: package
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -158,8 +132,8 @@ jobs:
 
   harness-node-floor:
     name: Harness (chromium, Playwright pin, Node 20)
-    needs: [changes, package]
-    if: inputs.node-floor && needs.changes.outputs.code == 'true'
+    needs: package
+    if: inputs.node-floor
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -195,8 +169,7 @@ jobs:
   # pages.yaml deploys the same build.
   site:
     name: Documentation and site
-    needs: [changes, package]
-    if: needs.changes.outputs.site == 'true'
+    needs: package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

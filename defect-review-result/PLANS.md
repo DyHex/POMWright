@@ -46,8 +46,8 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | # | Plan | Decisions | Bump | Stop | Status | Commits |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | [Every build from an empty `dist/`; the packed file list asserted](PLAN-G-4-clean-build.md) | 33 | none | | done | `ee00af7` |
-| 2 | [`.editorconfig` for YAML and Markdown; the VS Code snippets file deleted](PLAN-G-9-R-1-repository-hygiene.md) | 34, 35 | none | | done | (filled by the next commit) |
-| 3 | [CI without the docs-only skip; actionlint in the lint job](PLAN-G-2-G-1-checks-workflow.md) | 31, 32, 8 | none | stop | planned | |
+| 2 | [`.editorconfig` for YAML and Markdown; the VS Code snippets file deleted](PLAN-G-9-R-1-repository-hygiene.md) | 34, 35 | none | | done | `1717edb` |
+| 3 | [CI without the docs-only skip; actionlint in the lint job](PLAN-G-2-G-1-checks-workflow.md) | 31, 32, 8 | none | stop | done, awaiting the PR run | (filled by the next commit) |
 | 4 | [Release tooling: changesets 3, action v2, Trusted Publishing, the publish and Pages guards, Dependabot](PLAN-G-3-G-10-G-5-G-8-release-workflows.md) | 1, 3, 4, 53 | patch (note) | stop | planned | |
 | 5 | [A `consumer` job: the packaging probes and TypeScript 5.0 to latest](PLAN-T14-consumer-job.md) | 58 | none | stop | planned | |
 | 6 | [Mermaid 12, and a render check of every diagram in the site job](PLAN-G-3-T15-mermaid.md) | 1, 59 | none | stop | planned | |

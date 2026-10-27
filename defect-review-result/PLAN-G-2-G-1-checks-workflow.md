@@ -79,4 +79,22 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+- actionlint: the latest release is 1.7.12 (the version scope G ran); SHA-256 of `actionlint_1.7.12_linux_amd64.tar.gz`
+  `8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8`, matching the release's `checksums.txt`. Before the
+  change, actionlint with shellcheck 0.11.0 (downloaded to the scratchpad; not installed here, but on GitHub's runners)
+  was clean on all five workflows; after it, too.
+- The lint step downloads to `$RUNNER_TEMP`, checks the archive with `sha256sum --check --strict`, extracts `actionlint`
+  and runs it with `-color` from the checkout. Run locally with `RUNNER_TEMP` in the scratchpad: exit 0; a wrong
+  checksum fails `sha256sum` (exit 1).
+- `checks.yaml`: the `changes` job, the `workflow` input, `actions: read` and every `needs.changes` condition removed;
+  `package` has no `needs`; `harness` and `site` need `package`; `harness-node-floor` keeps `if: inputs.node-floor`.
+  `pr.yaml` and `main.yaml` lost `workflow:` and `actions: read`. `scripts/ci-changes.sh` and `scripts/ci-last-green.sh`
+  deleted; no reference to them is left in `.github/` or `scripts/`.
+- Docs: AGENTS.md §2 (the workflows row: every job on every run, lint with actionlint; the `scripts/` row without the
+  two scripts, `ci-playwright-version.sh` described from its header); *Internal → Tests and checks*, *CI* (why every job
+  runs, the job list without conditions).
+- Checks: `pnpm lint` 0; actionlint 0; `pnpm test:unit` 782 passed; `pnpm pack-test --reporter=line` exit 0 (1,509
+  passed, 3 skipped; doc snippets 215; api coverage 0 problems; step locations 7); `pnpm docs:build` exit 0.
+- To confirm on PR #60 after the push: no `Changes` job; lint runs the new step; every other job runs.

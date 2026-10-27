@@ -48,18 +48,19 @@ its own so that no `--reporter` given to the harness can switch it off.
 ## CI
 
 `.github/workflows/checks.yaml` holds the jobs; `pr.yaml` runs them for every pull request and `main.yaml` for every
-push to `main`:
+push to `main`. Every job runs on every run, whatever changed, so a run always tests what it reports on; on a pull
+request that is GitHub's merge commit of the branch and its base. Skipping jobs by what changed was tried and dropped:
+it saved minutes on pushes that changed only documentation, and compared the branch with its last green commit while
+the jobs tested the merge commit, so after the base moved a documentation-only push could skip the harness on an
+untested merge.
 
-- **changes**: compares the commit with the last green commit of the branch and, on a pull request, with its base.
-  `code` is a change outside `website/` that is not a Markdown file; `site` is `code` or a change under `website/`. A
-  change to Markdown files elsewhere runs lint alone; a change to the documentation's pages runs lint, the package and
-  the site job.
-- **lint**: biome over the whole repository, warnings failing.
-- **package** (`code` or `site`): the unit tests, then one build and one tarball, kept as an artifact.
-- **harness** (`code`): that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs
+- **lint**: biome over the whole repository, warnings failing, then actionlint over the workflows (with shellcheck over
+  their scripts), its version and checksum pinned in the step.
+- **package**: the unit tests, then one build and one tarball, kept as an artifact.
+- **harness**: that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs
   chromium, `main` all three, and one more job runs chromium on Node 20, the `engines` floor.
-- **site** (`site`): that tarball installed into `test/`, the documentation's examples compiled, the API reference and
-  the doc comments checked, and the site built, which fails on a link or an anchor that does not exist.
+- **site**: that tarball installed into `test/`, the documentation's examples compiled, the API reference and the doc
+  comments checked, and the site built, which fails on a link or an anchor that does not exist.
 - **build**: the gate job, the check `main` requires.
 
 Publishing waits for `CI` on `main`, so nothing is published past a red run, and `pages.yaml` deploys the site after
