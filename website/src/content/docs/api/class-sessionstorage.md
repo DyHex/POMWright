@@ -145,8 +145,9 @@ await storage.get(["token", "missing"]); // { token: "abc", missing: null }
 **Returns**
 
 - Promise: every present entry; the value or `null`; or a record with every key asked for, `null` for each missing one.
-  Values are typed by the schema: a declared key as its codec's type, any other key as a string, and a key typed
-  `string` rather than a literal as a string or any declared codec's type (see [Decoded](#decoded)).
+  Values are typed by the schema: a declared key as its codec's type, any other key as a string, a key typed `string`
+  or a branded string as a string or any declared codec's type, and a pattern as a string or the types of the declared
+  keys it matches (see [Decoded](#decoded)).
 
 **Throws**
 
@@ -322,8 +323,9 @@ Turns the value into the string to store. It must return a string.
 
 ## Decoded
 
-The type of a key's value under a schema: `Decoded<S, K>` is the codec's type when `K` is a declared key of `S`, and
-`string` otherwise. [`get`](#get) returns it (with `null`), and [`set`](#set) and [`seed`](#seed) take it.
+The type of a key's value under a schema, for each member of `K`: `Decoded<S, K>` is the codec's type when the member
+is a declared key of `S`, and `string` for any other literal. [`get`](#get) returns it (with `null`), and
+[`set`](#set) and [`seed`](#seed) take it.
 
 ```ts
 import { json, type Decoded } from "pomwright";
@@ -332,9 +334,13 @@ const accountStorage = { user: json<{ name: string }>() };
 type User = Decoded<typeof accountStorage, "user">; // { name: string }
 type Token = Decoded<typeof accountStorage, "token">; // string
 type AnyKey = Decoded<typeof accountStorage, string>; // string | { name: string }
+type UserKey = Decoded<typeof accountStorage, `u${string}`>; // string | { name: string }
+type FormKey = Decoded<typeof accountStorage, `form:${string}`>; // string
 ```
 
-A key typed `string` may be any key, so its value is a string or any declared codec's type.
+A key typed `string` may be any key, so its value is a string or any declared codec's type, and so is a branded
+string (`string & { … }`). A pattern may be any declared key it matches: its value is a string or those keys' codecs'
+types, and a string alone when it matches none.
 
 ## json
 

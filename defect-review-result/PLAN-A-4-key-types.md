@@ -62,4 +62,20 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27. As planned.
+
+- `sessionStorage.ts`: `Decoded<S, K>` is the walkthrough's option 3: `string extends K` as before; otherwise per member,
+  a branded string (`K extends object`) as `string | AnyDecoded<S>`, a pattern (`{} extends Record<K, unknown>`, behind
+  the same `biome-ignore` as the locator types) as `string | DecodedLiteral<S, Extract<keyof S, K>>`, a literal as
+  `DecodedLiteral<S, K>`, a new internal alias for the old literal branch. Its doc comment names the three kinds.
+- Tests: `src/helpers/sessionStorage.test.ts`, *Decoded, per member of the key's type*: a declared and an undeclared
+  literal and their union, `string`, a branded string, `` `u${string}` ``, `` `form:${string}` ``, `Uppercase<string>` and
+  `"attempts" | `u${string}``; `get` with a pattern-typed key. With the old `Decoded`, the brand and pattern cases fail
+  (checked, then restored). `test/tests/packaging/publicTypes.typecheck.ts`: a pattern's value takes the matching key's
+  codec type, and an `@ts-expect-error` that it does not take a key it cannot match.
+- Docs: *Session storage*, *Codecs for structured values*; `api/class-sessionstorage.md`, `get()` **Returns** and
+  *Decoded* (two more examples, compiled by the snippet check). `.changeset/storage-string-key-types.md` rewritten for
+  every key kind, with the narrowed migration.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 896 passed; `pnpm pack-test --reporter=line` exit 0 (1,602 passed, 3
+  skipped; doc snippets 221; api coverage 0 problems; step locations 29); `consumer-check.sh` 18 `ok`; `pnpm docs:build`
+  0.

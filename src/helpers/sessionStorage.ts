@@ -89,21 +89,34 @@ export type SessionStorageOptions<S extends SessionStorageSchema> = {
 /** The type of any declared key's value: the union of the schema's codecs' types (`never` without codecs). */
 type AnyDecoded<S extends SessionStorageSchema> = { [P in keyof S]: S[P] extends Codec<infer T> ? T : never }[keyof S];
 
+/** The type of one literal key's value: its codec's type when it is declared, otherwise `string`. */
+type DecodedLiteral<S extends SessionStorageSchema, K> = K extends keyof S
+	? S[K] extends Codec<infer T>
+		? T
+		: never
+	: string;
+
 /**
- * The type of key `K`'s value under schema `S`: the codec's type when the key is declared, otherwise `string`. A key
- * typed `string`, not a literal, may be any key, so its value is a string or any declared codec's type; pass the literal,
- * or type the key as the schema's keys (`keyof typeof schema`), for one codec's type. `get` returns it, with `null`, and
- * `set` and `seed` take it.
+ * The type of key `K`'s value under schema `S`, for each member of `K`: a literal key's codec's type when the key is
+ * declared, otherwise `string`. A key whose type is not a literal (`string`, a branded string, or a pattern such as
+ * `` `user:${string}` ``) may be any declared key it matches, so its value is a string or one of those codecs' types:
+ * any declared codec's for `string` and a branded string, the codecs of the declared keys the pattern matches for a
+ * pattern. Pass the literal, or type the key as the schema's keys (`keyof typeof schema`), for one codec's type. `get`
+ * returns it, with `null`, and `set` and `seed` take it.
  *
  * @see https://dyhex.github.io/POMWright/api/class-sessionstorage/#decoded
  */
 export type Decoded<S extends SessionStorageSchema, K extends string> = string extends K
 	? string | AnyDecoded<S>
-	: K extends keyof S
-		? S[K] extends Codec<infer T>
-			? T
-			: never
-		: string;
+	: K extends unknown
+		? K extends object
+			? // a branded string (string & {…}) may be any key
+				string | AnyDecoded<S>
+			: // biome-ignore lint/complexity/noBannedTypes: {} fits Record<K, unknown> only when K is a pattern, not a literal
+				{} extends Record<K, unknown>
+				? string | DecodedLiteral<S, Extract<keyof S, K>>
+				: DecodedLiteral<S, K>
+		: never;
 
 /**
  * `K`, but not a place TypeScript infers `K` from, so `set(key, value)` takes the key's type from the key alone; inferred

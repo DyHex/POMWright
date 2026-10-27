@@ -4,6 +4,7 @@ import { PageObject, type StorageTypeFromOptions } from "../pageObject";
 import {
 	type AllEntries,
 	type Codec,
+	type Decoded,
 	decodeValue,
 	encodeEntries,
 	json,
@@ -492,6 +493,9 @@ const typeContract = async () => {
 	await typed.seed(dynamicKey, 3);
 	// @ts-expect-error the value may be a declared codec's type, so it is not known to be a string
 	(await typed.get(dynamicKey))?.toUpperCase();
+	// a key typed as a pattern may be any declared key it matches
+	const patternKey = "user" as `u${string}`;
+	expectTypeOf(typed.get(patternKey)).resolves.toEqualTypeOf<string | VoiceCheckoutModel | null>();
 	expectTypeOf(plain.get()).resolves.toEqualTypeOf<Record<string, string>>();
 	expectTypeOf(typed.get()).resolves.toMatchTypeOf<{ user?: VoiceCheckoutModel; attempts?: number }>();
 	expectTypeOf<AllEntries<typeof schema>["anything"]>().toEqualTypeOf<string | VoiceCheckoutModel | number>();
@@ -536,3 +540,26 @@ const typeContract = async () => {
 };
 void typeContract;
 void WrongSchemaPage;
+
+describe("Decoded, per member of the key's type", () => {
+	type Schema = typeof schema;
+	type Brand = string & { readonly __brand: "Key" };
+
+	it("types a literal by its codec, or as a string when it has none", () => {
+		expectTypeOf<Decoded<Schema, "user">>().toEqualTypeOf<VoiceCheckoutModel>();
+		expectTypeOf<Decoded<Schema, "theme">>().toEqualTypeOf<string>();
+		expectTypeOf<Decoded<Schema, "user" | "theme">>().toEqualTypeOf<VoiceCheckoutModel | string>();
+	});
+
+	it("types string and a branded string as any declared key", () => {
+		expectTypeOf<Decoded<Schema, string>>().toEqualTypeOf<string | VoiceCheckoutModel | number>();
+		expectTypeOf<Decoded<Schema, Brand>>().toEqualTypeOf<string | VoiceCheckoutModel | number>();
+	});
+
+	it("types a pattern by the declared keys it can match", () => {
+		expectTypeOf<Decoded<Schema, `u${string}`>>().toEqualTypeOf<string | VoiceCheckoutModel>();
+		expectTypeOf<Decoded<Schema, `form:${string}`>>().toEqualTypeOf<string>();
+		expectTypeOf<Decoded<Schema, Uppercase<string>>>().toEqualTypeOf<string>();
+		expectTypeOf<Decoded<Schema, "attempts" | `u${string}`>>().toEqualTypeOf<number | string | VoiceCheckoutModel>();
+	});
+});

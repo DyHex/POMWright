@@ -347,6 +347,13 @@ const literalValue: Promise<{ name: string } | null> = storageWithCodecs.get("us
 storageWithCodecs.set("user", "a string");
 void [widenedValue, narrowedValue, literalValue];
 
+// a key typed as a pattern may be any declared key it matches, so its value may be that key's codec type
+type UserSchema = { user: Codec<{ name: string }>; attempts: Codec<number> };
+const patternValue: Decoded<UserSchema, `u${string}`> = { name: "Ada" };
+// @ts-expect-error a pattern that only "user" matches does not take "attempts"' type
+const notMatched: Decoded<UserSchema, `u${string}`> = 3;
+void [patternValue, notMatched];
+
 // sub-path arguments, typed per member of the path union
 // a literal member: a segment of the chain; a namespace that is not a declared path is never accepted
 const shop = createRegistryWithAccessors<"main" | "main.form.submit" | "footer">(page);
