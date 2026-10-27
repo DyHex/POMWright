@@ -160,3 +160,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 - Checks: `pnpm lint` 0; `pnpm test:unit` 800 passed; `pnpm pack-test --reporter=line` exit 0 (1,509 passed, 3
   skipped; doc snippets 217; api coverage 0 problems; step locations 7); `consumer-check.sh` 18 `ok`; `pnpm docs:build`
   0.
+
+**Step 2 (B-2).** `…/b2/b2-order.diff` applied cleanly: `persist(definition = this.definition)`; `commit` persists the
+copy, then assigns it and `overrideApplied`, with a comment why; the any-frame branch persists before it assigns. Unit
+tests (*a throwing DSL call changes nothing*): a duplicate path through `getByRole` and through `frameLocator()` throws
+`A locator schema with the path "a" already exists.` twice, and the registered definition is unchanged; a seeded
+registration whose first override the registry refuses (a stubbed `replace`) still takes one override. Against the old
+order all three fail with "has already been provided". Harness case in `add.validation.spec.ts` (packed package): the
+second call repeats the duplicate error, and the registered `main` still resolves to the page's one `body`. Changeset
+`failed-locator-method-unchanged.md`; no page changes (the behaviour now matches *Registering locators*). Checks: `pnpm
+lint` 0; `pnpm test:unit` 806 passed; `pnpm pack-test --reporter=line` exit 0 (1,512 passed, 3 skipped; doc snippets
+217; api coverage 0 problems; step locations 7).

@@ -261,6 +261,41 @@ describe("a throwing DSL call changes nothing", () => {
 		expect(() => builder.locator("x")).toThrowError("only one locator type can be set for a registration");
 		expect(registry.get("a").definition).toEqual({ type: "role", role: "button" });
 	});
+
+	it("leaves a registration as it was when its path is registered already, so a second call says the same", () => {
+		const registry = createRegistry();
+		registry.add("a").locator("main");
+		const duplicate = registry.add("a");
+		expect(() => duplicate.getByRole("button")).toThrowError('A locator schema with the path "a" already exists.');
+		expect(() => duplicate.getByRole("button")).toThrowError('A locator schema with the path "a" already exists.');
+		expect(registry.get("a").definition).toEqual({ type: "locator", selector: "main" });
+	});
+
+	it("does the same for the any-frame frameLocator()", () => {
+		const registry = createRegistry();
+		registry.add("anyFrame").frameLocator();
+		const duplicate = registry.add("anyFrame");
+		expect(() => duplicate.frameLocator()).toThrowError('A locator schema with the path "anyFrame" already exists.');
+		expect(() => duplicate.frameLocator()).toThrowError('A locator schema with the path "anyFrame" already exists.');
+	});
+
+	it("keeps a seeded registration's one override when the registry refuses it", () => {
+		const registry = createRegistry();
+		const seed = registry.createReusable.getByRole("button", { name: "Submit" });
+		const builder = registry.add("seeded", { reuse: seed });
+		const replace = registry.replace.bind(registry);
+		let refuse = true;
+		registry.replace = ((...args: Parameters<typeof replace>) => {
+			if (refuse) {
+				refuse = false;
+				throw new Error("refused");
+			}
+			return replace(...args);
+		}) as typeof registry.replace;
+		expect(() => builder.getByRole({ name: "First" })).toThrowError("refused");
+		builder.getByRole({ name: "Second" });
+		expect(registry.get("seeded").definition).toEqual({ type: "role", role: "button", options: { name: "Second" } });
+	});
 });
 
 describe("types", () => {

@@ -651,8 +651,8 @@ export class LocatorRegistrationBuilder<
 			}
 			const definition: LocatorStrategyDefinition = { type: "frameLocator" };
 			this.ensureDefinitionAllowed(definition);
+			this.persist(definition);
 			this.definition = definition;
-			this.persist();
 			return undefined;
 		}
 		assertStrategyPrimary("frameLocator", selector, { method: "frameLocator", path: this.path });
@@ -775,11 +775,13 @@ export class LocatorRegistrationBuilder<
 			? applyDefinitionPatch(this.definition as LocatorStrategyDefinition, definition)
 			: (definition as LocatorStrategyDefinition);
 		// a copy: a later filter, nth or describe re-registers from it, and the caller may still hold the original
-		this.definition = cloneLocatorStrategyDefinition(mergedDefinition);
+		const next = cloneLocatorStrategyDefinition(mergedDefinition);
+		// persisted first: when the registry refuses it (a path registered already), the registration stays as it was
+		this.persist(next);
+		this.definition = next;
 		if (this.reuseType && this.seededDefinition) {
 			this.overrideApplied = true;
 		}
-		this.persist();
 		return this.getPostDefinitionView();
 	}
 
@@ -846,14 +848,14 @@ export class LocatorRegistrationBuilder<
 		}
 	}
 
-	private persist() {
-		if (!this.definition) {
+	private persist(definition = this.definition) {
+		if (!definition) {
 			throw new Error(`No locator schema definition provided for path "${this.path}".`);
 		}
 
 		const record: LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>> = {
 			locatorSchemaPath: this.path,
-			definition: this.definition,
+			definition,
 			steps: normalizeSteps<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>(this.steps),
 			...(this.description !== undefined ? { description: this.description } : {}),
 		};
