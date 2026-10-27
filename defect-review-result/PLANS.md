@@ -72,7 +72,7 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 25 | [A string `fullUrl` writes `^` as `%5E`; `\|` documented](PLAN-D-2-H-4-fullurl.md) | 17 | patch | | done | `3bf7a19` |
 | 26 | [`NavigationFor` declares `goto` as a property; the labelled `Cannot resolve` message](PLAN-D-1-D-3-navigation.md) | 19, 36 (point 2) | patch | | done | `8c8d8fb`, `27f8d12`; the helper matrix after the stop, `cb101bf` |
 | 27 | [Packed twins of the source-level locator specs](PLAN-T10-packed-twins.md) | 55 (phase 1) | none | | done | `6a8b408`, `9f47cae`, `28310c7` |
-| 28 | [The smaller untested behaviours](PLAN-T16-smaller-specs.md) | 60 | none | | done, stopped (a deviation; the credentials finding) | filled by the next commit |
+| 28 | [The smaller untested behaviours](PLAN-T16-smaller-specs.md) | 60 | none | | done, stopped (a deviation; the credentials finding) | `ce6291d`; the credentials docs after the stop, filled by the next commit |
 | 29 | [The snippet check rejects what it would skip, and compiles the README](PLAN-T12-T15-snippet-check.md) | 56, 59 (point 1) | none | | planned | |
 | 30 | [Complete error lists and the message-coverage check](PLAN-B-7-error-lists.md) | 36, 59 (point 2) | none | | planned | |
 | 31 | [A docs-chains spec](PLAN-T15-docs-chains.md) | 59 (point 3) | none | | planned | |

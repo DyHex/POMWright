@@ -42,6 +42,9 @@ they reach reports and traces:
 AccountPage: expected to have left "http://user:secret@shop.example/account"; found "http://user:secret@shop.example/account" (page.waitForURL: Timeout 500ms exceeded.)
 ```
 
+And `expect(page).toHaveURL(fullUrl)` fails with them on every browser: it compares the document's URL, which browsers
+give without credentials, where `page.url()`, `page.waitForURL()` and the navigation methods keep them.
+
 Give them to Playwright instead, with the `httpCredentials` option
 ([HTTP authentication](https://playwright.dev/docs/network#http-authentication)), and keep the base an origin without
 them.
@@ -64,7 +67,8 @@ Every browser writes a `^` in the path as `%5E`, as `new URL` does on Node 24 wh
 `expect(page).toHaveURL(fullUrl)` fails on Chromium; `expectThisPage()` treats `|` and `%7C` as one and matches on
 every browser, as it does `^` and `%5E`.
 
-A string `fullUrl` is exact in `expect(page).toHaveURL()`. In `page.waitForURL()` and `page.route()` Playwright reads a
+A string `fullUrl` is exact in `expect(page).toHaveURL()`, which never matches it for a base with credentials (see
+[`baseUrl` and `urlPath`](/POMWright/docs/urls-and-navigation/#baseurl-and-urlpath)). In `page.waitForURL()` and `page.route()` Playwright reads a
 string as a glob, where `*`, `**` and a `{a,b}` group are patterns; the navigation helper's own waits use a matcher
 instead.
 

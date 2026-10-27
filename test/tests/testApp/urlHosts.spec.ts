@@ -4,8 +4,8 @@ import { PageObject } from "pomwright";
 
 // A string baseUrl in a form that new URL normalizes: the page object's fullUrl is the normalized URL, which is the URL
 // every browser reports for that page. Every request is fulfilled by page.route, so no host, DNS or IPv6 listener is
-// needed. A URL with credentials keeps them in page.url(), which waitForURL and expectThisPage() read; the document's
-// URL, which toHaveURL compares, has none.
+// needed. A URL with credentials keeps them in page.url(), which waitForURL and the navigation methods read; the
+// document's URL, which toHaveURL compares, has none.
 
 class HostPage extends PageObject<"body"> {
 	constructor(page: Page, baseUrl: string) {
@@ -95,5 +95,12 @@ for (const { form, baseUrl, fullUrl, documentUrl = fullUrl } of HOSTS) {
 		if (documentUrl !== fullUrl) {
 			await expect(page).not.toHaveURL(hostPage.fullUrl);
 		}
+
+		// expectAnotherPage() is this page's negation, on the same URL
+		await expect(hostPage.navigation.expectAnotherPage({ timeout: 250 })).rejects.toThrow(
+			`HostPage: expected to have left ${JSON.stringify(fullUrl)}; found ${JSON.stringify(fullUrl)}`,
+		);
+		await page.goto(fullUrl.replace(/\/x$/, "/elsewhere"));
+		await hostPage.navigation.expectAnotherPage();
 	});
 }

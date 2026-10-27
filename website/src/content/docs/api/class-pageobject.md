@@ -259,7 +259,8 @@ The `baseUrl` the page object was constructed with.
 
 The page object's URL: for two strings, `new URL(urlPath, baseUrl).href` with a `^` in the path written as `%5E`, the
 form every browser reports, but for Chromium's `%7C` for a `|`; a
-[`UrlMatcher`](/POMWright/api/class-navigation/#urlmatcher) when either part is a RegExp. See
+[`UrlMatcher`](/POMWright/api/class-navigation/#urlmatcher) when either part is a RegExp. `toHaveURL(fullUrl)` fails
+for a path with `|` on Chromium, and for a base with credentials on every browser, where `expectThisPage()` matches. See
 [fullUrl](/POMWright/docs/urls-and-navigation/#fullurl).
 
 **Usage**

@@ -2033,3 +2033,19 @@ reported to the maintainer at plan 28's stop.
 **Why**: the serial row says the later tests do not run, and Playwright skips the rest of a serial group only after an
 unexpected failure: with the first test marked `test.fail()`, the second ran (probe). Which tests fail, how far their
 bodies get and which do not run are outcomes of the run, which no test sees of itself.
+
+## 69. `toHaveURL(fullUrl)` with credentials in the base is documented (2026-10-28, after plan 28)
+
+**Settles**: plan 28's unpredicted result: with credentials in a string `baseUrl`, `expect(page).toHaveURL(fullUrl)`
+fails on every browser.
+
+**Decided**: a docs-only commit before plan 29, no changeset. *URLs and navigation*'s credentials note says
+`toHaveURL(fullUrl)` fails with them (it compares the document's URL, which browsers give without credentials, where
+`page.url()`, `page.waitForURL()` and the navigation methods keep them), and its `fullUrl` section links there;
+`fullUrl`'s doc comment and its API section name the case beside Chromium's `|`. `testApp/urlHosts.spec.ts` also
+checks `expectAnotherPage()` for every host form: it fails on the page and passes after leaving it. Agreed by the
+maintainer.
+
+**Why**: the note said such a base "is accepted and works", and `fullUrl`'s comment named `|` as the only form
+`toHaveURL` sees differently. The navigation methods work with credentials; only Playwright's assertion does not, which
+POMWright cannot change. The note already advises `httpCredentials`; this gives one more reason.
