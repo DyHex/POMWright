@@ -27,25 +27,36 @@ consumer files of those names.
 ## Steps at the test's line
 
 The report shows a step at a location Playwright takes from the async stack when the step opens, after an internal
-`await`: only `async` functions that are waiting are on it, not plain ones. An unboxed step is shown at the first frame;
-a boxed step (`{ box: true }`) at the frame after it, since the first is taken for the helper that opened the step. So a
-boxed step is shown at the line that called the helper exactly when one `async` POMWright frame sits between the caller
-and `test.step`:
+`await`: only `async` functions that are waiting are on it, not plain ones. An unboxed step is shown at the first frame.
+A boxed step (`{ box: true }`) is shown at the frame after it, the first being taken for the helper that opened the
+step, but only when no ancestor step is boxed: inside a boxed step, Playwright leaves out no frame. So no fixed number of
+POMWright frames is right both at the top level and inside a boxed step, and a boxed step inside a boxed `@step` or a
+test's own boxed `test.step` was shown inside POMWright's bundle.
+
+POMWright therefore passes every boxed step a `location`, which Playwright uses whatever the ancestors are:
+`callerLocation(boundary)` in `src/helpers/callSite.ts` captures the stack cut at the method the consumer called, as
+`captureCallSite` does, and takes its first frame that names a file (a `file://` URL becomes a path; frames such as
+`native` or `<anonymous>` are skipped). A `location` the caller passes to `@step` wins.
+
+A boxed step's error keeps Playwright's own rule: at the top level its stack is the async stack after the first frame,
+and inside a boxed step it is the outermost boxed step's. So exactly one `async` POMWright frame still sits between the
+caller and `test.step`:
 
 - **`@step`**: the method is replaced by a wrapper that opens the step. Without `box`, the wrapper is a plain function,
-  so the first frame is the caller's. With `box`, it is `async` and awaits the step, so its own frame is the one left
-  out. A plain wrapper with `box` would leave out the caller's frame: a method called from a test showed no location,
-  and its error lost its stack.
-- **The navigation helper**: `goto`, `expectThisPage` and `expectAnotherPage` are `async` and open their boxed steps
-  themselves.
-- **`SessionStorage`**: its methods are `async` and open their step through one helper, which is not `async` (it would
-  be a second frame), and which each method `await`s; `get` writes `return await`, since returning the helper's Promise
-  without awaiting it cuts the async stack, and the step shows no location.
+  so the first frame is the caller's. With `box`, it is `async`, awaits the step, and passes the location cut at
+  itself; its own frame is the one an error's stack leaves out.
+- **The navigation helper**: `goto`, `expectThisPage` and `expectAnotherPage` are `async`, take the location cut at
+  themselves before their first `await`, and open their boxed steps themselves.
+- **`SessionStorage`**: its methods are `async`, take the location cut at themselves (`seed` from the call site it
+  captures anyway), and open their step through one helper, which is not `async` (it would be a second frame), and
+  which each method `await`s; `get` writes `return await`, since returning the helper's Promise without awaiting it
+  cuts the async stack.
 
 `test/step-locations/` checks the result where only the runner can: a spec marks each probed call with
-`// LOCATION <id>`, and a reporter fails the run when a step or an error with that id is reported on another line. It
-covers `@step` with and without `box`, from a test and from another method, a boxed step that throws, `goto` and
-`set`. It runs without a browser, from `test/playwright.steps.config.ts`, which `pack-test.sh` runs after the harness,
+`// LOCATION <id>`, and a reporter fails the run when a step or an error with that id is reported on another line, or
+when a marked line is never reported. It covers `@step` with and without `box`, from a test and from another method, a
+boxed step that throws, `goto` and `set`, and the same boxed steps inside a boxed `@step` and inside a test's own boxed
+step, with an error in a nested boxed step reported at the outermost boxed call. It runs without a browser, from `test/playwright.steps.config.ts`, which `pack-test.sh` runs after the harness,
 so a `--reporter` given to the harness cannot switch it off; CI runs it at the Playwright pin and at the latest 1.x.
 The unit tests in `src/helpers/stepLocations.test.ts` check the option and the titles.
 
@@ -54,5 +65,9 @@ The unit tests in `src/helpers/stepLocations.test.ts` check the option and the t
 - **Dropping stack frames by file name.** An earlier version of these helpers dropped every frame of a file named like
   POMWright's own, so a consumer's `pageObject.ts` or `sessionStorage.ts` lost its frame and the report pointed at the
   caller's caller.
-- **A step `location` computed from the call site.** `{ box: true }` gives the same report location without parsing a
-  stack, and keeps the steps inside the helper's step.
+- **`{ box: true }` alone, without a `location`.** It gives the right line only when no ancestor step is boxed;
+  inside one, Playwright leaves out no frame and the step is shown inside POMWright's bundle. A computed `location`
+  costs one captured stack per boxed call, cut at a boundary and never filtered by file name.
+- **A boxed method whose Promise a helper returns without `await`.** Playwright shows such a step at no line; with the
+  computed `location` it is shown at the helper's line, the frame below the method. Accepted: it is the line that
+  called the method.

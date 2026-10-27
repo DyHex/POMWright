@@ -121,4 +121,39 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+**Step 1 (E-1).**
+
+- Playwright 1.64 read first (`playwright/lib/common/index.js` `_step`, `lib/worker/workerProcessEntry.js` `_addStep`):
+  `test.step` awaits once before `_addStep`, so only the async stack is left; a given `location` becomes the step's
+  stack whatever the ancestors are; a boxed step's error stack is the raw stack after its first frame at the top level,
+  and the outermost boxed ancestor's inside one. So the location is passed, and the one-`async`-frame structure stays
+  for the error stacks.
+- `src/helpers/callSite.ts`: `frameLocation(frame)` (a named frame read inside its first parenthesis, so a path with
+  spaces or parentheses stays whole; a frame without a name; `file://` through `fileURLToPath`; `native`,
+  `<anonymous>`, `index 0` and `eval` frames skipped), `siteLocation(site)` (the first frame with a file of a captured
+  site) and `callerLocation(boundary)` = `siteLocation(captureCallSite(boundary))`; a boundary not on the stack gives
+  `undefined` (V8 then captures no frame, checked).
+- `stepDecorator.ts`: the boxed wrapper is a named `async` function passing `{ ...options, location: options.location ??
+  callerLocation(boxed) }`; its comment rewritten. `navigation.ts`: `BOXED` became `boxedAt(location)`, each method
+  taking `callerLocation(Navigation.prototype.<method>)` at its start. `sessionStorage.ts`: `step(method, location,
+  body)`, `set`, `get` and `clear` taking `callerLocation(SessionStorage.prototype.<method>)`, `seed` the location of the
+  site it captures already (`siteLocation(site)`); the helper's comment rewritten (the error stack is why it is not
+  `async`).
+- Tests: `test/step-locations/stepLocations.spec.ts`, a boxed `@step` in a boxed `@step`, a boxed `@step` calling `goto`
+  and `set`, the same under a test's own boxed `test.step` (methods of their own, since a step's id is its method's
+  title; the test's own step is not marked, Playwright places it), and an error in a nested boxed step at the
+  outermost boxed call; 20 locations checked. Against the old helpers the same spec reports 9 wrong, every nested step
+  in `index.js` (checked by stashing the three helpers). `locationReporter.ts` fails when a marked line is never
+  reported (checked with a stray marker: `"orphan" at stepLocations.spec.ts:132: no step or error with this id was
+  reported`). Unit: `callSite.test.ts`, `frameLocation` (named, bare, async, spaces and parentheses, `file://`, four
+  frames without a file) and `callerLocation` (the calling line; `undefined` off the stack). Two unit tests that pinned
+  the step options as exactly `{ box: true }` (`stepDecorator.test.ts`, `stepLocations.test.ts`) now expect the
+  location in the calling test file; a new case keeps a `location` the caller passes.
+- Docs: *Internal → Call sites*, *Steps at the test's line* (the one-frame rule holds only without a boxed ancestor;
+  the location; what still needs one `async` frame) and *Alternatives weighed* (the `{ box: true }`-alone entry, its
+  premise disproved; the unawaited-return case); AGENTS.md §5's step bullet. `.changeset/boxed-step-location.md`
+  amended.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 842 passed; `pnpm pack-test --reporter=line` exit 0 (1,524 passed, 3
+  skipped; doc snippets 221; api coverage 0 problems; step locations 20, 8 probe tests); `pnpm docs:build` 0.

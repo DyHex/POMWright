@@ -39,10 +39,18 @@ describe("@step, stage-3 decorators", () => {
 		expect(recorded.map((entry) => entry.title)).toEqual(["Account.create"]);
 	});
 
-	it("passes an explicit title and the options through", async () => {
+	it("passes an explicit title and the options through, a boxed step with its caller's line", async () => {
 		const wrapped = stage3(step("Open settings", { box: true }), async () => undefined, context("open", false));
 		await wrapped.call(new Account());
-		expect(recorded).toEqual([{ title: "Open settings", options: { box: true } }]);
+		const location = expect.objectContaining({ file: expect.stringMatching(/stepDecorator\.test\.ts$/) });
+		expect(recorded).toEqual([{ title: "Open settings", options: { box: true, location } }]);
+	});
+
+	it("keeps a location the caller passes", async () => {
+		const location = { file: "/suite/checkout.ts", line: 3, column: 5 };
+		const wrapped = stage3(step({ box: true, location }), async () => undefined, context("pay", false));
+		await wrapped.call(new Account());
+		expect(recorded).toEqual([{ title: "Account.pay", options: { box: true, location } }]);
 	});
 
 	it("runs a method called without its object, with its own title or as Anonymous.method", async () => {

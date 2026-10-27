@@ -10,7 +10,7 @@
  * first arrival there. Calls for one origin take turns on the page (`storageTurns.ts`), in call order.
  */
 import { type Page, test } from "@playwright/test";
-import { captureCallSite } from "./callSite";
+import { callerLocation, captureCallSite, type StepLocation, siteLocation } from "./callSite";
 import { originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSeed";
 import { takeTurn } from "./storageTurns";
 
@@ -284,12 +284,12 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	}
 
 	/**
-	 * Runs `body` as a step, boxed so the report shows it at the line that called the helper. Playwright takes a boxed
-	 * step's location from the async stack after its first frame, so this helper is not `async` (it would be that frame)
-	 * and every method awaits it rather than returning it (which cuts the stack).
+	 * Runs `body` as a step, boxed and placed at `location`, the line that called the method (`callerLocation` says why it
+	 * is passed). A boxed error's stack is still Playwright's: the async stack after its first frame, so this helper is
+	 * not `async` (it would be that frame) and every method awaits it rather than returning it (which cuts the stack).
 	 */
-	private step<T>(method: string, body: () => Promise<T>): Promise<T> {
-		return test.step(`${this.title(method)}:`, body, { box: true });
+	private step<T>(method: string, location: StepLocation | undefined, body: () => Promise<T>): Promise<T> {
+		return test.step(`${this.title(method)}:`, body, { box: true, location });
 	}
 
 	/**
@@ -432,8 +432,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	set<K extends string>(key: K, value: Decoded<S, KeyOnly<K>>): Promise<void>;
 	set<E extends Record<string, unknown>>(entries: EntriesFor<S, E>): Promise<void>;
 	async set(keyOrEntries: string | Record<string, unknown>, value?: unknown): Promise<void> {
+		const location = callerLocation(SessionStorage.prototype.set);
 		const entries = typeof keyOrEntries === "string" ? { [keyOrEntries]: value } : keyOrEntries;
-		await this.step("set", async () => {
+		await this.step("set", location, async () => {
 			this.assertOnOrigin("set");
 			const encoded = encodeEntries(this.schema, entries, this.title("set"));
 			await this.inTurn("set", () => this.write("set", encoded));
@@ -464,8 +465,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	get<K extends string>(key: K): Promise<Decoded<S, K> | null>;
 	get<K extends string>(keys: NonEmpty<K>): Promise<{ [P in K]: Decoded<S, P> | null }>;
 	async get(keyOrKeys?: string | readonly string[]): Promise<unknown> {
+		const location = callerLocation(SessionStorage.prototype.get);
 		// awaited, not returned: see step()
-		return await this.step("get", async () => {
+		return await this.step("get", location, async () => {
 			this.assertOnOrigin("get");
 			return await this.inTurn("get", () => this.read(keyOrKeys));
 		});
@@ -525,7 +527,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	clear(key: string): Promise<void>;
 	clear<K extends string>(keys: NonEmpty<K>): Promise<void>;
 	async clear(keyOrKeys?: string | readonly string[]): Promise<void> {
-		await this.step("clear", async () => {
+		const location = callerLocation(SessionStorage.prototype.clear);
+		await this.step("clear", location, async () => {
 			this.assertOnOrigin("clear");
 			await this.inTurn("clear", async () => {
 				if (keyOrKeys === undefined) {
@@ -588,7 +591,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		const registry = registryFor(this.page, readTestOutcome);
 		const atCall = registry.snapshot();
 		try {
-			await this.step("seed", async () => {
+			await this.step("seed", siteLocation(site), async () => {
 				const title = this.title("seed");
 				const requested = options?.origin;
 				const origin = requested === undefined ? this.origin : normaliseOrigin(requested, title);

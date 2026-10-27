@@ -1,14 +1,32 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import type { FullResult, Reporter, TestCase, TestResult, TestStep } from "@playwright/test/reporter";
+import type {
+	FullConfig,
+	FullResult,
+	Reporter,
+	Suite,
+	TestCase,
+	TestResult,
+	TestStep,
+} from "@playwright/test/reporter";
 
 const ID = /LOCATION ([\w-]+)/;
 
-/** Fails the run when a step or an error carrying `LOCATION <id>` is reported away from the line marked with that id. */
+/**
+ * Fails the run when a step or an error carrying `LOCATION <id>` is reported away from the line marked with that id, and
+ * when a marked line is never checked (a probe that stops reporting would otherwise pass).
+ */
 export default class LocationReporter implements Reporter {
 	private readonly markers = new Map<string, Map<string, number>>();
 	private readonly failures: string[] = [];
+	private readonly seen = new Set<string>();
 	private checked = 0;
+
+	onBegin(_config: FullConfig, suite: Suite): void {
+		for (const test of suite.allTests()) {
+			this.markerLine(test.location.file, "");
+		}
+	}
 
 	private markerLine(file: string, id: string): number | undefined {
 		let lines = this.markers.get(file);
@@ -29,6 +47,7 @@ export default class LocationReporter implements Reporter {
 
 	private check(what: string, test: TestCase, id: string, location: { file: string; line: number } | undefined) {
 		this.checked++;
+		this.seen.add(`${test.location.file}#${id}`);
 		const expected = this.markerLine(test.location.file, id);
 		const reported = location ? `${path.basename(location.file)}:${location.line}` : "no location";
 		if (expected === undefined) {
@@ -59,6 +78,13 @@ export default class LocationReporter implements Reporter {
 	async onEnd(_result: FullResult): Promise<{ status: FullResult["status"] } | undefined> {
 		if (this.checked === 0) {
 			this.failures.push("no step or error was checked");
+		}
+		for (const [file, lines] of this.markers) {
+			for (const [id, line] of lines) {
+				if (!this.seen.has(`${file}#${id}`)) {
+					this.failures.push(`"${id}" at ${path.basename(file)}:${line}: no step or error with this id was reported`);
+				}
+			}
 		}
 		if (this.failures.length === 0) {
 			console.log(`step locations: ${this.checked} checked, all where they were called`);

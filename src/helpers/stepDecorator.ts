@@ -1,4 +1,5 @@
 import { test } from "@playwright/test";
+import { callerLocation } from "./callSite";
 
 type AnyMethod<This = unknown, Args extends unknown[] = unknown[], Return = unknown> = (
 	this: This,
@@ -80,10 +81,11 @@ const normalizeStepArguments = (args: StepDecoratorArgs) => {
 };
 
 /**
- * The method `@step` puts in place of the original. Playwright takes a step's location from the async stack when the
- * step opens: an unboxed step at its first frame, a boxed one at the frame after it. So an unboxed step's wrapper is not
- * `async` (the first frame is the caller's), and a boxed step's wrapper is, and awaits the step (its frame is the one a
- * box leaves out), as the navigation and session storage helpers are.
+ * The method `@step` puts in place of the original. Playwright takes an unboxed step's location from the first frame of
+ * the async stack, so that wrapper is not `async` (the first frame is the caller's). A boxed step is given its caller's
+ * line as `location`, cut at the wrapper itself: without one, Playwright skips one frame only when no ancestor step is
+ * boxed, so no fixed frame is right both at the top level and inside a boxed step. The boxed wrapper stays `async` and
+ * awaits the step: Playwright builds a top-level boxed error's stack from the frames after the first, the wrapper's.
  */
 const createWrappedMethod = <T extends AnyMethod>(
 	original: T,
@@ -107,9 +109,11 @@ const createWrappedMethod = <T extends AnyMethod>(
 		return `${className}.${String(methodName)}`;
 	};
 	if (options?.box) {
-		return async function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
-			return await test.step(titleFor(this), () => original.apply(this, methodArgs), options);
-		} as T;
+		const boxed = async function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
+			const location = options.location ?? callerLocation(boxed);
+			return await test.step(titleFor(this), () => original.apply(this, methodArgs), { ...options, location });
+		};
+		return boxed as T;
 	}
 	return function (this: ThisParameterType<T>, ...methodArgs: Parameters<T>) {
 		return test.step(titleFor(this), () => original.apply(this, methodArgs), options) as ReturnType<T>;

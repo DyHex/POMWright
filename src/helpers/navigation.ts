@@ -1,10 +1,14 @@
 import { type Page, test } from "@playwright/test";
+import { callerLocation, type StepLocation } from "./callSite";
 import { createUrlMatcher, isAbsoluteUrl, resolveUrl, type UrlMatcher } from "./url";
 
 type WaitUntil = NonNullable<Parameters<Page["goto"]>[1]>["waitUntil"];
 
-/** A boxed step is reported at the line that called the helper, as a `@step` row is, not inside POMWright. */
-const BOXED = { box: true };
+/**
+ * A boxed step, reported at the line that called the helper, as a `@step` row is, not inside POMWright: the location is
+ * the caller's line, cut at the method the consumer called (`callerLocation` says why it is passed).
+ */
+const boxedAt = (location: StepLocation | undefined) => ({ box: true, location });
 
 /** A URL with a scheme; the only `goto` target accepted when the page object's `baseUrl` is a RegExp. */
 export type AbsoluteUrl = `${string}:${string}`;
@@ -203,6 +207,7 @@ class Navigation {
 	 * actions.
 	 */
 	public async goto(...args: GotoArguments): Promise<void> {
+		const location = callerLocation(Navigation.prototype.goto);
 		const [first, second] = args;
 		// as page.goto, which takes a URL string only: from JavaScript, a URL object is not this page's options. Any other
 		// object is taken as the options, as page.goto takes any object as its options: a class instance works today
@@ -236,7 +241,7 @@ class Navigation {
 						await this.executeActions();
 					}
 				},
-				BOXED,
+				boxedAt(location),
 			);
 			return;
 		}
@@ -250,12 +255,13 @@ class Navigation {
 					timeout: this.resolveTimeout(second),
 				});
 			},
-			BOXED,
+			boxedAt(location),
 		);
 	}
 
 	/** Wait until the browser is on this page (URL and load state), then run the post-navigation actions. */
 	public async expectThisPage(options?: ThisPageOptions): Promise<void> {
+		const location = callerLocation(Navigation.prototype.expectThisPage);
 		await test.step(
 			`${this.label}: Expect this Page`,
 			async () => {
@@ -264,7 +270,7 @@ class Navigation {
 					await this.executeActions();
 				}
 			},
-			BOXED,
+			boxedAt(location),
 		);
 	}
 
@@ -273,6 +279,7 @@ class Navigation {
 	 * fail at once if the URL is back on this page, which catches a redirect that bounced back.
 	 */
 	public async expectAnotherPage(options?: NavigationOptions): Promise<void> {
+		const location = callerLocation(Navigation.prototype.expectAnotherPage);
 		await test.step(
 			`${this.label}: Expect any other Page`,
 			async () => {
@@ -283,7 +290,7 @@ class Navigation {
 					);
 				}
 			},
-			BOXED,
+			boxedAt(location),
 		);
 	}
 }

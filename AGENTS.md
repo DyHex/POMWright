@@ -218,12 +218,16 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   of POMWright's own published bundle (`/pomwright/dist/index.(js|mjs|cjs)`), which `atCallSite` drops so the report's
   code frame is the consumer's line.
 - `@step` decorates methods that return a Promise; `test.step` always returns one. The navigation and session storage
-  helpers pass `{ box: true }` to their steps, so the report shows the line that called them. Playwright takes a step's
-  location from the async stack (only `async` functions waiting in an `await`): an unboxed step's from its first frame,
-  a boxed step's from the frame after it. So exactly one `async` POMWright frame sits between the caller and a boxed
-  `test.step`: the navigation methods are `async` and open their steps themselves; a `SessionStorage` method is `async`
-  and awaits a helper that is not; `@step`'s wrapper is `async` for a boxed step and a plain function otherwise. A caller
-  awaits rather than returns such a Promise, which would cut the stack. `test/step-locations` checks the result. The logger keeps the message and
+  helpers pass `{ box: true }` to their steps, so the report shows the line that called them. Playwright takes an
+  unboxed step's location from the first frame of the async stack (only `async` functions waiting in an `await`), and a
+  boxed step's from the frame after it only when no ancestor step is boxed; so every boxed step (a boxed `@step`, the
+  navigation and session storage helpers) passes `location`, the caller's line from `callerLocation(boundary)`, cut at
+  the method the consumer called, unless the caller gave one. A boxed error's stack is still Playwright's (the async
+  stack after its first frame, or the outermost boxed step's), so exactly one `async` POMWright frame sits between the
+  caller and a boxed `test.step`: the navigation methods are `async` and open their steps themselves; a `SessionStorage`
+  method is `async` and awaits a helper that is not; `@step`'s wrapper is `async` for a boxed step and a plain function
+  otherwise. A caller awaits rather than returns such a Promise, which would cut the stack. `test/step-locations` checks
+  the result, nested boxed steps included, and fails when a marked line is never reported. The logger keeps the message and
   string arguments as given, prints other arguments as `console.log` does, attaches one attachment per entry in call
   order, and names them in Playwright's `locale` and `timezoneId`.
 - Keep the dot-delimited path guarantees. The runtime `validateLocatorSchemaPath` and the type-level
