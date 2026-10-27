@@ -87,4 +87,25 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+- `scripts/consumer-check.sh` and its fixtures in `scripts/consumer/` (`consumer.ts`, copied to `.ts`, `.mts` and `.cts`;
+  `runner/consumer.spec.ts` and `runner/playwright.config.ts`, which need no browser; `shared.mjs`). One npm project for
+  the TypeScript cases (the tarball, `@playwright/test` 1.64.0 and `@types/node` from the root's devDependencies, the
+  root's TypeScript `^6.0.3`, and the loop's versions as aliases `ts-5.0`, `ts-5`, `ts-6`, `ts-latest`); one project per
+  runner; one for `--node-floor`. Each compile uses `--noEmit --strict --target es2022 --types node --listFiles`, and
+  checks the declarations it read (`index.d.ts` from CommonJS and node10, `index.d.mts` from ESM and bundler).
+- Resolved locally: TypeScript 6.0.3 for the resolutions; the loop 5.0.4 (with `skipLibCheck`), 5.9.3, 6.0.3 and 7.0.2;
+  attw 0.18.5 (still the latest release; "No problems found", node10, node16 from CJS and ESM, bundler). node10 needs
+  `--ignoreDeprecations 6.0` on TypeScript 6 (a comment in the script says so).
+- Local run: every case `ok` in about 22 s; `nvm exec 20 … --node-floor`: "node v20.20.2: import and require share one
+  copy". A copy of the tarball whose `types` and `require.types` point at `dist/missing.d.ts` fails the first case
+  (TS7016, and the members unknown), exit 1.
+- `checks.yaml`: a `consumer` job (`needs: package`; Node 24 for the checks, then `setup-node` 20 for `--node-floor`; both
+  steps `shell: bash`). The gate `build` needs `checks`, which includes it, so `pr.yaml` and `main.yaml` are unchanged.
+- Docs: *Installation*, *TypeScript settings* (TypeScript 5.0 and later; 5.0 with `skipLibCheck`); the README's
+  TypeScript badge; AGENTS.md §2 (the job, the script), §7 (the probes run in CI, only `EBADENGINE` manual; the
+  TypeScript floor's three places); *Internal → Tests and checks* (a **consumer** bullet).
+- Checks: `pnpm lint` 0 (164 files); actionlint 0; shellcheck 0 on the script; `pnpm test:unit` 782 passed; `pnpm
+  pack-test --reporter=line` exit 0 (1,509 passed, 3 skipped; doc snippets 215; api coverage 0 problems; step locations
+  7); `pnpm docs:build` 0.

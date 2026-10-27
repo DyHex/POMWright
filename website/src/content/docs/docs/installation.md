@@ -52,8 +52,9 @@ holds two copies of POMWright, even when some files `import` it and others `requ
 
 ## TypeScript settings
 
-POMWright needs no `tsconfig.json` setting of its own. Playwright compiles your TypeScript itself and does not check
-its types ([TypeScript](https://playwright.dev/docs/test-typescript)). To check them with `tsc`, note that TypeScript 6
+POMWright needs no `tsconfig.json` setting of its own. Its declarations compile with TypeScript 5.0 and later; 5.0 needs
+`skipLibCheck` for Playwright's own declarations. Playwright compiles your TypeScript itself and does not check its
+types ([TypeScript](https://playwright.dev/docs/test-typescript)). To check them with `tsc`, note that TypeScript 6
 includes only the `@types` packages a tsconfig lists, and Playwright's own declarations need Node's, so a Playwright
 project lists `"types": ["node"]`, with or without POMWright. With that, everything in these docs compiles. Three
 settings change how code that uses POMWright is checked. None is required, and each only matters when you turn it on:

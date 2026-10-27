@@ -59,6 +59,10 @@ untested merge.
 - **package**: the unit tests, then one build and one tarball, kept as an artifact.
 - **harness**: that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs
   chromium, `main` all three, and one more job runs chromium on Node 20, the `engines` floor.
+- **consumer**: that tarball installed with npm into projects of their own, as consumers install it
+  (`scripts/consumer-check.sh`): TypeScript under each module resolution (`node10`, `node16` and `nodenext` from
+  CommonJS and ESM, `bundler`), attw, Playwright's runner in a CommonJS and a `"type": "module"` project, and TypeScript
+  5.0 to the latest release in both decorator modes; then, on Node 20, `import` and `require` sharing one copy.
 - **site**: that tarball installed into `test/`, the documentation's examples compiled, the API reference and the doc
   comments checked, and the site built, which fails on a link or an anchor that does not exist.
 - **build**: the gate job, the check `main` requires.

@@ -6,6 +6,7 @@
 [![npm downloads](https://img.shields.io/npm/d18m/pomwright)](https://www.npmjs.com/package/pomwright)
 [![Playwright peer dependency](https://img.shields.io/npm/dependency-version/pomwright/peer/%40playwright%2Ftest)](https://www.npmjs.com/package/@playwright/test)
 [![Node version](https://img.shields.io/node/v/pomwright)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-%E2%89%A55.0-3178c6)](https://dyhex.github.io/POMWright/docs/installation/#typescript-settings)
 [![License](https://img.shields.io/github/license/DyHex/POMWright)](https://github.com/DyHex/POMWright/blob/main/LICENSE)
 [![Created at ICE](https://img.shields.io/badge/created%40-ICE-ffcd00)](https://www.ice.no/)
 
