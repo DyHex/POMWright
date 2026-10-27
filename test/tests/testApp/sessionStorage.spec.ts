@@ -54,6 +54,18 @@ test.describe("a popup on about:blank, which inherits its opener's origin", () =
 		expect(await current(popup)).toEqual({ token: "for A" });
 	});
 
+	test("overlapping calls from a bound and an unbound helper act in the order they were made", async ({ page }) => {
+		const popup = await openPopup(page);
+		const unbound = new SessionStorage(popup, { label: "Unbound" });
+		const onA = new SessionStorage(popup, { label: "OnA", origin: A });
+		// a long batch first: on two chains, the later call would finish before it
+		const filler = Object.fromEntries(Array.from({ length: 50 }, (_, i) => [`f${i}`, "x"]));
+		await Promise.all([unbound.set({ ...filler, shared: "earlier" }), onA.set({ shared: "later" })]);
+		expect(await popup.evaluate(() => sessionStorage.getItem("shared"))).toBe("later");
+		await Promise.all([onA.set({ ...filler, shared: "earlier" }), unbound.set({ shared: "later" })]);
+		expect(await popup.evaluate(() => sessionStorage.getItem("shared"))).toBe("later");
+	});
+
 	test("a seed for the inherited origin applies, or fails the test where the browser counts the arrival as a return", async ({
 		page,
 		browserName,

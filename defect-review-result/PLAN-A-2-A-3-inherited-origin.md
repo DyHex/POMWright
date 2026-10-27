@@ -94,4 +94,31 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+**Step 1 (A-2).**
+
+- `storageTurns.ts`: `PAGE_WIDE`, a unique symbol, as `takeTurn`'s key; per page, the chains and the last page-wide
+  call. A page-wide call waits for every chain's tail and the previous page-wide call, then becomes the tail of every
+  chain there is and the start of any chain begun after it; the cleanup drops each entry still pointing at a settled
+  call. The module comment says it in one sentence. `sessionStorage.ts` `inTurn`: the page-wide key when
+  `originOf(page.url())` is `undefined` at the call, otherwise `this.origin ?? originOf(url)` as before (`""` is gone).
+- **Deviation: `seed` keeps its origin's chain on such a page.** The decision (and the plan's step 2) put the seed
+  registry's `add` on the page-wide key too. A unit test (*overlapping calls for one origin do not hold back calls for
+  another origin*, on the fake page, which starts at `about:blank`) failed: seeds for two origins then wait for each
+  other on any page not yet navigated, which is where a test seeds, against *Seeding session storage* ("For several
+  origins they register at the same time"), the promise decision 13 cites for rejecting one chain per page. The barrier
+  gives the ordering without it: every `set`, `get` and `clear` on such a page is page-wide, so it waits for every chain,
+  a seed's included, and every later seed waits for it; two seeds for one origin share its chain; seeds for different
+  origins stay side by side. `add` passes its origin as before, with a comment saying why. Step 2's write at once runs
+  in that turn.
+- Tests: unit (`storageTurns.test.ts`, *a page-wide turn*): it comes after earlier calls of two origins; it holds back
+  later calls on an existing chain and a new one (which then run side by side); per-origin calls without one stay
+  parallel. Harness (`sessionStorage.spec.ts`, three browsers): on an `about:blank` popup that inherited A, a 51-key
+  `set` from an unbound helper overlapping a `set` from a helper bound to A, both ways round, ends with the later value;
+  with the old turns it ends with `earlier` (checked on chromium, then restored).
+- Docs: *Internal → The seed registry*, *Overlapping calls* (the page-wide turn; `seed` on its chain, and why);
+  AGENTS.md §2 (`storageTurns.ts`) and §5 (the turn on a page without a URL origin). Changeset
+  `about-blank-storage-order.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 882 passed; `pnpm pack-test --reporter=line` exit 0 (1,590 passed, 3
+  skipped; doc snippets 221; api coverage 0 problems; step locations 29); `pnpm docs:build` 0.

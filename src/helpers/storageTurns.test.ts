@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { takeTurn } from "./storageTurns";
+import { PAGE_WIDE, takeTurn } from "./storageTurns";
 
 // test.step runs its body; outside the runner test.info() throws, as the helper expects
 vi.mock("@playwright/test", () => ({
@@ -89,6 +89,74 @@ describe("takeTurn", () => {
 			"second failed",
 			"third",
 		]);
+	});
+
+	describe("a page-wide turn, for a page whose URL has no origin", () => {
+		/** A task that logs its start, waits for `gate`, then logs its end. */
+		const gated =
+			(log: string[], name: string, gate: Promise<void> = Promise.resolve()) =>
+			async () => {
+				log.push(`${name} start`);
+				await gate;
+				log.push(`${name} end`);
+			};
+		const opened = () => {
+			let open = () => {};
+			const gate = new Promise<void>((resolve) => {
+				open = resolve;
+			});
+			return { gate, open };
+		};
+
+		it("comes after every earlier call on the page, whatever their origin", async () => {
+			const page = {};
+			const log: string[] = [];
+			const a = opened();
+			const b = opened();
+			const calls = [
+				takeTurn(page, A, gated(log, "A", a.gate)),
+				takeTurn(page, B, gated(log, "B", b.gate)),
+				takeTurn(page, PAGE_WIDE, gated(log, "page-wide")),
+			];
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			expect(log).toEqual(["A start", "B start"]);
+			b.open();
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			expect(log).toEqual(["A start", "B start", "B end"]);
+			a.open();
+			await Promise.all(calls);
+			expect(log).toEqual(["A start", "B start", "B end", "A end", "page-wide start", "page-wide end"]);
+		});
+
+		it("holds back every later call on the page, on a chain there was and on a new one", async () => {
+			const page = {};
+			const log: string[] = [];
+			const held = opened();
+			takeTurn(page, A, gated(log, "A first"));
+			const calls = [
+				takeTurn(page, PAGE_WIDE, gated(log, "page-wide", held.gate)),
+				takeTurn(page, A, gated(log, "A after")),
+				takeTurn(page, B, gated(log, "B after")),
+			];
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			expect(log).toEqual(["A first start", "A first end", "page-wide start"]);
+			held.open();
+			await Promise.all(calls);
+			// both start once it has ended; the two origins then run side by side
+			expect(log[3]).toBe("page-wide end");
+			expect(log.slice(4).sort()).toEqual(["A after end", "A after start", "B after end", "B after start"]);
+		});
+
+		it("leaves per-origin calls without one side by side", async () => {
+			const page = {};
+			const log: string[] = [];
+			const held = opened();
+			const blocked = takeTurn(page, A, gated(log, "A", held.gate));
+			await takeTurn(page, B, gated(log, "B"));
+			expect(log).toEqual(["A start", "B start", "B end"]);
+			held.open();
+			await blocked;
+		});
 	});
 
 	it("keeps origins and pages apart: a call waits only for earlier calls for its own origin on its own page", async () => {

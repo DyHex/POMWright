@@ -251,6 +251,8 @@ export class SeedRegistry {
 		// watched from the call on, so the wait for earlier calls and the Navigation API check are covered too
 		const snapshot = atCall ?? this.snapshot();
 		const wasOnOrigin = writeOnOrigin !== undefined && snapshot.origin === origin;
+		// on its origin's chain, also on a page whose URL has no origin: every other call there takes a page-wide turn,
+		// which orders it against this one, while seeds for different origins still register side by side
 		return takeTurn(this.page, origin, async () => {
 			try {
 				if (wasOnOrigin) {

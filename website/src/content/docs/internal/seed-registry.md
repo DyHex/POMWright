@@ -125,6 +125,12 @@ calls that overlap, in a `Promise.all` or without `await`, end exactly as if eac
 that fails leaves the pending seed as it was. Chains are per origin, so calls for different origins never wait for each
 other.
 
+A page whose URL has no origin, such as an `about:blank` popup that inherited its opener's origin, cannot say
+synchronously which origin a `set`, `get` or `clear` touches: its document may have inherited one. Such a call takes a
+page-wide turn instead, after every earlier call on the page, and every later call on the page waits for it. A `seed`
+there stays on its origin's chain, which the page-wide turns order it against, so seeds for different origins on a page
+not yet navigated still register side by side.
+
 A `seed` on the origin writes key by key, one round trip each, as `set` does, so two overlapping calls without the
 chain would interleave and an earlier value could win. The registry therefore decides in the call's turn, not at the
 call, whether to write at once or register: if the page was on the origin at the call and still is, it writes; if it has

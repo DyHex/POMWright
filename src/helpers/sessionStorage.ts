@@ -12,7 +12,7 @@
 import { type Page, test } from "@playwright/test";
 import { callerLocation, captureCallSite, type StepLocation, siteLocation } from "./callSite";
 import { originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSeed";
-import { takeTurn } from "./storageTurns";
+import { PAGE_WIDE, takeTurn } from "./storageTurns";
 
 /**
  * How a session storage key's value is stored as a string and read back: `stringify` on the way in, `parse` on the way
@@ -427,11 +427,13 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 
 	/**
 	 * Runs `task` in its turn among the page's session storage calls for the origin this call touches: the helper's, or
-	 * the one the page is on (`""` without one). The origin is checked again when the turn starts, since the page may
-	 * have left while the call waited.
+	 * the one the page is on; on a page whose URL has no origin, a page-wide turn, since the origin its document may have
+	 * inherited cannot be read synchronously. The origin is checked again when the turn starts, since the page may have
+	 * left while the call waited.
 	 */
 	private inTurn<T>(method: string, task: () => Promise<T>): Promise<T> {
-		return takeTurn(this.page, this.origin ?? originOf(this.page.url()) ?? "", async () => {
+		const onPage = originOf(this.page.url());
+		return takeTurn(this.page, onPage === undefined ? PAGE_WIDE : (this.origin ?? onPage), async () => {
 			this.assertOnOrigin(method);
 			await this.assertInheritedOrigin(method);
 			return await task();
