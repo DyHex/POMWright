@@ -32,6 +32,7 @@ import {
 	type PageObjectTypeOptions,
 	PlaywrightReportLogger,
 	type ReusableLocator,
+	type ReusableLocatorFactory,
 	type SeedOptions,
 	SessionStorage,
 	type SessionStorageOptions,
@@ -116,6 +117,9 @@ getLocatorSchema("list.item").update().getByRole("listitem").applyUpdate("list.i
 // type-only names are not values
 // @ts-expect-error a type, not a value
 const notAValue = LocatorQueryBuilder;
+// @ts-expect-error the seed factory's class is not exported, only its type
+type FactoryValue = typeof import("pomwright")["ReusableLocatorFactory"];
+const seeds: ReusableLocatorFactory<Paths> = registry.createReusable;
 
 // seeds: narrow and wide
 const roleSeed: ReusableLocator<Paths, "role"> = registry.createReusable.getByRole("heading", { level: 2 });
@@ -306,9 +310,9 @@ const held = add("main", { reuse: roleSeed });
 held.nth(0);
 held.getByRole({ name: "Cancel" });
 
-export type Probe = [Urls, Storage, Navigation, Logging, UrlTypeOptions];
+export type Probe = [Urls, Storage, Navigation, Logging, UrlTypeOptions, FactoryValue];
 void [DomainLogin, wrongOptions];
-void [accessors, typedRegistry, options, values, afterUpdate, afterReplace, notAValue, wrongSeed, misspelt];
+void [accessors, typedRegistry, options, values, afterUpdate, afterReplace, notAValue, seeds, wrongSeed, misspelt];
 void [wellFormed, malformed, ListPage, arrayHas, Steps];
 void [copy, voidCopy, narrowed, strictRegistry, StrictPage];
 

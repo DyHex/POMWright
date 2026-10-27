@@ -28,6 +28,7 @@ the errors thrown, with the real messages. The same text is in the doc comments,
 | [`LocatorQueryBuilder`](/POMWright/api/class-locatorquerybuilder/) | a query, what `getLocatorSchema(path)` returns |
 | [`LocatorUpdateBuilder`](/POMWright/api/class-locatorupdatebuilder/) | what a query's `update()` and `replace()` return |
 | [`ReusableLocator`](/POMWright/api/class-reusablelocator/) | a seed from `createReusable` |
+| [`ReusableLocatorFactory`](/POMWright/api/class-reusablelocator/#reusablelocatorfactory) | the type of `createReusable`, which makes seeds |
 | [`FilterDefinition`](/POMWright/api/types/#filterdefinition) | the argument of `filter` |
 | [`IndexSelector`](/POMWright/api/types/#indexselector) | the argument of `nth` |
 | [`LocatorSchemaPathFormat`](/POMWright/api/types/#locatorschemapathformat) | the path rules as a type |

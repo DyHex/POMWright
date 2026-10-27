@@ -35,13 +35,20 @@ value, so every public type that names an internal class is a type alias over it
 [builders](/POMWright/internal/builders/)). Internals are TypeScript-`private`; the declarations are emitted without
 `stripInternal`. The doc comments are kept, which is what the editor shows on hover.
 
+A consumer's own declarations must be able to name every type POMWright hands out, or a project with
+`declaration: true` cannot export a function that returns it. An alias of an indexed access type, such as
+`LocatorRegistryInternal<Paths>["add"]`, does not survive that: TypeScript resolves it to the method's type, and the
+consumer's declarations spell that type out, down to the registration builders, which are not exported. So
+`AddAccessor` is an interface that repeats `add`'s signature, a unit test holds the two to each other, and
+`LocatorRegistry` types its `add` with it instead of picking the method from the class.
+
 ## Checked on the packed package
 
 The harness installs the tarball `pnpm pack` produced, extracted, so it tests what npm would publish. A spec in ESM,
 `test/tests/packaging/esmEntry.spec.mts`, checks both entries, that they share one copy, that deep imports fail, and the
 manifest. Two compile-only files check the published types: `publicTypes.typecheck.ts`, every export and the types
 that must and must not compile, and `publicTypes.emit.ts`, which a project with `declaration: true` must be able to
-emit without annotations.
+emit without annotations: every public member returned on its own, so a type that is not exported fails it.
 
 ## A build for testing before a release
 

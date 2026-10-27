@@ -3,12 +3,14 @@
 // from "pomwright". Playwright does not match the file name.
 import type { Page } from "@playwright/test";
 import {
+	type Codec,
 	createRegistryWithAccessors,
 	json,
 	type LocatorRegistry,
 	PageObject,
 	type PageObjectOptions,
-	type SessionStorage,
+	type PlaywrightReportLogger,
+	SessionStorage,
 	step,
 } from "pomwright";
 
@@ -42,8 +44,7 @@ export function defineCopy(registry: LocatorRegistry<Paths>) {
 	registry.add("main.heading", { reuse: "list.item" }).describe("Copy of a row");
 }
 
-// the registry of a strict standalone factory; the factory's whole result also holds add, whose registration
-// views are unexported, so it does not emit (as in 2.x)
+// the registry of a strict standalone factory
 export const strictRegistry = (page: Page) => createRegistryWithAccessors<Paths>(page, { strictChains: true }).registry;
 
 export class Steps {
@@ -66,3 +67,63 @@ export const strictOptions = (options?: PageObjectOptions) => ({ ...options, loc
 const accountStorage = { user: json<{ name: string }>() };
 export const readUser = (storage: SessionStorage<typeof accountStorage>) => storage.get("user");
 export const readEverything = (storage: SessionStorage<typeof accountStorage>) => storage.get();
+
+// every public member, returned without annotations: a member whose type a consumer cannot name fails here
+type Cart = { cart: Codec<{ items: number }> };
+class ListPage extends PageObject<Paths, { baseUrlType: string; urlPathType: string; storage: Cart }> {
+	constructor(page: Page) {
+		super(page, "https://shop.example", "/list", { sessionStorage: { schema: { cart: json<{ items: number }>() } } });
+	}
+	protected defineLocators(): void {
+		this.add("list").locator("ul");
+	}
+}
+declare const page: Page;
+declare const registry: LocatorRegistry<Paths>;
+declare const listPage: ListPage;
+declare const logger: PlaywrightReportLogger;
+
+export const members = {
+	registry: () => registry,
+	verify: () => registry.verify,
+	getLocator: () => registry.getLocator,
+	getNestedLocator: () => registry.getNestedLocator,
+	getLocatorSchema: () => registry.getLocatorSchema,
+	add: () => registry.add,
+	createReusable: () => registry.createReusable,
+	factory: () => createRegistryWithAccessors<Paths>(page),
+	factoryAdd: () => createRegistryWithAccessors<Paths>(page).add,
+	query: () => registry.getLocatorSchema("list.item"),
+	queryChain: () =>
+		registry
+			.getLocatorSchema("list.item")
+			.filter({ hasText: "x" })
+			.nth(0)
+			.describe("d")
+			.skip("list")
+			.unskip("list")
+			.clearSteps(),
+	updateBuilder: () => registry.getLocatorSchema("list.item").update(),
+	afterUpdate: () => registry.getLocatorSchema("list.item").update().locator("li"),
+	replaceBuilder: () => registry.getLocatorSchema("list.item").replace(),
+	afterReplace: () => registry.getLocatorSchema("list.item").replace().getByRole("listitem"),
+	seed: () => registry.createReusable.getByRole("button"),
+	seedChain: () => registry.createReusable.getByRole("button").filter({ hasText: "x" }).nth(0).describe("d"),
+	seedDefinition: () => registry.createReusable.getByRole("button").definition,
+	seedSteps: () => registry.createReusable.getByRole("button").steps,
+	pageAdd: () => listPage.add,
+	pageGetLocator: () => listPage.getLocator,
+	pageGetNestedLocator: () => listPage.getNestedLocator,
+	pageGetLocatorSchema: () => listPage.getLocatorSchema,
+	navigation: () => listPage.navigation,
+	navigationGoto: () => listPage.navigation.goto,
+	pageSessionStorage: () => listPage.sessionStorage,
+	pageSessionStorageGet: () => listPage.sessionStorage.get(["cart"]),
+	fullUrl: () => listPage.fullUrl,
+	baseUrl: () => listPage.baseUrl,
+	label: () => listPage.label,
+	sessionStorage: () => new SessionStorage(page, { label: "S", schema: { cart: json<{ items: number }>() } }),
+	childLogger: () => logger.getNewChildLogger("child"),
+	codec: () => json<{ items: number }>(),
+	step: () => step,
+};

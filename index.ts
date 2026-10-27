@@ -28,6 +28,7 @@ export {
 	type LocatorSchemaPathFormat,
 	type LocatorUpdateBuilder,
 	type ReusableLocator,
+	type ReusableLocatorFactory,
 } from "./src/locators";
 export {
 	type BaseUrlTypeFromOptions,

@@ -81,4 +81,45 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27.
+
+- As planned: `AddAccessor` an `export interface` with `add`'s call signature, which `createRegistryWithAccessors`
+  types its `add` with (`PageObject`'s `add` was typed `AddAccessor` already); the class renamed
+  `ReusableLocatorFactoryInternal`, `export type ReusableLocatorFactory<P>` declared under its public name with a doc
+  comment, exported from `src/locators/index.ts` and `index.ts`; `locatorRegistrationBuilder.test.ts` takes the
+  internal name. The alias sits beside its class in `reusableLocatorBuilder.ts`, as `LocatorQueryBuilder` sits beside
+  its class (the walkthrough's diff had it in `locatorRegistry.ts`).
+- **Deviation 1, `registry.add` did not emit with the walkthrough's diff.** Emitting every public member from a
+  consumer module (`…/f2/all.ts` against the build): `registry.add` on a `LocatorRegistry<Paths>` still failed with
+  TS4023 and 22 × TS4094, because `LocatorRegistry` picked `add` from the class, whose method type is anonymous in a
+  consumer's declarations (the walkthrough's `emit.after.d.ts` checked the factory's and a page object's `add`, not the
+  registry's). `LocatorRegistry` is now `Pick` of the other five members `& { add: AddAccessor<P> }`, and `add`'s doc
+  comment moved there (the class method keeps a one-line comment saying so), so a consumer's hover is unchanged. With
+  that, 33 of the 34 members emit, `registry.add` as `AddAccessor<Paths>`; the 34th is `step(options)`, plan 15. The
+  changeset names `registry.add` too.
+- **Deviation 2, the API coverage check and the ten factory methods.** `scripts/check-api-coverage.mjs` listed
+  `ReusableLocatorFactory` among the unexported types whose methods it checks for `@see`; exported now, it is checked
+  as every export is, so it left the list (and the script's comments say only `add(path)`'s result is unexported). As
+  an export it needs a `### method` heading for each of its ten methods on its page: `## ReusableLocatorFactory` on
+  `api/class-reusablelocator.md` has them, one line each linking the registration's method and Playwright's, and the
+  ten doc comments' `@see` now name their own heading (AGENTS.md §9: every method its own heading) instead of
+  `#createreusable`, which stays as a section and links the type.
+- **Deviation 3, biome.** `lint/style/useShorthandFunctionType` asks for a function type instead of the interface's
+  call signature; the decided interface stays, with a `biome-ignore` (an interface is always named in declarations,
+  never inlined).
+- Tests: `publicTypes.emit.ts` emits `members`, every public member returned without annotations (the walkthrough's
+  33, plus the factory's `add` on its own), and its "does not emit (as in 2.x)" comment is gone;
+  `publicTypes.typecheck.ts`, `ReusableLocatorFactory<Paths>` holds `registry.createReusable`, and
+  `typeof import("pomwright")["ReusableLocatorFactory"]` is an error (the module's values, since a `type` import used as
+  a value tests the import, not the export); `locatorRegistry.test.ts`, *AddAccessor*: the method and the interface are
+  each assignable to the other for `Paths` and `string`, and `LocatorRegistry<Paths>["add"]` is `AddAccessor<Paths>`.
+  The drift test fails when the interface's second branch is changed (checked, then restored).
+- Docs: `api/class-reusablelocator.md` (`## ReusableLocatorFactory`, `Added in: v3.0.2`, an example, the ten methods;
+  `## createReusable` links the type); `api/class-locatorregistry.md` (`createReusable`'s **Type**); `api/index.md`
+  (its row); *Internal → Packaging* (why `AddAccessor` is an interface and `LocatorRegistry` types its `add` with it;
+  the emit check covers every member); AGENTS.md §1 (the export) and §2 (the class and its alias). The guide pages on
+  `declaration: true` already name only a returned registration as the exception, so they stay. Changeset
+  `declaration-emit-registry.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 826 passed; `pnpm pack-test --reporter=line` exit 0 (1,524 passed, 3
+  skipped; doc snippets 218; api coverage 39 exports, 108 members, 0 problems; step locations 7);
+  `consumer-check.sh` 18 `ok`; `pnpm docs:build` 0.

@@ -3,7 +3,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { createFakePage } from "./fakePage";
 import type { LocatorRegistrationPreDefinitionBuilder } from "./locatorRegistrationBuilder";
 import { type LocatorRegistry, LocatorRegistryInternal } from "./locatorRegistry";
-import type { ReusableLocatorFactory } from "./reusableLocatorBuilder";
+import type { ReusableLocatorFactoryInternal } from "./reusableLocatorBuilder";
 import type { ReusableLocator } from "./types";
 import type { StrategyMethod } from "./utils";
 
@@ -319,7 +319,7 @@ describe("types", () => {
 	it("the pre-definition builder and the seed factory have exactly the table's methods", () => {
 		// a strategy added to STRATEGIES without its method on either builder fails here
 		expectTypeOf<keyof LocatorRegistrationPreDefinitionBuilder<Paths, "a">>().toEqualTypeOf<StrategyMethod>();
-		expectTypeOf<keyof ReusableLocatorFactory<Paths>>().toEqualTypeOf<StrategyMethod>();
+		expectTypeOf<keyof ReusableLocatorFactoryInternal<Paths>>().toEqualTypeOf<StrategyMethod>();
 	});
 });
 

@@ -7,7 +7,7 @@ import {
 	type LocatorRegistrationSeededBuilderForType,
 	type RegistrationEnd,
 } from "./locatorRegistrationBuilder";
-import { ReusableLocatorFactory } from "./reusableLocatorBuilder";
+import { type ReusableLocatorFactory, ReusableLocatorFactoryInternal } from "./reusableLocatorBuilder";
 import type {
 	FilterDefinition,
 	FilterLocatorReference,
@@ -178,7 +178,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		private readonly page: Page,
 		options?: LocatorRegistryOptions,
 	) {
-		this.createReusable = new ReusableLocatorFactory<LocatorSchemaPathType>();
+		this.createReusable = new ReusableLocatorFactoryInternal<LocatorSchemaPathType>();
 		this.strictChains = options?.strictChains === true;
 	}
 
@@ -204,33 +204,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		} satisfies LocatorSchemaRecord<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>;
 	}
 
-	/**
-	 * Registers a locator at a path: `add(path)`, one of the ten locator methods with Playwright's arguments, then any
-	 * `filter`, `nth` and `describe` steps. With `{ reuse }`, a copy of a registered path or a seed from `createReusable`
-	 * is registered at once. The registration ends at the next call on the registry; a later call of it throws.
-	 *
-	 * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#add
-	 *
-	 * @param path The dot-delimited path: no empty segment and no whitespace, checked at compile time and at run time.
-	 * @param options `{ reuse }`: a registered path (not this one) or a seed from `createReusable`.
-	 * @returns The registration: the ten locator methods, or after a reuse `filter`, `nth` and `describe`.
-	 * @throws At `add`, when the path breaks the path rules, a literal being a compile error already
-	 * (`LocatorSchemaPath string cannot contain consecutive dots: main..list`, every broken rule named). At the locator
-	 * method, when the path is registered already
-	 * (`A locator schema with the path "main" already exists. …`; with `{ reuse }`, at `add`, which registers at once), or
-	 * when its first argument is missing or an empty string where Playwright cannot use one
-	 * (`locator requires a non-empty selector for "main.list".`). At `add`, when
-	 * a reused path is not registered (`No locator schema registered for path "common.button".`), or is the registration
-	 * path itself (`Locator reuse path cannot be the same as registration path: "main.list".`; a single literal reusing
-	 * itself is a compile error already, a variable is checked here). A method of a registration
-	 * that has ended throws: `nth() cannot apply to "main.list.items": its registration was ended by add("…"); …`
-	 *
-	 * @example
-	 * ```ts
-	 * registry.add("main.list.items@open").getByRole("listitem").filter({ hasText: "Open" });
-	 * registry.add("main.list.item@lastOpen", { reuse: "main.list.items@open" }).nth("last").describe("Last open item");
-	 * ```
-	 */
+	/** Registers a locator at a path. Consumers see `LocatorRegistry`'s `add`, which carries the doc comment. */
 	add<
 		Path extends LocatorSchemaPathType,
 		Reuse extends LocatorSchemaPathType | ReusableLocator<LocatorSchemaPathType> | undefined = undefined,
@@ -698,7 +672,34 @@ export type GetLocatorAccessor<LocatorSchemaPathType extends string> = <Path ext
  *
  * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#addaccessor
  */
-export type AddAccessor<LocatorSchemaPathType extends string> = LocatorRegistryInternal<LocatorSchemaPathType>["add"];
+export interface AddAccessor<LocatorSchemaPathType extends string> {
+	// add's signature, repeated: an indexed access type of the method would resolve to its anonymous type in a consumer's
+	// declarations and spell out the unexported registration builders
+	// biome-ignore lint/style/useShorthandFunctionType: an interface is always named in declarations, never inlined
+	<
+		Path extends LocatorSchemaPathType,
+		Reuse extends LocatorSchemaPathType | ReusableLocator<LocatorSchemaPathType> | undefined = undefined,
+	>(
+		path: LocatorSchemaPathArgument<Path>,
+		...args: [Reuse] extends [undefined]
+			? []
+			: [
+					options: {
+						reuse: [Reuse] extends [LocatorSchemaPathType]
+							? ReusePathArgument<LocatorSchemaPathType, Path, Reuse>
+							: Extract<Reuse, ReusableLocator<LocatorSchemaPathType>>;
+					},
+				]
+	): Reuse extends undefined
+		? LocatorRegistrationPreDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>
+		: Reuse extends LocatorSchemaPathType
+			? LocatorRegistrationPostDefinitionBuilder<LocatorSchemaPathType, RegistryPath<LocatorSchemaPathType>>
+			: LocatorRegistrationSeededBuilderForType<
+					LocatorSchemaPathType,
+					RegistryPath<LocatorSchemaPathType>,
+					Extract<Reuse, ReusableLocator<LocatorSchemaPathType>>["type"]
+				>;
+}
 
 /**
  * The registry's `getLocatorSchema` as a function of its own, as `createRegistryWithAccessors` returns it and a page
@@ -738,8 +739,39 @@ export type GetNestedLocatorAccessor<LocatorSchemaPathType extends string> = <Pa
  */
 export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
 	LocatorRegistryInternal<LocatorSchemaPathType>,
-	"add" | "createReusable" | "getLocator" | "getLocatorSchema" | "getNestedLocator" | "verify"
->;
+	"createReusable" | "getLocator" | "getLocatorSchema" | "getNestedLocator" | "verify"
+> & {
+	/**
+	 * Registers a locator at a path: `add(path)`, one of the ten locator methods with Playwright's arguments, then any
+	 * `filter`, `nth` and `describe` steps. With `{ reuse }`, a copy of a registered path or a seed from `createReusable`
+	 * is registered at once. The registration ends at the next call on the registry; a later call of it throws.
+	 *
+	 * @see https://dyhex.github.io/POMWright/api/class-locatorregistry/#add
+	 *
+	 * @param path The dot-delimited path: no empty segment and no whitespace, checked at compile time and at run time.
+	 * @param options `{ reuse }`: a registered path (not this one) or a seed from `createReusable`.
+	 * @returns The registration: the ten locator methods, or after a reuse `filter`, `nth` and `describe`.
+	 * @throws At `add`, when the path breaks the path rules, a literal being a compile error already
+	 * (`LocatorSchemaPath string cannot contain consecutive dots: main..list`, every broken rule named). At the locator
+	 * method, when the path is registered already
+	 * (`A locator schema with the path "main" already exists. …`; with `{ reuse }`, at `add`, which registers at once), or
+	 * when its first argument is missing or an empty string where Playwright cannot use one
+	 * (`locator requires a non-empty selector for "main.list".`). At `add`, when
+	 * a reused path is not registered (`No locator schema registered for path "common.button".`), or is the registration
+	 * path itself (`Locator reuse path cannot be the same as registration path: "main.list".`; a single literal reusing
+	 * itself is a compile error already, a variable is checked here). A method of a registration
+	 * that has ended throws: `nth() cannot apply to "main.list.items": its registration was ended by add("…"); …`
+	 *
+	 * @example
+	 * ```ts
+	 * registry.add("main.list.items@open").getByRole("listitem").filter({ hasText: "Open" });
+	 * registry.add("main.list.item@lastOpen", { reuse: "main.list.items@open" }).nth("last").describe("Last open item");
+	 * ```
+	 */
+	// typed by the interface, not picked from the class: a picked method's type is anonymous in a consumer's
+	// declarations and spells out the unexported registration builders
+	add: AddAccessor<LocatorSchemaPathType>;
+};
 
 /**
  * Creates a locator registry on a page, without a page object, and returns it with its `add`, `getLocator`,
@@ -769,7 +801,7 @@ export const createRegistryWithAccessors = <Paths extends string = NeedsPaths>(
 	options?: LocatorRegistryOptions,
 ) => {
 	const registryInstance = new LocatorRegistryInternal<Paths>(page, options);
-	const add: LocatorRegistryInternal<Paths>["add"] = registryInstance.add.bind(registryInstance);
+	const add: AddAccessor<Paths> = registryInstance.add.bind(registryInstance);
 	const getLocator: GetLocatorAccessor<Paths> = registryInstance.getLocator.bind(registryInstance);
 	const getNestedLocator: GetNestedLocatorAccessor<Paths> = registryInstance.getNestedLocator.bind(registryInstance);
 	const getLocatorSchema: GetLocatorSchemaAccessor<Paths> = registryInstance.getLocatorSchema.bind(registryInstance);

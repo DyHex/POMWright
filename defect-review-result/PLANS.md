@@ -56,8 +56,8 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 9 | [Path rules as pattern checks reporting every rule; a locator method that throws changes nothing](PLAN-B-3-B-2-path-rules-and-persist.md) | 22, 27 | patch | | done | `2d2c504`, `f46b982` |
 | 10 | [An ended registration's hint for `locator()` options and for queries](PLAN-B-5-C-2-ended-registration.md) | 25 | patch | | done | `890dbd8` |
 | 11 | [Own non-enumerable options are read](PLAN-B-1-C-5-own-non-enumerable.md) | 15 | patch | | done | `b990969` |
-| 12 | [A query's `describe()` on an any-frame terminal; a kept query's sub-path message](PLAN-C-6-C-7-query-checks.md) | 28, 29 | patch | | done | `8bdcd35`, (step 2 filled by the next commit) |
-| 13 | [`AddAccessor` as an interface, `ReusableLocatorFactory`; every public member emits](PLAN-F-2-emit-every-member.md) | 24 | patch | | planned | |
+| 12 | [A query's `describe()` on an any-frame terminal; a kept query's sub-path message](PLAN-C-6-C-7-query-checks.md) | 28, 29 | patch | | done | `8bdcd35`, `9bcf72e` |
+| 13 | [`AddAccessor` as an interface, `ReusableLocatorFactory`; every public member emits](PLAN-F-2-emit-every-member.md) | 24 | patch | | done | (filled by the next commit) |
 | 14 | [`@step` on generic methods](PLAN-E-5-generic-step.md) | 11 | patch | | planned | |
 | 15 | [`StepDecorator` exported](PLAN-F-1-step-decorator-type.md) | 23 | patch | | planned | |
 | 16 | [Boxed steps with a computed `location`; a page object's check points at `new`](PLAN-E-1-D-4-call-sites.md) | 12, 37 | patch | | planned | |

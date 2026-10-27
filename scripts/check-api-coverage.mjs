@@ -6,8 +6,8 @@
 // - Every export, every such member and every class constructor has a doc comment with a summary, and every
 //   parameter of a function, method or constructor has a `@param` (a rest parameter needs at least one `@param`).
 // - Every export, every method, every property of a class and every class constructor has a `@see` with its page on the
-//   site; a field of an option or data type does not need one. The methods of what `add(path)` and `createReusable`
-//   return, which are not exported, are held to the same rule.
+//   site; a field of an option or data type does not need one. The methods of what `add(path)` returns, which is not
+//   exported, are held to the same rule.
 // - Every https://dyhex.github.io/POMWright/ URL in the declarations names a page of website/src/content/docs and, after
 //   a `#`, one of its headings.
 //
@@ -116,13 +116,9 @@ for (const exported of checker.getExportsOfModule(moduleSymbol)) {
 	surface.set(exported.name, members);
 }
 
-// what `add(path)` and `createReusable` return is not exported, but it is what a consumer hovers most
+// what `add(path)` returns is not exported, but it is what a consumer hovers most
 const sourceFile = program.getSourceFile(declarations);
-for (const name of [
-	"LocatorRegistrationPreDefinitionBuilder",
-	"LocatorRegistrationPostDefinitionBuilder",
-	"ReusableLocatorFactory",
-]) {
+for (const name of ["LocatorRegistrationPreDefinitionBuilder", "LocatorRegistrationPostDefinitionBuilder"]) {
 	const statement = sourceFile.statements.find((node) => node.name?.text === name);
 	if (!statement) {
 		problems.add(`not in the declarations: ${name}`);

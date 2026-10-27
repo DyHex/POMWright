@@ -15,6 +15,10 @@ export {
 	LocatorUpdateBuilderInternal,
 	type LocatorUpdateMode,
 } from "./locatorUpdateBuilder";
-export { ReusableLocatorBuilder, ReusableLocatorFactory } from "./reusableLocatorBuilder";
+export {
+	ReusableLocatorBuilder,
+	type ReusableLocatorFactory,
+	ReusableLocatorFactoryInternal,
+} from "./reusableLocatorBuilder";
 export * from "./types";
 export * from "./utils";

@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { createFakePage, FakeLocator } from "./fakePage";
-import { createRegistryWithAccessors, LocatorRegistryInternal } from "./locatorRegistry";
+import {
+	type AddAccessor,
+	createRegistryWithAccessors,
+	type LocatorRegistry,
+	LocatorRegistryInternal,
+} from "./locatorRegistry";
 import type { FilterDefinition, ReusableLocator } from "./types";
 
 type Paths = "list" | "list.item" | "btn" | "row" | "seeded" | "x";
@@ -11,6 +16,17 @@ const createRegistry = () => {
 	return registry;
 };
 const chain = (locator: unknown) => String(locator);
+
+describe("AddAccessor", () => {
+	it("is add's signature: the method and the interface are each assignable to the other", () => {
+		// the interface repeats the signature so declarations can name it; a change to one side fails here
+		expectTypeOf<LocatorRegistryInternal<Paths>["add"]>().toExtend<AddAccessor<Paths>>();
+		expectTypeOf<AddAccessor<Paths>>().toExtend<LocatorRegistryInternal<Paths>["add"]>();
+		expectTypeOf<LocatorRegistryInternal<string>["add"]>().toExtend<AddAccessor<string>>();
+		expectTypeOf<AddAccessor<string>>().toExtend<LocatorRegistryInternal<string>["add"]>();
+		expectTypeOf<LocatorRegistry<Paths>["add"]>().toEqualTypeOf<AddAccessor<Paths>>();
+	});
+});
 
 describe("the duplicate-registration message", () => {
 	it("keeps its first sentence and shows a Locator in a step as Playwright prints it", () => {

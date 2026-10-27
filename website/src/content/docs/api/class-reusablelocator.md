@@ -34,8 +34,9 @@ A function that returns a seed names its type, `ReusableLocator<Paths, Strategy>
 
 ## createReusable
 
-`registry.createReusable` has the ten [locator methods](/POMWright/api/class-registrationbuilder/#locator-methods) of
-the registration, with the same arguments, each returning a seed. `frameLocator(selector)` requires its selector, since
+`registry.createReusable`, a [`ReusableLocatorFactory`](#reusablelocatorfactory), has the ten
+[locator methods](/POMWright/api/class-registrationbuilder/#locator-methods) of the registration, with the same
+arguments, each returning a seed. `frameLocator(selector)` requires its selector, since
 the any-frame form takes no steps.
 
 Each throws at the call when its first argument is missing (from JavaScript), or is an empty string where Playwright
@@ -156,3 +157,72 @@ A copy of the seed's `filter` and `nth` steps, in the order they were added, suc
 ### type
 
 The seed's strategy, such as `"locator"`.
+
+---
+
+## ReusableLocatorFactory
+
+Added in: v3.0.2
+
+`ReusableLocatorFactory<Paths>`: the type of [`registry.createReusable`](#createreusable), for a function that returns
+it. Each method returns a [`ReusableLocator`](/POMWright/api/class-reusablelocator/) and throws as
+[createReusable](#createreusable) shows.
+
+```ts
+import type { LocatorRegistry, ReusableLocatorFactory } from "pomwright";
+
+type Paths = "table" | "table.row@first";
+
+export function seedsOf(registry: LocatorRegistry<Paths>): ReusableLocatorFactory<Paths> {
+  return registry.createReusable;
+}
+```
+
+### frameLocator()
+
+Makes a seed of a frame segment, with the selector the registration's [`frameLocator()`](/POMWright/api/class-registrationbuilder/#framelocator)
+takes; the selector is required here, since the any-frame form takes no steps.
+
+### getByAltText()
+
+Makes a seed whose locator is Playwright's [`page.getByAltText()`](https://playwright.dev/docs/api/class-page#page-get-by-alt-text), with the
+registration's [`getByAltText()`](/POMWright/api/class-registrationbuilder/#getbyalttext) arguments.
+
+### getById()
+
+Makes a seed of an `id` locator, with the registration's [`getById()`](/POMWright/api/class-registrationbuilder/#getbyid) arguments.
+
+### getByLabel()
+
+Makes a seed whose locator is Playwright's [`page.getByLabel()`](https://playwright.dev/docs/api/class-page#page-get-by-label), with the registration's
+[`getByLabel()`](/POMWright/api/class-registrationbuilder/#getbylabel) arguments.
+
+### getByPlaceholder()
+
+Makes a seed whose locator is Playwright's [`page.getByPlaceholder()`](https://playwright.dev/docs/api/class-page#page-get-by-placeholder), with the
+registration's [`getByPlaceholder()`](/POMWright/api/class-registrationbuilder/#getbyplaceholder) arguments.
+
+### getByRole()
+
+Makes a seed whose locator is Playwright's [`page.getByRole()`](https://playwright.dev/docs/api/class-page#page-get-by-role), with the registration's
+[`getByRole()`](/POMWright/api/class-registrationbuilder/#getbyrole) arguments.
+
+### getByTestId()
+
+Makes a seed whose locator is Playwright's [`page.getByTestId()`](https://playwright.dev/docs/api/class-page#page-get-by-test-id), with the
+registration's [`getByTestId()`](/POMWright/api/class-registrationbuilder/#getbytestid) arguments.
+
+### getByText()
+
+Makes a seed whose locator is Playwright's [`page.getByText()`](https://playwright.dev/docs/api/class-page#page-get-by-text), with the registration's
+[`getByText()`](/POMWright/api/class-registrationbuilder/#getbytext) arguments.
+
+### getByTitle()
+
+Makes a seed whose locator is Playwright's [`page.getByTitle()`](https://playwright.dev/docs/api/class-page#page-get-by-title), with the registration's
+[`getByTitle()`](/POMWright/api/class-registrationbuilder/#getbytitle) arguments.
+
+### locator()
+
+Makes a seed whose locator is Playwright's [`page.locator()`](https://playwright.dev/docs/api/class-page#page-locator), with the registration's
+[`locator()`](/POMWright/api/class-registrationbuilder/#locator) arguments.

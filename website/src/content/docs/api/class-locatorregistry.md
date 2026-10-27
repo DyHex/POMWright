@@ -268,7 +268,8 @@ registry.add("main.heading@orders", { reuse: heading.filter({ hasText: "Orders" 
 
 **Type**
 
-- the ten locator methods, each returning a [ReusableLocator](/POMWright/api/class-reusablelocator/)
+- [ReusableLocatorFactory](/POMWright/api/class-reusablelocator/#reusablelocatorfactory)\<Paths\>: the ten locator
+  methods, each returning a [ReusableLocator](/POMWright/api/class-reusablelocator/)
 
 ---
 
