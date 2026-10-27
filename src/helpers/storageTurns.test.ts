@@ -23,6 +23,8 @@ const fakePage = (url: string) => {
 		writes: [] as string[],
 		store: new Map<string, string>(),
 		failNextSet: false,
+		/** What the document says its origin is: an about:blank popup inherits its opener's. */
+		documentOrigin: "null",
 		/** Runs once after the next write, in the same tick: a navigation the app starts as it stores. */
 		afterNextWrite: undefined as (() => void) | undefined,
 	};
@@ -39,6 +41,7 @@ const fakePage = (url: string) => {
 	const page = {
 		url: () => state.url,
 		mainFrame: () => ({ url: () => state.url }),
+		evaluate: async () => state.documentOrigin,
 		on: () => undefined,
 		off: () => undefined,
 		sessionStorage: {
@@ -217,6 +220,15 @@ describe("SessionStorage calls for one origin take turns", () => {
 		expect(failed.status).toBe("rejected");
 		expect(next.status).toBe("fulfilled");
 		expect(fake.state.writes).toEqual(["b=2"]);
+	});
+
+	it("a seed on an about:blank popup that inherited the origin writes at once, in order with a set after it", async () => {
+		const popup = fakePage("about:blank");
+		popup.state.documentOrigin = A;
+		const storage = new SessionStorage(popup.page, { label: "Popup", origin: A });
+		await Promise.all([storage.seed({ token: "seeded" }), storage.set("token", "set")]);
+		expect(popup.state.writes).toEqual(["token=seeded", "token=set"]);
+		expect(popup.state.store.get("token")).toBe("set");
 	});
 
 	it("a call whose turn comes after the page left the helper's origin fails with the origin message", async () => {

@@ -134,7 +134,10 @@ not yet navigated still register side by side.
 A `seed` on the origin writes key by key, one round trip each, as `set` does, so two overlapping calls without the
 chain would interleave and an earlier value could win. The registry therefore decides in the call's turn, not at the
 call, whether to write at once or register: if the page was on the origin at the call and still is, it writes; if it has
-left, it registers. A navigation within the origin while the call waits is not an arrival. A call made away from the
+left, it registers. On a page whose URL has no origin, at the call and in the turn, the helper asks the document, which
+may have inherited the origin, as an `about:blank` popup does: it writes when it has, as `set` does there, and registers
+otherwise. Registering there would let the earlier `seed` overwrite a later `set` on arrival, and Firefox counts that
+arrival as a return. A navigation within the origin while the call waits is not an arrival. A call made away from the
 origin keeps its commit watch from the call on, so a page that arrives while the call waits fails the call, as before.
 
 Without the chain, two calls that overlap read the same pending seed. Each merges only that seed with its own entries,

@@ -122,3 +122,27 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   `about-blank-storage-order.md`.
 - Checks: `pnpm lint` 0; `pnpm test:unit` 882 passed; `pnpm pack-test --reporter=line` exit 0 (1,590 passed, 3
   skipped; doc snippets 221; api coverage 0 problems; step locations 29); `pnpm docs:build` 0.
+
+**Step 2 (A-3).**
+
+- `SessionStorage.seed`: its `writeOnOrigin` now says whether it wrote; when the page had no URL origin at the call
+  (`atCall.origin`), it first asks the document for `self.origin` and writes only when that is the seeded origin. The
+  registry's `add` (`writeOnOrigin?: () => Promise<boolean>`) asks it in the turn when the page had no URL origin at the
+  call and still has none, and registers when it did not write; the on-origin path is unchanged, and a commit on the
+  origin while the call waits still fails it through the commit watch. `add`'s doc comment says so.
+- `notAppliedError`, "return": `… was not applied: the browser counted the page's arrival on https://pay.example as a
+  return there (navigation.activation.from is set): the document before it was already on the origin, as after a failed
+  navigation to it` (unit test's text; no browser reaches it on the popup any more).
+- Tests: unit (`sessionStorageSeed.test.ts`): the two `writeOnOrigin` stubs return `true`; a case where, on `about:blank`,
+  a `writeOnOrigin` that wrote leaves no script and one that did not registers; the return message. Unit
+  (`storageTurns.test.ts`): the fake page gains `evaluate` (the document's origin); on an `about:blank` popup that
+  inherited A, `seed` then `set` in a `Promise.all` write in that order and leave `set`'s value. Harness
+  (`sessionStorage.spec.ts`, three browsers): the `test.fail` for Firefox is gone; *a seed for the inherited origin
+  writes at once, as set does there* (the popup's storage holds it at once, and the app starts with it); *a seed then a
+  set*: the app starts with `set`'s value. With the old `seed` both fail on chromium (checked, then restored).
+- Docs: *Seeding session storage*, *How it works* (an `about:blank` popup that inherited the origin counts as on it) and
+  the message in *Errors*; *Internal → The seed registry* (asking the document; why registering there was wrong);
+  `api/class-sessionstorage.md`, `seed()` (summary and message); `api/errors.md` (the message); `seed`'s doc comment;
+  AGENTS.md §5 (when `seed` writes at once). Changeset `seed-inherited-origin.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 886 passed; `pnpm pack-test --reporter=line` exit 0 (1,593 passed, 3
+  skipped; doc snippets 221; api coverage 0 problems; step locations 29); `pnpm docs:build` 0.

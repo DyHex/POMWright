@@ -66,15 +66,21 @@ test.describe("a popup on about:blank, which inherits its opener's origin", () =
 		expect(await popup.evaluate(() => sessionStorage.getItem("shared"))).toBe("later");
 	});
 
-	test("a seed for the inherited origin applies, or fails the test where the browser counts the arrival as a return", async ({
-		page,
-		browserName,
-	}) => {
-		test.fail(browserName === "firefox", "Firefox presents the about:blank entry as activation.from: not applied");
+	test("a seed for the inherited origin writes at once, as set does there", async ({ page }) => {
 		const popup = await openPopup(page);
 		await new SessionStorage(popup, { origin: A }).seed({ token: "seeded" });
+		expect(await popup.evaluate(() => sessionStorage.getItem("token"))).toBe("seeded");
 		await popup.goto(`${A}/teststorage`);
 		expect(await startup(popup)).toEqual({ token: "seeded" });
+	});
+
+	test("a seed then a set for the inherited origin: the app starts with the set's value", async ({ page }) => {
+		const popup = await openPopup(page);
+		const storage = new SessionStorage(popup, { label: "Popup", origin: A });
+		await storage.seed({ token: "seeded" });
+		await storage.set("token", "set later");
+		await popup.goto(`${A}/teststorage`);
+		expect(await startup(popup)).toEqual({ token: "set later" });
 	});
 });
 

@@ -24,7 +24,8 @@ test("a returning customer", async ({ loginPage }) => {
 ## How it works
 
 When the page is already on the origin, `seed` writes at once; the app sees the entries the next time it reads
-storage, so reload or navigate if it reads only at startup. Otherwise the entries wait for the origin. POMWright adds an
+storage, so reload or navigate if it reads only at startup. A popup at `about:blank` whose document inherited the origin
+from its opener counts as on it, as it does for `set`. Otherwise the entries wait for the origin. POMWright adds an
 init script to the page that stores them when the page's main frame first arrives at the origin, before the app's first
 script runs, whatever takes the page there (`goto`, a link, a script, a form POST, a server redirect or a chain of
 them) and whatever answers (the server, a service worker, a route the test registered). Once that document has run the
@@ -169,7 +170,7 @@ Shop.SessionStorage.seed: the page closed while seed() was registering the seed 
 Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the document that arrived on https://pay.example has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)
-Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the browser counted the page's arrival on https://pay.example as a return there (navigation.activation.from is set), as after a failed navigation to it
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the browser counted the page's arrival on https://pay.example as a return there (navigation.activation.from is set): the document before it was already on the origin, as after a failed navigation to it
 ```
 
 The first seven are thrown by the `seed` call; the last four fail the test later, when the app's document loads or when

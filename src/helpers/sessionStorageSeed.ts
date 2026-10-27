@@ -154,7 +154,7 @@ export const notAppliedError = (applied: AppliedSeed, origin: string, reason: Sk
 					? `the document that arrived on ${origin} has an opaque origin (the browser's error page after a failed ` +
 						"navigation, or a sandboxed document)"
 					: `the browser counted the page's arrival on ${origin} as a return there (navigation.activation.from ` +
-						"is set), as after a failed navigation to it"),
+						"is set): the document before it was already on the origin, as after a failed navigation to it"),
 		),
 		applied.site,
 	);
@@ -216,7 +216,9 @@ export class SeedRegistry {
 	 * end of the script's registration: that document may or may not have run it.
 	 *
 	 * With `writeOnOrigin`, a call made while the page is on the origin writes there in its turn instead, if the page is
-	 * still there; a navigation within the origin while it waits is not an arrival.
+	 * still there; a navigation within the origin while it waits is not an arrival. On a page whose URL has no origin
+	 * (an `about:blank` popup), `writeOnOrigin` asks the document, which may have inherited the origin, writes when it
+	 * has, and says whether it wrote; the call registers when it did not.
 	 */
 	/**
 	 * The page as a `seed` call finds it: the main frame's origin, and every origin the main frame commits on from then
@@ -245,12 +247,14 @@ export class SeedRegistry {
 		entries: Record<string, string>,
 		title: string,
 		site: Error,
-		writeOnOrigin?: () => Promise<void>,
+		writeOnOrigin?: () => Promise<boolean>,
 		atCall?: CallSnapshot,
 	): Promise<void> {
 		// watched from the call on, so the wait for earlier calls and the Navigation API check are covered too
 		const snapshot = atCall ?? this.snapshot();
 		const wasOnOrigin = writeOnOrigin !== undefined && snapshot.origin === origin;
+		// a page whose URL has no origin may hold a document that inherited it, as an about:blank popup does
+		const mayHaveInherited = writeOnOrigin !== undefined && snapshot.origin === undefined;
 		// on its origin's chain, also on a page whose URL has no origin: every other call there takes a page-wide turn,
 		// which orders it against this one, while seeds for different origins still register side by side
 		return takeTurn(this.page, origin, async () => {
@@ -262,6 +266,10 @@ export class SeedRegistry {
 						await writeOnOrigin?.();
 						return;
 					}
+				}
+				// still without a URL origin in the turn: writeOnOrigin asks the document and writes when it is on the origin
+				if (mayHaveInherited && originOf(this.page.mainFrame().url()) === undefined && (await writeOnOrigin?.())) {
+					return;
 				}
 				await this.register(origin, entries, title, site, () => snapshot.committed.has(origin));
 			} catch (error) {

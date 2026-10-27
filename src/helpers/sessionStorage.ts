@@ -595,7 +595,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 
 	/**
 	 * Stores entries for an origin before the app's next load there, so the app's first script sees them, without
-	 * leaving the page the test is on; on the origin already, it writes at once. A seed that is still waiting when the
+	 * leaving the page the test is on; on the origin already, it writes at once, also on an `about:blank` popup whose
+	 * document inherited it. A seed that is still waiting when the
 	 * page closes fails the test. Calls for one origin merge in the order they were made, later values winning per key,
 	 * also when they overlap, on the origin or before the hop. Await it before the action that starts the hop. Entries
 	 * that are empty at run time (`seed({})`) do nothing.
@@ -652,8 +653,19 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 					// nothing to store, as get([]) and clear([]) read and remove nothing; a seed without keys would only wait
 					return;
 				}
-				// on the origin, the registry writes at once in the call's turn; elsewhere it registers the seed
-				await registry.add(origin, encoded, title, site, () => this.write("seed", encoded), atCall);
+				// on the origin, the registry writes at once in the call's turn; on a page whose URL has none, it writes when
+				// the document inherited the origin, as set() does there; elsewhere it registers the seed
+				const writeOnOrigin = async () => {
+					if (atCall.origin === undefined) {
+						const inherited = await this.page.evaluate(() => self.origin).catch(() => "null");
+						if (inherited !== origin) {
+							return false;
+						}
+					}
+					await this.write("seed", encoded);
+					return true;
+				};
+				await registry.add(origin, encoded, title, site, writeOnOrigin, atCall);
 			});
 		} finally {
 			atCall.stop();

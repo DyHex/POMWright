@@ -319,6 +319,7 @@ describe("SeedRegistry", () => {
 				site,
 				async () => {
 					wrote = true;
+					return true;
 				},
 				atCall,
 			)
@@ -338,12 +339,25 @@ describe("SeedRegistry", () => {
 			site,
 			async () => {
 				wrote = true;
+				return true;
 			},
 			onOrigin,
 		);
 		onOrigin.stop();
 		expect(wrote).toBe(true);
 		expect(page.listeners.filter((l) => l.event === "framenavigated")).toEqual([]);
+	});
+
+	it("on a page whose URL has no origin, writes at once when the document inherited it, and registers otherwise", async () => {
+		const { page, registry } = setup();
+		// about:blank: the registry asks writeOnOrigin, which asks the document
+		const inherited = await registry.add(B, { token: "t" }, title, site, async () => true);
+		expect(inherited).toBeUndefined();
+		expect(page.scripts).toEqual([]);
+		expect(registry.pendingOrigins).toEqual([]);
+		await registry.add(B, { token: "t" }, title, site, async () => false);
+		expect(page.scripts.map((script) => script.arg.origin)).toEqual([B]);
+		expect(registry.pendingOrigins).toEqual([B]);
 	});
 
 	it("throws from add when the main frame commits on the origin while the script is being registered, and disposes of it", async () => {
@@ -575,7 +589,7 @@ describe("SeedRegistry", () => {
 				],
 				[
 					"return",
-					`the browser counted the page's arrival on ${B} as a return there (navigation.activation.from is set), as after a failed navigation to it`,
+					`the browser counted the page's arrival on ${B} as a return there (navigation.activation.from is set): the document before it was already on the origin, as after a failed navigation to it`,
 				],
 			] as const) {
 				const { page, registry, failure } = setup();

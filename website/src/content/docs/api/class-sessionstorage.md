@@ -161,7 +161,8 @@ return what it may have read from the new document.
 ### seed()
 
 Stores entries for an origin before the app's next load there, so the app's first script sees them, without leaving
-the page the test is on; on the origin already, it writes at once. See
+the page the test is on; on the origin already, it writes at once, also on an `about:blank` popup that inherited it.
+See
 [how it works](/POMWright/docs/seeding-session-storage/#how-it-works).
 
 Calls for one origin merge in the order they were made, later values winning per key, also when they overlap, on the
@@ -217,7 +218,7 @@ Shop.SessionStorage.seed: the page navigated while seed() was writing to https:/
 Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the document that arrived on https://pay.example has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)
-Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the browser counted the page's arrival on https://pay.example as a return there (navigation.activation.from is set), as after a failed navigation to it
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the browser counted the page's arrival on https://pay.example as a return there (navigation.activation.from is set): the document before it was already on the origin, as after a failed navigation to it
 ```
 
 [What `seed` cannot do](/POMWright/docs/seeding-session-storage/#what-seed-cannot-do) lists every such case.
