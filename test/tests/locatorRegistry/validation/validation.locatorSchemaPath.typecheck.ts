@@ -84,3 +84,40 @@ invalidRegistryFactoryResult.getNestedLocator("trailing.");
 invalidRegistryFactoryResult.getNestedLocator("double..dot");
 // @ts-expect-error invalid path literal should fail at the accessor argument with path-format details
 invalidRegistryFactoryResult.getNestedLocator("contains whitespace");
+
+// reuse by path: a self-reuse is a compile error only for one and the same literal; variables are checked at run time
+const toolbarButtons = ["save", "publish", "cancel"] as const;
+type ToolbarButton = (typeof toolbarButtons)[number];
+type ReusePaths =
+	| "shared.button"
+	| "main"
+	| `main.toolbar.button@${ToolbarButton}`
+	| `dialog.button@${ToolbarButton}`
+	| "main.heading"
+	| "dialog.heading";
+const reuseRegistry = createRegistryWithAccessors<ReusePaths>(page).registry;
+reuseRegistry.add("main.toolbar.button@save", { reuse: "shared.button" });
+// @ts-expect-error a literal path that reuses itself
+reuseRegistry.add("main.heading", { reuse: "main.heading" });
+for (const button of toolbarButtons) reuseRegistry.add(`main.toolbar.button@${button}`, { reuse: "shared.button" });
+for (const button of toolbarButtons) {
+	reuseRegistry.add(`dialog.button@${button}`, { reuse: `main.toolbar.button@${button}` });
+}
+const headingCopies: ReadonlyArray<{ target: ReusePaths; source: ReusePaths }> = [
+	{ target: "dialog.heading", source: "main.heading" },
+];
+for (const { target, source } of headingCopies) reuseRegistry.add(target, { reuse: source });
+declare const eitherHeading: "main.heading" | "dialog.heading";
+reuseRegistry.add(eitherHeading, { reuse: eitherHeading });
+reuseRegistry.add("main.toolbar.button@cancel", { reuse: "shared.button" }).filter({ hasText: "Cancel" });
+const untypedReuse = createRegistryWithAccessors<string>(page).registry;
+declare const anyTarget: string;
+declare const anySource: string;
+untypedReuse.add(anyTarget, { reuse: anySource });
+// @ts-expect-error a literal path that reuses itself, on a registry typed <string> too
+untypedReuse.add("main.heading", { reuse: "main.heading" });
+const listRegistry = createRegistryWithAccessors<"list" | "list.item@first" | `list.item@${string}`>(page).registry;
+declare const itemId: string;
+listRegistry.add(`list.item@${itemId}`, { reuse: "list.item@first" });
+// @ts-expect-error a literal matching a template member, reusing itself
+listRegistry.add("list.item@first", { reuse: "list.item@first" });

@@ -97,10 +97,12 @@ LocatorSchemaPath string cannot contain consecutive dots: main..list
 ```
 
 The duplicate message goes on with the existing and the attempted locator. `add` with `{ reuse }` throws when the
-reused path is not registered, or when the value is neither a path nor a seed (from JavaScript):
+reused path is not registered, when it is the registration path itself (through a variable; one literal reusing itself
+is a compile error), or when the value is neither a path nor a seed (from JavaScript):
 
 ```text
 No locator schema registered for path "main.list.items".
+Locator reuse path cannot be the same as registration path: "main.heading".
 reuse requires a registered path or a seed from createReusable for "main.list.item@last".
 ```
 

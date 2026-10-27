@@ -249,6 +249,29 @@ describe("reuse by path", () => {
 		expect(description(registry.getNestedLocator("other.item"))).toBeNull();
 		expect(description(registry.getNestedLocator("list.item"))).toBe("Last bold item");
 	});
+
+	it("throws for a path that reuses itself through a variable, which compiles", () => {
+		const registry = create();
+		const either = "list.item" as "list.item" | "other.item";
+		expect(() => registry.add(either, { reuse: either })).toThrowError(
+			'Locator reuse path cannot be the same as registration path: "list.item".',
+		);
+	});
+
+	it("registers and resolves a template union reused in pairs, in a loop", () => {
+		const buttons = ["save", "cancel"] as const;
+		type Button = (typeof buttons)[number];
+		const registry = new LocatorRegistryInternal<
+			"main" | `main.button@${Button}` | "dialog" | `dialog.button@${Button}`
+		>(createFakePage());
+		registry.add("main").locator("main");
+		registry.add("dialog").getByRole("dialog");
+		for (const button of buttons) registry.add(`main.button@${button}`).getByRole("button", { name: button });
+		for (const button of buttons) registry.add(`dialog.button@${button}`, { reuse: `main.button@${button}` });
+		expect(chain(registry.getNestedLocator("dialog.button@cancel"))).toBe(
+			"getByRole('dialog').getByRole('button', { name: 'cancel' })",
+		);
+	});
 });
 
 describe("a reuse value that is neither a path nor a seed", () => {

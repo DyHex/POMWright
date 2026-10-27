@@ -92,7 +92,21 @@ export class EditorPage extends PageObject<Paths> {
 
 `Paths` is then the union of the full paths, `main.toolbar.button@save` and the others, so TypeScript checks each one
 as it checks a path written out, and a query of one takes its ancestors as sub-paths
-([Queries](/POMWright/docs/queries/#sub-paths)).
+([Queries](/POMWright/docs/queries/#sub-paths)). The same loop can copy each button to another place, pairing every
+path with its source by [reuse by path](/POMWright/docs/reusing-locators/#reuse-by-path):
+
+```ts
+import type { LocatorRegistry } from "pomwright";
+
+const actions = ["save", "publish", "discard"] as const;
+type Action = (typeof actions)[number];
+type Paths = "main.toolbar" | `main.toolbar.button@${Action}` | "dialog" | `dialog.button@${Action}`;
+declare const registry: LocatorRegistry<Paths>;
+// ---cut---
+for (const action of actions) {
+  registry.add(`dialog.button@${action}`, { reuse: `main.toolbar.button@${action}` });
+}
+```
 
 :::note
 A composed path is not found where it is composed. An error message or the report shows `main.toolbar.button@save`,

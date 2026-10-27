@@ -72,4 +72,23 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27. As planned.
+
+- `locatorRegistry.ts`: `UnionToIntersection`, `IsSingleLiteral` (with the same `// biome-ignore` and reason as plan 7's
+  pattern test) and `ReusePathArgument` applying the self-reuse check only to a single literal, each with a comment;
+  `add`'s rest parameter non-distributive (`[Reuse] extends [undefined]`, `[Reuse] extends [LocatorSchemaPathType]`).
+  `add`'s doc comment `@throws` names the runtime self-reuse message.
+- Compile-only rows (R1-R11, descriptive paths) in `validation.locatorSchemaPath.typecheck.ts` and
+  `publicTypes.typecheck.ts`: errors exactly at the literal self-reuse, the same on `<string>`, and a literal matching a
+  template member; the paired template loop, a table typed `Paths`, one union variable twice, steps after a reuse, wide
+  variables and a runtime id compile (`tsc -p test` exit 0).
+- Unit tests (`locatorRegistry.test.ts`, *reuse by path*): a self-reuse through a variable throws `Locator reuse path
+  cannot be the same as registration path: "list.item".`; the paired loop registers and resolves
+  (`getByRole('dialog').getByRole('button', { name: 'cancel' })`). The message on the build:
+  `Locator reuse path cannot be the same as registration path: "main.heading".`
+- Docs: *Reusing locators*, *Reuse by path* (compile error for one literal, the runtime message for a variable);
+  `api/class-locatorregistry.md`, `add` **Throws**; *Locator paths*, *Paths with a dynamic part* gains the paired loop.
+  Changeset `reuse-path-variables.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 790 passed; `pnpm pack-test --reporter=line` exit 0 (1,509 passed, 3
+  skipped; doc snippets 217; api coverage 0 problems; step locations 7); `consumer-check.sh` 18 `ok`; `pnpm docs:build`
+  0.

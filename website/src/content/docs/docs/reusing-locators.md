@@ -47,7 +47,12 @@ source's strategy and a copy without the source's steps would be another locator
 registered once and reused where needed.
 
 The source must be registered before the copy: `No locator schema registered for path "nope.path".` otherwise. A path
-cannot reuse itself (a compile error).
+cannot reuse itself: written as one literal, that is a compile error; through a variable, which may hold another path,
+it compiles and `add` throws:
+
+```text
+Locator reuse path cannot be the same as registration path: "main.heading".
+```
 
 ## Seeds: `createReusable`
 

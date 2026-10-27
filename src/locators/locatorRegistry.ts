@@ -73,8 +73,28 @@ type InvalidReusePath<Path extends string> = [
 	`Invalid reuse path, reuse path cannot be the same as registration path: ${Path}`,
 ];
 
+type UnionToIntersection<U> = (U extends unknown ? (x: U) => void : never) extends (x: infer I) => void ? I : never;
+
+/** A single string literal: not `string`, not a pattern such as `` `list.item@${string}` ``, not a union. */
+type IsSingleLiteral<T extends string> = string extends T
+	? false
+	: // biome-ignore lint/complexity/noBannedTypes: {} fits Record<T, unknown> only when T is a pattern, not a literal
+		{} extends Record<T, unknown>
+		? false
+		: [T] extends [UnionToIntersection<T>]
+			? true
+			: false;
+
+/**
+ * A reuse path that is the registration path is a compile error only when both are one and the same literal; a union,
+ * `string` or a pattern may hold other values, so the runtime checks it.
+ */
 type ReusePathArgument<Paths extends string, Path extends Paths, ReusePath extends Paths> =
-	Exclude<ReusePath, Path> extends never ? InvalidReusePath<Path> : LocatorSchemaPathArgument<ReusePath>;
+	IsSingleLiteral<Path> extends true
+		? Exclude<ReusePath, Path> extends never
+			? InvalidReusePath<Path>
+			: LocatorSchemaPathArgument<ReusePath>
+		: LocatorSchemaPathArgument<ReusePath>;
 
 /**
  * The options of a registry: the second argument of `createRegistryWithAccessors`, and the `locators` option of a
@@ -187,7 +207,9 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * (`A locator schema with the path "main" already exists. …`; with `{ reuse }`, at `add`, which registers at once), when its first argument is missing or an empty
 	 * string where Playwright cannot use one (`locator requires a non-empty selector for "main.list".`), or when the
 	 * path breaks the path rules (`LocatorSchemaPath string cannot contain consecutive dots: main..list`); at `add`, when
-	 * a reused path is not registered (`No locator schema registered for path "common.button".`). A method of a registration
+	 * a reused path is not registered (`No locator schema registered for path "common.button".`), or is the registration
+	 * path itself (`Locator reuse path cannot be the same as registration path: "main.list".`; a single literal reusing
+	 * itself is a compile error already, a variable is checked here). A method of a registration
 	 * that has ended throws: `nth() cannot apply to "main.list.items": its registration was ended by add("…"); …`
 	 *
 	 * @example
@@ -201,11 +223,12 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		Reuse extends LocatorSchemaPathType | ReusableLocator<LocatorSchemaPathType> | undefined = undefined,
 	>(
 		path: LocatorSchemaPathArgument<Path>,
-		...args: Reuse extends undefined
+		// not distributive: a union-typed reuse is checked as one argument
+		...args: [Reuse] extends [undefined]
 			? []
 			: [
 					options: {
-						reuse: Reuse extends LocatorSchemaPathType
+						reuse: [Reuse] extends [LocatorSchemaPathType]
 							? ReusePathArgument<LocatorSchemaPathType, Path, Reuse>
 							: Extract<Reuse, ReusableLocator<LocatorSchemaPathType>>;
 					},

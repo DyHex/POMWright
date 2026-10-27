@@ -402,3 +402,42 @@ abstract class OrdersListPage extends SitePage<"main.list@orders" | "main.list@o
 	}
 }
 void [OrdersListPage];
+
+// reuse by path: a self-reuse is a compile error only for one and the same literal; variables are checked at run time
+const publicToolbarButtons = ["save", "publish", "cancel"] as const;
+type PublicToolbarButton = (typeof publicToolbarButtons)[number];
+type PublicReusePaths =
+	| "shared.button"
+	| "main"
+	| `main.toolbar.button@${PublicToolbarButton}`
+	| `dialog.button@${PublicToolbarButton}`
+	| "main.heading"
+	| "dialog.heading";
+const publicReuse = createRegistryWithAccessors<PublicReusePaths>(page).registry;
+publicReuse.add("main.toolbar.button@save", { reuse: "shared.button" });
+// @ts-expect-error a literal path that reuses itself
+publicReuse.add("main.heading", { reuse: "main.heading" });
+for (const button of publicToolbarButtons) publicReuse.add(`main.toolbar.button@${button}`, { reuse: "shared.button" });
+for (const button of publicToolbarButtons) {
+	publicReuse.add(`dialog.button@${button}`, { reuse: `main.toolbar.button@${button}` });
+}
+const publicHeadingCopies: ReadonlyArray<{ target: PublicReusePaths; source: PublicReusePaths }> = [
+	{ target: "dialog.heading", source: "main.heading" },
+];
+for (const { target, source } of publicHeadingCopies) publicReuse.add(target, { reuse: source });
+declare const publicEitherHeading: "main.heading" | "dialog.heading";
+publicReuse.add(publicEitherHeading, { reuse: publicEitherHeading });
+publicReuse.add("main.toolbar.button@cancel", { reuse: "shared.button" }).filter({ hasText: "Cancel" });
+const publicUntypedReuse = createRegistryWithAccessors<string>(page).registry;
+declare const publicAnyTarget: string;
+declare const publicAnySource: string;
+publicUntypedReuse.add(publicAnyTarget, { reuse: publicAnySource });
+// @ts-expect-error a literal path that reuses itself, on a registry typed <string> too
+publicUntypedReuse.add("main.heading", { reuse: "main.heading" });
+const publicListRegistry = createRegistryWithAccessors<"list" | "list.item@first" | `list.item@${string}`>(
+	page,
+).registry;
+declare const publicItemId: string;
+publicListRegistry.add(`list.item@${publicItemId}`, { reuse: "list.item@first" });
+// @ts-expect-error a literal matching a template member, reusing itself
+publicListRegistry.add("list.item@first", { reuse: "list.item@first" });
