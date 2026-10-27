@@ -57,7 +57,8 @@
 			"!**/test/test-data",
 			"!**/test/.doc-snippets",
 			"!**/website/.astro",
-			"!**/.pack"
+			"!**/.pack",
+			"!**/.pnpm-store"
 		]
 	}
 }

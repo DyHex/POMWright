@@ -1994,3 +1994,12 @@ much").
 checked their `run:` scripts (`run: scripts checked with ShellCheck <version>`, or `run: scripts not checked: shellcheck
 is not installed`), since actionlint prints nothing when it finds nothing and silently skips the scripts without
 shellcheck. A separate commit before plan 6's, so one push validates both. Agreed by the maintainer.
+
+## 66. biome skips pnpm's local store (2026-10-27, after plan 5)
+
+**Settles**: an execution-time finding from plan 5's PR run (CI's lint checked 162 files, local lint 164).
+
+**Decided**: `biome.json` excludes `**/.pnpm-store`, beside the other ignored build and cache folders. A local
+`.pnpm-store/` at the repository root (pnpm's cache of third-party package files, gitignored, absent from CI's checkout)
+made local lint also check two of pnpm's index files. Local lint now checks the same 162 files as CI. Agreed by the
+maintainer.
