@@ -159,7 +159,8 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   published entries, one shared copy, closed deep imports, the manifest; `packageFiles.spec.ts`, the installed
   package's exact file list; `publicTypes.typecheck.ts` and `publicTypes.emit.ts`, compile-only). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through
   `playwright.bench.config.ts`, never by `pack-test`. `testApp/urlForms.spec.ts` sweeps the printable ASCII
-  characters through the URL each browser reports, with the one known difference (Chromium's `|` in a path) listed.
+  characters through the URL each browser reports (but `# ? / % \`), with the known differences listed: Chromium's `|`
+  in a path, and, on Node 20 and 22, whose `new URL` keeps a `^`, every browser's `%5E`.
   `test/step-locations/` is the step-location check: its specs mark each probed call with `// LOCATION <id>` (a step
   titled by its class and method is marked with that title), and its reporter fails the run when a step or an error
   with that id is reported on another line, or a marked line is never reported; `legacyDecorators.spec.ts` runs `@step`'s
@@ -309,7 +310,8 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   app's first script).
 - URLs mirror Playwright's `baseURL` handling with one base per page object: each part is a string or a RegExp, a
   string `baseUrl` is a non-empty origin (no bare `?` or `#`, and a scheme with a URL origin, so not `chrome-extension:` or `file:`, as for `SessionStorage`'s `origin`) and a string `urlPath` is `""` or a single-slash path
-  that stays on the base's origin once resolved, all validated at construction; two strings resolve with `new URL`,
+  that stays on the base's origin once resolved, all validated at construction; two strings resolve with `new URL`, a `^` in the path part written as `%5E` (every
+  browser's form, which `new URL` keeps before Node 24),
   and a page is compared as Playwright compares URLs: the rest of the URL as `href` writes it, an empty `?` or `#`
   included, a string path in the form `new URL` gives it, with `|` and `%7C`, and `^` and `%5E`, equal in its path part (Chromium reports
   a `|` as `%7C`; every browser reports a `^` as `%5E`, which `new URL` keeps as `^` before Node 24); a RegExp in either part makes `fullUrl` a `UrlMatcher` (base against the origin, path against the

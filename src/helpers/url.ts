@@ -160,10 +160,13 @@ const restOf = (url: URL): string => {
  * from Node 24 (ada 4) but keeps on Node 20 and 22. A sweep of every printable ASCII character in the path, query and
  * fragment on the three browsers found no other difference (`test/tests/testApp/urlForms.spec.ts` keeps checking).
  */
-const comparable = (rest: string): string => {
-	const end = rest.search(/[?#]/);
-	const path = (end === -1 ? rest : rest.slice(0, end)).replaceAll("|", "%7C").replaceAll("^", "%5E");
-	return end === -1 ? path : path + rest.slice(end);
+const comparable = (rest: string): string =>
+	inPathPart(rest, (path) => path.replaceAll("|", "%7C").replaceAll("^", "%5E"));
+
+/** Rewrites the part of `text` before its first "?" or "#": a URL's path, or the whole of it up to the path's end. */
+const inPathPart = (text: string, rewrite: (path: string) => string): string => {
+	const end = text.search(/[?#]/);
+	return end === -1 ? rewrite(text) : rewrite(text.slice(0, end)) + text.slice(end);
 };
 
 const toUrl = (input: string | URL): URL => (typeof input === "string" ? new URL(input) : input);
@@ -214,7 +217,9 @@ export function composeFullUrl(base: string, path: string): string;
 export function composeFullUrl(base: string | RegExp, path: string | RegExp): UrlMatcher;
 export function composeFullUrl(base: string | RegExp, path: string | RegExp): string | UrlMatcher {
 	if (typeof base === "string" && typeof path === "string") {
-		return resolveUrl(path, base);
+		// a "^" in the path as every browser reports it, "%5E": Node 20 and 22's `new URL` keeps it (Node 24's writes it);
+		// a "|" stays, as Firefox and WebKit report it and Chromium does not
+		return inPathPart(resolveUrl(path, base), (beforeQuery) => beforeQuery.replaceAll("^", "%5E"));
 	}
 	return createUrlMatcher(base, path);
 }

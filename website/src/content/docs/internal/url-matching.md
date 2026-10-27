@@ -27,7 +27,11 @@ helpers in `src/helpers/url.ts`:
 `composeFullUrl` makes the page's identity:
 
 - **Two strings**: `new URL(urlPath, baseUrl).href`, the resolution Playwright applies to `page.goto(path)` against
-  `baseURL`, and the form the browser reports: `https://shop.example/` for an empty path, `/s%C3%B8k` for `/søk`.
+  `baseURL`, and the form the browser reports: `https://shop.example/` for an empty path, `/s%C3%B8k` for `/søk`. A `^`
+  in the path part is written `%5E`, as every browser reports it, since Node 20 and 22's `new URL` keeps it; a `|` is
+  kept, as Firefox and WebKit report it and Chromium does not. Making a string page's `fullUrl` a `UrlMatcher` would
+  match both forms, but code using it as a string would stop compiling; a page object cannot tell which browser it runs
+  in, so a `fullUrl` per browser is not possible either.
 - **A RegExp in either part**: a `UrlMatcher`.
 
 ## `UrlMatcher`
@@ -51,7 +55,8 @@ Playwright's `waitForURL`, `toHaveURL` and `route` accept a URL predicate, so th
 The navigation helper builds a matcher for every page object, a string `fullUrl` included, and waits with it: a page
 is matched in the form the browser reports, so `/søk` matches the percent-encoded URL the browser shows.
 
-The browsers agree with `new URL` on every printable ASCII character in the path, the query and the fragment but one:
+The browsers agree with `new URL` on every printable ASCII character in the path, the query and the fragment, except in
+the path:
 Chromium reports a `|` in the path as `%7C`, and every browser reports a `^` in the path as `%5E`, which `new URL` writes
 too on Node 24 (its URL parser, ada 4, follows the current URL standard) but keeps on Node 20 and 22. Before comparing a
 string path, the matcher writes `|` as `%7C` and `^` as `%5E` in the path part of both sides (`comparable` in

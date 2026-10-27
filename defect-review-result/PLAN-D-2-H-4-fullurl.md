@@ -66,4 +66,28 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27. As planned.
+
+- `url.ts`: `inPathPart(text, rewrite)`, the split at the first `?` or `#` that `comparable` used inline, now shared;
+  `composeFullUrl`'s string case writes the path part's `^` as `%5E` (a comment says why; a `|` stays). `fullUrl`'s doc
+  comment on `PageObject`: the `%5E`, Chromium's `%7C` with `expectThisPage()`, exact in `toHaveURL` and a glob in
+  `waitForURL` and `route`.
+- Playwright 1.64 read for the glob claim (`playwright-core/lib/coreBundle.js` `urlMatches`, `globToRegexPattern`;
+  `playwright/lib/matchers/expect.js` `toHaveURL`): `toHaveURL(string)` is an exact text match; `waitForURL` and
+  `route` turn a string into a glob, where `*`, `**` and a `{a,b}` group are patterns and `?` is literal. A first draft
+  of the sentence also named `?`; corrected before the build.
+- Node 20.20.2 (nvm): `new URL("/a^b", …)` keeps `^`; the packed `PageObject`'s `fullUrl` for `/a^b?q=a^b#a^b` is
+  `http://localhost:9000/a%5Eb?q=a^b#a^b`, and `/a|b` stays. `urlForms.spec.ts` on Node 20, all three browsers: 9
+  passed. With the old `composeFullUrl` the new caret assertion fails there (`Received: …/testpath/a^b`; checked, then
+  restored).
+- Tests: unit (`url.test.ts`): the `^` in the path written `%5E`, the query and fragment and a `|` kept, the matcher
+  accepting it. `urlForms.spec.ts`: the caret page's `fullUrl` is `…/a%5Eb` and `toHaveURL(fullUrl)` matches on every
+  browser; the pipe page's `toHaveURL(fullUrl)` matches on Firefox and WebKit and not on Chromium (the known
+  difference), and `expectThisPage()` matches on all three.
+- Docs: *URLs and navigation*, *fullUrl* (the `%5E`, the `|` exception and `expectThisPage()`, exact versus glob);
+  `api/class-pageobject.md`, `fullUrl`; *Internal → URL matching* (`fullUrl`'s two strings, the rejected alternatives,
+  "except in the path:"); *Upgrading from 2.x*, `waitForPage` with `toHaveURL`; *Internal → Tests and checks* ("the
+  known differences"); AGENTS.md §4 (both differences, the skipped characters) and §5 (`fullUrl`'s `%5E`).
+  `.changeset/caret-in-url-path.md` amended.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 898 passed; `pnpm pack-test --reporter=line` exit 0 (1,602 passed, 3
+  skipped; doc snippets 221; api coverage 0 problems; step locations 29); `pnpm docs:build` 0.

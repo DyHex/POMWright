@@ -265,6 +265,15 @@ describe("composeFullUrl", () => {
 		}
 	});
 
+	it('writes a "^" in the path as "%5E", as every browser reports it, and keeps "|" and the query and fragment as given', () => {
+		// on Node 24 new URL writes "%5E" already; on Node 20 and 22 it keeps "^", and composeFullUrl rewrites it there
+		expect(composeFullUrl("https://app.example", "/a^b?q=a^b#a^b")).toBe("https://app.example/a%5Eb?q=a^b#a^b");
+		expect(composeFullUrl("https://app.example", "/a|b")).toBe("https://app.example/a|b");
+		expect(createUrlMatcher("https://app.example", "/a^b").test(composeFullUrl("https://app.example", "/a^b"))).toBe(
+			true,
+		);
+	});
+
 	it("types the result from the argument types", () => {
 		expectTypeOf(composeFullUrl("https://app.example", "/login")).toEqualTypeOf<string>();
 		expectTypeOf(composeFullUrl("https://app.example", /\/login/)).toEqualTypeOf<UrlMatcher>();

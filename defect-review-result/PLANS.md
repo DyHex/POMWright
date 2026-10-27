@@ -68,8 +68,8 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 21 | [A page-wide turn on pages without a URL origin; `seed` writes at once on an inherited origin](PLAN-A-2-A-3-inherited-origin.md) | 13, 14 | patch | | done | `e231dc2`, `52f2d4c` |
 | 22 | [The opaque-origin message; the never-applied message for several seeds](PLAN-A-5-R-2-storage-messages.md) | 26, 30 | patch | | done | `186bc5f`, `c35eae4` |
 | 23 | [Storage values typed per key member](PLAN-A-4-key-types.md) | 18 | patch | | done | `f422b77` |
-| 24 | [A schema's type and value must agree](PLAN-A-7-schema-agreement.md) | 38 | patch | | done | (filled by the next commit) |
-| 25 | [A string `fullUrl` writes `^` as `%5E`; `\|` documented](PLAN-D-2-H-4-fullurl.md) | 17 | patch | | planned | |
+| 24 | [A schema's type and value must agree](PLAN-A-7-schema-agreement.md) | 38 | patch | | done | `e05b84d` |
+| 25 | [A string `fullUrl` writes `^` as `%5E`; `\|` documented](PLAN-D-2-H-4-fullurl.md) | 17 | patch | | done | (filled by the next commit) |
 | 26 | [`NavigationFor` declares `goto` as a property; the labelled `Cannot resolve` message](PLAN-D-1-D-3-navigation.md) | 19, 36 (point 2) | patch | | planned | |
 | 27 | [Packed twins of the source-level locator specs](PLAN-T10-packed-twins.md) | 55 (phase 1) | none | | planned | |
 | 28 | [The smaller untested behaviours](PLAN-T16-smaller-specs.md) | 60 | none | | planned | |

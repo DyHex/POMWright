@@ -22,7 +22,7 @@ Playwright against an express server, `test/server.js`, with a page per area: fi
 session storage across two origins. `pnpm pack-test` builds, packs, installs, type-checks and runs every spec on
 chromium, firefox and webkit. Most `locatorRegistry` specs import the registry from `src/` and test the source; the
 specs that use page objects or import `pomwright` test the packed package. `testApp/urlForms.spec.ts` sweeps every
-printable ASCII character through the URL each browser reports, with the one known difference listed, so a browser
+printable ASCII character through the URL each browser reports, with the known differences listed, so a browser
 that starts reporting a URL differently fails the harness.
 
 After the harness, `pack-test` runs `test/playwright.steps.config.ts`: where the report places a step and its error,

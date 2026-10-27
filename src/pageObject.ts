@@ -177,9 +177,11 @@ export abstract class PageObject<
 	 */
 	readonly urlPath: UrlPathTypeFromOptions<Options>;
 	/**
-	 * The page object's URL. For a string `baseUrl` and `urlPath` it is `new URL(urlPath, baseUrl).href`, the form the
-	 * browser reports (`https://shop.example/` for an empty path). When either part is a RegExp it is a `UrlMatcher`,
-	 * which Playwright's `waitForURL`, `toHaveURL` and `route` take as a URL predicate.
+	 * The page object's URL. For a string `baseUrl` and `urlPath` it is `new URL(urlPath, baseUrl).href`, with a `^` in
+	 * the path written as `%5E`: the form the browser reports (`https://shop.example/` for an empty path), but for
+	 * Chromium's `%7C` for a `|`, where `expectThisPage()` matches on every browser. It is exact in `toHaveURL`, and a
+	 * glob in `waitForURL` and `route`. When either part is a RegExp it is a `UrlMatcher`, which Playwright's
+	 * `waitForURL`, `toHaveURL` and `route` take as a URL predicate.
 	 *
 	 * @example
 	 * ```ts

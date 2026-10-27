@@ -510,11 +510,12 @@ A base RegExp that includes a path never matches, since the base only sees the o
 or a parameter typed `string | RegExp` that receives `fullUrl`, tests or takes `UrlMatcher` instead:
 
 ```ts title="3.0.0"
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import type { UrlMatcher } from "pomwright";
 
 export async function waitForPage(page: Page, url: string | UrlMatcher) {
-  await page.waitForURL(url);
+  // toHaveURL compares a string exactly, where waitForURL reads it as a glob
+  await expect(page).toHaveURL(url);
 }
 ```
 

@@ -257,7 +257,8 @@ The `baseUrl` the page object was constructed with.
 
 ### fullUrl
 
-The page object's URL: `new URL(urlPath, baseUrl).href` for two strings, a
+The page object's URL: for two strings, `new URL(urlPath, baseUrl).href` with a `^` in the path written as `%5E`, the
+form every browser reports, but for Chromium's `%7C` for a `|`; a
 [`UrlMatcher`](/POMWright/api/class-navigation/#urlmatcher) when either part is a RegExp. See
 [fullUrl](/POMWright/docs/urls-and-navigation/#fullurl).
 
