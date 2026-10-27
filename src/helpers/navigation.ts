@@ -92,7 +92,9 @@ type NavigationBase<Target extends string> = {
 	 * @param target The URL or path. On a RegExp `baseUrl`, an absolute URL.
 	 * @param options `waitUntil`, `timeout` (or, without a target, also `runPostNavigationActions`); each defaults to
 	 * the page object's `navOptions`.
-	 * @throws What `page.goto` throws; on a RegExp `baseUrl`, for a relative target (from JavaScript):
+	 * @throws What `page.goto` throws; for a target that cannot be resolved against a string `baseUrl`:
+	 * `LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.example"`; on a RegExp `baseUrl`, for
+	 * a relative target (from JavaScript):
 	 * `AccountPage: goto("/account") needs an absolute URL because baseUrl is a RegExp.`; for a first argument that is
 	 * neither a string nor options, a `URL` object included (from JavaScript):
 	 * `LoginPage: goto() takes a URL string or options; received a URL object; pass its href.`
@@ -204,7 +206,16 @@ class Navigation {
 
 	private resolveTarget(input: string): string {
 		if (typeof this.baseUrl === "string") {
-			return resolveUrl(input, this.baseUrl);
+			try {
+				return resolveUrl(input, this.baseUrl);
+			} catch (error) {
+				// labelled as every other navigation message; the URL parser's own error is the cause
+				const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
+				throw new Error(
+					`${this.label}: goto(${JSON.stringify(input)}) cannot be resolved against baseUrl ${JSON.stringify(this.baseUrl)}`,
+					{ cause },
+				);
+			}
 		}
 		if (isAbsoluteUrl(input)) {
 			return input;

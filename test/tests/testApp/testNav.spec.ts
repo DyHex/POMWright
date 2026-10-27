@@ -124,6 +124,15 @@ test.describe("goto", () => {
 		expect(testNav.page.url()).toBe(`${BASE}/testnav/item/7`);
 	});
 
+	test("a target that cannot be resolved against baseUrl names the page object and goes nowhere", async ({
+		testNav,
+	}) => {
+		const error = await testNav.navigation.goto("http://").catch((thrown: unknown) => thrown);
+		expect((error as Error).message).toBe(`TestNav: goto("http://") cannot be resolved against baseUrl "${BASE}"`);
+		expect((error as Error).cause).toBeInstanceOf(TypeError);
+		expect(testNav.page.url()).toBe("about:blank");
+	});
+
 	test("a trailing slash on baseUrl composes to a single slash", async ({ page }) => {
 		const nav = new TrailingSlashNav(page);
 		expect(nav.fullUrl).toBe(`${BASE}/testnav`);

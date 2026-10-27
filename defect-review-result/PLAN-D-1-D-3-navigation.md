@@ -120,3 +120,16 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 - Checks: `pnpm lint` 0; `pnpm test:unit` 898 passed; `pnpm pack-test --reporter=line` exit 0 (1,602 passed, 3
   skipped; doc snippets 221; api coverage 108 members, 0 problems; step locations 29); `consumer-check.sh` 18 `ok`;
   `pnpm docs:build` 0.
+
+**Step 2 (D-3's label).**
+
+- `navigation.ts` `resolveTarget`: for a string `baseUrl`, the `Cannot resolve` error of `resolveUrl` becomes
+  `LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.example"` (the decision's text; the
+  build gives `TestNav: goto("http://") cannot be resolved against baseUrl "http://localhost:9000"`), with the URL
+  parser's `TypeError` as `cause`; `resolveUrl` unchanged (construction-time validation uses it). `goto`'s `@throws`
+  names it.
+- Tests: unit (`navigation.test.ts`), the message and a `TypeError` cause; harness (`testNav.spec.ts`, three browsers),
+  the same, and the page stays at `about:blank`.
+- Docs: none in this step (the API and errors pages take it in plan 30's pass). Changeset `cannot-resolve-label.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 900 passed; `pnpm pack-test --reporter=line` exit 0 (1,605 passed, 3
+  skipped; doc snippets 221; api coverage 0 problems; step locations 29).

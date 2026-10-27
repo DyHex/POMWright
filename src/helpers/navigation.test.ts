@@ -110,6 +110,22 @@ describe("createNavigation runtime guards", () => {
 		await expect(untyped.goto(null)).rejects.toThrow("LoginPage: goto() takes a URL string or options; received null.");
 	});
 
+	it("names the page object when a target cannot be resolved against a string baseUrl, with the parser's error as cause", async () => {
+		const navigation = createNavigation(
+			fakePage,
+			"https://shop.example",
+			"/login",
+			"https://shop.example/login",
+			"LoginPage",
+			() => null,
+		);
+		const error = await navigation.goto("http://").catch((thrown: unknown) => thrown);
+		expect((error as Error).message).toBe(
+			'LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.example"',
+		);
+		expect((error as Error).cause).toBeInstanceOf(TypeError);
+	});
+
 	it("rejects a non-absolute target on a RegExp baseUrl", async () => {
 		const matcher = createUrlMatcher(/app\.example/, "/login");
 		const navigation = createNavigation(fakePage, /app\.example/, "/login", matcher, "LoginPage", () => null);
