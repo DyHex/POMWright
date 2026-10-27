@@ -1984,3 +1984,13 @@ anywhere in a pipe fails the step. A separate commit under plan 4, before plan 5
 **Why**: without `shell:`, GitHub runs a step as `bash -e {0}`, where only a pipe's last command counts: a failed `git
 show` read as an empty version (the guard stopped quietly), and a failed `git ls-remote` read as a moved `main` (Pages
 skipped the deploy with a misleading message). The local probes had run with `pipefail`. Agreed by the maintainer.
+
+## 65. The actionlint step says what it checked (2026-10-27, after plan 5)
+
+**Settles**: an execution-time finding from plan 5's PR run (the maintainer: the step's log "doesn't really tell me
+much").
+
+**Decided**: after actionlint passes, the lint job's step prints the workflow files it checked and whether shellcheck
+checked their `run:` scripts (`run: scripts checked with ShellCheck <version>`, or `run: scripts not checked: shellcheck
+is not installed`), since actionlint prints nothing when it finds nothing and silently skips the scripts without
+shellcheck. A separate commit before plan 6's, so one push validates both. Agreed by the maintainer.

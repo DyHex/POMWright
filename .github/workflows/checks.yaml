@@ -53,6 +53,13 @@ jobs:
           echo "${ACTIONLINT_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
           tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
           "$RUNNER_TEMP/actionlint" -color
+          # actionlint prints nothing when it finds nothing, and skips the run: scripts silently without shellcheck
+          echo "actionlint ${ACTIONLINT_VERSION}: no problems in $(cd .github/workflows && echo *.yaml)"
+          if command -v shellcheck >/dev/null; then
+            echo "run: scripts checked with ShellCheck $(shellcheck --version | sed -n 's/^version: //p')"
+          else
+            echo "run: scripts not checked: shellcheck is not installed"
+          fi
 
   package:
     name: Unit tests and package

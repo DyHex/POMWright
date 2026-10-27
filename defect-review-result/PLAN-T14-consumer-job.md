@@ -109,3 +109,5 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 - Checks: `pnpm lint` 0 (164 files); actionlint 0; shellcheck 0 on the script; `pnpm test:unit` 782 passed; `pnpm
   pack-test --reporter=line` exit 0 (1,509 passed, 3 skipped; doc snippets 215; api coverage 0 problems; step locations
   7); `pnpm docs:build` 0.
+- PR run green (2026-10-27): the `consumer` job listed every case `ok`, attw "No problems found", both runner projects
+  passed. Follow-up from that run, decision 65: the actionlint step prints a summary (a separate commit).
