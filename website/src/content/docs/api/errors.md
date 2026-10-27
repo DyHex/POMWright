@@ -368,3 +368,18 @@ is a `TypeError` thrown in the step, when the method returns something that is n
 ```
 
 From JavaScript, on something that is not a method.
+
+---
+
+## Logging
+
+```text
+log fixture: locale "en_US" is not a BCP 47 language tag; write it with hyphens, such as "en-US"
+log fixture: timezoneId "Invalid/Zone" is not a time zone Node's Intl knows
+```
+
+The `log` fixture checks Playwright's `locale` and `timezoneId` when the test starts, since it names its attachments in
+them. Playwright passes `locale` to the browser unchecked, and an underscore form works in Chromium only; write the tag
+with hyphens, and the time zone as an IANA name such as `Europe/Oslo`. `""` is no value. `attachLogsToTest` called in a
+fixture of your own gives the same messages, starting `attachLogsToTest:` and naming `timeZone`, before it attaches
+anything. See [names in your locale](/POMWright/docs/logging/#names-in-your-locale).

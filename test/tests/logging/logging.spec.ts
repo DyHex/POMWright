@@ -1,3 +1,5 @@
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { expect, type TestInfo } from "@playwright/test";
 import { test as base } from "pomwright";
 
@@ -105,5 +107,48 @@ test.describe('with use: { locale: "nb-NO", timezoneId: "UTC" }', () => {
 			expect(name).toMatch(/^\d{2}:\d{2}:\d{2} \d{2}\.\d{2}\.\d{4} - WARN : \[TestCase\]$/);
 			expect(utcHours).toContain(name.slice(0, 2));
 		};
+	});
+});
+
+test.describe("the locale and the time zone, checked when the test starts", () => {
+	for (const locale of ["", "EN-us"]) {
+		test.describe(`locale ${JSON.stringify(locale)}`, () => {
+			test.use({ locale });
+			test("names the entries", async ({ log, afterLog }) => {
+				log.warn("kept");
+				afterLog.check = (attachments) => {
+					expect(bodies(attachments)).toEqual(["kept"]);
+				};
+			});
+		});
+	}
+
+	test.describe("an underscore locale, which only Chromium accepts", () => {
+		test.describe.configure({ mode: "serial" });
+		test.use({ locale: "en_US" });
+		// the failing test's worker is replaced, so its error is handed to the next test through a file
+		const errorFile = () =>
+			path.join(
+				test.info().project.outputDir,
+				`log-locale-${test.info().project.name}-${test.info().repeatEachIndex}.txt`,
+			);
+		test.afterEach(() => {
+			const [error] = test.info().errors;
+			if (error?.message !== undefined) {
+				writeFileSync(errorFile(), error.message);
+			}
+		});
+
+		test.fail("fails the test when the log fixture is set up, before its body", async ({ log }) => {
+			log.warn("never logged");
+		});
+
+		test("with a message naming the value and its hyphenated form", () => {
+			const message = readFileSync(errorFile(), "utf8");
+			rmSync(errorFile());
+			expect(message).toContain(
+				'log fixture: locale "en_US" is not a BCP 47 language tag; write it with hyphens, such as "en-US"',
+			);
+		});
 	});
 });

@@ -66,4 +66,29 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27. As planned.
+
+- Probed first (Node 24.22): `Intl` accepts `en-US`, `nb-NO`, `EN-us`, `en-US-u-ca-buddhist`, and the zones
+  `Europe/Oslo`, `UTC`, `utc`, `+01:00`; it throws `RangeError` for `en_US`, `""`, `xx-!!`, `123`, `i-klingon`, and the
+  zones `""` and `Invalid/Zone`. Playwright's `locale` fixture defaults to `en-US`, `timezoneId` to `undefined`
+  (`playwright/lib/index.js`).
+- `playwrightReportLogger.ts`: `checkDateFormat(locale, timeZone, source)` (internal, not exported from `index.ts`):
+  `""` becomes `undefined`; a locale through `Intl.getCanonicalLocales`, a time zone through `Intl.DateTimeFormat`; the
+  messages name the caller and its option (`log fixture` with `timezoneId`, `attachLogsToTest` with `timeZone`), the
+  value as JSON, and the hyphenated form when the locale holds `_`. `attachLogsToTest` resolves each value as before
+  (given, else the project's) and checks it before attaching anything; its doc comment `@throws`.
+- `base.fixtures.ts`: the fixture calls the check before `use(log)` and still passes Playwright's values unchanged to
+  `attachLogsToTest`, so `""` keeps meaning the machine's value rather than falling back to the project's.
+- Messages from the build: `log fixture: locale "en_US" is not a BCP 47 language tag; write it with hyphens, such as
+  "en-US"`; `log fixture: locale "xx-!!" is not a BCP 47 language tag`; `log fixture: timezoneId "Invalid/Zone" is not
+  a time zone Node's Intl knows`; `attachLogsToTest: timeZone "Invalid/Zone" is not a time zone Node's Intl knows`.
+- Tests: unit (`playwrightReportLogger.test.ts`, *the locale and the time zone*): accepted forms, `""`, the underscore
+  hint, a malformed tag, an unknown zone under both callers' names, `attachLogsToTest` refusing before any attachment
+  (given and from the project), `""` attaching in the machine's values. Harness (`test/tests/logging/logging.spec.ts`,
+  packed): `""` and `EN-us` name the entries; `locale: "en_US"` fails the test at the fixture's setup, its error handed
+  to a serial test through a file (as the call-site and lifecycle specs do), which finds the message.
+- Docs: *Logging to the report*, *Names in your locale*; `api/class-playwrightreportlogger.md`, `attachLogsToTest`
+  **Throws** (and `""` in the argument); `api/errors.md`, a new *Logging* section; the fixture's doc comment; AGENTS.md
+  §5's logger sentence. Changeset `log-locale-check.md`, with the trade-off.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 866 passed; `pnpm pack-test --reporter=line` exit 0 (1,572 passed, 3
+  skipped; doc snippets 221; api coverage 0 problems; step locations 29); `pnpm docs:build` 0.

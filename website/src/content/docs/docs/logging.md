@@ -82,6 +82,14 @@ your configuration. With `use: { locale: "nb-NO", timezoneId: "Europe/Oslo" }`:
 The time is taken in the test process: Playwright's [clock](https://playwright.dev/docs/clock) changes the page's time,
 not the logger's.
 
+The fixture formats with Node's `Intl`, so it checks both values when the test starts: the locale must be a BCP 47
+language tag and the time zone one `Intl` knows, and `""` is no value. Playwright passes `locale` to the browser
+unchecked, and an underscore form works in Chromium only, so with `locale: "en_US"` a test that uses `log` fails at once:
+
+```text
+log fixture: locale "en_US" is not a BCP 47 language tag; write it with hyphens, such as "en-US"
+```
+
 ## Child loggers
 
 A child logger has a name of its own and shares its parent's entries and level, so a page object can log under its own

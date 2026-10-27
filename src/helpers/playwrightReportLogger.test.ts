@@ -1,6 +1,12 @@
 import type { TestInfo } from "@playwright/test";
 import { describe, expect, it } from "vitest";
-import { initialLogLevel, type LogEntry, type LogLevel, PlaywrightReportLogger } from "./playwrightReportLogger";
+import {
+	checkDateFormat,
+	initialLogLevel,
+	type LogEntry,
+	type LogLevel,
+	PlaywrightReportLogger,
+} from "./playwrightReportLogger";
 
 // A TestInfo that records attachments; what the HTML report shows is covered by the integration specs.
 const setup = (level: LogLevel = "debug", use: { locale?: string; timezoneId?: string } = {}) => {
@@ -136,6 +142,60 @@ describe("attachments", () => {
 		log.attachLogsToTest(testInfo, { locale: "en-US", timeZone: "UTC" });
 		expect(attachments).toHaveLength(1);
 		expect(attachments[0]?.name).toMatch(/ - WARN : \[TestCase -> LoginPage\]$/);
+	});
+});
+
+describe("the locale and the time zone", () => {
+	it("accept a BCP 47 tag in any case and a time zone Intl knows", () => {
+		expect(checkDateFormat("en-US", "Europe/Oslo", "log fixture")).toEqual({
+			locale: "en-US",
+			timeZone: "Europe/Oslo",
+		});
+		expect(checkDateFormat("nb-NO", "UTC", "log fixture")).toEqual({ locale: "nb-NO", timeZone: "UTC" });
+		expect(checkDateFormat("EN-us", undefined, "log fixture")).toEqual({ locale: "EN-us", timeZone: undefined });
+	});
+
+	it("take an empty string as no value, as Playwright does", () => {
+		expect(checkDateFormat("", "", "log fixture")).toEqual({ locale: undefined, timeZone: undefined });
+	});
+
+	it("reject an underscore tag with a hint, and any other malformed tag, naming the option and the value", () => {
+		expect(() => checkDateFormat("en_US", undefined, "log fixture")).toThrowError(
+			'log fixture: locale "en_US" is not a BCP 47 language tag; write it with hyphens, such as "en-US"',
+		);
+		expect(() => checkDateFormat("xx-!!", undefined, "log fixture")).toThrowError(
+			/^log fixture: locale "xx-!!" is not a BCP 47 language tag$/,
+		);
+	});
+
+	it("reject a time zone Intl does not know, named as the caller names it", () => {
+		expect(() => checkDateFormat(undefined, "Invalid/Zone", "log fixture")).toThrowError(
+			`log fixture: timezoneId "Invalid/Zone" is not a time zone Node's Intl knows`,
+		);
+		expect(() => checkDateFormat(undefined, "Invalid/Zone", "attachLogsToTest")).toThrowError(
+			`attachLogsToTest: timeZone "Invalid/Zone" is not a time zone Node's Intl knows`,
+		);
+	});
+
+	it("are checked by attachLogsToTest before anything is attached, given or from the project", () => {
+		const given = setup();
+		given.log.warn("kept");
+		expect(() => given.log.attachLogsToTest(given.testInfo, { locale: "en_US" })).toThrowError(
+			'attachLogsToTest: locale "en_US" is not a BCP 47 language tag; write it with hyphens, such as "en-US"',
+		);
+		expect(given.attachments).toEqual([]);
+		const configured = setup("debug", { timezoneId: "Invalid/Zone" });
+		configured.log.warn("kept");
+		expect(() => configured.log.attachLogsToTest(configured.testInfo)).toThrowError(
+			`attachLogsToTest: timeZone "Invalid/Zone" is not a time zone Node's Intl knows`,
+		);
+	});
+
+	it("attach in the machine's locale and time zone for an empty string", () => {
+		const { log, attachments, testInfo } = setup("debug", { locale: "en-GB" });
+		log.warn("kept");
+		log.attachLogsToTest(testInfo, { locale: "", timeZone: "" });
+		expect(attachments).toHaveLength(1);
 	});
 });
 

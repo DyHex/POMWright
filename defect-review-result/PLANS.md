@@ -62,8 +62,8 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 15 | [`StepDecorator` exported](PLAN-F-1-step-decorator-type.md) | 23 | patch | | done | `b4fee4a` |
 | 16 | [Boxed steps with a computed `location`; a page object's check points at `new`](PLAN-E-1-D-4-call-sites.md) | 12, 37 | patch | | done | `b19de77`, `445fc71`; the frame budget dropped after the stop, `f4bb76e` |
 | 17 | [A Promise from `defineLocators()` fails the page object](PLAN-D-5-async-definelocators.md) | 16 | patch | | done | `80cb5ea` |
-| 18 | [`@step`'s Promise rule at run time; legacy decorators run for real](PLAN-H-7-T13-step-runtime.md) | 40, 57 | patch | | done | `2e15291`, (step 2 filled by the next commit) |
-| 19 | [The `log` fixture validates `locale` and `timezoneId`](PLAN-E-2-log-locale.md) | 10 | patch | | planned | |
+| 18 | [`@step`'s Promise rule at run time; legacy decorators run for real](PLAN-H-7-T13-step-runtime.md) | 40, 57 | patch | | done | `2e15291`, `69bc09a` |
+| 19 | [The `log` fixture validates `locale` and `timezoneId`](PLAN-E-2-log-locale.md) | 10 | patch | | done | (filled by the next commit) |
 | 20 | [Session storage calls check the origin before and after every call](PLAN-A-1-origin-checks.md) | 9 | patch | | planned | |
 | 21 | [A page-wide turn on pages without a URL origin; `seed` writes at once on an inherited origin](PLAN-A-2-A-3-inherited-origin.md) | 13, 14 | patch | | planned | |
 | 22 | [The opaque-origin message; the never-applied message for several seeds](PLAN-A-5-R-2-storage-messages.md) | 26, 30 | patch | | planned | |

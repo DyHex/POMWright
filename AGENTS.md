@@ -236,7 +236,8 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   otherwise. A caller awaits rather than returns such a Promise, which would cut the stack. `test/step-locations` checks
   the result, nested boxed steps included, and fails when a marked line is never reported. The logger keeps the message and
   string arguments as given, prints other arguments as `console.log` does, attaches one attachment per entry in call
-  order, and names them in Playwright's `locale` and `timezoneId`.
+  order, and names them in Playwright's `locale` and `timezoneId`, which the `log` fixture checks with Node's `Intl`
+  when the test starts (`""` is no value).
 - Keep the dot-delimited path guarantees. The runtime `validateLocatorSchemaPath` and the type-level
   `LocatorSchemaPathFormat` family in `types.ts` must stay in agreement; the whitespace both reject comes from one
   list, `LOCATOR_SCHEMA_PATH_WHITESPACE` in `utils.ts`.
