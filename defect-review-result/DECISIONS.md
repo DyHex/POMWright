@@ -166,7 +166,8 @@ easy, and the docs stop promising what the workflow does not do.
    it was untracked until the audit, then added and removed in two commits.)
 2. **`defect-review-result/` is the working folder of the implementation** (AGENTS.md §6), under this name. `PLANS.md`
    (the ordered plans and their status) is added when the implementation plan is written; `DECISIONS.md` is this file;
-   each finding file is its item's plan.
+   the plans are files of their own, one per item or group of items worked on together (revised 2026-10-27, decision
+   62: it was "each finding file is its item's plan").
 3. **The review worktree `../POMWright-final-review` and the probes folder `../POMWright-final-review-probes/` stay until
    every fix has landed and been verified** (the finding files cite the probes for every reproduction), and are removed
    in the same audit step as the folder.
@@ -1900,8 +1901,8 @@ checklist).
      site after it (gate 4);
    - after the release: approve it and check its attestation (#3), merge nothing with a changeset until Publish has run
      for the release commit (#4), post the drafted comment on #58 (#38).
-5. **Next**: `PLANS.md`, the ordered plans and their status, in this folder (decision 5); each finding file is its item's
-   plan, and the entries without a finding (#8, #55–#60) are their own. Fixed order: G-4 first (#33); the locator fixes
+5. **Next**: `PLANS.md`, the ordered plans and their status, in this folder (decision 5); the plans are files of their own
+   (decision 62). Fixed order: G-4 first (#33); the locator fixes
    (#20–#29) before the packed twins (#55); every message-changing fix before the one late docs pass (#36); the bench
    rerun (#50) after the registry changes; AGENTS.md and the final tooling-comment pass (#51) near the end; the folder
    audit last (#5).
@@ -1909,3 +1910,62 @@ checklist).
 **Why**: the plan needs one source; DECISIONS.md is it.
 
 **Depends on / affects**: every entry above.
+
+## 62. The plans: one overview, one file per item or group, the changesets as the release notes (2026-10-27)
+
+**Settles**: how the implementation plan is written (revises decision 5, point 2).
+
+**Decided**:
+
+1. **`PLANS.md`, the overview**: the base (no code change since `54cdada`, so the findings' file and line references
+   hold), the target (3.0.2, decision 6), AGENTS.md §6 rule 7 up front (decision 5, point 4), the ordered table of plans
+   (each plan's decisions, findings, bump, status and commits), the gates of decision 2, the maintainer's actions
+   (decision 61, point 4), and the folder audit as the last step.
+2. **One `PLAN-<IDs>-<slug>.md` per item or group of items worked on together**, as for 3.0.2 (`2f06702`): findings that
+   are fixed together share a plan; a plan without a finding is named after its test gap (`PLAN-T<n>-<slug>.md`). A
+   plan links its finding files and decisions rather than copying them, and adds the decided contract in one paragraph,
+   the implementation steps file by file, the tests, the docs pages, the changeset text, the commands that verify it,
+   and a proposed commit message with the `Co-Authored-By:` trailer (AGENTS.md §6 rule 9). A finding file's *Fix plan*
+   is superseded where its decision differs.
+3. **The changesets table in `PLANS.md` replaces a release-notes file** (AGENTS.md §6 rule 3): the pending changesets
+   to amend and the new ones, each *planned* or *done*. The changesets are what consumers read (§6 rule 6), and several
+   pending ones change with the fixes (decision 2, gate 3).
+4. **Review**: `PLANS.md` and every plan file are written together, reviewed by the maintainer, then committed and
+   pushed (decision 5, point 1); execution follows decision 63. (Revised 2026-10-27 at the maintainer's request: it was
+   `PLANS.md` first, then the plan files in batches by area.)
+
+**Why**: many decisions went beyond their finding's *Fix plan* (C-1, B-3, A-7, D-4 among them), so executing from the
+finding files would mislead; a plan file per step is one source to execute from, and lets findings fixed together share
+it.
+
+**Depends on / affects**: decisions 2, 5, 61.
+
+## 63. Execution: one plan at a time, committed by the agent, pushed by the maintainer (2026-10-27)
+
+**Settles**: how the agreed plans are carried out (with decision 62, point 4).
+
+**Decided**:
+
+1. **One plan at a time**, in `PLANS.md`'s order, only once the plans are agreed.
+2. **The agent commits**: one commit per plan, or one per step of a plan, each message ending with the
+   `Co-Authored-By:` trailer (AGENTS.md §6 rule 9). **The maintainer pushes**, most likely all commits together at the
+   end; the agent never pushes. So CI sees none of the commits until then, and the local checks are each commit's
+   gate: `pnpm lint`, `pnpm test:unit`, the full `pnpm pack-test` at the end of every plan (chromium, firefox and webkit,
+   with the typecheck, snippet, API and step-location checks; runs during a plan use `--project=chromium` to save time,
+   and a firefox or webkit failure in the final run is fixed before the plan is done), `pnpm docs:build` when a plan touches `website/`, and actionlint when it
+   touches a workflow. A failure outside the plan is rerun once; one that persists stops the plan with a question.
+3. **Nothing unexpected**: once a plan is implemented, verified and committed, the agent goes on to the next plan
+   without waiting.
+4. **Something unexpected** (a deviation from the plan, work the plan does not cover, a result it did not predict, big
+   or small): the agent finishes the plan, commits it, then stops and reports before the next plan; the maintainer and
+   the agent decide together. Only a question the plan cannot be finished without is asked during the plan.
+5. **A plan that changes CI stops after its commit** (a change under `.github/`, or to a script only a workflow runs):
+   the agent notifies the maintainer, who pushes, and the next plan starts once the run on PR #60 has validated it.
+   `publish.yaml` and `pages.yaml` run only on `main`, so for them the PR run validates the lint (actionlint, once its
+   plan has landed) and nothing else; their real run comes after the merge (decision 8, point 6).
+6. **The ledgers move with the work**: each plan's commit updates its `PLANS.md` row (status, commit) and appends any
+   execution-time decision here (AGENTS.md §6 rule 3).
+
+**Why**: the maintainer's request; the decisions are taken, so an agreed plan that runs as written needs no stop.
+
+**Depends on / affects**: decisions 5, 62.

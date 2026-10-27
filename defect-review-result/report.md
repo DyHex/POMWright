@@ -391,7 +391,8 @@ Options marked [rec] are the ones the finding or this report recommends.
 ## Act before the next merge
 
 **Status**: decided: items 1–5 by [DECISIONS.md](DECISIONS.md) #1–#5; PRs #47, #48 and #49 closed by the maintainer
-on 2026-10-27 (#48's change lands in this branch).
+on 2026-10-27 (#48's change lands in this branch). Item 5 was revised by decision 5: the folder is committed on this
+branch and removed in one commit before the merge, so PR #60's net diff stays free of it.
 
 1. **Do not merge Dependabot's PR #47** (G-3). It is still open and green (re-checked today) and replaces `changesets/action` v1.9.0 with v2.1.2, which refuses `@changesets/cli` 2 and the `publish` input: every Publish run would fail. Close it and add the `ignore` entries. PR #49 (TypeScript 7, changesets CLI 3) is red and must not be merged either. PR #48 bumps Mermaid to a new major: CI cannot see a diagram that fails to render (AGENTS.md §9), so render the 17 diagrams first (H's `…-probes/H/mermaid/render.mjs`).
 2. **Hold PR #60** (`fix/review-3-0-2` into `main`). It is open, green on all eight checks and mergeable. Merging it makes Publish open a Version Packages pull request from 29 patch changesets, so before it:
