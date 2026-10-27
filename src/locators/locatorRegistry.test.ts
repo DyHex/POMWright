@@ -798,16 +798,18 @@ describe("a seeded builder held in a variable", () => {
 });
 
 describe("a registration ends at the next call on the registry", () => {
-	const ended = (method: string, path: string, by: string, resolvedPath?: string) =>
-		method === "filter" && resolvedPath !== undefined && resolvedPath !== path
-			? `filter() cannot apply to "${path}": its registration was ended by ${by}. If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "${resolvedPath}" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.`
-			: `${method}() cannot apply to "${path}": its registration was ended by ${by}; give a registration all its steps in its add(…) chain, or query the path for one use.`;
+	const ended = (method: string, path: string, by: string, resolvedPath?: string, query = false) =>
+		method === "filter" && query
+			? `filter() cannot apply to "${path}": its registration was ended by ${by}. If that query is in this filter's arguments, which run first, resolve it before add(…). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.`
+			: method === "filter" && resolvedPath !== undefined && resolvedPath !== path
+				? `filter() cannot apply to "${path}": its registration was ended by ${by}. If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "${resolvedPath}" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.`
+				: `${method}() cannot apply to "${path}": its registration was ended by ${by}; give a registration all its steps in its add(…) chain, or query the path for one use.`;
 	const steps = {
 		filter: (view: { filter: (filter: { hasText: string }) => unknown }) => view.filter({ hasText: "x" }),
 		nth: (view: { nth: (index: number) => unknown }) => view.nth(0),
 		describe: (view: { describe: (description: string) => unknown }) => view.describe("d"),
 	};
-	const enders: [string, (registry: LocatorRegistryInternal<Paths>) => unknown, string, string?][] = [
+	const enders: [string, (registry: LocatorRegistryInternal<Paths>) => unknown, string, string?, boolean?][] = [
 		["another add", (registry) => registry.add("x").locator("p"), 'add("x")'],
 		["getLocator", (registry) => registry.getLocator("list"), 'getLocator("list")', "list"],
 		[
@@ -816,17 +818,23 @@ describe("a registration ends at the next call on the registry", () => {
 			'getNestedLocator("btn")',
 			"btn",
 		],
-		["getLocatorSchema", (registry) => registry.getLocatorSchema("list.item"), 'getLocatorSchema("list.item")'],
+		[
+			"getLocatorSchema",
+			(registry) => registry.getLocatorSchema("list.item"),
+			'getLocatorSchema("list.item")',
+			undefined,
+			true,
+		],
 		["verify", (registry) => registry.verify(), "verify()"],
 	];
 
-	for (const [label, end, by, resolvedPath] of enders) {
+	for (const [label, end, by, resolvedPath, query] of enders) {
 		it(`ends at ${label}: filter, nth and describe throw, naming it, and the record stays`, () => {
 			for (const [method, step] of Object.entries(steps)) {
 				const registry = createRegistry();
 				const view = registry.add("btn").getByRole("button");
 				end(registry);
-				expect(() => step(view as never)).toThrowError(ended(method, "btn", by, resolvedPath));
+				expect(() => step(view as never)).toThrowError(ended(method, "btn", by, resolvedPath, query));
 				expect(registry.get("btn")).toEqual({
 					locatorSchemaPath: "btn",
 					definition: { type: "role", role: "button" },

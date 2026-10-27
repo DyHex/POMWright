@@ -117,3 +117,35 @@ test("a getLocator in an add chain's filter ends that registration; a path, or a
 		expect(await sectionOf(getNestedLocator(path))).toBe("section2");
 	}
 });
+
+test("a getLocator in locator()'s options ends that registration; a path in a step filters the same", async ({
+	page,
+}) => {
+	type Paths = "heading@explorer" | "section@inline" | "section@byPath";
+	const { add, getLocator, getNestedLocator } = createRegistryWithAccessors<Paths>(page);
+	add("heading@explorer").getByRole("heading", { name: "Primary Colors Explorer" });
+
+	expect(() => add("section@inline").locator("section", { has: getLocator("heading@explorer") })).toThrowError(
+		`locator() cannot apply to "section@inline": its registration was ended by getLocator("heading@explorer"). If that call is in this locator's options, which run first, resolve the locator before add(…), or filter by a path in a step: .filter({ has: "heading@explorer" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.`,
+	);
+
+	add("section@byPath").locator("section").filter({ has: "heading@explorer" });
+	await expect(getNestedLocator("section@byPath")).toHaveCount(1);
+	expect(await sectionOf(getNestedLocator("section@byPath"))).toBe("section2");
+});
+
+test("a query in filter()'s arguments ends that registration, and the message leaves out the path alternative", async ({
+	page,
+}) => {
+	type Paths = "heading@explorer" | "section@inline";
+	const { add, getLocatorSchema } = createRegistryWithAccessors<Paths>(page);
+	add("heading@explorer").getByRole("heading", { name: "Primary Colors Explorer" });
+
+	expect(() =>
+		add("section@inline")
+			.locator("section")
+			.filter({ has: getLocatorSchema("heading@explorer").nth(0).getLocator() }),
+	).toThrowError(
+		`filter() cannot apply to "section@inline": its registration was ended by getLocatorSchema("heading@explorer"). If that query is in this filter's arguments, which run first, resolve it before add(…). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.`,
+	);
+});

@@ -79,4 +79,24 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27. As planned.
+
+- `RegistrationEnd` gains `query?: true`; `endOpenRegistration` sets it for `getLocatorSchema` and a query's resolution.
+  `ensureOpen` builds the message from three parts and gives `filter` and `locator` the query hint, `filter` the
+  existing resolving-call hint, `locator` the new one (`.filter({ has: "<path>" })`); every other method keeps the plain
+  message. The seeded override's `locator()` goes through the same check. Doc comment rewritten.
+- Messages, from the packed build (harness) and a probe in Chromium: `locator() cannot apply to "section@inline": its
+  registration was ended by getLocator("heading@explorer"). If that call is in this locator's options, which run first,
+  resolve the locator before add(…), or filter by a path in a step: .filter({ has: "heading@explorer" }). Otherwise, …`;
+  `filter() … ended by getLocatorSchema("heading@explorer"). If that query is in this filter's arguments, which run
+  first, resolve it before add(…). Otherwise, …`; `locator() … ended by a query's resolution of "heading@explorer". If
+  that query is in this locator's options, …`.
+- Tests: `locatorRegistrationBuilder.test.ts`, the four combinations, a query resolved after it was taken, and the
+  plain message for another method; `locatorRegistry.test.ts`'s table of enders now expects the query hint for `filter`
+  after `getLocatorSchema` (the existing expectation pinned the behaviour this plan changes); two harness cases in
+  `add.registrationEnds.spec.ts` (the `locator` form with the path filter that works instead, and a query in a filter).
+- Docs: *Registering locators* (the `locator` form and queries, with both messages), *Filters and indices* (a query
+  ends it too), `api/errors.md` (the three new forms), `api/class-registrationbuilder.md` (`locator()` and `filter()`
+  **Throws**), AGENTS.md §5. The pending `ended-registration-message.md` extended.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 818 passed; `pnpm pack-test --reporter=line` exit 0 (1,518 passed, 3
+  skipped; doc snippets 217; api coverage 0 problems; step locations 7); `pnpm docs:build` 0.

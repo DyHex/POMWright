@@ -74,13 +74,17 @@ empty string, which Playwright matches. See [registering locators](/POMWright/do
 ```text
 nth() cannot apply to "main.button@save": its registration was ended by add("main.list.item"); give a registration all its steps in its add(…) chain, or query the path for one use.
 filter() cannot apply to "list.item@open": its registration was ended by getLocator("badge"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "badge" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+locator() cannot apply to "section@inline": its registration was ended by getLocator("heading@explorer"). If that call is in this locator's options, which run first, resolve the locator before add(…), or filter by a path in a step: .filter({ has: "heading@explorer" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+filter() cannot apply to "section@inline": its registration was ended by getLocatorSchema("heading@explorer"). If that query is in this filter's arguments, which run first, resolve it before add(…). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+locator() cannot apply to "section@inline": its registration was ended by a query's resolution of "heading@explorer". If that query is in this locator's options, which run first, resolve it before add(…). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
 ```
 
 A method of a registration kept in a variable, called after the registry was called again (the next `add`,
 `getLocator`, `getNestedLocator`, `getLocatorSchema`, `verify`, or the resolution of a query), which the message names.
 Give the registration all its steps before that, in its chain; for a variation of one use, query the path. A
-`getLocator` or `getNestedLocator` in a filter's own arguments runs before the filter: pass a path, or resolve the
-locator before `add(…)`. See
+`getLocator` or `getNestedLocator` in a filter's own arguments or a `locator`'s options runs before that method: pass a
+path (in a `filter` step after `locator`), or resolve the locator before `add(…)`. A query there runs first too: resolve
+it before `add(…)`. See
 [registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change).
 
 ### A step before the locator method

@@ -27,7 +27,7 @@ import {
 } from "./utils";
 
 /** The registry call that ended a registration, and the path it resolved when it was `getLocator` or `getNestedLocator`. */
-export type RegistrationEnd = { call: string; resolvedPath?: string };
+export type RegistrationEnd = { call: string; resolvedPath?: string; query?: true };
 
 export type LocatorRegistrationPostDefinitionBuilder<
 	LocatorSchemaPathType extends string,
@@ -126,23 +126,36 @@ export class LocatorRegistrationBuilder<
 
 	/**
 	 * Checked first by every method, so a registration kept in a variable cannot change its path once it has ended. The
-	 * message names the call that ended it. A `getLocator` or `getNestedLocator` of another path before `filter()` may
-	 * have run in the filter's own arguments, which run before the call they are passed to, so the message shows the two
-	 * ways to write such a filter.
+	 * message names the call that ended it. `filter()` and `locator()` take arguments that can hold a `Locator`, and a
+	 * registry call in them runs before the method it is passed to: a `getLocator` or `getNestedLocator` of another path,
+	 * or a query, may have ended the registration from there, so the message shows how to write it. A path in place of a
+	 * query would drop the query's changes, so for a query it says only to resolve it first.
 	 */
 	private ensureOpen(method: string): void {
 		const by = this.endedBy;
 		if (by === undefined) {
 			return;
 		}
-		if (method === "filter" && by.resolvedPath !== undefined && by.resolvedPath !== this.path) {
+		const ended = `${method}() cannot apply to "${this.path}": its registration was ended by ${by.call}`;
+		const otherwise =
+			"Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.";
+		const where = method === "filter" ? "this filter's arguments" : "this locator's options";
+		if ((method === "filter" || method === "locator") && by.query) {
 			throw new Error(
-				`filter() cannot apply to "${this.path}": its registration was ended by ${by.call}. If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "${by.resolvedPath}" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.`,
+				`${ended}. If that query is in ${where}, which run first, resolve it before add(…). ${otherwise}`,
 			);
 		}
-		throw new Error(
-			`${method}() cannot apply to "${this.path}": its registration was ended by ${by.call}; give a registration all its steps in its add(…) chain, or query the path for one use.`,
-		);
+		if (method === "filter" && by.resolvedPath !== undefined && by.resolvedPath !== this.path) {
+			throw new Error(
+				`${ended}. If that call is in ${where}, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "${by.resolvedPath}" }). ${otherwise}`,
+			);
+		}
+		if (method === "locator" && by.resolvedPath !== undefined && by.resolvedPath !== this.path) {
+			throw new Error(
+				`${ended}. If that call is in ${where}, which run first, resolve the locator before add(…), or filter by a path in a step: .filter({ has: "${by.resolvedPath}" }). ${otherwise}`,
+			);
+		}
+		throw new Error(`${ended}; give a registration all its steps in its add(…) chain, or query the path for one use.`);
 	}
 
 	constructor(

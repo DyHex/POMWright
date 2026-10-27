@@ -354,7 +354,12 @@ registry.add("main.list").locator("ul.orders");
 
 ```text
 locator requires a non-empty selector for "main.list".
+locator() cannot apply to "section@inline": its registration was ended by getLocator("heading@explorer"). If that call is in this locator's options, which run first, resolve the locator before add(…), or filter by a path in a step: .filter({ has: "heading@explorer" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
 ```
+
+The second form: a registry call in the options ran first and ended the registration (see
+[registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change)); for a query there,
+the message says to resolve it before `add(…)`.
 
 ---
 
@@ -433,6 +438,16 @@ registry.add("main.section@orders").locator("section").filter({ has: "main.secti
 
 A `has` path that is not registered, or a cycle of `has` paths, fails
 [`verify()`](/POMWright/api/class-locatorregistry/#verify).
+
+**Throws**
+
+```text
+filter() cannot apply to "list.item@open": its registration was ended by getLocator("badge"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "badge" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+filter() cannot apply to "section@inline": its registration was ended by getLocatorSchema("heading@explorer"). If that query is in this filter's arguments, which run first, resolve it before add(…). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+```
+
+A registry call in the filter's arguments ran first and ended the registration (see
+[registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change)).
 
 ### nth()
 

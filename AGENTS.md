@@ -201,8 +201,9 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   registration ends at the next call on its registry (`add`, `getLocator`, `getNestedLocator`, `getLocatorSchema`,
   `verify`, a resolution): the registry ends the open one, and every method of an ended registration throws first,
   naming the call that ended it, so a registration kept in a variable cannot change its path once anything else has
-  happened. A `getLocator` in an `add` chain's filter arguments runs first and ends that registration; the message shows
-  the two ways to write it (a path, or a locator resolved before `add`). The rule stays "the next call", not "the next
+  happened. A resolving call or a query in an `add` chain's `filter` arguments or `locator` options runs first and ends
+  that registration; the message shows how to write it (a path, in a `filter` step after `locator`, or a locator
+  resolved before `add`; for a query, resolving it first, since a path would drop its changes). The rule stays "the next call", not "the next
   call that could read it" (considered and not adopted).
 - `skip(subPath)` is a flag on the query: it leaves an ancestor out of the chain and deletes nothing, and
   `unskip(subPath)` restores it exactly as it was. The terminal path cannot be skipped (types and runtime);

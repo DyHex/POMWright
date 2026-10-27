@@ -178,7 +178,8 @@ filter() cannot apply to "list.item": its registration was ended by add("list");
 So nothing that reads the registry ever sees a registration change. In a page object, the check that runs after
 `defineLocators()` ends the last one.
 
-A registry call in a step's own arguments counts too, since JavaScript runs a call's arguments before the call. In
+A registry call in a step's own arguments counts too, since JavaScript runs a call's arguments before the call: a
+`filter`'s arguments, and a `locator`'s options, which take a `has` locator. In
 `add("list.item@open").getByRole("listitem").filter({ has: registry.getLocator("badge") })`, `getLocator` ends the
 registration of `list.item@open` before `filter` runs. The message names the call and the two ways to write such a
 filter, a path or a locator resolved before `add(…)` (see
@@ -186,6 +187,16 @@ filter, a path or a locator resolved before `add(…)` (see
 
 ```text
 filter() cannot apply to "list.item@open": its registration was ended by getLocator("badge"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "badge" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+```
+
+In `locator()`'s options, the path goes in a `filter` step instead, since Playwright treats
+`locator(selector, { has })` and `locator(selector).filter({ has })` alike. A query in the arguments ends the
+registration too, at `getLocatorSchema`; the message then says to resolve it before `add(…)`, without the path, which
+would drop the query's changes:
+
+```text
+locator() cannot apply to "section@inline": its registration was ended by getLocator("heading@explorer"). If that call is in this locator's options, which run first, resolve the locator before add(…), or filter by a path in a step: .filter({ has: "heading@explorer" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+filter() cannot apply to "section@inline": its registration was ended by getLocatorSchema("heading@explorer"). If that query is in this filter's arguments, which run first, resolve it before add(…). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
 ```
 
 ## When locators are registered

@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { describe, expect, expectTypeOf, it } from "vitest";
+import { createFakePage } from "./fakePage";
 import type { LocatorRegistrationPreDefinitionBuilder } from "./locatorRegistrationBuilder";
 import { type LocatorRegistry, LocatorRegistryInternal } from "./locatorRegistry";
 import type { ReusableLocatorFactory } from "./reusableLocatorBuilder";
@@ -421,3 +422,70 @@ const noArgumentContract = (registry: LocatorRegistryInternal<Paths>) => {
 	registry.add("a").getById();
 };
 void noArgumentContract;
+
+describe("an ended registration's hint, for a registry call in filter() arguments or locator() options", () => {
+	const create = () => {
+		const registry = new LocatorRegistryInternal<Paths>(createFakePage());
+		registry.add("a").locator("main");
+		return registry;
+	};
+	const otherwise = "Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.";
+
+	it("filter(), ended by a resolving call in its arguments: resolve first, or pass a path", () => {
+		const registry = create();
+		expect(() =>
+			registry
+				.add("a.b")
+				.getByRole("button")
+				.filter({ has: registry.getLocator("a") }),
+		).toThrowError(
+			`filter() cannot apply to "a.b": its registration was ended by getLocator("a"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "a" }). ${otherwise}`,
+		);
+	});
+
+	it("locator(), ended by a resolving call in its options: resolve first, or filter by a path in a step", () => {
+		const registry = create();
+		expect(() => registry.add("a.b").locator("button", { has: registry.getNestedLocator("a") })).toThrowError(
+			`locator() cannot apply to "a.b": its registration was ended by getNestedLocator("a"). If that call is in this locator's options, which run first, resolve the locator before add(…), or filter by a path in a step: .filter({ has: "a" }). ${otherwise}`,
+		);
+	});
+
+	it("filter(), ended by a query in its arguments: resolve it first, without the path alternative", () => {
+		const registry = create();
+		expect(() =>
+			registry
+				.add("a.b")
+				.getByRole("button")
+				.filter({ has: registry.getLocatorSchema("a").nth(0).getNestedLocator() }),
+		).toThrowError(
+			`filter() cannot apply to "a.b": its registration was ended by getLocatorSchema("a"). If that query is in this filter's arguments, which run first, resolve it before add(…). ${otherwise}`,
+		);
+	});
+
+	it("locator(), ended by a query in its options, a query that resolves there too", () => {
+		const registry = create();
+		expect(() =>
+			registry.add("a.b").locator("button", { has: registry.getLocatorSchema("a").getLocator() }),
+		).toThrowError(
+			`locator() cannot apply to "a.b": its registration was ended by getLocatorSchema("a"). If that query is in this locator's options, which run first, resolve it before add(…). ${otherwise}`,
+		);
+	});
+
+	it("a query resolved after it was taken ends a registration by its resolution", () => {
+		const registry = create();
+		const query = registry.getLocatorSchema("a");
+		const registration = registry.add("a.b");
+		expect(() => registration.locator("button", { has: query.getLocator() })).toThrowError(
+			`locator() cannot apply to "a.b": its registration was ended by a query's resolution of "a". If that query is in this locator's options, which run first, resolve it before add(…). ${otherwise}`,
+		);
+	});
+
+	it("every other method keeps the plain message", () => {
+		const registry = create();
+		const registration = registry.add("a.b");
+		registry.getLocator("a");
+		expect(() => registration.getByRole("button")).toThrowError(
+			'getByRole() cannot apply to "a.b": its registration was ended by getLocator("a"); give a registration all its steps in its add(…) chain, or query the path for one use.',
+		);
+	});
+});

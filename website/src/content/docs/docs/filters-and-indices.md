@@ -70,7 +70,8 @@ names it; the registry's [verification](/POMWright/docs/verifying-registries/) r
 ### A path, a locator or a chain
 
 There are three ways to filter by another registered locator. Inside an `add(…)` chain, resolve a locator before the
-`add`: a `getLocator` in the filter's own arguments runs first, and ends the registration (see
+`add`: a `getLocator` in the filter's own arguments runs first, and ends the registration, as does a query
+(`getLocatorSchema(…)`) there (see
 [registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change)).
 
 ```ts

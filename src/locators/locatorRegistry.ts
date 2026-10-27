@@ -164,10 +164,11 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		}
 		const by: RegistrationEnd =
 			method === "resolution"
-				? { call: `a query's resolution of "${path}"` }
+				? { call: `a query's resolution of "${path}"`, query: true }
 				: {
 						call: path === undefined ? `${method}()` : `${method}("${path}")`,
 						resolvedPath: resolves ? path : undefined,
+						...(method === "getLocatorSchema" ? { query: true as const } : {}),
 					};
 		this.openRegistration.end(by);
 		this.openRegistration = undefined;
