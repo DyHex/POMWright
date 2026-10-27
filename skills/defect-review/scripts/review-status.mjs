@@ -22,10 +22,11 @@
 // }
 //
 // Progress of a running segment: elapsed time against its expected duration (size x the mean minutes per size unit
-// of the finished segments, or priorMinutes before any), at most 95 %. Projected cost of a running segment: its
-// per-call cost fitted as a line over the call index (each call re-reads a context that grows), summed to the
-// projected number of calls, and blended with the prior (size x the mean dollars per size unit of the finished
-// segments) by progress. Pending segments use the prior. The first estimates are rough; every finished segment
+// of the finished segments, or priorMinutes before any). Past 80 % of that duration the estimate rises ever more slowly
+// toward 95 % (a segment that runs long is not almost done), and the row says it is past its estimate. Projected
+// cost of a running segment: its per-call cost fitted as a line over the call index (each call re-reads a context
+// that grows), summed to the projected number of calls, and blended with the prior (size x the mean dollars per size
+// unit of the finished segments) by progress. Pending segments use the prior. The first estimates are rough; every finished segment
 // recalibrates the rest.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -147,7 +148,8 @@ let usdPerUnit = mean((s) => s.t.usd / s.size);
 // running segments first: before any segment is done, their projections are the prior for the pending ones
 for (const s of segs.filter((s) => s.status === "running")) {
 	s.expected = minutesPerUnit * s.size;
-	s.fraction = Math.min(0.95, s.t.minutes / s.expected);
+	const ratio = s.t.minutes / s.expected;
+	s.fraction = ratio <= 0.8 ? ratio : 0.8 + 0.15 * (1 - 0.8 / ratio);
 	const fit = extrapolate(s.t.costs, s.fraction);
 	const prior = usdPerUnit === undefined ? undefined : usdPerUnit * s.size;
 	s.projected =
@@ -193,7 +195,7 @@ for (const s of segs) {
 			`${found} so far`,
 			mtok(s.t.tokens),
 			`${money(s.t.usd)} so far, ~${money(s.projected)} projected${capText}`,
-			`~${pct}% (${Math.round(s.t.minutes)} of ~${Math.round(s.expected)} min, ${s.t.toolCalls} tool calls)`,
+			`~${pct}% (${Math.round(s.t.minutes)} of ~${Math.round(s.expected)} min${s.t.minutes > s.expected ? ", past its estimate" : ""}, ${s.t.toolCalls} tool calls)`,
 		]);
 		if (cap && s.t.usd >= wrapUpAt * cap)
 			alerts.push(`segment ${s.id} has spent ${money(s.t.usd)} of its ${money(cap)} cap`);

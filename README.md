@@ -16,13 +16,19 @@ report logging and steps build on that, and each part works on its own.
 
 ## Example
 
-An orders page lists orders in a table. The rows are registered once; two methods narrow them to one order, and each
-reaches a different element in that row:
+An orders page lists the orders the app keeps in session storage, in a table. The rows are registered once; two methods
+narrow them to one order, and each reaches a different element in that row:
 
 ```ts
 // orders.page.ts
 import { expect, type Page } from "@playwright/test";
-import { PageObject, step } from "pomwright";
+import { json, PageObject, step } from "pomwright";
+
+// the known statuses are suggested; any other string is accepted too
+type OrderStatus = "Open" | "Approved" | "Completed" | "Cancelled" | (string & {});
+export type Order = { id: string; status: OrderStatus };
+
+const ordersStorage = { orders: json<Order[]>() };
 
 type Paths =
   | "main"
@@ -31,9 +37,9 @@ type Paths =
   | "main.table@orders.row.button@cancel"
   | "main.table@orders.row.cell@status";
 
-export class OrdersPage extends PageObject<Paths> {
+export class OrdersPage extends PageObject<Paths, { storage: typeof ordersStorage }> {
   constructor(page: Page) {
-    super(page, "https://shop.example", "/orders");
+    super(page, "https://shop.example", "/orders", { sessionStorage: { schema: ordersStorage } });
   }
 
   protected defineLocators(): void {
@@ -45,7 +51,8 @@ export class OrdersPage extends PageObject<Paths> {
   }
 
   @step()
-  async cancel(order: string) {
+  async cancel(options: { order: string }) {
+    const { order } = options;
     await this.getLocatorSchema("main.table@orders.row.button@cancel")
       .filter("main.table@orders.row", { hasText: order })
       .getNestedLocator()
@@ -53,7 +60,8 @@ export class OrdersPage extends PageObject<Paths> {
   }
 
   @step()
-  async expectStatus(order: string, status: string) {
+  async expectStatus(options: { order: string; status: OrderStatus }) {
+    const { order, status } = options;
     const cell = this.getLocatorSchema("main.table@orders.row.cell@status")
       .filter("main.table@orders.row", { hasText: order })
       .getNestedLocator();
@@ -62,13 +70,14 @@ export class OrdersPage extends PageObject<Paths> {
 }
 ```
 
-The test receives the page object as a Playwright fixture:
+The test receives the page object as a Playwright fixture, seeds the orders and logs them to the report, then opens the
+page:
 
 ```ts
 // orders.spec.ts
 import { expect } from "@playwright/test";
 import { test as base } from "pomwright";
-import { OrdersPage } from "./orders.page";
+import { type Order, OrdersPage } from "./orders.page";
 
 const test = base.extend<{ ordersPage: OrdersPage }>({
   ordersPage: async ({ page }, use) => {
@@ -76,32 +85,39 @@ const test = base.extend<{ ordersPage: OrdersPage }>({
   },
 });
 
-test("a customer cancels an open order", async ({ ordersPage }) => {
-  await ordersPage.navigation.goto();
-  await ordersPage.cancel("ORD-1042");
-  await ordersPage.expectStatus("ORD-1042", "Cancelled");
-});
+const orders: [Order, Order] = [
+  { id: "ORD-1042", status: "Open" },
+  { id: "ORD-1043", status: "Open" },
+];
 
-test("two orders are still open", async ({ ordersPage }) => {
+test("a customer cancels an open order", async ({ ordersPage, log }) => {
+  await ordersPage.sessionStorage.seed({ orders });
+  log.info("seeded sessionStorage", { orders });
+
   await ordersPage.navigation.goto();
-  const openOrders = ordersPage
-    .getLocatorSchema("main.table@orders.row")
-    .filter({ hasText: "Open" })
-    .getNestedLocator();
-  await expect(openOrders).toHaveCount(2);
+  await expect(ordersPage.getNestedLocator("main.table@orders")).toBeVisible();
+  await ordersPage.expectStatus({ order: orders[0].id, status: "Open" });
+  await ordersPage.cancel({ order: orders[0].id });
+  await ordersPage.expectStatus({ order: orders[0].id, status: "Cancelled" });
 });
 ```
 
-`cancel("ORD-1042")` clicks this locator, which the report and the trace viewer show by its path,
+Cancelling `ORD-1042` clicks this locator, which the report and the trace viewer show by its path,
 `main.table@orders.row.button@cancel`:
 
 ```text
 locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })
 ```
 
-`getLocatorSchema(path)` returns a copy of the path's chain to narrow, index, patch or replace for one use, as both
-methods and the second test do; the registered locators never change. A path that is not in `Paths` does not compile,
-and a mistake the compiler cannot see fails the fixture before the test body runs. Say `Paths` also declared
+`getNestedLocator(path)` resolves a path's registered chain as it is: the shorthand for the locators you use most, as
+the test does with the table. `getLocatorSchema(path)` returns a copy of the chain to narrow, index, patch or replace
+for one use, as both methods do; the registered locators never change.
+
+`seed` stores entries before the app's first script reads them, typed by the schema the page object declares, and the
+`log` fixture of `pomwright`'s `test` attaches each entry it records to the report.
+
+A path that is not in `Paths` does not compile, and a mistake the compiler cannot see fails the fixture before the test
+body runs. Say `Paths` also declared
 `main.table@orders.caption`, and the table were registered with `filter({ has: "main.table@orders.caption" })`, but the
 caption itself never was:
 

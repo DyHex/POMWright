@@ -335,6 +335,9 @@ Rules:
    folder, a plan, a finding or a decision number stays outside it. Then the folder is deleted.
 8. **Commits only when asked.** Never commit on your own. When the user asks for one commit per execution step,
    commit exactly those steps, name the plan and step in the message, and leave everything else uncommitted.
+9. **A commit an AI wrote or helped write says so.** Its message ends with a `Co-Authored-By:` trailer naming the
+   model, after a blank line, for example `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. This holds for
+   every commit in the repository, not only release work: leaving the trailer out would misstate who wrote the change.
 
 ## 7. Versioning and release mechanics
 
@@ -399,7 +402,8 @@ Rules:
   its registry was called again, or filter stack frames by file name other than POMWright's own bundle (section 5).
 - Re-export a class as a public type, return `this` from a public builder step, or hide internals with `@internal`
   and `stripInternal` (section 5).
-- Commit without being asked.
+- Commit without being asked, or commit what an AI wrote or helped write without its `Co-Authored-By:` trailer
+  (section 6).
 - Reintroduce a `file:` tarball dependency, a second build in a harness job, or sudo in the harness scripts.
 - Let `CI` (`main.yaml`) run on pull requests, remove the publish guard, or rename the gate job `build` without
   changing the branch-protection rule with it (every pull request would be blocked for non-admins).
