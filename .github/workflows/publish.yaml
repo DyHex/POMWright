@@ -38,6 +38,7 @@ jobs:
       # published: the run fails and says how to recover.
       - name: Continue only on the commit CI tested
         id: tested
+        shell: bash # -eo pipefail: a failed git show or npm view fails the step instead of reading as empty
         env:
           TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
@@ -83,6 +84,7 @@ jobs:
       # appears on npm only once the maintainer approves it on npmjs.com, which can take longer than this waits.
       - name: Check the provenance of what was published
         if: steps.changesets.outputs.published == 'true'
+        shell: bash # -eo pipefail: a failed command anywhere in a pipe fails the step
         env:
           PUBLISHED: ${{ steps.changesets.outputs.published-packages }}
         run: |

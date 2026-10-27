@@ -1972,3 +1972,15 @@ it.
 **Why**: the maintainer's request; the decisions are taken, so an agreed plan that runs as written needs no stop.
 
 **Depends on / affects**: decisions 5, 62.
+
+## 64. Workflow steps with pipes run under `pipefail` (2026-10-27, during plan 4)
+
+**Settles**: an execution-time finding of plan 4 (the PR run's log).
+
+**Decided**: the steps plan 4 added with pipes (the publish guard, the attestation check, the Pages tip check) and the
+actionlint step set `shell: bash`, which GitHub runs as `bash --noprofile --norc -eo pipefail {0}`, so a failed command
+anywhere in a pipe fails the step. A separate commit under plan 4, before plan 5's.
+
+**Why**: without `shell:`, GitHub runs a step as `bash -e {0}`, where only a pipe's last command counts: a failed `git
+show` read as an empty version (the guard stopped quietly), and a failed `git ls-remote` read as a moved `main` (Pages
+skipped the deploy with a misleading message). The local probes had run with `pipefail`. Agreed by the maintainer.

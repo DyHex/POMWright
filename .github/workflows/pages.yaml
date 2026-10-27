@@ -41,6 +41,7 @@ jobs:
       # commit's own run deploys a site that already holds this commit's changes, so only main's tip is deployed.
       - name: Deploy only main's tip
         id: tip
+        shell: bash # -eo pipefail: a failed git ls-remote fails the step instead of reading as a moved main
         env:
           EVENT: ${{ github.event_name }}
           TESTED_SHA: ${{ github.event.workflow_run.head_sha }}

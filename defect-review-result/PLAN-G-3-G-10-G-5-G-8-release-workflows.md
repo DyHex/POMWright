@@ -178,3 +178,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   exit 0 (1,509 passed, 3 skipped; doc snippets 215; api coverage 0 problems; step locations 7); `pnpm docs:build` 0.
 - Not testable before the merge (decision 8): a real publish, the attestation, a Pages re-run; the maintainer's actions
   in PLANS.md cover them.
+- **Follow-up after the PR run (decision 64)**: the run's log showed GitHub runs a `run:` step without `shell:` as
+  `bash -e {0}`, without `pipefail`, while the local probes ran with it. The guard, the tip check, the attestation check
+  and the actionlint step now set `shell: bash` (`bash --noprofile --norc -eo pipefail {0}`). Rerun under that shell:
+  the four guard cases as before; a tested commit git cannot read fails (exit 128); the tip check with an unreachable
+  origin fails (exit 128), where under `bash -e` it exited 0 with "main has moved past … to ;" and skipped the deploy.
+  actionlint 0. Committed separately, before plan 5's commit, so one push validates both.

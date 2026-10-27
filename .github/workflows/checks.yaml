@@ -42,6 +42,7 @@ jobs:
       # actionlint over .github/workflows. GitHub's runners have shellcheck, so it also checks the run: scripts. The
       # version and its checksum are pinned here and move together, by hand: Dependabot does not see them.
       - name: Lint the workflows
+        shell: bash # -eo pipefail: a failed command anywhere in a pipe fails the step
         env:
           ACTIONLINT_VERSION: 1.7.12
           ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
