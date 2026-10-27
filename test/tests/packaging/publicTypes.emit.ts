@@ -47,11 +47,17 @@ export function defineCopy(registry: LocatorRegistry<Paths>) {
 // the registry of a strict standalone factory
 export const strictRegistry = (page: Page) => createRegistryWithAccessors<Paths>(page, { strictChains: true }).registry;
 
+// a preconfigured decorator shared from a module
+export const boxedStep = step({ box: true });
+
 export class Steps {
 	@step()
 	async load(): Promise<number> {
 		return 1;
 	}
+
+	@boxedStep
+	async save(): Promise<void> {}
 
 	@step({ box: true })
 	async choose<Method extends "card" | "invoice">(method: Method): Promise<Method> {
@@ -131,4 +137,5 @@ export const members = {
 	childLogger: () => logger.getNewChildLogger("child"),
 	codec: () => json<{ items: number }>(),
 	step: () => step,
+	stepWithOptions: () => step({ box: true }),
 };

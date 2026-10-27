@@ -37,6 +37,7 @@ import {
 	SessionStorage,
 	type SessionStorageOptions,
 	type SessionStorageSchema,
+	type StepDecorator,
 	type StorageTypeFromOptions,
 	step,
 	type ThisPageOptions,
@@ -120,6 +121,9 @@ const notAValue = LocatorQueryBuilder;
 // @ts-expect-error the seed factory's class is not exported, only its type
 type FactoryValue = typeof import("pomwright")["ReusableLocatorFactory"];
 const seeds: ReusableLocatorFactory<Paths> = registry.createReusable;
+// @ts-expect-error step()'s decorator type is a type, not a value
+type DecoratorValue = typeof import("pomwright")["StepDecorator"];
+const decorator: StepDecorator = step("x");
 
 // seeds: narrow and wide
 const roleSeed: ReusableLocator<Paths, "role"> = registry.createReusable.getByRole("heading", { level: 2 });
@@ -314,9 +318,21 @@ const held = add("main", { reuse: roleSeed });
 held.nth(0);
 held.getByRole({ name: "Cancel" });
 
-export type Probe = [Urls, Storage, Navigation, Logging, UrlTypeOptions, FactoryValue];
+export type Probe = [Urls, Storage, Navigation, Logging, UrlTypeOptions, FactoryValue, DecoratorValue];
 void [DomainLogin, wrongOptions];
-void [accessors, typedRegistry, options, values, afterUpdate, afterReplace, notAValue, seeds, wrongSeed, misspelt];
+void [
+	accessors,
+	typedRegistry,
+	options,
+	values,
+	afterUpdate,
+	afterReplace,
+	notAValue,
+	seeds,
+	decorator,
+	wrongSeed,
+	misspelt,
+];
 void [wellFormed, malformed, ListPage, arrayHas, Steps];
 void [copy, voidCopy, narrowed, strictRegistry, StrictPage];
 

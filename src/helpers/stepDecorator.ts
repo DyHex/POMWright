@@ -32,11 +32,24 @@ type LegacyMethodDecoratorArgs<T extends AnyMethod = AnyMethod> = [object, strin
 
 type Stage3MethodDecoratorArgs<T extends AnyMethod = AnyMethod> = [T, ClassMethodDecoratorContext<unknown, T>];
 
-interface StepDecoratorFactory {
+/**
+ * The decorator `step()` returns, with or without a title and options: write it above a method that returns a Promise,
+ * or store it in a module to share one configuration, such as a boxed step, across classes.
+ *
+ * @example
+ * ```ts
+ * export const boxedStep: StepDecorator = step({ box: true });
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/step/#stepdecorator
+ */
+export interface StepDecorator {
+	/** Runs the method as a `test.step`, with TypeScript's standard decorators; the method keeps its type. */
 	<This, M extends AsyncMethod<This>>(
 		value: ReturnsPromise<M>,
 		context: ClassMethodDecoratorContext<This, M>,
 	): M | undefined;
+	/** Runs the method as a `test.step`, with `experimentalDecorators`; the method keeps its type. */
 	<M extends AsyncMethod>(
 		target: object,
 		propertyKey: string | symbol,
@@ -145,15 +158,15 @@ const createStepDecorator =
  * static method.
  * @param propertyKey With `experimentalDecorators` and without parentheses: the method's name.
  * @param descriptor With `experimentalDecorators` and without parentheses: the method's property descriptor.
- * @returns The decorator.
+ * @returns The decorator, a `StepDecorator`.
  * @throws From JavaScript, on something that is not a method: `@step decorator can only be applied to methods.`
  *
  * @see https://dyhex.github.io/POMWright/api/step/
  */
-export function step(): StepDecoratorFactory;
-export function step(title: StepTitle): StepDecoratorFactory;
-export function step(options: StepOptions): StepDecoratorFactory;
-export function step(title: StepTitle, options: StepOptions): StepDecoratorFactory;
+export function step(): StepDecorator;
+export function step(title: StepTitle): StepDecorator;
+export function step(options: StepOptions): StepDecorator;
+export function step(title: StepTitle, options: StepOptions): StepDecorator;
 export function step<This, M extends AsyncMethod<This>>(
 	value: ReturnsPromise<M>,
 	context: ClassMethodDecoratorContext<This, M>,
@@ -181,5 +194,5 @@ export function step(...args: unknown[]): unknown {
 	}
 
 	// the message signatures of the factory are never called with a message at runtime
-	return createStepDecorator(normalizeStepArguments(args as StepDecoratorArgs)) as StepDecoratorFactory;
+	return createStepDecorator(normalizeStepArguments(args as StepDecoratorArgs)) as StepDecorator;
 }

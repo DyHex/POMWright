@@ -23,7 +23,7 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   `getNestedLocator`, `verify`), what the registry hands out (`LocatorQueryBuilder`, `LocatorUpdateBuilder`,
   `ReusableLocator`, `ReusableLocatorFactory`, `FilterDefinition`, `IndexSelector`) and the path types (`LocatorSchemaPathFormat`,
   `LocatorSchemaPathArgument`), `SessionStorage` with the `json` codec and the `Codec`, `SessionStorageSchema`,
-  `SessionStorageOptions`, `SeedOptions`, `Decoded` and `AllEntries` types, `PlaywrightReportLogger` with `LogEntry` and `LogLevel`, `step`, `NavigationFor`, `NavigationOptions`,
+  `SessionStorageOptions`, `SeedOptions`, `Decoded` and `AllEntries` types, `PlaywrightReportLogger` with `LogEntry` and `LogLevel`, `step` with `StepDecorator`, `NavigationFor`, `NavigationOptions`,
   `ThisPageOptions` and `UrlMatcher`. Everything else under `src/` is internal even when it carries an `export`
   keyword, so renaming or deleting it is not by itself a breaking change.
 - The published version is `package.json`'s `version`, which changesets sets; the next release is the changesets in

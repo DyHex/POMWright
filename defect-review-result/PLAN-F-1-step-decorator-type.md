@@ -61,4 +61,20 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-27. As planned.
+
+- `src/helpers/stepDecorator.ts`: `export interface StepDecorator` (was `StepDecoratorFactory`), with a doc comment
+  (summary, a stored decorator as the example, `@see …/api/step/#stepdecorator`); its two accepted call signatures carry
+  a one-line comment each (standard decorators, `experimentalDecorators`), the two message signatures keep their
+  `//` comment; `step`'s `@returns` names it. `index.ts` exports it as a type.
+- Tests: `publicTypes.emit.ts`, `export const boxedStep = step({ box: true })` decorating a method of `Steps`, and
+  `stepWithOptions` in the every-member list, which now covers all 34 members of the walkthrough; `publicTypes.typecheck.ts`,
+  `const decorator: StepDecorator = step("x")` and `typeof import("pomwright")["StepDecorator"]` an error (as plan 13
+  checks `ReusableLocatorFactory`); `stepLegacyDecorators.typecheck.ts`, a stored `StepDecorator` decorating a method
+  under `experimentalDecorators` (and under the standard decorators, through the harness's own `tsc`).
+- Docs: `api/step.md`, `## StepDecorator` (`Added in: v3.0.2`, the stored-decorator example) and **Returns** links it;
+  `api/index.md`, its row; *Test steps*, *Sharing a decorator* (a `steps.ts` module and a class importing it, compiled
+  by the snippet check); AGENTS.md §1 (`step` with `StepDecorator`). Changeset `step-decorator-type.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 828 passed; `pnpm pack-test --reporter=line` exit 0 (1,524 passed, 3
+  skipped; doc snippets 221; api coverage 40 exports, 0 problems; step locations 7); `consumer-check.sh` 18 `ok`;
+  `pnpm docs:build` 0.

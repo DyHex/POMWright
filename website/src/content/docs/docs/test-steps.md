@@ -82,6 +82,26 @@ export class Cart {
 }
 ```
 
+## Sharing a decorator
+
+`step()` returns the decorator, so a configuration used in many classes can be stored once, in a module of its own, and
+imported where it is needed. Its type is `StepDecorator`:
+
+```ts title="steps.ts"
+import { type StepDecorator, step } from "pomwright";
+
+export const boxedStep: StepDecorator = step({ box: true });
+```
+
+```ts
+import { boxedStep } from "./steps";
+
+export class Checkout {
+  @boxedStep
+  async confirm() {} // "Checkout.confirm", reported at the line that called confirm()
+}
+```
+
 ## Decorator settings
 
 `@step` works with TypeScript's standard decorators, the default, and with `experimentalDecorators: true`, in the

@@ -1,8 +1,14 @@
 // Compile-only: @step under experimentalDecorators (tsconfig.legacyDecorators.json) and under the standard decorators
 // of the harness's own tsconfig; both run in pnpm typecheck, which enforces every @ts-expect-error.
-import { step } from "pomwright";
+import { type StepDecorator, step } from "pomwright";
+
+// a preconfigured decorator, stored and shared
+export const boxedStep: StepDecorator = step({ box: true });
 
 export class Checkout {
+	@boxedStep
+	async stored(): Promise<void> {}
+
 	@step
 	async bare(): Promise<void> {}
 

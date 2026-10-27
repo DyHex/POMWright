@@ -11,7 +11,7 @@ export {
 	type SessionStorageOptions,
 	type SessionStorageSchema,
 } from "./src/helpers/sessionStorage";
-export { step } from "./src/helpers/stepDecorator";
+export { type StepDecorator, step } from "./src/helpers/stepDecorator";
 export type { UrlMatcher } from "./src/helpers/url";
 export {
 	type AddAccessor,
