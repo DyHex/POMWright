@@ -2049,3 +2049,20 @@ maintainer.
 **Why**: the note said such a base "is accepted and works", and `fullUrl`'s comment named `|` as the only form
 `toHaveURL` sees differently. The navigation methods work with credentials; only Playwright's assertion does not, which
 POMWright cannot change. The note already advises `httpCredentials`; this gives one more reason.
+
+## 70. `declaration: true`: TS2883 is the compilation's rule; npm's names are Playwright's (2026-10-28, after plan 34)
+
+**Settles**: plan 34's re-probe, which found the facts differ from the plan's wording.
+
+**Decided**: the docs as committed in plan 34, no code change. *TypeScript* states the pnpm case as TypeScript applies it:
+Playwright's types are named through `@playwright/test` only when the compilation imports it, so a module that imports
+only from `pomwright` fails with TS2883 when no file of the compilation imports `@playwright/test`; the advice is the
+import in the module that exports the value, or an annotation with POMWright's types, which holds whatever else the
+compilation contains. Under npm the declarations name `playwright/test` and `playwright-core` with or without that
+import, as for code that uses Playwright alone; one sentence says so. Not adopted: re-exporting Playwright's types from
+`pomwright` (a new export surface, against Playwright's things coming from `@playwright/test`, as `expect` does), and a
+check of the TS2883 behaviour (the snippet check cannot show it, its example app imports `@playwright/test`, and it
+would test TypeScript, not POMWright). Agreed by the maintainer.
+
+**Why**: in a fresh pnpm project, the same module compiled alongside any file importing `@playwright/test` emits; under
+npm, a Playwright-only module's declarations name the same packages (plan 34's execution notes).

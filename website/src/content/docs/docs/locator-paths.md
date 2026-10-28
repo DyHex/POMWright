@@ -219,11 +219,35 @@ follows.
 
 ### One path gets a new name
 
-Your editor's rename (F2 in VS Code) works on a single path, in two steps. Started from any use, it renames every use
-of that exact path across the project, sub-path arguments included, but not its member of `Paths`; started from the
-member, it renames only the member. Rename from a use, then the member: in between, TypeScript flags every use, so
-nothing is missed. A rename changes whole paths only, so a change of structure, which changes the prefix of many
-paths, stays a find and replace.
+Rename a path and every path below it with one find and replace, regular expressions on. To rename `main.list` to
+`main.items`:
+
+```text
+find:     (["'`])main\.list(["'`.])
+replace:  $1main.items$2
+```
+
+It changes the path wherever it is written, in any quotes: the members of `Paths` (a template member with a literal
+prefix, `` `main.list.item@${string}` ``, too), `add(…)`, resolutions, sub-paths, `reuse`, and `has` and `hasNot`
+paths. It leaves alone a sibling that starts the same (`main.listArchive`, `main.list@open`) and another path that
+contains the text (`shell.main.list`). Without regular expressions, two replacements do it for double-quoted paths:
+`"main.list"` with `"main.items"`, then `"main.list.` with `"main.items.`. A path composed from a variable, such as
+`` `${base}.list.item` ``, is not found; TypeScript flags it once `Paths` has changed.
+
+:::note
+Rename the paths below it too, not the exact path alone. A path left under the old segment still compiles, since the
+segment is then a name that groups paths, and it resolves without that segment's locator: `main.list.item` becomes
+`locator('main').getByRole('listitem')`. Only [`strictChains: true`](/POMWright/docs/verifying-registries/) reports it:
+
+```text
+"main.list.item": strictChains requires every ancestor to be registered; "main.list" is not.
+```
+:::
+
+Your editor's rename (F2 in VS Code) suits a path with no paths below it: it renames the exact path only. It works in
+three groups, so take three steps. Started from a use (`add(…)`, a resolution, a sub-path or a `reuse`), it renames
+every use; started from a `has` or `hasNot` path, every such path; started from the member of `Paths`, the member.
+Once the member is renamed, TypeScript flags any use still on the old path.
 
 ### A variant of the page for one test
 

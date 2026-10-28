@@ -540,6 +540,13 @@ test("docs/locator-paths.md", async ({ page }) => {
 		.toBe(
 			"locator('main').getByRole('region', { name: 'Order' }).getByRole('region', { name: 'Mobile subscription' }).getByRole('button', { name: 'Edit' })",
 		);
+
+	// "One path gets a new name": main.list renamed alone, main.list.item left on the old segment
+	const renamed = createRegistryWithAccessors<"main" | "main.items" | "main.list.item">(page).registry;
+	renamed.add("main").locator("main");
+	renamed.add("main.items").locator("ul");
+	renamed.add("main.list.item").getByRole("listitem");
+	expect.soft(chain(renamed.getNestedLocator("main.list.item"))).toBe("locator('main').getByRole('listitem')");
 });
 
 test("docs/queries.md", async ({ page }) => {
@@ -564,6 +571,26 @@ test("docs/queries.md", async ({ page }) => {
 	expect
 		.soft(chain(skipped.unskip("main.list").getNestedLocator()))
 		.toBe("locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()");
+
+	// the any-frame form in a query
+	const { registry: payment } = createRegistryWithAccessors<
+		"main" | "main.frame@payment" | "main.frame@payment.button@confirm"
+	>(page);
+	payment.add("main").locator("main");
+	payment.add("main.frame@payment").frameLocator("iframe#payment");
+	payment.add("main.frame@payment.button@confirm").getByRole("button", { name: "Confirm" });
+	expect
+		.soft(
+			chain(
+				payment
+					.getLocatorSchema("main.frame@payment.button@confirm")
+					.skip("main")
+					.replace("main.frame@payment")
+					.frameLocator()
+					.getNestedLocator(),
+			),
+		)
+		.toBe("frameLocator().getByRole('button', { name: 'Confirm' })");
 
 	// a query kept and updated
 	const { registry: lamp } = createRegistryWithAccessors<

@@ -58,4 +58,27 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-28.
+
+- Probes re-run at this build: the walkthrough's regex cases (`regex.mjs`, the same nine results: five renamed, the
+  siblings and `shell.main.list` unchanged, the variable-composed path not found); the rename groups through TypeScript
+  6's language service against `index.ts` (`rename.cjs`, the same three groups as at the review: the member alone;
+  `add`, resolutions, sub-paths and `reuse`; `has` and `hasNot` paths); a path left under a renamed segment (resolves as
+  `locator('main').getByRole('listitem')`, `verify()` passes, `strictChains: true` reports `"main.list.item":
+  strictChains requires every ancestor to be registered; "main.list" is not.`); the any-frame query (the chain and the
+  four messages, from a spec on the packed package).
+- *Locator paths*, *One path gets a new name*: the find and replace first, the two-replacement form for double quotes,
+  the variable-composed path, the `:::note` with the probed chain and message, then the editor's rename in its three
+  groups. *A wrapper is removed* already used the prefix replace with the closing dot; unchanged.
+- *Internal → Builders*, *Path parameters are generic*: the `has`/`hasNot` group and the generic-`has` probe
+  (`rename.generic.out`: still apart from the uses, and a `has` beside a `hasNot` split into a group of one).
+- *Queries*, *The any-frame form in a query*, after *A new definition: `replace`*: the example and its chain, and the
+  rules with their messages. **Worded more precisely than decision 44**: `describe()` takes no sub-path, so after the
+  replace only `filter` and `nth` reject the segment; `describe` rejects a query whose own path is registered as the
+  any-frame form (decision 28), which the list says in the same item. *Frames* (*Any frame*) and the update builder's
+  *frameLocator()* link the section.
+- `docsChains.spec.ts` gained the two new chains (the query's on *Queries*, the renamed path's in *Locator paths*' note),
+  as the spec covers every chain a page shows.
+- DECISIONS.md #70 (plan 34's outcome, agreed at its stop) is in this commit.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 900 passed; `pnpm pack-test --reporter=line` exit 0 (2,427 passed, 3
+  skipped; doc snippets 226; api coverage 0 problems; error messages 0 problems; step locations 31); `pnpm docs:build` 0.

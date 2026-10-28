@@ -78,7 +78,8 @@ throws in both modes, naming its mode:
 Changes the segment to a frame segment: with a selector, the `<iframe>` element whose descendants resolve inside the
 frame. In `update` mode an omitted selector keeps the registered one. In `replace` mode an omitted selector installs
 Playwright's any-frame `frameLocator()`, which must be the first segment of its chain, so its ancestors are
-[skipped](/POMWright/api/class-locatorquerybuilder/#skip) or unregistered.
+[skipped](/POMWright/api/class-locatorquerybuilder/#skip) or unregistered; see
+[the any-frame form in a query](/POMWright/docs/queries/#the-any-frame-form-in-a-query).
 
 **Usage**
 

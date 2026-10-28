@@ -127,7 +127,8 @@ resolved on its own, filtered or indexed; resolve a path inside it.` "Any iframe
 question, answered by `frameLocator("iframe")` below that element's segment.
 
 `frameLocator("")` throws (`frameLocator requires a non-empty selector for "checkout.section@payment.frame".`). A query can install the any-frame form
-on an ancestor with `replace(subPath).frameLocator()`; see [Queries](/POMWright/docs/queries/).
+on an ancestor with `replace(subPath).frameLocator()`; see
+[the any-frame form in a query](/POMWright/docs/queries/#the-any-frame-form-in-a-query).
 
 ## Reference
 

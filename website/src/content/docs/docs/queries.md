@@ -148,6 +148,44 @@ registry.getLocatorSchema("main.list.item").replace("main.list").getByRole("list
 Neither `update` nor `replace` touches the segment's steps or its description: a step is something Playwright chains
 after the locator, whatever its strategy. Take them away with `clearSteps()` and `describe("")`.
 
+## The any-frame form in a query
+
+`replace(subPath).frameLocator()` without a selector installs Playwright's any-frame
+[`frameLocator()`](/POMWright/docs/frames/#any-frame-framelocator-without-a-selector) on an ancestor, for one use: the
+paths below it then resolve inside whichever frame contains them. It must be the first segment of the chain, so the
+query skips every registered ancestor before it:
+
+```ts
+import type { LocatorRegistry } from "pomwright";
+
+type Paths = "main" | "main.frame@payment" | "main.frame@payment.button@confirm";
+declare const registry: LocatorRegistry<Paths>;
+// ---cut---
+registry.add("main").locator("main");
+registry.add("main.frame@payment").frameLocator("iframe#payment");
+registry.add("main.frame@payment.button@confirm").getByRole("button", { name: "Confirm" });
+
+registry
+  .getLocatorSchema("main.frame@payment.button@confirm")
+  .skip("main")
+  .replace("main.frame@payment")
+  .frameLocator()
+  .getNestedLocator();
+// frameLocator().getByRole('button', { name: 'Confirm' })
+```
+
+The any-frame form has no element of its own, so:
+
+- an ancestor left registered fails the resolution:
+  `frameLocator() without a selector must be the first segment of the chain; "main.frame@payment" has the ancestor "main".`
+- the query's own path cannot take it:
+  `replace() cannot apply to "main.frame@payment": it is the path this query resolves, and frameLocator() without a selector has no element to resolve to; replace an ancestor instead.`
+- a segment with steps in the query needs `clearSteps(subPath)` first:
+  `replace() cannot apply to "main.frame@payment": it has filter or nth steps, and frameLocator() without a selector takes none; call clearSteps("main.frame@payment") first.`
+- afterwards, `filter` and `nth` reject the segment, as `describe` rejects a query of a path registered as the any-frame
+  form:
+  `filter() cannot apply to "main.frame@payment": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.`
+
 ## Keeping a query
 
 A query is an object you can keep in a variable. Its methods change it, and every `getNestedLocator()` resolves it as

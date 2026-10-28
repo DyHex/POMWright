@@ -69,6 +69,12 @@ parameter typed as the union would link the member to its uses, but only in the 
 its uses from theirs and make a rename reach fewer places than today. Probed against the TypeScript 6.0.3 language
 service; not adopted.
 
+A `has` or `hasNot` path is a third group. Its contextual type is the filter's, which includes `Locator`, so its
+literals link only to each other: a rename from one renames every `has` and `hasNot` path, and neither the uses nor the
+member. A type change cannot merge the groups: typing `has` by its own literal, as the methods type a path, still left
+it apart from the uses, and split a `has` written beside a `hasNot` into a group of one (probed). So the editor's
+rename takes three steps, and a find and replace, which reaches every group at once, is the page's first advice.
+
 ## The update builder
 
 `update(subPath?)` and `replace(subPath?)` return a `LocatorUpdateBuilderInternal`
