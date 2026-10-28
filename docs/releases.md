@@ -45,11 +45,18 @@ Rules 8 and 9, on commits, are in the root AGENTS.md (*How to work*): they hold 
 
 How Publish and Pages run is in [.github/AGENTS.md](../.github/AGENTS.md).
 
-- After merging the Version Packages pull request, merge nothing with a changeset until that version is on npm: a
-  commit with a changeset merged while the release commit's `CI` runs, or before its Publish run, makes that run stop,
-  and the version is never published. If it
-  happens, revert the release commit before merging the next Version Packages pull request; that restores its
-  changesets, and the next release includes them.
+- After the Version Packages pull request is merged, every other pull request into `main` waits until that version is
+  on npm: its `build` holds in the *Release window* job, and since `main: checks` requires an up-to-date branch, a pull
+  request that passed earlier must be updated, which holds it too. Merge it when `build` turns green (with auto-merge,
+  a pull request you approved merges itself). A changeset merged before the version is on npm would make the release
+  skip it (*The rulesets on `main`* in [.github/AGENTS.md](../.github/AGENTS.md)).
+- Do not use **Update branch** on a Version Packages pull request: it merges `main` in without running
+  `changeset version`, so a changeset merged since would ride along unversioned. The *Release window* job fails it;
+  Publish rebuilds the pull request a few minutes after the merge that made it stale.
+- If a version on `main` is not on npm while changesets are pending (a release that could not publish, or a merge past
+  the rulesets), every Publish run fails and names the version: revert the Version Packages pull request that set it.
+  That restores its changesets, the next Version Packages pull request includes them, and the revert passes the
+  *Release window* at once.
 - Releases are published with npm Trusted Publishing: npmjs.com trusts `publish.yaml` of this repository, `pnpm publish`
   exchanges the workflow's OIDC token, no npm token is stored, and npm records provenance. The Trusted Publisher allows
   `npm publish`, so a release goes live when Publish runs, and merging the Version Packages pull request is the human

@@ -1,6 +1,7 @@
 # 2G-2: A re-run of a Publish run goes on after main has moved past the commit CI tested, and rebuilds the Version Packages pull request from that older commit
 
 - **Kind**: defect
+- **Status**: decided 2026-10-28, decision 79 in [DECISIONS.md](../DECISIONS.md) (a pull-request hold, two rulesets, and Publish judging `main`'s tip); plan [PLAN-2G-1-2G-2-release-window.md](../PLAN-2G-1-2G-2-release-window.md)
 - **Area**: Release and publishing: `publish.yaml`'s guard on a re-run (every path through `publish.yaml`: a re-run)
 - **Severity**: Low (needs a Publish run that failed, re-run after a later merge; its effect is a Version Packages pull
   request that silently drops the changesets merged since, and, if that pull request is merged, the skipped version of

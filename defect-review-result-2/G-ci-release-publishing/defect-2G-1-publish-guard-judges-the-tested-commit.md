@@ -1,6 +1,7 @@
 # 2G-1: Publish's guard judges the commit CI tested, not what main's tip will do: it fails a release the next run publishes, and a version is skipped with no failing run when the Version Packages pull request is merged before it caught up with main
 
 - **Kind**: defect
+- **Status**: decided 2026-10-28, decision 79 in [DECISIONS.md](../DECISIONS.md) (a pull-request hold, two rulesets, and Publish judging `main`'s tip); plan [PLAN-2G-1-2G-2-release-window.md](../PLAN-2G-1-2G-2-release-window.md)
 - **Area**: Release and publishing: `publish.yaml`'s step "Continue only on the commit CI tested" (the tested-commit guard)
 - **Severity**: Medium (the release path; in a sequence the guide does not forbid, merging a pull request with a
   changeset and then the Version Packages pull request before Publish refreshed it, the version is never published and

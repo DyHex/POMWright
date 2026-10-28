@@ -4,7 +4,8 @@ name: Publish
 # pending it opens or updates the "Version Packages" pull request; once that is merged, the next run publishes the new
 # version. npm authenticates this workflow by Trusted Publishing (OIDC), so no npm token is stored, and pnpm publish
 # records provenance from the same identity. The Trusted Publisher allows npm publish, so a version goes live when this
-# run publishes it; merging the Version Packages pull request is the human gate. The job runs in the npm
+# run publishes it; merging the Version Packages pull request is the human gate, and pr.yaml's Release window holds every
+# other pull request into main until the new version is on npm. The job runs in the npm
 # environment, which only main may deploy to, and the Trusted Publisher names it, so a publish.yaml on any other branch
 # cannot publish.
 
@@ -34,37 +35,21 @@ jobs:
     # this environment, so a publish.yaml pushed to another branch cannot publish.
     environment: npm
     steps:
-      # a workflow_run checks out the newest commit on main, which may not be the one this CI run tested
+      # a workflow_run checks out the newest commit on main when the run first started (a re-run keeps that commit),
+      # which may not be the one this CI run tested
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # the guard reads the tested commit's package.json and its parent's
-      # On the commit CI tested, the release goes on. When main has moved on, the newer commit's own run continues the
-      # release, and publishes only when no changeset is pending, so this run stops. If the tested commit is a release
-      # commit (its version differs from its parent's) whose version is not on npm, that version would never be
-      # published: the run fails and says how to recover.
+          fetch-depth: 0 # the guard reads main's history
+      # The guard (scripts/release-check.sh publish). It fails while main's tip, read from GitHub, has a version npm does
+      # not have and changesets are pending: changesets/action would not publish that version, and its next Version
+      # Packages pull request would bump past it, so the run says to revert the pull request that set it. Otherwise
+      # the release goes on only when the commit CI tested is main's tip and the checkout; when main has moved on, the
+      # newer commit's own run continues it, re-runs included.
       - name: Continue only on the commit CI tested
         id: tested
-        shell: bash # -eo pipefail: a failed git show or npm view fails the step instead of reading as empty
         env:
           TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
-        run: |
-          head="$(git rev-parse HEAD)"
-          if [ "$head" = "$TESTED_SHA" ]; then
-            echo "current=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "current=false" >> "$GITHUB_OUTPUT"
-          version="$(git show "$TESTED_SHA:package.json" | jq -r .version)"
-          parent="$(git show "$TESTED_SHA^:package.json" | jq -r .version)"
-          if [ "$version" != "$parent" ]; then
-            published="$(npm view pomwright versions --json)"
-            if ! jq -e --arg v "$version" 'if type == "array" then any(.[]; . == $v) else . == $v end' \
-              <<<"$published" >/dev/null; then
-              echo "::error::Version $version of commit $TESTED_SHA was not published: main moved past it before its Publish run. Revert $TESTED_SHA before merging the next Version Packages pull request."
-              exit 1
-            fi
-          fi
-          echo "main has moved past $TESTED_SHA to $head; the newer commit's own run continues the release, and publishes only when no changeset is pending"
+        run: bash scripts/release-check.sh publish
       - if: steps.tested.outputs.current == 'true'
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:

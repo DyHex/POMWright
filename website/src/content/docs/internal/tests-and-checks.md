@@ -81,7 +81,9 @@ the jobs tested the merge commit, so after the base moved a documentation-only p
 untested merge.
 
 - **lint**: biome over the whole repository, warnings failing, then actionlint over the workflows (with shellcheck over
-  their scripts), its version and checksum pinned in the step.
+  their scripts and over `scripts/release-check.sh`), its version and checksum pinned in the step, then the release
+  checks' test (`scripts/release-check.test.sh`), which runs every path of a release in throwaway repositories with a
+  fake npm.
 - **package**: the unit tests, then one build and one tarball, kept as an artifact.
 - **harness**: that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs
   chromium, `main` all three, on Node 24; one more job per older LTS Node line, from the `engines` floor (20 and 22),
@@ -93,15 +95,45 @@ untested merge.
 - **site**: that tarball installed into `test/`, the documentation's examples compiled, the API reference and the doc
   comments checked, the site built, which fails on a link or an anchor that does not exist, and every diagram rendered
   in Chromium, light and dark.
+- **release** (*Release window*, in `pr.yaml` only, for a pull request into `main`): holds the pull request while
+  `main`'s version is being published, described below.
 - **build**: the gate job, the check `main` requires.
 
 Publishing waits for `CI` on `main`, so nothing is published past a red run, and `pages.yaml` deploys the site after
-the same green run (see [documentation](/POMWright/internal/documentation/#building-and-publishing)). A run that
-`workflow_run` starts checks out the newest commit on `main`, which may be newer than the one `CI` tested, so
-`publish.yaml` first compares the two and goes no further when `main` has moved on: the newer commit's own `CI` run
-starts Publish again, which continues the release and publishes only when no changeset is pending. When the tested
-commit is a release commit (its version differs from its parent's) and that version is not on npm, it would never be
-published, so the run fails and names the commit to revert. Publish authenticates to npm with Trusted Publishing,
+the same green run (see [documentation](/POMWright/internal/documentation/#building-and-publishing)).
+
+A version on `main` that npm does not have while changesets are pending is never published: the changesets action
+publishes only when no changeset is pending, and its next Version Packages pull request bumps past that version. Between
+merging a Version Packages pull request and its publish, six to eleven minutes for 3.0.0 and 3.0.1, a merge with a
+changeset would get `main` there, and so would a Version Packages pull request that has not caught up with `main`. Two
+checks share `scripts/release-check.sh`:
+
+- **The release window** (`pr.yaml`'s `release` job) keeps pull requests out. It judges the pull request's merge commit,
+  whose first parent is `main`'s tip: it passes when that commit's version is on npm, or when the pull request sets the
+  version with no changeset pending (the Version Packages pull request); it fails at once when the pull request sets the
+  version while changesets are pending (a Version Packages pull request updated with `main` after a changeset landed);
+  otherwise a release is publishing, and it waits until npm has the version. It binds every merge because `main`'s
+  rulesets require `build` and an up-to-date branch, and nobody may bypass that ruleset; a pull request that passed
+  before the release was merged has to be updated, which runs the job again. The review rules sit in a ruleset of their
+  own, which the maintainer may bypass to merge their own pull requests. The rulesets are described in
+  [`.github/AGENTS.md`](https://github.com/DyHex/POMWright/blob/main/.github/AGENTS.md).
+- **Publish's guard** reports what gets past: a disabled ruleset, a re-run. A run that `workflow_run` starts checks out
+  the newest commit on `main` when it first starts, and a re-run keeps that checkout, so the guard reads `main`'s tip
+  from GitHub. While the tip has a version npm does not have and changesets are pending, every run fails and says to
+  revert the Version Packages pull request that set the version, after reading npm once more 5½ minutes later: npm
+  serves its list of versions with a five-minute cache, so it can still lack a version that was just published, and
+  reading it once would say to revert a published release. Otherwise a run goes on only when the commit `CI` tested is
+  the tip and the checkout; when `main` has moved on, the newer commit's own run continues the release, and publishes
+  the version when no changeset is pending.
+
+Rejected: GitHub's merge queue, which would queue the merges themselves, is not offered for a repository of a personal
+account; publishing as the last job of `CI`, on the commit it tested, would queue the work behind a release without any
+setting, but it is a larger change of the release path, and a failed publish would turn `CI` red and hold back the
+site; the git tags as the record of what is published, since the changesets action pushes a tag only after the
+publish, so a missing tag can follow a published release; and a guard that judges the tested commit, as the first one
+did, which missed a release commit whose own run never came and failed a release that the next run published.
+
+Publish authenticates to npm with Trusted Publishing,
 which allows `npm publish` from the `npm` environment only, which only `main` may deploy to, so a version goes live when
 the run publishes it and no other branch can publish; it warns when a published version
 has no provenance attestation after ten minutes. `pages.yaml` builds the tested commit itself, and only

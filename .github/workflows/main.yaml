@@ -26,8 +26,8 @@ jobs:
       browsers: '["chromium", "firefox", "webkit"]'
       older-node-lines: true # the chromium harness on Node 20 and 22 as well
 
-  # The gate. Its job id is the required status check of main ("build"): do not rename it without changing the
-  # branch protection rule with it.
+  # The gate. Its job id is the required status check of main ("build") in the ruleset main: checks: do not rename it
+  # without changing the ruleset with it.
   build:
     needs: checks
     if: always()

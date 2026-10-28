@@ -68,6 +68,12 @@ jobs:
           # actionlint prints nothing when it finds nothing
           echo "actionlint ${ACTIONLINT_VERSION}: no problems in $(cd .github/workflows && echo *.yaml)"
           echo "run: scripts checked with ShellCheck $("$RUNNER_TEMP/shellcheck" --version | sed -n 's/^version: //p')"
+          # the release checks, which pr.yaml and publish.yaml run from a script rather than a run: block
+          "$RUNNER_TEMP/shellcheck" scripts/release-check.sh scripts/release-check.test.sh
+          echo "scripts/release-check.sh and its test checked with ShellCheck"
+      # every path of the release checks, in throwaway repositories with a fake npm (seconds, no network)
+      - name: Test the release checks
+        run: bash scripts/release-check.test.sh
 
   package:
     name: Unit tests and package
