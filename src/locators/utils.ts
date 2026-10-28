@@ -122,7 +122,7 @@ export const escapeCssString = (value: string): string =>
 		.replace(/\f/g, "\\c ");
 
 /**
- * Serialises a RegExp for Playwright's selector syntax (`internal:attr=[id=/source/flags]`).
+ * Serializes a RegExp for Playwright's selector syntax (`internal:attr=[id=/source/flags]`).
  * Port of Playwright's `escapeRegexForSelector` (playwright-core, Apache-2.0): unescaped quotes
  * and backticks are backslash-escaped, `>>` is escaped so the selector parser does not split the
  * chain, and unicode-mode regexes (`u`, `v`) are passed through as-is because unicode mode rejects

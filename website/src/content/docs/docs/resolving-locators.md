@@ -85,7 +85,7 @@ object](/POMWright/docs/first-page-object/).
 ### How much to chain
 
 A path does not need a segment for every element between the page and its target. Each registered segment is a
-condition the page must keep, so register the ones a user would recognise, such as a landmark, a form, a dialog or a
+condition the page must keep, so register the ones a user would recognize, such as a landmark, a form, a dialog or a
 table, and only as many as it takes to make the chain unique on the page. `main.form@login.button@login` registers
 `main`, the form and the button; the layout `div`s between them are not segments, so wrapping the form in another
 `div` changes nothing, while moving the button out of the form fails the test.

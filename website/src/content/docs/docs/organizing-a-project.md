@@ -1,5 +1,5 @@
 ---
-title: Organising a project
+title: Organizing a project
 description: "A base class for your site's page objects, locator modules beside them, and a folder layout that scales."
 ---
 
@@ -198,7 +198,7 @@ playwright.config.ts
   `fixtures.ts` combines them with `mergeTests` and `mergeExpects` and exports the `test` and `expect` every spec
   imports (see [fixtures from several files](/POMWright/docs/page-objects-in-tests/#fixtures-from-several-files)).
 - `common/` holds what every page shares: the base class (see
-  [a base class for your site](/POMWright/docs/organising-a-project/#a-base-class-for-your-site)), the locator modules
+  [a base class for your site](/POMWright/docs/organizing-a-project/#a-base-class-for-your-site)), the locator modules
   of the parts every page has, in `page-components/`, with the dialogs in a folder of their own, and the helpers and
   utilities. The base class registers `common.locators.ts`, as
   [Locator modules](/POMWright/docs/locator-modules/#locators-every-page-shares-in-a-base-class) shows.

@@ -178,7 +178,7 @@ const testRegExp = (regExp: RegExp, value: string): boolean => {
 
 /**
  * Builds the matcher for a base and a path. A string base is exact origin equality after URL
- * normalisation; a string path is exact against the rest of the URL, path, query and fragment, in the form `new URL`
+ * normalization; a string path is exact against the rest of the URL, path, query and fragment, in the form `new URL`
  * gives it (an empty "?" or "#" included),
  * with "" meaning "/".
  * A RegExp base is tested against the origin and a RegExp path against the rest, as written.

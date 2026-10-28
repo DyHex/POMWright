@@ -78,10 +78,10 @@ export type SeedScriptArg = {
 	origin: string;
 	/**
 	 * The encoded entries as `[key, value]` pairs. A key is never a property name on the way to the page, where
-	 * Playwright's serialisation of an argument drops an own `__proto__` key.
+	 * Playwright's serialization of an argument drops an own `__proto__` key.
 	 */
 	entries: [key: string, value: string][];
-	/** `FAILURE_PREFIX`, passed in because the script is serialised and refers to nothing outside its body. */
+	/** `FAILURE_PREFIX`, passed in because the script is serialized and refers to nothing outside its body. */
 	prefix: string;
 };
 

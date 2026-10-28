@@ -26,7 +26,7 @@ the same facts as the API pages.
   README's examples are compiled as one more page, their blocks titled in the fence (`title="orders.page.ts"`), which
   GitHub and npm do not show.
 - **Nothing is skipped silently.** A TypeScript block the check would not compile fails it, with the fix in the
-  message: one in a `~~~` fence (write it as a ` ```ts ` block), one labelled `tsx`, `mts` or `cts` (write it as
+  message: one in a `~~~` fence (write it as a ` ```ts ` block), one labeled `tsx`, `mts` or `cts` (write it as
   `ts`), and `nocheck` on any other page (make the example compile, with `// ---cut---` for the setup lines and
   `// @ts-expect-error` for a deliberate error). Blocks in other languages, `js`, `sh` or `text`, are not checked.
 - **The API is complete.** `scripts/check-api-coverage.mjs` reads the installed declarations and fails on an export

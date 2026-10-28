@@ -136,7 +136,7 @@ that waited checks the origin again when its turn comes, since the page may have
 
 ## Through a page object
 
-A page object's helper is labelled with the page object's label, belongs to the origin of its string `baseUrl`, and
+A page object's helper is labeled with the page object's label, belongs to the origin of its string `baseUrl`, and
 is typed by the schema the page object declares: the type goes in the second type argument, under `storage`, and the
 value in the constructor's options:
 

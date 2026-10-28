@@ -26,7 +26,7 @@ A consumer's file may be named `pageObject.ts` or `sessionStorage.ts`, like POMW
 never filtered by a consumer-side file name; the boundary decides where the stack starts. The harness checks this with
 consumer files of those names.
 
-The labelled error keeps the original as `cause`, with its own stack: for a mistake in an `add` chain, POMWright's own
+The labeled error keeps the original as `cause`, with its own stack: for a mistake in an `add` chain, POMWright's own
 frames, then the `add` line and the lines that called it (a locator module, the module that composed it, the page
 object's `defineLocators()`). `test/tests/pageObject/callSite/checkSite.spec.ts` checks the `new` line and these lines
 against the packed package.

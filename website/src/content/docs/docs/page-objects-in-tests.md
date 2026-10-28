@@ -124,6 +124,6 @@ Error: LoginPage: Locator registry verification failed for 1 of 5 paths:
 
 ## What's next
 
-- [Organising a project](/POMWright/docs/organising-a-project/): a base class for your page objects, and locator
+- [Organizing a project](/POMWright/docs/organizing-a-project/): a base class for your page objects, and locator
   modules
 - [Principles](/POMWright/docs/principles/): the ideas POMWright is built on

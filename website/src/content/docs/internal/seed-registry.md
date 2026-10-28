@@ -43,7 +43,7 @@ stateDiagram-v2
 
 ## The script
 
-`seedScript` is a plain function that Playwright serialises, so it refers to nothing outside its body. It runs in every
+`seedScript` is a plain function that Playwright serializes, so it refers to nothing outside its body. It runs in every
 new document of the page, in every frame, and writes only when all three hold:
 
 - **the main frame**: `window === window.top`, so an iframe on the seeded origin inside another page, and the
@@ -68,7 +68,7 @@ errors is not disturbed.
 A skip matters only for the document that took the seed out of pending. After a navigation to the origin that
 fails, Chromium and Firefox present the error page's history entry as the next document's `activation.from`, so the
 retry looks like a return; Firefox also commits its error page at the origin's URL. Making the retry apply the seed
-would mean treating some commits as error pages and accepting that entry as `from`, which rests on browser behaviour
+would mean treating some commits as error pages and accepting that entry as `from`, which rests on browser behavior
 without a guarantee. So the registry does not try: such a seed fails the test, and never passes silently.
 
 ## A seeded navigation
@@ -195,7 +195,7 @@ instead, which fails the running test at once all the same.
 An earlier design of 3.0.0, never released, had `seed` answer the navigation with a document of POMWright's own that
 wrote the entries and then continued the navigation, through a `page.route`. It was chosen when `addInitScript` could
 not be removed. A route sees
-only what Playwright intercepts, so it needed a proxy for server redirects, synthesised `Sec-Fetch-*` headers, a
+only what Playwright intercepts, so it needed a proxy for server redirects, synthesized `Sec-Fetch-*` headers, a
 re-submitted form for POSTs (multipart and `text/plain` could not be), a fragment carried over by hand, and a detour so
 that WebKit's `goto` waited for the app. Service workers and the test's own mocks bypassed it, and the app saw a
 different request than without a seed. An init script runs in whatever document commits, however it was answered, and

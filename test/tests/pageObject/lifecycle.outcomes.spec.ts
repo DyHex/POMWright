@@ -24,7 +24,7 @@ type ReportSuite = {
 
 type Outcome = { status: string; reached: string[]; errors: string[] };
 
-const LABELLED =
+const LABELED =
 	'TypoPage: Locator registry verification failed for 1 of 2 paths:\n  "body.heading": No locator schema registered for path "body.headng".';
 
 const runOutcomes = (project: string, outputDir: string) =>
@@ -53,7 +53,7 @@ const outcomesOf = (suite: ReportSuite, groups: string[] = []): Record<string, O
 				),
 				errors: [
 					...new Set(
-						(result?.errors ?? []).map(({ message = "" }) => (message.includes(LABELLED) ? "labelled" : message)),
+						(result?.errors ?? []).map(({ message = "" }) => (message.includes(LABELED) ? "labeled" : message)),
 					),
 				],
 			};
@@ -75,8 +75,8 @@ test("a broken page object fails the run as the docs' table says for each place 
 	} catch {
 		throw new Error(`the run of lifecycle-outcomes/ wrote no report:\n${stderr}`);
 	}
-	const failedBeforeTheBody = { status: "failed", reached: [], errors: ["labelled"] };
-	const failedAtTheFirstUse = { status: "failed", reached: ["body"], errors: ["labelled"] };
+	const failedBeforeTheBody = { status: "failed", reached: [], errors: ["labeled"] };
+	const failedAtTheFirstUse = { status: "failed", reached: ["body"], errors: ["labeled"] };
 	expect(outcomesOf(report)).toEqual({
 		"a test-scoped fixture › first": failedBeforeTheBody,
 		"a test-scoped fixture › second": failedBeforeTheBody,

@@ -49,7 +49,7 @@ a locator module that receives `this.locatorRegistry`. `createReusable` is passe
 seed registers nothing. `verify()` on the facade runs the definition, which verifies, or verifies again when the
 definition has already run.
 
-## Sticky, labelled failures
+## Sticky, labeled failures
 
 An error in `defineLocators()` or in the check after it is wrapped once, as
 `LoginPage: defineLocators() failed: …` or `LoginPage: Locator registry verification failed …`, with the original as
@@ -61,7 +61,7 @@ share (see [call sites](/POMWright/internal/call-sites/#errors-raised-later)).
 
 `defineLocators()` registers synchronously. TypeScript accepts an `async` override of a method that returns `void`,
 and such a definition would be verified before the rest of it ran, while an error after its first `await` would escape
-unlabelled and leave a half-registered page object. So a definition that returns a Promise (any value with a `then`
+unlabeled and leave a half-registered page object. So a definition that returns a Promise (any value with a `then`
 function) fails the page object at once, `LoginPage: defineLocators() must register its locators synchronously; …`,
 kept like every other failure; the returned Promise's own rejection is handled, since that failure already reports it,
 and the rest of the definition finds the kept failure at its next `add`.

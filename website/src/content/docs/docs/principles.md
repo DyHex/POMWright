@@ -3,7 +3,7 @@ title: Principles
 description: "The ideas POMWright is built on: mirror Playwright, one locator per path, nothing changes behind your back, fail early, check at runtime."
 ---
 
-These are the rules POMWright's design follows. Knowing them makes its behaviour predictable. Where a page seems to
+These are the rules POMWright's design follows. Knowing them makes its behavior predictable. Where a page seems to
 break one of them, it says why.
 
 ## Mirror Playwright, add only what it lacks
@@ -59,4 +59,4 @@ given", as in Playwright. POMWright sets no timeout or wait of its own: an unset
 
 It has no runner, no reporter and no assertions: tests use `@playwright/test`. It does not wait for anything Playwright
 would not wait for, retry anything, or catch errors to hide them. It does not decide how you structure a suite beyond
-the page object and the registry; [Organising a project](/POMWright/docs/organising-a-project/) shows one way.
+the page object and the registry; [Organizing a project](/POMWright/docs/organizing-a-project/) shows one way.

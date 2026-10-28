@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 /**
  * Test support for the unit tests, never imported by the runtime (so tsup does not bundle it): a page whose
  * locators record the chain they were built from, `locator('ul').getByRole('listitem').nth(0)`, rendering
- * their arguments when they are called, as Playwright serialises them. Resolution against real DOM is
+ * their arguments when they are called, as Playwright serializes them. Resolution against real DOM is
  * covered by the integration specs.
  */
 export class FakeLocator {

@@ -1,7 +1,7 @@
 {
 	"name": "pomwright",
 	"version": "3.0.1",
-	"description": "A TypeScript library for Playwright Test that organises a suite's locators and page objects.",
+	"description": "A TypeScript library for Playwright Test that organizes a suite's locators and page objects.",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/DyHex/POMWright.git"

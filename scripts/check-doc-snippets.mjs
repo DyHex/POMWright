@@ -12,7 +12,7 @@
 // has a block with the same title, so an example can import "./fixtures"; they are also compiled on their own, so the
 // check has inputs before any page exists.
 //
-// A TypeScript example the check could not compile fails it, with the fix: one in a ~~~ fence, one labelled tsx, mts
+// A TypeScript example the check could not compile fails it, with the fix: one in a ~~~ fence, one labeled tsx, mts
 // or cts, and nocheck on any other page. Blocks in other languages (js, sh, text, …) are not checked.
 
 import { execFileSync } from "node:child_process";
@@ -76,7 +76,7 @@ for (const page of [...pages(contentDir), readme]) {
 			continue;
 		}
 		if (block.lang !== "ts" && block.lang !== "typescript") {
-			rejected.push(`${where}: a block labelled ${block.lang} is not compiled; write the example as a \`\`\`ts block`);
+			rejected.push(`${where}: a block labeled ${block.lang} is not compiled; write the example as a \`\`\`ts block`);
 			continue;
 		}
 		if (/\bnocheck\b/.test(block.meta)) {

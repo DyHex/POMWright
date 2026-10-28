@@ -209,7 +209,7 @@ class Navigation {
 			try {
 				return resolveUrl(input, this.baseUrl);
 			} catch (error) {
-				// labelled as every other navigation message; the URL parser's own error is the cause
+				// labeled as every other navigation message; the URL parser's own error is the cause
 				const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
 				throw new Error(
 					`${this.label}: goto(${JSON.stringify(input)}) cannot be resolved against baseUrl ${JSON.stringify(this.baseUrl)}`,

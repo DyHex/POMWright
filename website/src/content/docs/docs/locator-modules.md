@@ -140,7 +140,7 @@ error. A module is called once per page object, every time a page object is cons
 ## Locators every page shares, in a base class
 
 The locators every page of a site shares, and the methods that use them, can live in the site's
-[base class](/POMWright/docs/organising-a-project/#a-base-class-for-your-site), so that every page object gets them
+[base class](/POMWright/docs/organizing-a-project/#a-base-class-for-your-site), so that every page object gets them
 without registering anything. Instead of each page's module calling the common module, as `login.locators.ts` does
 above, the base class implements `defineLocators()` once: it registers the common module, then calls a method of its
 own in which each page registers its locators. Its methods work on the common locators, queries with a sub-path on them

@@ -86,7 +86,7 @@ Locator registry verification failed for 1 of 2 paths:
 ```
 
 A page object takes it as a constructor option, `locators: { strictChains: true }`, usually once, in the site's
-[base class](/POMWright/docs/organising-a-project/#a-base-class-for-your-site). A path that fails both checks gets both
+[base class](/POMWright/docs/organizing-a-project/#a-base-class-for-your-site). A path that fails both checks gets both
 messages on its line. `skip` works as before: it leaves a registered segment out of one query. Under the option an
 any-frame segment, which may have no registered ancestor, can only be a root path.
 

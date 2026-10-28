@@ -222,7 +222,7 @@ const hasNewline = (part) =>
 			? part.alt.some((branch) => branch.some(hasNewline))
 			: false;
 
-/** Merges neighbouring strings and wildcards, and splits the message into its lines. */
+/** Merges neighboring strings and wildcards, and splits the message into its lines. */
 function linesOf(parts) {
 	const lines = [[]];
 	for (const part of parts) {

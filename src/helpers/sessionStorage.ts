@@ -163,7 +163,7 @@ const describeOrigin = (value: string): string | undefined => {
 		: undefined;
 };
 
-/** Throws unless `value` is an origin; returns it normalised. */
+/** Throws unless `value` is an origin; returns it normalized. */
 const normaliseOrigin = (value: string, title: string): string => {
 	const origin = describeOrigin(value);
 	if (origin === undefined) {
@@ -311,7 +311,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	}
 
 	/**
-	 * One call into `page.sessionStorage`, its failure labelled; a page without an origin and a document with an opaque
+	 * One call into `page.sessionStorage`, its failure labeled; a page without an origin and a document with an opaque
 	 * origin are explained.
 	 */
 	private async access<T>(method: string, call: () => Promise<T>): Promise<T> {

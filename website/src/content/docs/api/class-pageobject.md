@@ -181,7 +181,7 @@ export class LoginPage extends PageObject<"main" | "main.button@login"> {
 
 **Throws**
 
-An error inside `defineLocators()` or from the verification after it, labelled with the page object and kept for
+An error inside `defineLocators()` or from the verification after it, labeled with the page object and kept for
 every later locator call; see [how a mistake is reported](/POMWright/docs/page-objects/#how-a-mistake-is-reported).
 
 ```text
