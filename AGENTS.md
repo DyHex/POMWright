@@ -384,10 +384,14 @@ Rules:
 - Call out consumer-facing API or behaviour changes in the changeset body, with a migration hint whenever something
   a 2.x user wrote stops working.
 - Bumps: behaviour brought in line with what the docs, the doc comments or this file already promise is a patch; so
-  is an export that such a promise requires (section 5: every public method returns a type a consumer can import), and
-  a type corrected to what the docs promise and the runtime does, even when code that relied on the wrong type stops
-  compiling (its changeset gives the migration). A new export, member, option or accepted input is a minor; code
-  written against the docs that stops compiling for any other reason, or documented behaviour removed, is a major.
+  is a type corrected to what the docs promise and the runtime does, even when code that relied on the wrong type stops
+  compiling (its changeset gives the migration). Providing what a released version's docs or doc comments promise but
+  the package lacks is a patch too, unless it breaks code written against those docs, which is a major: an export such
+  a promise requires is one (section 5: every public method returns a type a consumer can import; *Types* and
+  *TypeScript*: "Every type is imported from `pomwright`"; *Installation*: "Everything is imported from `pomwright`").
+  Utility types that only shape parameters (`EntriesFor`, `NonEmpty`, `KeyOnly`, `GotoTarget`) are outside that
+  promise. A new export, member, option or accepted input that no such promise requires is a minor; code written
+  against the docs that stops compiling for any other reason, or documented behaviour removed, is a major.
 - The changelog is written by `@changesets/changelog-github` with `disableThanks: true` (`.changeset/config.json`): an
   entry is ``- [#PR](…) [`sha`](…) - <the changeset's first line>``, its further lines indented below. So a changeset
   starts with a sentence, never a heading: a heading on that line does not render, in `CHANGELOG.md` or in the GitHub
@@ -515,7 +519,9 @@ Rules:
   earns it, as on the home page) with a `title` and a quoted `description`; links within the site are root-absolute
   with the base and anchor (`/POMWright/docs/<page>/#<heading>`), links to Playwright go to playwright.dev's current
   pages. Plain sentences, one idea each, no marketing, no "simply" or "just", American spelling. No "Added in" markers
-  on 3.0.0 pages; from the first 3.x addition on, a new member or option carries one.
+  on 3.0.0 pages. From the first 3.x addition on, a new export, member or option carries one, as playwright.dev's
+  pages do (`Added in: v3.x.y`, a line directly under its heading on its API page; *API reference*'s row links that
+  section), whatever its bump. A fix that makes an already-documented form work carries none; the changelog says so.
 - Diagrams are Mermaid, where one explains better than prose, each checked against the code: a sentence before it says
   what it shows, at most about a dozen nodes, the theme's colours (the charts of *Internal → Performance* set their two
   series colours, which the light theme would otherwise draw too pale), and text around it that says the same, so a

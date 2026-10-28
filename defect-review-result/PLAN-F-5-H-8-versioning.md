@@ -60,4 +60,23 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-28.
+
+- Step 1: AGENTS.md §7, *Bumps*: providing what a released version's docs or doc comments promise but the package lacks
+  is a patch unless it breaks code written against them (a major); an export such a promise requires is one, citing
+  §5's return-type rule, *Types* and *TypeScript* ("Every type is imported from `pomwright`") and *Installation*
+  ("Everything is imported from `pomwright`"); the four
+  utility types (`EntriesFor`, `NonEmpty`, `KeyOnly`, `GotoTarget`, each in the declarations) are outside it. A new
+  export, member, option or input that no promise requires stays a minor.
+- Step 2: AGENTS.md §9, the marker rule as the contract words it, with playwright.dev's form and the index row.
+- Step 3: `Added in: v3.0.2` under `## AllEntries`, `## Decoded`, `## SeedOptions` and `## SessionStorageOptions`;
+  `StepDecorator` and `ReusableLocatorFactory` had theirs; `api/index.md`'s six rows link the sections. To find any
+  other addition without a marker, the public surface of the published 3.0.1 (`npm pack pomwright@3.0.1`) was listed
+  beside the build's (exports, their members, the members of option parameters): the only POMWright additions are the
+  six exports and their members; the rest of the difference is Playwright's types, which the scratch 3.0.1 could not
+  resolve.
+- Step 4: `.changeset/export-storage-types.md` names the promise ("The docs say every type is imported from
+  `pomwright`; these four were used in public signatures but not exported") and the markers.
+- Step 5: no Internal page states the marker rule (grep "Added in"); nothing to change.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 900 passed; `pnpm pack-test --reporter=line` exit 0 (2,424 passed, 3
+  skipped; doc snippets 223; api coverage 0 problems; error messages 0 problems; step locations 31); `pnpm docs:build` 0.

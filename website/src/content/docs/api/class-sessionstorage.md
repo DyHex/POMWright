@@ -277,6 +277,8 @@ Playwright gets the label in front of its message and is the `cause`.
 
 ## AllEntries
 
+Added in: v3.0.2
+
 What [`get()`](#get) returns without an argument: every entry, as `Record<string, string>` without a schema; with one,
 the declared keys typed by their codecs and every other key a string.
 
@@ -328,6 +330,8 @@ Turns the value into the string to store. It must return a string.
 
 ## Decoded
 
+Added in: v3.0.2
+
 The type of a key's value under a schema, for each member of `K`: `Decoded<S, K>` is the codec's type when the member
 is a declared key of `S`, and `string` for any other literal. [`get`](#get) returns it (with `null`), and
 [`set`](#set) and [`seed`](#seed) take it.
@@ -358,6 +362,8 @@ parsed value. See [codecs for structured values](/POMWright/docs/session-storage
 
 ## SeedOptions
 
+Added in: v3.0.2
+
 The options of [`seed`](#seed).
 
 ### origin
@@ -367,6 +373,8 @@ The options of [`seed`](#seed).
 The origin to seed. Defaults to the helper's origin.
 
 ## SessionStorageOptions
+
+Added in: v3.0.2
 
 `SessionStorageOptions<S>`: the options of [`new SessionStorage()`](#new-sessionstorage), for a helper of your own
 that forwards them. `S` is the schema's type.

@@ -76,8 +76,8 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 29 | [The snippet check rejects what it would skip, and compiles the README](PLAN-T12-T15-snippet-check.md) | 56, 59 (point 1) | none | | done, stopped (a stale clause fixed beside it) | `ff8a2ac` |
 | 30 | [Complete error lists and the message-coverage check](PLAN-B-7-error-lists.md) | 36, 59 (point 2) | none | | done, stopped (two additions beyond the plan) | `429f2c2` |
 | 31 | [A docs-chains spec](PLAN-T15-docs-chains.md) | 59 (point 3) | none | | done, stopped (`describe("")` for the chain; Firefox's strict mode listing; prose chains outside the contract) | `6c53973`; the prose chains after the stop, `3be8ca9` |
-| 32 | [The API coverage check: own `@see` headings, the *TypeScript* table](PLAN-G-7-F-4-api-coverage.md) | 49, 48 | none | | done, stopped (`LogLevel`'s wrong anchor found; inherited members; the table linked) | filled by the next commit |
-| 33 | [Versioning rules: patch-level exports, "Added in" markers](PLAN-F-5-H-8-versioning.md) | 6, 7 | none | | planned | |
+| 32 | [The API coverage check: own `@see` headings, the *TypeScript* table](PLAN-G-7-F-4-api-coverage.md) | 49, 48 | none | | done, stopped (`LogLevel`'s wrong anchor found; inherited members; the table linked) | `8eda398` |
+| 33 | [Versioning rules: patch-level exports, "Added in" markers](PLAN-F-5-H-8-versioning.md) | 6, 7 | none | | done | filled by the next commit |
 | 34 | [Docs: `declaration: true`, the `log` fixture, `box`](PLAN-F-3-E-4-E-3-docs.md) | 39, 41, 42 | none | | planned | |
 | 35 | [Docs: renaming a path; the any-frame form in a query](PLAN-B-6-C-3-docs.md) | 43, 44 | none | | planned | |
 | 36 | [Docs: *Upgrading from 2.x*](PLAN-H-1-H-3-upgrade-page.md) | 45, 46 | none | | planned | |
