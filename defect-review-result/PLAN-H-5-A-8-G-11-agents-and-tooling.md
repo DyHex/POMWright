@@ -62,4 +62,41 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-28.
+
+- Step 1: AGENTS.md §4, `/teststorage/sandboxed` and `/teststorage/shadowed-navigation`; `git log main..HEAD --
+  test/server.js` shows no other route added on this branch (plans 20–28 used `page.route` and `page.setContent`).
+- Step 2: `vitest.config.ts` (no other `tsc` run covers the unit tests; `pnpm typecheck` compiles `test/`, which no longer
+  imports `src/`); `playwright.base.ts` (the shared options of `test/playwright.config.ts`, and why its one import is a
+  type import: probed by turning it into a value import, `playwright test --list` then failed with "Requiring
+  @playwright/test second time"; restored); `scripts/check-api-coverage.mjs` was already corrected in plan 32.
+- Step 3, the headers re-read: the workflows' and `dependabot.yml`'s hold, so no workflow changes and the plan does not
+  stop for CI. Corrected: `pack-test.sh` (the README's examples and the error-message check), `test/tsconfig.declarations.json`
+  and `tests/packaging/publicTypes.emit.ts` (since plan 13 the emit check returns every public member on its own; TS2742
+  is TS2883 under TypeScript 6, and TS4023 is what a registration builder reports). Current already: `pack-build.sh`,
+  `check-doc-snippets.mjs` (plan 29), `check-error-messages.mjs` (plan 30), `check-diagrams.mjs`, `consumer-check.sh`,
+  `tsconfig.legacyDecorators*.json`, `playwright.steps.config.ts`, `lifecycle-outcomes/playwright.config.ts`, the
+  packaging and step-location specs.
+- Step 4, AGENTS.md against the code: §1's export list has `StepDecorator`, `ReusableLocatorFactory` and the four
+  storage types; §2's `src/` count corrected to "about 7,000 lines" (19 files, 7,002 lines), the unit-test list matches
+  the 16 files and the `.test-d.ts`, the pages are 24, 14 and 13; §3 (`--clean`, `docs:diagrams`, `consumer-check.sh`,
+  the seven checks `pnpm typecheck` runs), §4 (60 spec files, the new specs), §5, §6 rule 9, §7, §8 and §9 were brought
+  up to date by the plans that changed them; the "Last revised" line reads "2026-10-28, with the fixes from the 3.0.2
+  defect review".
+- Step 5, references outside the folder:
+
+```text
+$ grep -rnE "defect-review-result|PLAN-|DECISIONS\.md|\b[A-H]-[0-9]+\b|decision [0-9]+" … (the folder, node_modules,
+  dist, .pack and the build outputs excluded)
+AGENTS.md:343: …(`git show 08bdcac^:release-3.0.0/DECISIONS.md`, …   (§6, 3.0.0's folder, from before this branch)
+AGENTS.md:348: …(`PLAN-<items>-<slug>.md`), `PLANS.md` …, `DECISIONS.md` …   (§6, the process, from before this branch)
+$ grep -rnliE "orderform|iceno" … (the same exclusions)
+(nothing)
+$ git log main..HEAD --format=%B | grep -ciE "orderform|iceno"
+0
+```
+
+  Nothing new; §6's two lines describe how release work is organized and are plan 41's to revisit with the folder.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 904 passed; `pnpm pack-test --reporter=line` exit 0 (1,746 passed, 3 skipped;
+  doc snippets 226; api coverage 0 problems; error messages 0 problems; step locations 31). No workflow changed, so no
+  actionlint run and no stop.

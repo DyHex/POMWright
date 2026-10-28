@@ -1,7 +1,7 @@
 {
-	// Declaration emit of a shared locator module against the published declarations: a module that returns a
-	// seed, a query builder or an update builder without annotations must emit (declaration: true reports
-	// TS4094 and TS2742 for types a consumer cannot name). Run by pnpm typecheck and pack-test.sh.
+	// Declaration emit against the published declarations: a module that returns pomwright's builders, seeds and
+	// every public member without annotations must emit (declaration: true reports TS4023, TS4094 or TS2883 for a
+	// type a consumer cannot name). Run by pnpm typecheck and pack-test.sh.
 	"extends": "./tsconfig.json",
 	"compilerOptions": {
 		"declaration": true,

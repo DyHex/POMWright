@@ -1,11 +1,9 @@
-// playwright.base.ts
+// The shared options of test/playwright.config.ts, as plain data it spreads in. The file sits at the root, outside
+// test/, so its one import of @playwright/test is a type import, erased at run time: a value import would load the
+// root's copy of Playwright beside test/'s, which Playwright refuses ("Requiring @playwright/test second time").
 import type { PlaywrightTestConfig } from "@playwright/test";
 
-// this is only a *type* import → erased at runtime → does NOT trigger the double-load
-// everything below is plain data the subprojects can spread in
-
 export const baseConfig: PlaywrightTestConfig = {
-	// things you currently have in both configs:
 	globalTimeout: 60_000 * 5,
 	timeout: 60_000,
 	expect: {

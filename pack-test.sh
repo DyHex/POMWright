@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # Builds and packs pomwright, installs the packed package into test/ with a frozen lockfile, type-checks the harness
-# and the documentation's examples against the published declarations, checks that the API reference and the doc
-# comments cover those declarations, downloads the browsers and runs Playwright, then checks where the report places
-# steps (test/playwright.steps.config.ts).
+# and the examples of the documentation and the README against the published declarations, checks that the API
+# reference and the doc comments cover those declarations and that the Error messages page lists every message the
+# code throws, downloads the browsers and runs Playwright, then checks where the report places steps
+# (test/playwright.steps.config.ts).
 # Arguments go to `playwright test`:
 #   pnpm pack-test --project=chromium tests/testApp/testIds.spec.ts --reporter=line
 # Never needs sudo. Playwright's system libraries are a once-per-machine step (`pnpm -C test exec playwright

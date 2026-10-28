@@ -1,6 +1,6 @@
-// Compile-only, through tsconfig.declarations.json (declaration: true): a shared locator module whose exported
-// functions return pomwright's builders and seeds without annotations. It emits only if each type can be named
-// from "pomwright". Playwright does not match the file name.
+// Compile-only, through tsconfig.declarations.json (declaration: true): exported functions that return pomwright's
+// builders, seeds, registries, page objects and decorators without annotations, and every public member on its own
+// (`members`). It emits only if each type can be named from "pomwright". Playwright does not match the file name.
 import type { Page } from "@playwright/test";
 import {
 	type Codec,
