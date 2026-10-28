@@ -149,3 +149,28 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
 
 ## Execution notes
+
+2026-10-28, after plans 43 and 44 (the maintainer's order).
+
+- **Commit 1** (`6d8642f`): `publish.yaml`'s `publish` job has `environment: npm`, with its comment, and the header says
+  why; `.github/AGENTS.md` (the publish sentence, and a *Do not* item: remove the job's environment or its branch rule),
+  `docs/releases.md` (the Trusted Publishing bullet: the environment, set up before the publisher), *Internal → Tests and
+  checks*. actionlint 0, `pnpm lint` 0, `pnpm docs:build` 0. The environment's real run comes after the merge;
+  `pages.yaml`'s `github-pages` environment, which allows `main` only, has run this way from `workflow_run` all along.
+- **Commit 2**: `checks.yaml`'s `harness-node-floor` is `harness-node`, a matrix over Node `"20"` and `"22"` with
+  `fail-fast: false`, named "Harness (chromium, Playwright pin, Node N)", its report artifact per line; the input
+  `node-floor` is `older-node-lines` (`pr.yaml` and `main.yaml` pass it, their comments naming 20 and 22); the header says
+  which lines run and that the list moves with Node's schedule (#55). The `consumer` job's Node 20 loading check stays
+  (`consumer-check.sh --node-floor`, the floor). `.github/AGENTS.md`'s workflows paragraph and *Tests and checks* name
+  the matrix; `test/AGENTS.md` needed nothing (its Node sentence, the `urlForms` sweep on 20 and 22, holds, and both now
+  run it), nor the root AGENTS.md (it names the `engines` floor only).
+- **Node 22, as the new row runs it**: Node 22.18.0, `POMWRIGHT_TARBALL=pomwright-test-build.tgz bash pack-test.sh
+  --project=chromium --reporter=line` (the tarball built on Node 24): exit 0, 583 passed, step locations 31, the
+  test-server check 26 passed.
+- Not needed any more: the `HARNESS_NODE_LINE` step (removed earlier), since the test-server check left the harness.
+- Checks before commit 2: actionlint 1.7.12 with ShellCheck 0.11.0: 0; `pnpm lint` 0; `pnpm test:unit` 904 passed;
+  `pnpm docs:build` 0; `pnpm pack-test --reporter=line` exit 0 (1,746 passed, 3 skipped; doc snippets 226; api
+  coverage 0 problems; error messages 0 problems; step locations 31; the test-server check 26 passed).
+- **Stop**: both commits change CI; the maintainer pushes; the PR run should show "Harness (chromium, Playwright pin,
+  Node 20)" and "… Node 22", both green. The environment and the Trusted Publisher are the maintainer's steps before the
+  merge (the guide above).

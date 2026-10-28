@@ -4,8 +4,10 @@ name: Checks
 # run, whatever changed, so a run always tests what it reports on (on a pull request, GitHub's merge commit); skipping
 # jobs by what changed saved minutes on docs-only pushes only. Lint runs biome and actionlint.
 # The package job builds and packs once; every harness job, the consumer job and the site job test that tarball. The harness runs on the
-# browsers the caller asks for, each at the Playwright pin and at the latest 1.x, and with node-floor (set by pr.yaml and
-# main.yaml) also on chromium at the pin on Node 20, the floor of package.json's engines (the unit tests stay on Node 24:
+# browsers the caller asks for, each at the Playwright pin and at the latest 1.x, on Node 24, the default; with
+# older-node-lines (set by pr.yaml and main.yaml) also on chromium at the pin on every LTS Node line below the default,
+# from the engines floor: 20 and 22. The list moves with Node's schedule: a line joins when it is LTS, the floor's line
+# leaves when engines moves, and issue #55 makes 26 the default and moves 24 here (the unit tests stay on the default:
 # vitest needs 22.12). The test-server job checks, once per run, that no page of the test server loads anything from
 # another host. Third-party actions are pinned to commits, the version in a comment; Dependabot
 # (.github/dependabot.yml) proposes updates.
@@ -17,8 +19,8 @@ on:
         description: JSON array of the Playwright projects the harness runs, each at the pin and at the latest version
         type: string
         default: '["chromium", "firefox", "webkit"]'
-      node-floor:
-        description: Also run the harness on chromium at the Playwright pin on Node 20, the engines floor
+      older-node-lines:
+        description: Also run the chromium harness at the pin on each older LTS Node line, from the engines floor
         type: boolean
         default: false
 
@@ -144,11 +146,16 @@ jobs:
           path: test/playwright-report
           retention-days: 30
 
-  harness-node-floor:
-    name: Harness (chromium, Playwright pin, Node 20)
+  # The chromium harness at the pin on each LTS Node line below the default (Node 24), from the engines floor.
+  harness-node:
+    name: Harness (chromium, Playwright pin, Node ${{ matrix.node }})
     needs: package
-    if: inputs.node-floor
+    if: inputs.older-node-lines
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -156,7 +163,7 @@ jobs:
           version: 12.14.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 20.x
+          node-version: ${{ matrix.node }}.x
           cache: pnpm
           cache-dependency-path: |
             pnpm-lock.yaml
@@ -165,7 +172,7 @@ jobs:
         with:
           name: pomwright-package
           path: ${{ runner.temp }}/package
-      - name: Run the harness against the packed package on Node 20
+      - name: Run the harness against the packed package on Node ${{ matrix.node }}
         env:
           CI: "true"
           POMWRIGHT_TARBALL: ${{ runner.temp }}/package/pomwright-test-build.tgz
@@ -174,7 +181,7 @@ jobs:
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-report-chromium-node20-${{ github.run_id }}-${{ github.run_attempt }}
+          name: playwright-report-chromium-node${{ matrix.node }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: test/playwright-report
           retention-days: 30
 

@@ -84,7 +84,8 @@ untested merge.
   their scripts), its version and checksum pinned in the step.
 - **package**: the unit tests, then one build and one tarball, kept as an artifact.
 - **harness**: that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs
-  chromium, `main` all three, and one more job runs chromium on Node 20, the `engines` floor.
+  chromium, `main` all three, on Node 24; one more job per older LTS Node line, from the `engines` floor (20 and 22),
+  runs chromium at the pinned Playwright, on pull requests and `main` alike.
 - **consumer**: that tarball installed with npm into projects of their own, as consumers install it
   (`scripts/consumer-check.sh`): TypeScript under each module resolution (`node10`, `node16` and `nodenext` from
   CommonJS and ESM, `bundler`), attw, Playwright's runner in a CommonJS and a `"type": "module"` project, and TypeScript

@@ -2168,3 +2168,24 @@ CI, and in CI in the job "Test server: no external requests", which the `build` 
 **Why**: a page that needs the internet makes the harness depend on other hosts' response times; the maintainer wanted
 the page free of the template's material too, and the check general, so a route added later is covered, and of its own,
 since a failure is not a harness failure and depends on no browser, Playwright version or Node line.
+
+## 74. Publishing only from `main`, through the `npm` environment (2026-10-28, plan 42)
+
+**Decided**: the publish job runs in a GitHub environment `npm` that only `main` may deploy to (the maintainer creates it,
+with that branch rule, before the merge, following plan 42's guide), and the Trusted Publisher names it (*Environment
+name* `npm`).
+
+**Why**: npm's Trusted Publisher matches the repository, the workflow file name and, if set, an environment, never the
+branch, so without one a `publish.yaml` on any branch could publish; GitHub refuses a deployment to `npm` from another
+branch, and npm refuses a token without the environment.
+
+## 75. The chromium harness on every LTS Node line below the default (2026-10-28, plan 42)
+
+**Decided**: Node 24 stays the default (contributors; the unit, package, consumer, site and test-server jobs; the harness
+on every browser on `main`); every other LTS line from the `engines` floor runs the chromium harness at the Playwright
+pin on pull requests and `main`: a matrix of 20 and 22. Issue #55 moves the default to 26 (LTS since 2026-10-28) and 24
+into the matrix.
+
+**Why**: the maintainer's rule, every LTS line from the floor up is tested; Node's schedule (read 2026-10-28): 20 end of
+life 2026-04-30 but Playwright 1.64's and POMWright's floor, 22 maintenance until 2027-04-30, 24 maintenance since
+2026-10-20, 26 LTS from 2026-10-28.

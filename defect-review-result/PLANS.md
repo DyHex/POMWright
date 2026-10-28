@@ -86,9 +86,9 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 39 | [The source-level specs evaluated against their twins](PLAN-T10-source-specs-evaluated.md) | 55 (phase 2) | none | stop | done after the maintainer's decisions (#71) | `a7d5ba7` |
 | 40 | [AGENTS.md complete; tooling comments current](PLAN-H-5-A-8-G-11-agents-and-tooling.md) | 47, 51 | none | if CI | done (no workflow changed) | `1b15aff` |
 | 41 | [Release gates and the folder audit](PLAN-release-gates-and-audit.md) | 2, 5, 8, 72, 73 | none | stop | part 1 done; part 2's moves done; the removal waits for the second review (#73) | part 1: `299abdb`; part 2: filled by the next commit |
-| 42 | [Publish only from `main`; the harness on every LTS Node line](PLAN-publish-environment-node-lines.md) | 74, 75 (once agreed) | none | stop | agreed; after plan 43 | |
-| 43 | [The 1.x and 2.x docs deleted; AGENTS.md split into an index and `docs/`](PLAN-agents-split.md) | 76, 77 | none | | done (before plan 42) | `88493f2`, `9923a9f`; part C (nested files): filled by the next commit |
-| 44 | [The static test page loads nothing from outside the test server](PLAN-static-page.md) | 78 | none | stop | done, stopped for the push (a new CI job); before plan 42 | filled by the next commit |
+| 42 | [Publish only from `main`; the harness on every LTS Node line](PLAN-publish-environment-node-lines.md) | 74, 75 | none | stop | done, stopped for the push (CI changes) | `6d8642f`; the Node matrix: filled by the next commit |
+| 43 | [The 1.x and 2.x docs deleted; AGENTS.md split into an index and `docs/`](PLAN-agents-split.md) | 76, 77 | none | | done (before plan 42), PR run green | `88493f2`, `9923a9f`, `6d1de0e` |
+| 44 | [The static test page loads nothing from outside the test server](PLAN-static-page.md) | 78 | none | stop | done, PR run green (the new job included) | `0905892`; one test per page, `ac0832c` |
 
 The order follows the decisions' dependencies: the clean build first (decision 33); CI early, so its stops come
 before the long run of code plans and every later push is linted and checked against TypeScript 5.0; C-1, B-4 and B-3
@@ -159,9 +159,12 @@ Decision 2's gates, as they stand after decisions 8, 33 and 58; plan 41 works th
 
 ## The maintainer's actions outside the plans
 
-- Before the merge: check every Mermaid diagram by hand on the site built locally (done 2026-10-28); right before it, set
-  up the Trusted Publisher for `pomwright` on npmjs.com (repository `DyHex/POMWright`, workflow `publish.yaml`, **Allow
-  npm publish** checked; decision 72), whose first publish must succeed within 2 days.
+- Before the merge: check every Mermaid diagram by hand on the site built locally (done 2026-10-28); create the GitHub
+  environment `npm`, which only `main` may deploy to (plan 42's guide, step 1; decision 74); right before the merge, set
+  up the Trusted Publisher for `pomwright` on npmjs.com (repository `DyHex/POMWright`, workflow `publish.yaml`,
+  environment `npm`, **Allow npm publish** checked; decisions 72, 74), whose first publish must succeed within 2 days.
+- After the merge, also: the first Publish run shows a deployment to `npm` and succeeds; issue #55's body says CI runs
+  every LTS Node line from the floor, and that 24 joins the matrix when 26 becomes the default (decision 75).
 - After the merge: check the diagrams on the live site; re-run an older green `CI` run once to see Pages skip its deploy
   (plan 4).
 - After the release: check its attestation; merge nothing with a changeset until Publish has run for the release
