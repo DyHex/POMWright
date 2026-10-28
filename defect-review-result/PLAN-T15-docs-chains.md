@@ -182,10 +182,16 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   rejected `skip("main")` on a query taken through a helper typed with the whole path union (a union of query paths has
   no sub-path in common). The query is taken with the literal path, as the page does.
 - Step 3: no chain on the pages hides an option the rendering drops; nothing needed the stored record.
-- Seen, outside the contract (`text` blocks and comments): 9 chains in running prose, in inline code, are not
-  rebuilt: `docs/descriptions.md:38`, `:39`, `:90`; `docs/first-page-object.md:125`, `:130`, `:133`;
-  `docs/frames.md:61`; `internal/resolution.md:52`, `:58` (the other 7 inline hits are method names such as
-  `locator.contentFrame()`). Reported at the stop.
+- Seen, outside the contract (`text` blocks and comments): 9 chains in running prose, in inline code:
+  `docs/descriptions.md:38`, `:39`, `:90`; `docs/first-page-object.md:125`, `:130`, `:133`; `docs/frames.md:61`;
+  `internal/resolution.md:52`, `:58` (the other 7 inline hits are method names such as `locator.contentFrame()`).
+  Reported at the stop; at the maintainer's request they were added in a further commit: the call log's
+  `waiting for …` and the strict mode line of *Descriptions* and *Your first page object* from an action on the blank
+  page (500 ms) and on two buttons, a locator chained further (`locator('main').locator('li')`, printed without
+  `describe("")`, since it has no description), the frame segment as a terminal, and the heading path alone and as a
+  chain starting at `locator('main')`. All 9 matched on the three browsers (19 tests each); a planted wrong count
+  (`resolved to 3 elements`) failed. AGENTS.md §4 and §9 and the two Internal pages say "a `text` block, a code comment
+  or the running text".
 - Step 4: AGENTS.md §4 (`docs/`, 86 spec files, about 14,000 lines) and §9; *Internal → Documentation* (*The code
   decides*) and *Internal → Tests and checks*.
 - Checks: `pnpm lint` 0; `pnpm test:unit` 900 passed; `pnpm pack-test --reporter=line` exit 0 (2,421 passed, the 18

@@ -33,8 +33,8 @@ change it, since a serial group goes on after an expected failure. So `pageObjec
 `test/lifecycle-outcomes/` as a Playwright run of its own, on its project's browser, and compares that run's JSON report
 with the table in [Page objects](/POMWright/docs/page-objects/#how-a-mistake-is-reported).
 
-`docs/docsChains.spec.ts` rebuilds every locator chain the documentation and the README show, in a `text` block or a
-code comment, from the page's own example, and compares it with what the packed package resolves: one test per page,
+`docs/docsChains.spec.ts` rebuilds every locator chain the documentation and the README show, in a `text` block, a
+code comment or the running text, from the page's own example, and compares it with what the packed package resolves: one test per page,
 so a chain that a change to the code or to the page made stale names its page. The latest-1.x CI rows run it too, so
 a Playwright release that prints a locator differently shows there first.
 

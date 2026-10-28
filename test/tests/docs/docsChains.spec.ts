@@ -1,8 +1,8 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createRegistryWithAccessors, PageObject } from "pomwright";
 
-// Every locator chain the documentation shows, in a `text` block or a code comment, rebuilt here through the packed
-// package and compared, one test per page (its path under website/src/content/docs, or README.md). A page's examples
+// Every locator chain the documentation shows, in a `text` block, a code comment or the running text, rebuilt here
+// through the packed package and compared, one test per page (its path under website/src/content/docs, or README.md). A page's examples
 // are copied as written; a chain is the locator as Playwright prints it without a description, which a resolved
 // locator otherwise prints instead (`describe("")`). A selector the page shows on its own is compared through
 // `page.locator(selector)`, which Playwright prints as it prints the registry's. A changed chain fails here until the
@@ -10,6 +10,15 @@ import { createRegistryWithAccessors, PageObject } from "pomwright";
 
 const chain = (locator: Locator) => `${locator.describe("")}`;
 const selector = (page: Page, shown: string) => `${page.locator(shown)}`;
+
+/** The error message an action throws on the blank page, whose call log shows the chain Playwright waited for. */
+const errorMessage = async (action: Promise<unknown>) =>
+	(
+		await action.then(
+			() => new Error("no error"),
+			(caught: Error) => caught,
+		)
+	).message;
 
 /** The first lines of the error an action throws, for Playwright's strict mode message. */
 const errorLines = async (action: Promise<unknown>, count: number) => {
@@ -338,12 +347,61 @@ test("api/class-reusablelocator.md", async ({ page }) => {
 });
 
 test("docs/descriptions.md", async ({ page }) => {
-	const { registry } = createRegistryWithAccessors<"main.button@submit">(page);
+	const { registry } = createRegistryWithAccessors<"main" | "main.button@login" | "main.button@submit">(page);
+	registry.add("main").locator("main");
+	registry.add("main.button@login").getByRole("button", { name: "Log in" });
 	registry.add("main.button@submit").getByRole("button", { name: "Submit" }).describe("Primary submit button");
 	// the page shows toString() itself, after describe("") on the query
 	expect
 		.soft(registry.getLocatorSchema("main.button@submit").describe("").getLocator().toString())
 		.toBe("getByRole('button', { name: 'Submit' })");
+
+	// "Where Playwright shows it": the call log and a strict mode error show the chain, described or not
+	const login = registry.getNestedLocator("main.button@login");
+	expect
+		.soft(await errorMessage(login.click({ timeout: 500 })))
+		.toContain("waiting for locator('main').getByRole('button', { name: 'Log in' })");
+	await page.setContent("<main><button>Log in</button><button>Log in</button></main>");
+	expect
+		.soft(await errorMessage(login.click({ timeout: 2_000 })))
+		.toContain("strict mode violation: locator('main').getByRole('button', { name: 'Log in' }) resolved to 2 elements");
+
+	// "Chaining further": a locator chained further has no description, so it prints its chain
+	expect.soft(`${registry.getNestedLocator("main").locator("li")}`).toBe("locator('main').locator('li')");
+});
+
+test("docs/first-page-object.md", async ({ page }) => {
+	type Paths =
+		| "main"
+		| "main.aside"
+		| "main.aside.button@login"
+		| "main.form@login"
+		| "main.form@login.input@email"
+		| "main.form@login.input@password"
+		| "main.form@login.button@login";
+	class LoginPage extends PageObject<Paths> {
+		constructor(page: Page) {
+			super(page, "https://shop.example", "/login");
+		}
+		protected defineLocators(): void {
+			this.add("main").locator("main");
+			this.add("main.aside").locator("aside");
+			this.add("main.aside.button@login").getByRole("button", { name: "Log in" });
+			this.add("main.form@login").getByRole("form", { name: "Log in" });
+			this.add("main.form@login.input@email").getByLabel("Email");
+			this.add("main.form@login.input@password").getByLabel("Password");
+			this.add("main.form@login.button@login", { reuse: "main.aside.button@login" });
+		}
+	}
+	const loginPage = new LoginPage(page);
+	expect
+		.soft(chain(loginPage.getNestedLocator("main.aside.button@login")))
+		.toBe("locator('main').locator('aside').getByRole('button', { name: 'Log in' })");
+	expect.soft(chain(loginPage.getLocator("main.aside.button@login"))).toBe("getByRole('button', { name: 'Log in' })");
+	// the trace viewer's Log tab starts with the call log's first line
+	expect
+		.soft(await errorMessage(loginPage.getNestedLocator("main.form@login.button@login").click({ timeout: 500 })))
+		.toContain("waiting for locator('main').getByRole('form', { name: 'Log in' })");
 });
 
 test("docs/filters-and-indices.md", async ({ page }) => {
@@ -406,6 +464,10 @@ test("docs/frames.md", async ({ page }) => {
 		.toBe(
 			"locator('main').getByRole('region', { name: 'Payment' }).locator('iframe').contentFrame().getByLabel('Card number')",
 		);
+	// a frame segment as the terminal is the <iframe> element
+	expect
+		.soft(chain(registry.getNestedLocator("checkout.section@payment.frame")))
+		.toBe("locator('main').getByRole('region', { name: 'Payment' }).locator('iframe')");
 
 	registry.add("widgets").locator(".widgets");
 	registry.add("widgets.frame@second").frameLocator("iframe").nth(1);
@@ -705,6 +767,11 @@ test("internal/resolution.md", async ({ page }) => {
 	expect
 		.soft(chain(registry.getNestedLocator("main.section@orders")))
 		.toBe("locator('main').locator('section').filter({ has: getByRole('heading', { name: 'Orders' }) })");
+	// the heading path resolved alone, as the filter resolves it, and as its chain, which starts at main
+	expect
+		.soft(chain(registry.getLocator("main.section@orders.heading")))
+		.toBe("getByRole('heading', { name: 'Orders' })");
+	expect.soft(chain(registry.getNestedLocator("main.section@orders.heading"))).toMatch(/^locator\('main'\)\./);
 });
 
 test("README.md", async ({ page }) => {

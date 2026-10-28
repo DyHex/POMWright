@@ -75,7 +75,7 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 28 | [The smaller untested behaviours](PLAN-T16-smaller-specs.md) | 60 | none | | done, stopped (a deviation; the credentials finding) | `ce6291d`; the credentials docs after the stop, `55e7149`, and their wording, `a74d10e` |
 | 29 | [The snippet check rejects what it would skip, and compiles the README](PLAN-T12-T15-snippet-check.md) | 56, 59 (point 1) | none | | done, stopped (a stale clause fixed beside it) | `ff8a2ac` |
 | 30 | [Complete error lists and the message-coverage check](PLAN-B-7-error-lists.md) | 36, 59 (point 2) | none | | done, stopped (two additions beyond the plan) | `429f2c2` |
-| 31 | [A docs-chains spec](PLAN-T15-docs-chains.md) | 59 (point 3) | none | | done, stopped (`describe("")` for the chain; Firefox's strict mode listing; prose chains outside the contract) | filled by the next commit |
+| 31 | [A docs-chains spec](PLAN-T15-docs-chains.md) | 59 (point 3) | none | | done, stopped (`describe("")` for the chain; Firefox's strict mode listing; prose chains outside the contract) | `6c53973`; the prose chains after the stop, filled by the next commit |
 | 32 | [The API coverage check: own `@see` headings, the *TypeScript* table](PLAN-G-7-F-4-api-coverage.md) | 49, 48 | none | | planned | |
 | 33 | [Versioning rules: patch-level exports, "Added in" markers](PLAN-F-5-H-8-versioning.md) | 6, 7 | none | | planned | |
 | 34 | [Docs: `declaration: true`, the `log` fixture, `box`](PLAN-F-3-E-4-E-3-docs.md) | 39, 41, 42 | none | | planned | |
