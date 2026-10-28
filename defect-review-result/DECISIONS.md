@@ -2152,3 +2152,18 @@ loads for every change that can trigger it; `CLAUDE.md` removed.
 agent choosing to read them; a `CLAUDE.md` in the working directory or above makes it read `CLAUDE.md` files only
 (its docs), which would stop every folder's `AGENTS.md` from loading; Codex reads only the root-to-start-folder chain,
 hence the index. The maintainer uses only current Claude Code clients and Codex.
+
+## 78. The test server loads nothing from other hosts, checked by a job of its own (2026-10-28, plan 44)
+
+**Settles**: the flaky Node 20 job of run 40671631885 (two `page.goto` timeouts on the static page, waiting for
+stylesheets and fonts from W3Schools, cdnjs and Google Fonts).
+
+**Decided**: the static page is rebuilt with a local stylesheet (the rules it uses, taken from `w3.css` and its theme,
+renamed without `w3-`), inline SVG icons, SVG placeholder images and neutral texts, nothing of W3Schools left; the server
+lists its routes at `/__routes`; `test/test-server/externalRequests.spec.ts` opens every route and `/` and scans the
+source and test data; it runs once per run, on chromium, through `test-server-check.sh`: at the end of `pack-test` outside
+CI, and in CI in the job "Test server: no external requests", which the `build` gate requires with the rest of `checks`.
+
+**Why**: a page that needs the internet makes the harness depend on other hosts' response times; the maintainer wanted
+the page free of the template's material too, and the check general, so a route added later is covered, and of its own,
+since a failure is not a harness failure and depends on no browser, Playwright version or Node line.

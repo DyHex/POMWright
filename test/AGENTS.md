@@ -21,7 +21,7 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   README against the installed package, `scripts/check-api-coverage.mjs`, the API reference and the doc comments against the
   installed declarations, and `scripts/check-error-messages.mjs`, *Error messages* against the messages `src/` throws
   and the compile-error messages its types define (see [website/AGENTS.md](../website/AGENTS.md)). `pack-test.sh` runs all seven, and after the harness
-  `playwright test -c playwright.steps.config.ts` (see *The harness* below).
+  `playwright test -c playwright.steps.config.ts` (see *The harness* below), then, outside CI, `test-server-check.sh`.
 - `pnpm pack:version <version>` (`scripts/pack-version.sh`, run by hand only) builds and packs the package with the
   given semver version in the packed `package.json` only, as `pomwright-<version>.tgz` at the root (gitignored), for
   trying a build in another project before it is released; the repository's version stays what changesets set, and
@@ -56,7 +56,8 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
 - Own `package.json`, lockfile and `tsconfig.json` (path aliases `@page-object-models/*`, `@fixtures/*`,
   `@test-data/*`). Depends on `pomwright` as `file:../.pack/pomwright`, the packed tarball extracted (above).
   Playwright is pinned to 1.64.0.
-- `server.js` is an express app on port 9000. It serves `test-data/staticPage` (a W3 template page) and the routes
+- `server.js` is an express app on port 9000. It serves `test-data/staticPage` (a static social-media page: a top bar with a
+  notifications dropdown and three columns, its stylesheet, icons and images all its own) and the routes
   `/testpath`, `/testpath/:color`, `/testfilters`, `/iframe` (with `/iframe/a`, `/b`, `/c`, a nested frame and a
   hidden iframe section), `/testids` (ids that are valid HTML but awkward as CSS selectors, and one empty
   `data-testid`), `/testnav` (with `/testnav/item/:id` and `/testnav/bounce`,
@@ -68,7 +69,13 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   `window.navigation`), `/sw.js` and `/sw-passthrough.js`: the session storage fixture,
   whose first script snapshots `sessionStorage` and which shows the navigation's type and `document.referrer`; hops to
   the second origin `http://127.0.0.1:9000`, the same server, by every kind of navigation; iframes, COOP and COEP
-  flags, and two service workers). New fixture pages go in as new routes, not into the static page.
+  flags, and two service workers). New fixture pages go in as new routes, not into the static page. `/__routes` lists
+  every route, read from Express's router. No page loads anything from outside the test server: a slow host once made
+  the harness flaky. `test-server/externalRequests.spec.ts` opens every listed route and `/` in chromium and checks
+  every request, and scans `server.js` and `test-data/` for any other host (an XML namespace aside), through
+  `playwright.test-server.config.ts` and the root's `test-server-check.sh`, which `pack-test.sh` runs at its end
+  outside CI and CI runs in a job of its own, once per run. A new route with a parameter needs a sample in the spec's
+  `SAMPLES`; the spec fails until it has one.
 - Page objects live under `page-object-models/testApp/pages/<name>/` as `<name>.locatorSchema.ts` plus
   `<name>.page.ts`, all extending `testApp.base.ts` (which carries a storage schema through its options type);
   `teststorage/` also has `teststorage-second.page.ts`, a `PageObject` on the second origin. `fixtures/testApp.fixtures.ts`

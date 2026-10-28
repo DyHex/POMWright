@@ -15,7 +15,8 @@ that tarball), and with the `node-floor` input, which `pr.yaml` and `main.yaml` 
 the pin on Node 20, the `engines` floor); every third-party action is pinned to a commit with its version in a comment,
 kept current by `.github/dependabot.yml` (monthly, minor and patch updates grouped, each major as a pull request of its
 own), which also proposes the npm versions of the root, `test/` and `website/`, never `@playwright/test`, and holds the
-majors of `typescript` (issue #54) and `@types/node` (issue #55); `consumer` (`scripts/consumer-check.sh`): the tarball
+majors of `typescript` (issue #54) and `@types/node` (issue #55); `test-server` (`test-server-check.sh`), once per run, on chromium: no page of the
+test server loads anything from another host; `consumer` (`scripts/consumer-check.sh`): the tarball
 installed with npm into projects of its own, TypeScript under each module resolution, attw, Playwright's runner in a
 CommonJS and a `"type": "module"` project, TypeScript 5.0 to the latest release in both decorator modes, then on Node 20
 `import` and `require` sharing one copy; `site`: the tarball installed into `test/`, the snippet and coverage checks,

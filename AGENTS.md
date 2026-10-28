@@ -55,7 +55,8 @@ defect review and the guide split by folder and by task.
 - `pnpm pack-test` is the authoritative integration run and needs no sudo: `pack-build.sh` (frozen root install,
   build, pack `pomwright-test-build.tgz`, extract into `.pack/pomwright`), a frozen install of `test/`, `tsc` over
   `test/`, `playwright install` (browsers only), then every project (chromium, firefox, webkit). Arguments go to
-  `playwright test`, for example `pnpm pack-test --project=chromium tests/testApp/testIds.spec.ts --reporter=line`.
+  `playwright test`, for example `pnpm pack-test --project=chromium tests/testApp/testIds.spec.ts --reporter=line`;
+  outside CI it ends with `test-server-check.sh`, which checks that no page of the test server loads from another host.
   Use the line reporter in non-interactive runs, because the local html reporter opens on failure and blocks.
   Playwright's system libraries are a once-per-machine step (`pnpm -C test exec playwright install-deps`, with
   sudo; `install-deps --dry-run` lists what is missing without it).

@@ -88,6 +88,7 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 41 | [Release gates and the folder audit](PLAN-release-gates-and-audit.md) | 2, 5, 8, 72, 73 | none | stop | part 1 done; part 2's moves done; the removal waits for the second review (#73) | part 1: `299abdb`; part 2: filled by the next commit |
 | 42 | [Publish only from `main`; the harness on every LTS Node line](PLAN-publish-environment-node-lines.md) | 74, 75 (once agreed) | none | stop | agreed; after plan 43 | |
 | 43 | [The 1.x and 2.x docs deleted; AGENTS.md split into an index and `docs/`](PLAN-agents-split.md) | 76, 77 | none | | done (before plan 42) | `88493f2`, `9923a9f`; part C (nested files): filled by the next commit |
+| 44 | [The static test page loads nothing from outside the test server](PLAN-static-page.md) | 78 | none | stop | done, stopped for the push (a new CI job); before plan 42 | filled by the next commit |
 
 The order follows the decisions' dependencies: the clean build first (decision 33); CI early, so its stops come
 before the long run of code plans and every later push is linted and checked against TypeScript 5.0; C-1, B-4 and B-3

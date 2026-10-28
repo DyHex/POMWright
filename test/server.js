@@ -632,6 +632,23 @@ app.get("/teststorage/sw-passthrough.js", (_req, res) => {
   `);
 });
 
+// Every route this server serves, read from Express's router when asked, so a route added anywhere above is listed
+// without editing anything else. test-server/externalRequests.spec.ts opens each one. The static folder at "/" is not
+// a route, so it is not listed.
+app.get("/__routes", (_req, res) => {
+	/** @type {{ method: string; path: string }[]} */
+	const routes = [];
+	for (const layer of app.router.stack) {
+		// Express 5 keeps a route's methods in route.methods, which its types leave out
+		const route = /** @type {{ path: string; methods: Record<string, boolean> } | undefined} */ (
+			/** @type {unknown} */ (layer.route)
+		);
+		if (!route || route.path === "/__routes") continue;
+		for (const method of Object.keys(route.methods)) routes.push({ method, path: route.path });
+	}
+	res.json(routes);
+});
+
 // Start the server
 app.listen(port, () => {
 	console.log(`Server running at http://localhost:${port}/`);

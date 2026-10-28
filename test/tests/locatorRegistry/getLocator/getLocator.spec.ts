@@ -13,19 +13,15 @@ test("getLocator resolves the terminal locator when ancestor paths are registere
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
-	registry.add("topMenu").locator(".w3-top");
-	registry.add("topMenu.notifications").locator(".w3-dropdown-hover");
-	registry.add("topMenu.notifications.dropdown").locator(".w3-dropdown-content");
-	registry.add("topMenu.notifications.dropdown.item").locator(".w3-bar-item");
+	registry.add("topMenu").locator(".top");
+	registry.add("topMenu.notifications").locator(".dropdown-hover");
+	registry.add("topMenu.notifications.dropdown").locator(".dropdown-content");
+	registry.add("topMenu.notifications.dropdown.item").locator(".bar-item");
 
 	const locator = registry.getLocator("topMenu.notifications.dropdown.item");
-	const chained = page
-		.locator(".w3-top")
-		.locator(".w3-dropdown-hover")
-		.locator(".w3-dropdown-content")
-		.locator(".w3-bar-item");
+	const chained = page.locator(".top").locator(".dropdown-hover").locator(".dropdown-content").locator(".bar-item");
 
-	expect(`${locator.describe("")}`).toEqual("locator('.w3-bar-item')");
+	expect(`${locator.describe("")}`).toEqual("locator('.bar-item')");
 	expect(`${locator.describe("")}`).not.toEqual(`${chained}`);
 });
 

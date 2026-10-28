@@ -13,21 +13,21 @@ test("getNestedLocator should resolve chained locators automatically", async ({ 
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
-	registry.add("topMenu").locator(".w3-top");
-	registry.add("topMenu.notifications").locator(".w3-dropdown-hover");
-	registry.add("topMenu.notifications.dropdown").locator(".w3-dropdown-content");
-	registry.add("topMenu.notifications.dropdown.item").locator(".w3-bar-item");
+	registry.add("topMenu").locator(".top");
+	registry.add("topMenu.notifications").locator(".dropdown-hover");
+	registry.add("topMenu.notifications.dropdown").locator(".dropdown-content");
+	registry.add("topMenu.notifications.dropdown.item").locator(".bar-item");
 
 	const manuallyChained = page
-		.locator(".w3-top")
-		.locator(".w3-dropdown-hover")
-		.locator(".w3-dropdown-content")
-		.locator(".w3-bar-item");
+		.locator(".top")
+		.locator(".dropdown-hover")
+		.locator(".dropdown-content")
+		.locator(".bar-item");
 
 	const automaticallyChained = registry.getNestedLocator("topMenu.notifications.dropdown.item");
 
 	expect(`${automaticallyChained.describe("")}`).toEqual(
-		"locator('.w3-top').locator('.w3-dropdown-hover').locator('.w3-dropdown-content').locator('.w3-bar-item')",
+		"locator('.top').locator('.dropdown-hover').locator('.dropdown-content').locator('.bar-item')",
 	);
 
 	expect(`${automaticallyChained.describe("")}`).toEqual(`${manuallyChained.describe("")}`);
@@ -42,17 +42,17 @@ test("getLocator returns the terminal locator while getNestedLocator builds the 
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
-	registry.add("topMenu").locator(".w3-top");
-	registry.add("topMenu.notifications").locator(".w3-dropdown-hover");
-	registry.add("topMenu.notifications.dropdown").locator(".w3-dropdown-content");
-	registry.add("topMenu.notifications.dropdown.item").locator(".w3-bar-item");
+	registry.add("topMenu").locator(".top");
+	registry.add("topMenu.notifications").locator(".dropdown-hover");
+	registry.add("topMenu.notifications.dropdown").locator(".dropdown-content");
+	registry.add("topMenu.notifications.dropdown.item").locator(".bar-item");
 
 	const direct = registry.getLocator("topMenu.notifications.dropdown.item");
 	const nested = registry.getNestedLocator("topMenu.notifications.dropdown.item");
 
-	expect(`${direct.describe("")}`).toEqual("locator('.w3-bar-item')");
+	expect(`${direct.describe("")}`).toEqual("locator('.bar-item')");
 	expect(`${nested.describe("")}`).toEqual(
-		"locator('.w3-top').locator('.w3-dropdown-hover').locator('.w3-dropdown-content').locator('.w3-bar-item')",
+		"locator('.top').locator('.dropdown-hover').locator('.dropdown-content').locator('.bar-item')",
 	);
 });
 
@@ -65,10 +65,10 @@ test("getNestedLocator returns a fresh locator each time", async ({ page }) => {
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
-	registry.add("topMenu").locator(".w3-top");
-	registry.add("topMenu.notifications").locator(".w3-dropdown-hover");
-	registry.add("topMenu.notifications.dropdown").locator(".w3-dropdown-content");
-	registry.add("topMenu.notifications.dropdown.item").locator(".w3-bar-item");
+	registry.add("topMenu").locator(".top");
+	registry.add("topMenu.notifications").locator(".dropdown-hover");
+	registry.add("topMenu.notifications.dropdown").locator(".dropdown-content");
+	registry.add("topMenu.notifications.dropdown.item").locator(".bar-item");
 
 	const first = registry.getNestedLocator("topMenu.notifications.dropdown.item");
 	const second = registry.getNestedLocator("topMenu.notifications.dropdown.item");
