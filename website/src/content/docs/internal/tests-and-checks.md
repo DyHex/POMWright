@@ -57,6 +57,11 @@ its own so that no `--reporter` given to the harness can switch it off.
 6. `scripts/check-api-coverage.mjs`: every export of the installed declarations has an API page or section, every
    member a heading on it, every export and member a doc comment with a summary and its parameters, every method and
    class property a `@see` to its heading, and every link to the site a page and heading that exist.
+7. `scripts/check-error-messages.mjs`: *Error messages* against the code, both ways. Every message the source throws,
+   read with the compiler API (a varying part matches anything, a ternary inside a message offers its branches), and
+   every compile-error message its types define, must be on the page; every message line on the page must end as one
+   of them does. Errors no user can reach, and messages that only put a label in front of another error's, are listed
+   in the script with their reasons. The API pages' **Throws** and the doc comments' `@throws` are kept by hand.
 
 ## CI
 

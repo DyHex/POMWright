@@ -38,7 +38,7 @@ export interface UrlMatcher {
 	 */
 	test(url: string | URL): boolean;
 	/**
-	 * A readable form, used in step titles and error messages: `origin "https://shop.example" + path /^\/account\/\d+$/`.
+	 * A readable form, used in error messages: `origin "https://shop.example" + path /^\/account\/\d+$/`.
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-navigation/#tostring
 	 */

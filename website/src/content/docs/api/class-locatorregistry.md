@@ -107,6 +107,15 @@ Locator reuse path cannot be the same as registration path: "main.heading".
 reuse requires a registered path or a seed from createReusable for "main.list.item@last".
 ```
 
+It throws, too, for a seed object made by hand (from JavaScript) whose first argument is missing, of the wrong type or
+empty where Playwright cannot use one, and `filter`, `nth` and `describe` throw on a copy of an any-frame path, which
+has no element:
+
+```text
+reuse requires a role value for "main.button@save".
+nth() cannot apply to "frames": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
+```
+
 ### getLocator()
 
 Resolves the locator registered for a path alone, with its own steps and without its ancestors, described by the path:

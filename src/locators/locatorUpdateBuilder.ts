@@ -162,6 +162,8 @@ export class LocatorUpdateBuilderInternal<
 	 * @returns The query.
 	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
 	 * the strategy from "text" to "role"; use replace("main.button@save").getByRole(…) instead.`
+	 * In either mode, on a builder taken before `skip()` of its segment: `update() cannot apply to "main.list": it is
+	 * skipped in this query; call unskip("main.list") first.` (or `replace()`).
 	 *
 	 * @example
 	 * ```ts
@@ -191,6 +193,8 @@ export class LocatorUpdateBuilderInternal<
 	 * @returns The query.
 	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
 	 * the strategy from "role" to "text"; use replace("main.button@save").getByText(…) instead.`
+	 * In either mode, on a builder taken before `skip()` of its segment: `update() cannot apply to "main.list": it is
+	 * skipped in this query; call unskip("main.list") first.` (or `replace()`).
 	 *
 	 * @example
 	 * ```ts
@@ -219,6 +223,8 @@ export class LocatorUpdateBuilderInternal<
 	 * @returns The query.
 	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
 	 * the strategy from "role" to "label"; use replace("main.button@save").getByLabel(…) instead.`
+	 * In either mode, on a builder taken before `skip()` of its segment: `update() cannot apply to "main.list": it is
+	 * skipped in this query; call unskip("main.list") first.` (or `replace()`).
 	 *
 	 * @example
 	 * ```ts
@@ -247,6 +253,8 @@ export class LocatorUpdateBuilderInternal<
 	 * @returns The query.
 	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
 	 * the strategy from "role" to "placeholder"; use replace("main.button@save").getByPlaceholder(…) instead.`
+	 * In either mode, on a builder taken before `skip()` of its segment: `update() cannot apply to "main.list": it is
+	 * skipped in this query; call unskip("main.list") first.` (or `replace()`).
 	 *
 	 * @example
 	 * ```ts
@@ -275,6 +283,8 @@ export class LocatorUpdateBuilderInternal<
 	 * @returns The query.
 	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
 	 * the strategy from "role" to "altText"; use replace("main.button@save").getByAltText(…) instead.`
+	 * In either mode, on a builder taken before `skip()` of its segment: `update() cannot apply to "main.list": it is
+	 * skipped in this query; call unskip("main.list") first.` (or `replace()`).
 	 *
 	 * @example
 	 * ```ts
@@ -303,6 +313,8 @@ export class LocatorUpdateBuilderInternal<
 	 * @returns The query.
 	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
 	 * the strategy from "role" to "title"; use replace("main.button@save").getByTitle(…) instead.`
+	 * In either mode, on a builder taken before `skip()` of its segment: `update() cannot apply to "main.list": it is
+	 * skipped in this query; call unskip("main.list") first.` (or `replace()`).
 	 *
 	 * @example
 	 * ```ts
@@ -331,6 +343,8 @@ export class LocatorUpdateBuilderInternal<
 	 * @returns The query.
 	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
 	 * the strategy from "role" to "locator"; use replace("main.button@save").locator(…) instead.`
+	 * In either mode, on a builder taken before `skip()` of its segment: `update() cannot apply to "main.list": it is
+	 * skipped in this query; call unskip("main.list") first.` (or `replace()`).
 	 *
 	 * @example
 	 * ```ts
@@ -357,9 +371,13 @@ export class LocatorUpdateBuilderInternal<
 	 *
 	 * @param selector The `<iframe>` element's selector; an empty one is rejected in both modes.
 	 * @returns The query.
-	 * @throws In `replace` mode without a selector, on the query's own path or on a segment with steps in the query:
+	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
+	 * the strategy from "role" to "frameLocator"; use replace("main.button@save").frameLocator(…) instead.` In `replace`
+	 * mode without a selector, on the query's own path or on a segment with steps in the query:
 	 * `replace() cannot apply to "shell.frame": it has filter or nth steps, and frameLocator() without a selector takes
 	 * none; call clearSteps("shell.frame") first.`
+	 * In either mode, on a builder taken before `skip()` of its segment: `update() cannot apply to "main.list": it is
+	 * skipped in this query; call unskip("main.list") first.` (or `replace()`).
 	 *
 	 * @example
 	 * ```ts
@@ -381,6 +399,8 @@ export class LocatorUpdateBuilderInternal<
 	 * @returns The query.
 	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
 	 * the strategy from "role" to "testId"; use replace("main.button@save").getByTestId(…) instead.`
+	 * In either mode, on a builder taken before `skip()` of its segment: `update() cannot apply to "main.list": it is
+	 * skipped in this query; call unskip("main.list") first.` (or `replace()`).
 	 *
 	 * @example
 	 * ```ts
@@ -408,6 +428,8 @@ export class LocatorUpdateBuilderInternal<
 	 * @returns The query.
 	 * @throws In `update` mode, for a segment registered with another strategy: `update("main.button@save") cannot change
 	 * the strategy from "role" to "id"; use replace("main.button@save").getById(…) instead.`
+	 * In either mode, on a builder taken before `skip()` of its segment: `update() cannot apply to "main.list": it is
+	 * skipped in this query; call unskip("main.list") first.` (or `replace()`).
 	 *
 	 * @example
 	 * ```ts

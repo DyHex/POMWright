@@ -69,7 +69,9 @@ getByRole requires a role value for "main.button@pay".
 ```
 
 An empty string is rejected in both modes where Playwright cannot use one, as at registration:
-`locator requires a non-empty selector for "main.list@items".`
+`locator requires a non-empty selector for "main.list@items".` A builder taken before the query skipped its segment
+throws in both modes, naming its mode:
+`update() cannot apply to "main.list": it is skipped in this query; call unskip("main.list") first.`
 
 ### frameLocator()
 

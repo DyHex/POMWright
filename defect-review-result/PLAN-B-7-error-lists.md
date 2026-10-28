@@ -81,4 +81,58 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-28.
+
+- Order: the check first (step 2), so it found the gaps of `api/errors.md` itself; then the lists.
+- Step 2, `scripts/check-error-messages.mjs`: a program over `src/` (tests and `fakePage.ts` aside) with the compiler
+  API. A message's literal text is kept, a `${…}` part is a wildcard, a ternary inside a message is an alternation (the
+  page shows one branch: a singular or a plural, a part present or not; cartesian expansion first required every branch
+  on the page, which flagged "key was" beside "keys were" and every a/an), a ternary of whole messages is two
+  messages, and a `const` or a call of a helper of `src/` is followed to its text (the any-frame messages). A message of
+  several lines is checked line by line. A page line must end as a message does (`pattern$`, any start), so a page
+  object's label and verify()'s `"path": ` prefix are allowed; an indented page line continues the one above and is
+  not checked (verify()'s paths, the never-applied list). Three lists in the script: `INTERNAL` (9 entries, each with
+  its reason, each probed from JavaScript through the build: the boundary rejects the same input first with a listed
+  message, for example a hand-made seed of type `"id"` without an id gets `reuse requires a non-empty id for "a".`),
+  `PASS_THROUGH` (3: a page object's label and the two session storage titles in front of another error's message,
+  `…: …`), and `PARTS` (`strictChainsMessage`, which verify() reports inside its list). A message with fewer than 5
+  fixed characters that neither list names fails, and so does an entry the code no longer has.
+- **Beyond the plan's four message types**: the audit below found the path rules' compile errors
+  (`LocatorSchemaPathError<"main..list", "String can't contain consecutive '.'">`) on *Types* and *Locator paths* but not on
+  *Error messages*, whose contract covers "every compile-error message it defines". `MESSAGE_TYPES` names the alias,
+  and every string literal type in it is a message (a conditional's `extends` side, a pattern, is skipped):
+  `StepRequiresPromise` (through `typeof STEP_REQUIRES_PROMISE`), `NeedsPaths`, `SchemaNeedsStorageType`,
+  `InvalidReusePath`, `LocatorSchemaPathFormat` (`String can't be empty`) and `BrokenRules` (the four rules): 9
+  messages. *Paths* shows tsc's six errors (probed: `Argument of type 'string' is not assignable to parameter of type
+  'LocatorSchemaPathError<…>'`).
+- Step 3, **beyond the plan**: `pack-test.sh` lists the type-check commands itself rather than calling `pnpm typecheck`,
+  so the check is also a line there, after `check-api-coverage.mjs`; otherwise no harness job would run it.
+  `checks.yaml` is unchanged (the `site` job runs the snippet and coverage checks by name).
+- Step 1, the lists, copied from probes against the build:
+  - *Error messages*: *Paths*, the `NeedsPaths` compile error and the six path-rule compile errors; *Reusing*, the hand-made
+    seed's three `reuse requires …` messages and `nth() cannot apply to "frames": …` for a step on a copy of an any-frame
+    path; *Navigation*, `LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.example"` in place
+    of the unlabelled `Cannot resolve …` (plan 26's deferred docs), and the URL-object message with `received null` and
+    `received a number` named; *seed*, the on-origin opaque-document and navigation messages, the count in its prose.
+  - API pages: `add`'s **Throws** (the hand-made seed, the any-frame copy); `SessionStorage`'s *Methods* (the
+    opaque-document message for `set`, `get` and `clear`) and `seed()`'s list and prose; the update builder's *Methods*
+    (a builder taken before `skip()`); `goto()`'s **Throws** (the labelled resolution message); `UrlMatcher.toString()`
+    "used in error messages". The query's `describe()` **Throws** was already complete (plan 12).
+  - Doc comments: `add`; `get`, `clear` and `seed`; the ten methods of the update builder (the skip clause, and
+    `frameLocator`'s strategy error, probed: `update("main.button@save") cannot change the strategy from "role" to
+    "frameLocator"; use replace("main.button@save").frameLocator(…) instead.`); the three `@param options` of the
+    navigation helper (`waitUntil` and `timeout` from `navOptions`, `runPostNavigationActions` `true`); `UrlMatcher`'s
+    `toString`.
+  - *Seeding session storage*: the two on-origin messages and the count ("The first nine are thrown by the `seed` call").
+- Audits, one-off (scratch copies of the check): every `text` line of every page of the site against the code's
+  messages found no stale message (only the path-rule compile errors above); every code span of a doc comment's
+  `@throws` found none either (three deliberate `(…)` shortenings).
+- Step 4, tests: a planted throw site (`planted: a message the page does not list for x`), a message line removed
+  (`Detected cyclic filter reference …`), a stale line added (`No locator schema is registered at "main.list.item".`),
+  a compile error removed (`NeedsPaths`, then `String can't contain consecutive '.'`), and a stale `INTERNAL` entry each
+  failed the check with exit 1 and the problem named; all reverted, 0 problems.
+- Step 5: AGENTS.md §2 (`scripts/`), §3 (`pnpm typecheck`, "all seven"), §9 (the check's paragraph); *Internal → Tests
+  and checks* (item 7) and *Internal → Documentation* (*Every message is listed*).
+- Checks: `pnpm lint` 0; `pnpm test:unit` 900 passed; `pnpm pack-test --reporter=line` exit 0 (2,367 passed, 3
+  skipped; doc snippets 223; api coverage 0 problems; error messages 77 thrown and 9 compile-error messages, 108 page
+  lines; step locations 31); `pnpm docs:build` 0.

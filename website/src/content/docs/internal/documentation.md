@@ -31,6 +31,10 @@ the same facts as the API pages.
   without a page or section, a member without a heading, a doc comment without a summary or a `@param`, a method or
   class property without a `@see` to its heading, and a link to the site whose page or heading does not exist. So an
   editor's hover always links the member's API entry, which links the Docs section.
+- **Every message is listed.** `scripts/check-error-messages.mjs` compares *Error messages* with the code both ways:
+  a message the source throws, or a compile-error message its types define, that the page does not show fails it, and
+  so does a line on the page that no message ends as. Errors no user can reach are listed in the script with their
+  reasons.
 - **Links resolve.** Links within the site are root-absolute with the base, `/POMWright/docs/<page>/`, and the site
   build fails on a link or an anchor that does not exist.
 

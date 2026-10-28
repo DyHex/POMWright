@@ -517,8 +517,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * @returns Without an argument, every entry; otherwise the value or the record.
 	 * @throws When a stored value cannot be decoded by its codec
 	 * (`Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"`), when the page is on another origin
-	 * than the helper's, when the page has no origin yet, and when the page leaves the origin during the read, rather than
-	 * return what it may have read from the new document
+	 * than the helper's, when the page has no origin yet, when the document's origin is opaque, as for `set`
+	 * (`Shop.SessionStorage.get: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`),
+	 * and when the page leaves the origin during the read, rather than return what it may have read from the new document
 	 * (`Shop.SessionStorage.get: the page navigated while get() was reading "token" from https://shop.example; it may have read the new document`).
 	 *
 	 * @example
@@ -575,9 +576,11 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 *
 	 * @param key One key.
 	 * @param keys Several keys. A literal `[]` does not compile; a list that is empty at run time removes nothing.
-	 * @throws When the page is on another origin than the helper's, when the page has no origin yet, and when the page
-	 * leaves the origin during the call; the keys named as removed are gone, and the one in flight may have reached the
-	 * new document
+	 * @throws When the page is on another origin than the helper's, when the page has no origin yet, when the document's
+	 * origin is opaque, as for `set`
+	 * (`Shop.SessionStorage.clear: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`),
+	 * and when the page leaves the origin during the call; the keys named as removed are gone, and the one in flight may
+	 * have reached the new document
 	 * (`Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token); locale was being removed and may have reached the new document`).
 	 *
 	 * @example
@@ -634,7 +637,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * `… the codec for "orderId" returned undefined instead of a string`), when the browser has no Navigation API, when the page commits a document on the
 	 * origin while the seed is being registered, when the page closes before it is registered (`… the page closed
 	 * while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends`),
-	 * and, on the origin already, when the page leaves it during the write, as for `set`;
+	 * and, on the origin already, when the document's origin is opaque or the page leaves it during the write, as for
+	 * `set` (`… the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`, `… the
+	 * page navigated while seed() was writing to https://shop.example; …`);
 	 * later, failing the test with the line of this call in the stack, when the browser refuses the write (the storage
 	 * quota), when the document that arrives on the origin does not take the seed (after a navigation there that failed:
 	 * `… was not applied: the document that arrived on https://pay.example has an opaque origin …`), or when the page

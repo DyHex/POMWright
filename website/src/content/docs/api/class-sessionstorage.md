@@ -78,12 +78,14 @@ Shop.SessionStorage.constructor: origin must be an origin such as "https://app.e
 
 Every method is a step of the report. Calls for one origin act in the order they were made, also when they overlap,
 across every helper on the page (see [the methods](/POMWright/docs/session-storage/#the-methods)). `set`, `get` and
-`clear` work on the origin the page is on, and throw when the helper belongs to another origin, or when the page has
-no origin yet:
+`clear` work on the origin the page is on, and throw when the helper belongs to another origin, when the page has no
+origin yet, and when the document's origin is opaque, as a sandboxed document's and the browser's error page's after
+a failed navigation are:
 
 ```text
 AccountPage.SessionStorage.get: the page is on https://login.example, not on this page object's origin https://shop.example; another origin's sessionStorage is reachable only from a document on it. Use the page object for https://login.example, or a standalone SessionStorage without an origin
 Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()
+Shop.SessionStorage.clear: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)
 ```
 
 ### clear()
@@ -205,7 +207,7 @@ await loginPage.navigation.goto(); // the app's first script already sees the to
 At the call, without an origin, for a value its key's codec cannot encode (or a value that is not a string, for a key
 without a codec), in a browser without the Navigation API, when the page commits a document on the
 origin while the seed is being registered, when the page closes before it is registered, and, on the origin already,
-when the page leaves it during the write, as for `set`; later, failing the test with this call's line in the stack, when the
+when the document's origin is opaque or the page leaves it during the write, as for `set`; later, failing the test with this call's line in the stack, when the
 browser refuses the write, when the document that arrives on the origin does not take the seed (a failed navigation
 there), or when the page closes before the seed was applied:
 
@@ -217,7 +219,8 @@ Shop.SessionStorage.seed: the codec for "orderId" returned undefined instead of 
 Shop.SessionStorage.seed: the page committed a document on https://pay.example while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it
 Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation) to write only on the first arrival at https://pay.example, and this browser has none (Mozilla/5.0 …); use set() on the origin and reload instead
 Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends
-Shop.SessionStorage.seed: the page navigated while seed() was writing to https://pay.example; 1 of 2 keys were written (orderId); amount was being written and may have reached the new document
+Shop.SessionStorage.seed: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)
+Shop.SessionStorage.seed: the page navigated while seed() was writing to https://shop.example; 1 of 2 keys were written (orderId); amount was being written and may have reached the new document
 Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
 Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the document that arrived on https://pay.example has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)

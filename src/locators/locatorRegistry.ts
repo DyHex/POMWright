@@ -759,7 +759,10 @@ export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
 	 * (`locator requires a non-empty selector for "main.list".`). At `add`, when
 	 * a reused path is not registered (`No locator schema registered for path "common.button".`), or is the registration
 	 * path itself (`Locator reuse path cannot be the same as registration path: "main.list".`; a single literal reusing
-	 * itself is a compile error already, a variable is checked here). A method of a registration
+	 * itself is a compile error already, a variable is checked here), or for a seed object made by hand whose first
+	 * argument is missing or empty (`reuse requires a role value for "main.button@save".`, from JavaScript). `filter`,
+	 * `nth` and `describe` on a copy of an any-frame path: `nth() cannot apply to "frames": frameLocator() without a
+	 * selector has no element to filter, index or describe; resolve a path inside it.` A method of a registration
 	 * that has ended throws: `nth() cannot apply to "main.list.items": its registration was ended by add("…"); …`
 	 *
 	 * @example

@@ -29,6 +29,24 @@ LocatorSchemaPath string cannot contain whitespace chars and cannot start with a
 A path that breaks several rules gets one message naming them all, in this order. Whitespace is shown escaped, so a
 non-breaking space is visible. Fix the path.
 
+Where a path is written as a literal, TypeScript reports the same rules:
+
+```text
+Argument of type 'string' is not assignable to parameter of type 'LocatorSchemaPathError<"", "String can't be empty">'.
+Argument of type 'string' is not assignable to parameter of type 'LocatorSchemaPathError<"main list", "String can't contain whitespace chars">'.
+Argument of type 'string' is not assignable to parameter of type 'LocatorSchemaPathError<".main", "String can't start with '.'">'.
+Argument of type 'string' is not assignable to parameter of type 'LocatorSchemaPathError<"main.", "String can't end with '.'">'.
+Argument of type 'string' is not assignable to parameter of type 'LocatorSchemaPathError<"main..list", "String can't contain consecutive '.'">'.
+Argument of type 'string' is not assignable to parameter of type 'LocatorSchemaPathError<".main list", "String can't contain whitespace chars; String can't start with '.'">'.
+```
+
+```text
+Argument of type '"main"' is not assignable to parameter of type '"createRegistryWithAccessors needs its paths as a type argument: createRegistryWithAccessors<Paths>(page)"'.
+```
+
+A compile error, on every path of a registry created without its paths. Pass them as the type argument:
+`createRegistryWithAccessors<Paths>(page)`; `<string>` takes any path, unchecked at compile time.
+
 ---
 
 ## Registering
@@ -136,9 +154,22 @@ A seed's locator can be patched once, with its own method; for another strategy,
 
 ```text
 reuse cannot apply to "bannerFrame": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
+nth() cannot apply to "frames": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
 ```
 
-A seed of the any-frame `frameLocator()` with steps or a description, which it cannot have.
+A seed of the any-frame `frameLocator()` with steps or a description, which it cannot have; and `filter`, `nth` or
+`describe` on a copy of an any-frame path, which has no element either. Resolve a path inside it.
+
+```text
+reuse requires a role value for "main.button@save".
+reuse requires a non-empty selector for "main.list".
+reuse requires a non-empty id for "main.panel".
+```
+
+Thrown by `add(path, { reuse })` for a seed object made by hand, from JavaScript, whose first argument is missing, of the
+wrong type, or empty where Playwright cannot use one, as the locator methods check it (see
+[a first argument that is missing or empty](#a-first-argument-that-is-missing-or-empty)). Make the seed with
+`createReusable`.
 
 ---
 
@@ -283,11 +314,14 @@ part.
 ```text
 AccountPage: goto() without a URL needs a string fullUrl; this page object has a RegExp URL. Pass an absolute URL instead.
 AccountPage: goto("/account") needs an absolute URL because baseUrl is a RegExp.
-Cannot resolve "http://" against baseUrl "https://shop.example".
+LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.example"
+LoginPage: goto() takes a URL string or options; received a URL object; pass its href.
 ```
 
-Thrown by `goto()`: from JavaScript on a page object whose URL is a RegExp, and for a target that is not a URL, such as
-a scheme with nothing after it.
+Thrown by `goto()`: from JavaScript on a page object whose URL is a RegExp; for a target that cannot be resolved
+against `baseUrl`, such as a scheme with nothing after it, with the URL parser's error as `cause`; and from JavaScript
+for a first argument that is neither a URL string nor options (`received null`, `received a number`), a `URL` object
+included: pass its `href`.
 
 ---
 
@@ -351,9 +385,12 @@ Shop.SessionStorage.seed: the codec for "orderId" returned undefined instead of 
 Shop.SessionStorage.seed: the page committed a document on https://pay.example while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it
 Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation) to write only on the first arrival at https://pay.example, and this browser has none (Mozilla/5.0 …); use set() on the origin and reload instead
 Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends
+Shop.SessionStorage.seed: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)
+Shop.SessionStorage.seed: the page navigated while seed() was writing to https://shop.example; 1 of 2 keys were written (orderId); amount was being written and may have reached the new document
 ```
 
-At the call, the last when the page closes before the seed is registered. The others fail the test later, when the app's document loads or when the page closes, with the line of
+At the call: the seventh when the page closes before the seed is registered, the last two from a seed on the origin
+already, which writes as `set` does. The others fail the test later, when the app's document loads or when the page closes, with the line of
 the `seed` call in the stack:
 
 ```text

@@ -158,10 +158,12 @@ await loginPage.navigation.goto("https://help.shop.example/");
 
 **Throws**
 
-What `page.goto()` throws. From JavaScript, on a page object whose URL is a RegExp, and for a first argument that is
-neither a URL string nor options, which `page.goto()` rejects too:
+What `page.goto()` throws. For a target that cannot be resolved against a string `baseUrl`, before `page.goto()` runs,
+with the URL parser's error as `cause`; from JavaScript, on a page object whose URL is a RegExp, and for a first
+argument that is neither a URL string nor options, which `page.goto()` rejects too:
 
 ```text
+LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.example"
 AccountPage: goto() without a URL needs a string fullUrl; this page object has a RegExp URL. Pass an absolute URL instead.
 AccountPage: goto("/account") needs an absolute URL because baseUrl is a RegExp.
 LoginPage: goto() takes a URL string or options; received a URL object; pass its href.
@@ -247,7 +249,7 @@ Tests a URL, as the predicate does.
 
 ### toString()
 
-A readable form, used in step titles and error messages: `origin "https://shop.example" + path /^\/account\/\d+$/`.
+A readable form, used in error messages: `origin "https://shop.example" + path /^\/account\/\d+$/`.
 
 **Returns**
 

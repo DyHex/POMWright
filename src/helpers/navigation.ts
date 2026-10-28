@@ -54,8 +54,8 @@ type NavigationBase<Target extends string> = {
 	 * Waits until the browser is on this page, with one `page.waitForURL`, then runs the actions of
 	 * `pageActionsToPerformAfterNavigation()`.
 	 *
-	 * @param options `waitUntil`, `timeout` and `runPostNavigationActions`; each defaults to the page object's
-	 * `navOptions`.
+	 * @param options `waitUntil` and `timeout`, each defaulting to the page object's `navOptions`, and
+	 * `runPostNavigationActions`, which defaults to `true`.
 	 * @throws When the URL does not match in time:
 	 * `OrdersPage: expected URL "https://shop.example/orders"; found "https://shop.example/orders?tab=1" (…)`
 	 *
@@ -90,8 +90,8 @@ type NavigationBase<Target extends string> = {
 	 * actions after navigation. Without a target, navigates to this page.
 	 *
 	 * @param target The URL or path. On a RegExp `baseUrl`, an absolute URL.
-	 * @param options `waitUntil`, `timeout` (or, without a target, also `runPostNavigationActions`); each defaults to
-	 * the page object's `navOptions`.
+	 * @param options `waitUntil` and `timeout`, each defaulting to the page object's `navOptions` (without a target, also
+	 * `runPostNavigationActions`, which defaults to `true`).
 	 * @throws What `page.goto` throws; for a target that cannot be resolved against a string `baseUrl`:
 	 * `LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.example"`; on a RegExp `baseUrl`, for
 	 * a relative target (from JavaScript):
@@ -133,8 +133,8 @@ export type NavigationFor<BaseUrl, FullUrl> = NavigationBase<GotoTarget<BaseUrl>
 				 * Navigates to this page, `fullUrl`, with `page.goto`, then runs the actions of
 				 * `pageActionsToPerformAfterNavigation()`. Exists when `fullUrl` is a string.
 				 *
-				 * @param options `waitUntil`, `timeout` and `runPostNavigationActions`; each defaults to the page object's
-				 * `navOptions`.
+				 * @param options `waitUntil` and `timeout`, each defaulting to the page object's `navOptions`, and
+				 * `runPostNavigationActions`, which defaults to `true`.
 				 * @throws What `page.goto` throws.
 				 *
 				 * @example
