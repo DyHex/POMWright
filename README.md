@@ -177,8 +177,9 @@ If you run into issues or have questions, please use the
 
 ## Contributing
 
-Pull requests are welcome. [AGENTS.md](./AGENTS.md) is the contributor guide: the repository, the commands, the
-conventions, and how the tests and the documentation are checked.
+Pull requests are welcome. [AGENTS.md](./AGENTS.md) is the contributor guide: the commands, the rules every change
+keeps, and an index of the files in [`docs/`](./docs/) that cover the repository, the conventions, and how the tests
+and the documentation are checked.
 
 ## License
 

@@ -67,7 +67,8 @@ started by hand.
 
 ## How pages are written
 
-The rules are in [AGENTS.md](https://github.com/DyHex/POMWright/blob/main/AGENTS.md), section 9. In short: pages
+The rules are in the contributor guide's
+[documentation](https://github.com/DyHex/POMWright/blob/main/docs/documentation.md) file. In short: pages
 follow playwright.dev's shapes; a concept page starts from the Playwright concept beneath it and says what POMWright
 adds; page objects reach tests as Playwright fixtures; examples use `*.example` hosts and descriptive paths; plain
 sentences, one idea each.

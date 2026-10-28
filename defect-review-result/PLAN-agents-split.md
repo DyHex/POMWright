@@ -121,3 +121,38 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
 
 ## Execution notes
+
+2026-10-28, before plan 42 (the maintainer's order).
+
+- **A** (`88493f2`): `git rm -r` of the three folders (27 Markdown files; the two migration skills under
+  `docs/v1-to-v2-migration/skills/` included, which nothing outside the folder used and the `v2.1.0` tag keeps);
+  AGENTS.md's two map rows, §6 rule 4's "`docs/v2` is frozen" and §8's `docs/` item removed. `git grep` afterwards:
+  only the tag links (README, *Upgrading from 2.x*, AGENTS.md §9) and `CHANGELOG.md`'s historical lines. Plan 42's step
+  lists and this plan's *Depends on* changed for the new order, decision 76 recorded.
+- **B**: the files built by a script that slices AGENTS.md at `88493f2` by line ranges (`split.py` in the scratchpad), so
+  the text moved verbatim; written by hand: each file's title and opening line, AGENTS.md's header, *How to work*'s
+  first three bullets and *The index*, the map's `.github/` and contributor-guide rows, the split *Do not* and
+  *Considered and not planned* items. Words: AGENTS.md 10,000 → 1,178; the eleven files 453 to 1,860 each, 10,044 in
+  all. `CLAUDE.md`: `@AGENTS.md`.
+- **The sentence ledger** (`agents-ledger.mjs`): 331 sentences and table cells of the old AGENTS.md; 0 in more than one
+  file; 301 found verbatim (section references aside); the 30 others, each checked by hand:
+  - 13 cross-references reworded: "(section N)" and "§N" became links, or "(above)" and "below" inside one file; "this
+    file" became "the contributor guide" (the version bullet, the bumps, the backlog, release planning's intro and
+    rule 7);
+  - 4 stale counts and lists dropped: `src/`'s "19 files, about 7,000 lines" and its unit-test file list (now "beside the
+    file each tests"), the website's page counts (24, 14, 13), "60 spec files, about 9,900 lines";
+  - 6 lists split across files: *Considered and not planned* (the scheduled workflow to CI, Markdown linting and the
+    spelling check to documentation, the punctuation convention to code conventions, `nth` to locators; ending a
+    registration only at calls that could read it is dropped, since the locator bullet already says it was considered
+    and not adopted) and the *Do not* items (by area; "Reintroduce behavior that 3.0.0 removed" split into each area's
+    part);
+  - 6 rewordings: AGENTS.md's header ("Read it fully" and "Last revised"), the version bullet's last sentence, release
+    planning's first sentence (its file's opening line says it), and *Internal pages … link the contributor docs*;
+  - 1 comparison artifact: `pnpm install --frozen-lockfile` has no full stop and joined the next sentence; it is in
+    AGENTS.md.
+- **Links**: *Internal → Documentation* links `docs/documentation.md`; the *Internal* index names AGENTS.md and the files
+  it indexes; the README's *Contributing* names both. `git grep` for "section N" and "§N" outside the folder: none.
+- **Memory**: the plan-first note and its index line point at `docs/release-planning.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 904 passed; `pnpm docs:build` 0 (53 pages); `pnpm pack-test --reporter=line`
+  exit 0 (1,746 passed, 3 skipped; doc snippets 226; api coverage 0 problems; error messages 0 problems; step locations
+  31).
