@@ -2085,3 +2085,40 @@ npm, a Playwright-only module's declarations name the same packages (plan 34's e
 
 **Why**: about 4,200 lines kept in step with their twins, and 681 test runs per full `pack-test`, for checks the unit
 tests (which run on the source) and the twins (which run on the package) already make.
+
+## 72. The Trusted Publisher allows `npm publish`; no approval on npmjs.com (2026-10-28, plan 41)
+
+**Settles**: how 3.0.2 and later releases go live; reverses decision 3's "Manual 2FA approval on npmjs.com stays on".
+
+**Decided**: the maintainer sets up the Trusted Publisher for `pomwright` (`DyHex`, `POMWright`, `publish.yaml`) with
+**Allow npm publish** checked, right before PR #60 is merged. A version goes live when Publish runs, with provenance; the
+human gate is merging the Version Packages pull request. No staged publishing, and no issue for it. `publish.yaml`'s
+comments and warning, AGENTS.md §7 and *Internal → Tests and checks* say so; AGENTS.md §7 also records the stage-only
+publisher as considered and not adopted, and npm's 2-day window for a new publisher's first publish.
+
+**Why**: npm's current docs (read 2026-10-28) make approval a matter of staged publishing: a publisher created after 3
+September 2026 allows only `npm stage publish` unless `npm publish` is checked, and a staged version waits for a
+maintainer's 2FA approval. `changeset publish` runs `pnpm publish` (`@changesets/cli` 3.0.3, `getPublishPlan.mjs:349`)
+and cannot stage; a publish script of its own would have to stage only on the release commit (CI cannot list staged
+versions: npm's stage commands need interactive authentication) and write the `CHANGESETS_OUTPUT` events
+`changesets/action` v2 reads for the tag and the GitHub release, and npm's docs do not say whether the attestation
+survives approval. Provenance, the point of the move (decision 3), comes with `npm publish` from GitHub Actions on a
+public repository either way. The Publishing access setting does not gate a Trusted Publisher's publish (npm: trusted
+publishers keep working under "Require two-factor authentication and disallow tokens"). npm expires a new publisher whose
+first publish has not succeeded within 2 days, hence the timing.
+
+**After the release** (the maintainer): Publishing access set to "Require two-factor authentication and disallow tokens",
+the old npm token revoked, and the repository's `NPM_TOKEN` secret deleted.
+
+## 73. The folder stays for a second defect review of this branch (2026-10-28, plan 41)
+
+**Settles**: plan 41's step 3 (decision 5's removal), its timing.
+
+**Decided**: after the audit's moves, `defect-review-result/` stays on the branch while a second run of the defect-review
+skill reviews the branch's latest commit with its full history. That review reads this folder as a reference (every
+finding and its reproduction, the decisions, the fixes in report.md's ledger, the issues) and confirms everything
+itself; its results go to `defect-review-result-2/`. The removal (one commit), and the question about the worktree and
+the probes folder, come after it, when the maintainer says so.
+
+**Why**: the maintainer wants a second review that re-tests every fix at the final commit and looks for what the first
+run missed, starting from what it found.

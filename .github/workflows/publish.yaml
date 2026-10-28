@@ -3,7 +3,8 @@ name: Publish
 # Versions and publishes the package after CI succeeds on a push to main, with changesets/action: while changesets are
 # pending it opens or updates the "Version Packages" pull request; once that is merged, the next run publishes the new
 # version. npm authenticates this workflow by Trusted Publishing (OIDC), so no npm token is stored, and pnpm publish
-# records provenance from the same identity. A published version appears on npm once the maintainer approves it there.
+# records provenance from the same identity. The Trusted Publisher allows npm publish, so a version goes live when this
+# run publishes it; merging the Version Packages pull request is the human gate.
 
 on:
   workflow_run:
@@ -80,8 +81,8 @@ jobs:
         with:
           publish-script: pnpm run release
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      # Every version published here should carry a provenance attestation. This warns rather than fails: the version
-      # appears on npm only once the maintainer approves it on npmjs.com, which can take longer than this waits.
+      # Every version published here should carry a provenance attestation. This warns rather than fails: by the time it
+      # runs the version is published, and failing the run would not take it back.
       - name: Check the provenance of what was published
         if: steps.changesets.outputs.published == 'true'
         shell: bash # -eo pipefail: a failed command anywhere in a pipe fails the step
@@ -101,6 +102,6 @@ jobs:
             if [ "$found" = true ]; then
               echo "pomwright@$version has a provenance attestation: $url"
             else
-              echo "::warning::No provenance attestation for pomwright@$version after 10 minutes. Once the release is approved on npmjs.com, check $url or run: npm view pomwright@$version dist --json"
+              echo "::warning::No provenance attestation for pomwright@$version after 10 minutes. Check $url or run: npm view pomwright@$version dist --json"
             fi
           done

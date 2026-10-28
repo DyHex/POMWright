@@ -3,7 +3,7 @@
 # other. A major update comes as a pull request of its own, so a failing major never holds the routine updates.
 # @playwright/test is left alone: its root and test/ pins are the peer floor, which moves only by decision, together
 # with peerDependencies. Held majors, each tracked by an issue: typescript (#54: version 7 has no compiler API yet, which
-# the declaration build and the doc checks use) and @types/node (#55: it follows the Node version of contributors and
+# the declaration build and two of the doc checks use) and @types/node (#55: it follows the Node version of contributors and
 # CI, 24).
 version: 2
 updates:

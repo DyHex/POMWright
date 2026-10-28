@@ -75,6 +75,13 @@ member. A type change cannot merge the groups: typing `has` by its own literal, 
 it apart from the uses, and split a `has` written beside a `hasNot` into a group of one (probed). So the editor's
 rename takes three steps, and a find and replace, which reaches every group at once, is the page's first advice.
 
+The format check, `LocatorSchemaPathFormat`, is a set of template-literal patterns, one per rule: whitespace, a leading
+dot, a trailing dot and consecutive dots, with an empty path as an error of its own. Every broken rule is named, in the
+order the runtime's `validateLocatorSchemaPath` checks them, so TypeScript and the runtime name the same rules for a
+path. The walk it replaced in 3.0.2 read the path one character at a time and recursed once per character: TypeScript
+refused a path of 999 characters or more (TS2589, its limit of 1,000 levels), and for 300 paths it took about ten times
+the type instantiations.
+
 ## The update builder
 
 `update(subPath?)` and `replace(subPath?)` return a `LocatorUpdateBuilderInternal`

@@ -49,7 +49,9 @@ for Playwright's own. Under pnpm only a project's own dependencies are there, so
 only through `@playwright/test`, and it finds that way only when the compilation imports `@playwright/test`. A module
 that exports an extended `test` or a seed's `definition`, in a compilation where no file imports it, then fails with
 TS2883. POMWright cannot name the types for the consumer: the fix is the consumer's import, or an annotation with
-POMWright's own types (see [`declaration: true`](/POMWright/docs/typescript/#declaration-true)).
+POMWright's own types (see [`declaration: true`](/POMWright/docs/typescript/#declaration-true)). Re-exporting
+Playwright's types from `pomwright` was not adopted: Playwright's things come from `@playwright/test`, as `expect` does,
+and the re-exports would be a second public name for each.
 
 ## Checked on the packed package
 

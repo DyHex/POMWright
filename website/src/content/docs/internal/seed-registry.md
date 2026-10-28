@@ -159,6 +159,19 @@ Rejected:
 - **Coalescing**, one registration of everything merged so far: the commit check would no longer belong to the call
   that made it.
 
+## The origin around every call
+
+`set`, `get`, `clear` and a `seed` that writes at once read the page's origin before and after each storage call they
+make, each key of a batch and each read of `get(keys)` included, and fail with the navigation message when it moved,
+whether or not the call threw. The read is `page.url()`, which Playwright's client keeps current from the browser's
+navigation events, so it costs no round trip; each key still costs one, as Playwright's `setItem` takes one key. The
+check detects a navigation and cannot prevent one: a call already sent when the page commits on another origin may act
+on the new document, and the message names that key as the one in flight (see
+[the methods](/POMWright/docs/session-storage/#the-methods)).
+
+Rejected: **a guarded write in the page**, one `page.evaluate` that compares `location.origin` and writes. It would
+leave `page.sessionStorage`, which the helper mirrors, and run in the page's main world, among the app's own scripts.
+
 ## Failures
 
 Every failure carries the line of the `seed` call, captured when it was called (see

@@ -85,7 +85,8 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 38 | [American spelling; *Organizing a project*](PLAN-H-6-spelling.md) | 52 | none | | done | `3e37c74` |
 | 39 | [The source-level specs evaluated against their twins](PLAN-T10-source-specs-evaluated.md) | 55 (phase 2) | none | stop | done after the maintainer's decisions (#71) | `a7d5ba7` |
 | 40 | [AGENTS.md complete; tooling comments current](PLAN-H-5-A-8-G-11-agents-and-tooling.md) | 47, 51 | none | if CI | done (no workflow changed) | `1b15aff` |
-| 41 | [Release gates and the folder audit](PLAN-release-gates-and-audit.md) | 2, 5, 8 | none | stop | part 1 done, stopped for the maintainer | part 1: filled by the next commit |
+| 41 | [Release gates and the folder audit](PLAN-release-gates-and-audit.md) | 2, 5, 8, 72, 73 | none | stop | part 1 done; part 2's moves done; the removal waits for the second review (#73) | part 1: `299abdb`; part 2: filled by the next commit |
+| 42 | [Publish only from `main`, through a GitHub environment](PLAN-publish-environment.md) | 74 (once agreed) | none | stop | planned, awaiting the maintainer's agreement | |
 
 The order follows the decisions' dependencies: the clean build first (decision 33); CI early, so its stops come
 before the long run of code plans and every later push is linted and checked against TypeScript 5.0; C-1, B-4 and B-3
@@ -156,10 +157,12 @@ Decision 2's gates, as they stand after decisions 8, 33 and 58; plan 41 works th
 
 ## The maintainer's actions outside the plans
 
-- Before the merge: set up the Trusted Publisher for `pomwright` on npmjs.com (repository `DyHex/POMWright`, workflow
-  `publish.yaml`); check every Mermaid diagram by hand on the site built locally.
+- Before the merge: check every Mermaid diagram by hand on the site built locally (done 2026-10-28); right before it, set
+  up the Trusted Publisher for `pomwright` on npmjs.com (repository `DyHex/POMWright`, workflow `publish.yaml`, **Allow
+  npm publish** checked; decision 72), whose first publish must succeed within 2 days.
 - After the merge: check the diagrams on the live site; re-run an older green `CI` run once to see Pages skip its deploy
   (plan 4).
-- After the release: approve it on npmjs.com and check its attestation; merge nothing with a changeset until Publish has
-  run for the release commit; close issue #53 (the release tooling, done in plan 4) once the release has published;
-  post the drafted comment on issue #58.
+- After the release: check its attestation; merge nothing with a changeset until Publish has run for the release
+  commit; Publishing access set to "Require two-factor authentication and disallow tokens", the old npm token revoked
+  and the `NPM_TOKEN` secret deleted (decision 72); close issue #53 (the release tooling, done in plan 4) once the
+  release has published; #58's body already holds the drafted comment.

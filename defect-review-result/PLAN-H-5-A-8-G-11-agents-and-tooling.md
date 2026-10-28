@@ -90,9 +90,9 @@ $ grep -rnE "defect-review-result|PLAN-|DECISIONS\.md|\b[A-H]-[0-9]+\b|decision 
   dist, .pack and the build outputs excluded)
 AGENTS.md:343: …(`git show 08bdcac^:release-3.0.0/DECISIONS.md`, …   (§6, 3.0.0's folder, from before this branch)
 AGENTS.md:348: …(`PLAN-<items>-<slug>.md`), `PLANS.md` …, `DECISIONS.md` …   (§6, the process, from before this branch)
-$ grep -rnliE "orderform|iceno" … (the same exclusions)
+$ grep -rnliE "<the external consumer projects' names>" … (the same exclusions)
 (nothing)
-$ git log main..HEAD --format=%B | grep -ciE "orderform|iceno"
+$ git log main..HEAD --format=%B | grep -ciE "<the external consumer projects' names>"
 0
 ```
 

@@ -408,61 +408,66 @@ branch and removed in one commit before the merge, so PR #60's net diff stays fr
 
 The ledger for the fix work. "This branch" means `fix/review-3-0-2` before PR #60 is merged. No fix is major-only, so no row goes to a GitHub issue; A-7's direction is added to the filed issue 06.
 
-| ID | Kind | Severity | Semver | Merged IDs | Route | Status |
-| --- | --- | --- | --- | --- | --- | --- |
-| [A-1] | defect | Medium | patch | | this branch: origin check around every call; amend `batch-navigation-message.md` | decided ([#9](DECISIONS.md)) |
-| [G-3] | defect | Medium | none | | this branch: issue 01's move, `dependabot.yml`, Mermaid 12; close PRs #47, #48 and #49 | decided ([#1](DECISIONS.md)) |
-| [E-2] | defect | Medium | patch | | this branch: validate `locale`/`timezoneId` at the fixture's setup | decided ([#10](DECISIONS.md)) |
-| [G-10] | defect | Medium | none | | this branch: Trusted Publishing (decision 1), a warning check, a changeset note | decided ([#3](DECISIONS.md)) |
-| [E-5] | defect | Medium | patch | | this branch: method type as the type parameter; generic example on *Test steps* | decided ([#11](DECISIONS.md)) |
-| [E-1] | defect | Medium | patch | (covers A and D helpers) | this branch: computed `location`; amend `boxed-step-location.md` | decided ([#12](DECISIONS.md)) |
-| [A-3] | defect | Low | patch | | this branch: `seed` reads the inherited origin; reworded return message | decided ([#14](DECISIONS.md)) |
-| [B-1] | defect | Low | patch | C-5 | this branch: own non-enumerable names; amend `options-read-like-playwright.md` | decided ([#15](DECISIONS.md)) |
-| [A-2] | defect | Low | patch | | this branch: page-wide barrier for pages without a URL origin | decided ([#13](DECISIONS.md)) |
-| [D-5] | defect | Low | patch | | this branch: reject a returned Promise with a labelled, kept error | decided ([#16](DECISIONS.md)) |
-| [D-2] | defect | Low | patch (`^`), none (`\|`) | | this branch: `^` as `%5E` in `fullUrl`, `\|` documented; amend `caret-in-url-path.md` | decided ([#17](DECISIONS.md)) |
-| [A-4] | defect | Low | patch | | this branch: per-member key typing (option 3); amend `storage-string-key-types.md` | decided ([#18](DECISIONS.md)) |
-| [D-1] | defect | Low | patch | | this branch: `goto` as a property in `NavigationFor`; docs explain the type | decided ([#19](DECISIONS.md)) |
-| [C-1] | defect | Medium | patch | | this branch: per-member sub-path types; `createRegistryWithAccessors` requires `<Paths>`; sub-paths in a generic base (regression since 2.0.0) | decided ([#20](DECISIONS.md)) |
-| [B-4] | defect | Low | patch | | this branch: compile-time self-reuse check for a single literal only; non-distributive `reuse` | decided ([#21](DECISIONS.md)) |
-| [B-3] | defect | Low | patch | | this branch: pattern checks reporting every broken rule, type and runtime alike | decided ([#22](DECISIONS.md)) |
-| [F-1] | defect | Low | patch | | this branch: export the decorator type as `StepDecorator` | decided ([#23](DECISIONS.md)) |
-| [F-2] | defect | Low | patch | | this branch: `AddAccessor` as an interface; `ReusableLocatorFactory` exported; every public member emits | decided ([#24](DECISIONS.md)) |
-| [B-5] | defect | Low | patch | C-2 | this branch: the hint for `filter` and `locator`, after a resolving call or a query; extend the pending changeset | decided ([#25](DECISIONS.md)) |
-| [A-5] | defect | Low | patch | | this branch: the message names the error page and the sandboxed document; amend the pending changeset | decided ([#26](DECISIONS.md)) |
-| [B-2] | defect | Low | patch | | this branch: persist first, assign after; the path half settled by #22 | decided ([#27](DECISIONS.md)) |
-| [C-6] | defect | Low | patch | | this branch: the query's `describe()` checked at the call | decided ([#28](DECISIONS.md)) |
-| [C-7] | defect | Low | patch | | this branch: today's message unless the registry now has the path | decided ([#29](DECISIONS.md)) |
-| [R-2](#r-2-the-never-applied-message-for-several-origins) | defect | Low | patch | | this branch: plural, each seed's helper and call location | decided ([#30](DECISIONS.md)) |
-| [G-5] | documentation (reclassified from defect) | Low | none | | this branch: AGENTS.md §7 rule, a failing check in the guard, corrected wording | decided ([#4](DECISIONS.md)) |
-| [G-2] | defect | Low | none | | this branch: drop the docs-only skip; every job runs | decided ([#31](DECISIONS.md)) |
-| [G-1] | defect | Low | none | | settled by #31 (the script is deleted) | decided ([#32](DECISIONS.md)) |
-| [G-4] | defect | Low | none | | this branch, **first in the plan**: `--clean` in `build`; the packed file list asserted | decided ([#33](DECISIONS.md)) |
-| [G-9] | defect | Low | none | | this branch: space sections for YAML and Markdown | decided ([#34](DECISIONS.md)) |
-| [R-1](#r-1-the-pw-step-snippet-inserts-v1s-pocname) | defect | Low | none | | this branch: delete the snippets file | decided ([#35](DECISIONS.md)) |
-| [B-7] | documentation | Low | none (D-3 label: patch) | A-6, C-4, D-3, H-2 | this branch: complete lists in one late docs pass; labelled `Cannot resolve`; a message-coverage check | decided ([#36](DECISIONS.md)) |
-| [D-4] | documentation | Low | patch (code option) | H-9 | this branch: `captureCallSite(new.target)`; frame-budget tests | decided ([#37](DECISIONS.md)) |
-| [A-7] | documentation | Low | patch (code option) | | this branch: type and value must agree (value without type, explicit type without value, key without codec); a comment on #58 | decided ([#38](DECISIONS.md)) |
-| [F-3] | documentation | Low | none | | this branch: the two remaining exceptions and their fixes (late docs pass) | decided ([#39](DECISIONS.md)) |
-| [H-7] | documentation | Low | patch (runtime check) | | this branch: `@step` checked at run time; *Principles* names the type-only rules | decided ([#40](DECISIONS.md)) |
-| [E-4] | documentation | Low | none | | this branch: docs, an outcome-based fixture example; the redesign as a breaking issue draft | decided ([#41](DECISIONS.md)) |
-| [E-3] | documentation | Low | none | | this branch: `box` described as Playwright does | decided ([#42](DECISIONS.md)) |
-| [B-6] | documentation | Low | none | | this branch: a find and replace for the path and its descendants; F2 with its limits | decided ([#43](DECISIONS.md)) |
-| [C-3] | documentation | Low | none | | this branch: a *Queries* section on the any-frame form | decided ([#44](DECISIONS.md)) |
-| [H-1] | documentation | Low | none | | this branch: `getById` named in the upgrade sentence | decided ([#45](DECISIONS.md)) |
-| [H-3] | documentation | Low | none | | this branch: 3.x throughout the upgrade page; a search for every item that needs a change | decided ([#46](DECISIONS.md)) |
-| [H-4] | documentation | Low | none | | this branch, with D-2 | decided ([#17](DECISIONS.md)) |
-| [H-5] | documentation | Low | none | A-8 | this branch: the two routes in AGENTS.md §4, and any new one | decided ([#47](DECISIONS.md)) |
-| [F-4] | documentation | Low | none | | this branch: every exported type in the table, checked; *Packaging* names every check | decided ([#48](DECISIONS.md)) |
-| [G-7] | documentation | Low | none | | this branch: `@see` to its own heading, headings per section | decided ([#49](DECISIONS.md)) |
-| [G-6] | documentation | Low | none | | this branch: the call counts stated; a fresh bench run after the registry changes | decided ([#50](DECISIONS.md)) |
-| [G-11] | documentation | Low | none | | this branch: the three comments, and a final pass over changed tooling | decided ([#51](DECISIONS.md)) |
-| [H-6] | documentation | Low | none | | this branch: American spelling; the page renamed without a redirect | decided ([#52](DECISIONS.md)) |
-| [R-3](#r-3-inventorymd-counts-31-pending-changesets) | documentation | Low | none | | review notes only | closed, no action ([#8](DECISIONS.md)) |
-| [G-8] | suspected | Low | none | | this branch: the tip guard in `pages.yaml` | decided ([#53](DECISIONS.md)) |
-| [F-5] | design question | — | patch: the release is 3.0.2 | | AGENTS.md §7 wording; `export-storage-types.md` text | decided ([#6](DECISIONS.md)) |
-| [H-8] | design question | Low | none | | this branch: markers on the four types (and F-1/F-2's if adopted); AGENTS.md §9 | decided ([#7](DECISIONS.md)) |
-| [R-4](#r-4-message-punctuation) | design question | — | none | | no convention; each message punctuated as reads best | decided ([#54](DECISIONS.md)) |
+Every decided row is done, in the plan and commits of its last two columns (added 2026-10-28, after the fix work, for
+a second review of this branch); R-3 and R-4 needed no change. The backlog issue drafts this folder numbers are GitHub
+issues: 01 [#53](https://github.com/DyHex/POMWright/issues/53), 02 #54, 03 #55, 04 #56, 05 #57, 06 #58, 07 #59; the
+walkthrough filed #61 (decision 20, the 2.x regression) and #62 (decision 41, the `log` fixture's redesign).
+
+| ID | Kind | Severity | Semver | Merged IDs | Route | Status | Plan | Commits |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [A-1] | defect | Medium | patch | | this branch: origin check around every call; amend `batch-navigation-message.md` | decided ([#9](DECISIONS.md)) | [20](PLAN-A-1-origin-checks.md) | `56229e2` |
+| [G-3] | defect | Medium | none | | this branch: issue 01's move, `dependabot.yml`, Mermaid 12; close PRs #47, #48 and #49 | decided ([#1](DECISIONS.md)) | [4](PLAN-G-3-G-10-G-5-G-8-release-workflows.md), [6](PLAN-G-3-T15-mermaid.md) | `3284aa4`, `8beb9d0`; `54cf090`; follow-ups `2607cf7`, `fd0db4c`, `b47a255` |
+| [E-2] | defect | Medium | patch | | this branch: validate `locale`/`timezoneId` at the fixture's setup | decided ([#10](DECISIONS.md)) | [19](PLAN-E-2-log-locale.md) | `b28686b` |
+| [G-10] | defect | Medium | none | | this branch: Trusted Publishing (decision 1), a warning check, a changeset note | decided ([#3](DECISIONS.md)) | [4](PLAN-G-3-G-10-G-5-G-8-release-workflows.md) | `3284aa4`, `8beb9d0` |
+| [E-5] | defect | Medium | patch | | this branch: method type as the type parameter; generic example on *Test steps* | decided ([#11](DECISIONS.md)) | [14](PLAN-E-5-generic-step.md) | `ea94410` |
+| [E-1] | defect | Medium | patch | (covers A and D helpers) | this branch: computed `location`; amend `boxed-step-location.md` | decided ([#12](DECISIONS.md)) | [16](PLAN-E-1-D-4-call-sites.md) | `b19de77`, `445fc71`; the frame budget dropped after the stop, `f4bb76e` |
+| [A-3] | defect | Low | patch | | this branch: `seed` reads the inherited origin; reworded return message | decided ([#14](DECISIONS.md)) | [21](PLAN-A-2-A-3-inherited-origin.md) | `e231dc2`, `52f2d4c` |
+| [B-1] | defect | Low | patch | C-5 | this branch: own non-enumerable names; amend `options-read-like-playwright.md` | decided ([#15](DECISIONS.md)) | [11](PLAN-B-1-C-5-own-non-enumerable.md) | `b990969` |
+| [A-2] | defect | Low | patch | | this branch: page-wide barrier for pages without a URL origin | decided ([#13](DECISIONS.md)) | [21](PLAN-A-2-A-3-inherited-origin.md) | `e231dc2`, `52f2d4c` |
+| [D-5] | defect | Low | patch | | this branch: reject a returned Promise with a labelled, kept error | decided ([#16](DECISIONS.md)) | [17](PLAN-D-5-async-definelocators.md) | `80cb5ea` |
+| [D-2] | defect | Low | patch (`^`), none (`\|`) | | this branch: `^` as `%5E` in `fullUrl`, `\|` documented; amend `caret-in-url-path.md` | decided ([#17](DECISIONS.md)) | [25](PLAN-D-2-H-4-fullurl.md) | `3bf7a19` |
+| [A-4] | defect | Low | patch | | this branch: per-member key typing (option 3); amend `storage-string-key-types.md` | decided ([#18](DECISIONS.md)) | [23](PLAN-A-4-key-types.md) | `f422b77` |
+| [D-1] | defect | Low | patch | | this branch: `goto` as a property in `NavigationFor`; docs explain the type | decided ([#19](DECISIONS.md)) | [26](PLAN-D-1-D-3-navigation.md) | `8c8d8fb`, `27f8d12`; the helper matrix after the stop, `cb101bf` |
+| [C-1] | defect | Medium | patch | | this branch: per-member sub-path types; `createRegistryWithAccessors` requires `<Paths>`; sub-paths in a generic base (regression since 2.0.0) | decided ([#20](DECISIONS.md)) | [7](PLAN-C-1-sub-path-types.md) | `49454c6` |
+| [B-4] | defect | Low | patch | | this branch: compile-time self-reuse check for a single literal only; non-distributive `reuse` | decided ([#21](DECISIONS.md)) | [8](PLAN-B-4-reuse-by-path-types.md) | `ff6495e` |
+| [B-3] | defect | Low | patch | | this branch: pattern checks reporting every broken rule, type and runtime alike | decided ([#22](DECISIONS.md)) | [9](PLAN-B-3-B-2-path-rules-and-persist.md) | `2d2c504`, `f46b982` |
+| [F-1] | defect | Low | patch | | this branch: export the decorator type as `StepDecorator` | decided ([#23](DECISIONS.md)) | [15](PLAN-F-1-step-decorator-type.md) | `b4fee4a` |
+| [F-2] | defect | Low | patch | | this branch: `AddAccessor` as an interface; `ReusableLocatorFactory` exported; every public member emits | decided ([#24](DECISIONS.md)) | [13](PLAN-F-2-emit-every-member.md) | `7f90436` |
+| [B-5] | defect | Low | patch | C-2 | this branch: the hint for `filter` and `locator`, after a resolving call or a query; extend the pending changeset | decided ([#25](DECISIONS.md)) | [10](PLAN-B-5-C-2-ended-registration.md) | `890dbd8` |
+| [A-5] | defect | Low | patch | | this branch: the message names the error page and the sandboxed document; amend the pending changeset | decided ([#26](DECISIONS.md)) | [22](PLAN-A-5-R-2-storage-messages.md) | `186bc5f`, `c35eae4` |
+| [B-2] | defect | Low | patch | | this branch: persist first, assign after; the path half settled by #22 | decided ([#27](DECISIONS.md)) | [9](PLAN-B-3-B-2-path-rules-and-persist.md) | `2d2c504`, `f46b982` |
+| [C-6] | defect | Low | patch | | this branch: the query's `describe()` checked at the call | decided ([#28](DECISIONS.md)) | [12](PLAN-C-6-C-7-query-checks.md) | `8bdcd35`, `9bcf72e` |
+| [C-7] | defect | Low | patch | | this branch: today's message unless the registry now has the path | decided ([#29](DECISIONS.md)) | [12](PLAN-C-6-C-7-query-checks.md) | `8bdcd35`, `9bcf72e` |
+| [R-2](#r-2-the-never-applied-message-for-several-origins) | defect | Low | patch | | this branch: plural, each seed's helper and call location | decided ([#30](DECISIONS.md)) | [22](PLAN-A-5-R-2-storage-messages.md) | `186bc5f`, `c35eae4` |
+| [G-5] | documentation (reclassified from defect) | Low | none | | this branch: AGENTS.md §7 rule, a failing check in the guard, corrected wording | decided ([#4](DECISIONS.md)) | [4](PLAN-G-3-G-10-G-5-G-8-release-workflows.md) | `3284aa4`, `8beb9d0` |
+| [G-2] | defect | Low | none | | this branch: drop the docs-only skip; every job runs | decided ([#31](DECISIONS.md)) | [3](PLAN-G-2-G-1-checks-workflow.md) | `f866325` |
+| [G-1] | defect | Low | none | | settled by #31 (the script is deleted) | decided ([#32](DECISIONS.md)) | [3](PLAN-G-2-G-1-checks-workflow.md) | `f866325` |
+| [G-4] | defect | Low | none | | this branch, **first in the plan**: `--clean` in `build`; the packed file list asserted | decided ([#33](DECISIONS.md)) | [1](PLAN-G-4-clean-build.md) | `ee00af7` |
+| [G-9] | defect | Low | none | | this branch: space sections for YAML and Markdown | decided ([#34](DECISIONS.md)) | [2](PLAN-G-9-R-1-repository-hygiene.md) | `1717edb` |
+| [R-1](#r-1-the-pw-step-snippet-inserts-v1s-pocname) | defect | Low | none | | this branch: delete the snippets file | decided ([#35](DECISIONS.md)) | [2](PLAN-G-9-R-1-repository-hygiene.md) | `1717edb` |
+| [B-7] | documentation | Low | none (D-3 label: patch) | A-6, C-4, D-3, H-2 | this branch: complete lists in one late docs pass; labelled `Cannot resolve`; a message-coverage check | decided ([#36](DECISIONS.md)) | [30](PLAN-B-7-error-lists.md) | `429f2c2` |
+| [D-4] | documentation | Low | patch (code option) | H-9 | this branch: `captureCallSite(new.target)`; frame-budget tests | decided ([#37](DECISIONS.md)) | [16](PLAN-E-1-D-4-call-sites.md) | `b19de77`, `445fc71`; the frame budget dropped after the stop, `f4bb76e` |
+| [A-7] | documentation | Low | patch (code option) | | this branch: type and value must agree (value without type, explicit type without value, key without codec); a comment on #58 | decided ([#38](DECISIONS.md)) | [24](PLAN-A-7-schema-agreement.md) | `e05b84d` |
+| [F-3] | documentation | Low | none | | this branch: the two remaining exceptions and their fixes (late docs pass) | decided ([#39](DECISIONS.md)) | [34](PLAN-F-3-E-4-E-3-docs.md) | `f8ca42a` |
+| [H-7] | documentation | Low | patch (runtime check) | | this branch: `@step` checked at run time; *Principles* names the type-only rules | decided ([#40](DECISIONS.md)) | [18](PLAN-H-7-T13-step-runtime.md) | `2e15291`, `69bc09a` |
+| [E-4] | documentation | Low | none | | this branch: docs, an outcome-based fixture example; the redesign as a breaking issue draft | decided ([#41](DECISIONS.md)) | [34](PLAN-F-3-E-4-E-3-docs.md) | `f8ca42a` |
+| [E-3] | documentation | Low | none | | this branch: `box` described as Playwright does | decided ([#42](DECISIONS.md)) | [34](PLAN-F-3-E-4-E-3-docs.md) | `f8ca42a` |
+| [B-6] | documentation | Low | none | | this branch: a find and replace for the path and its descendants; F2 with its limits | decided ([#43](DECISIONS.md)) | [35](PLAN-B-6-C-3-docs.md) | `8f185be`; the `describe` sentence in plan 36's commit |
+| [C-3] | documentation | Low | none | | this branch: a *Queries* section on the any-frame form | decided ([#44](DECISIONS.md)) | [35](PLAN-B-6-C-3-docs.md) | `8f185be`; the `describe` sentence in plan 36's commit |
+| [H-1] | documentation | Low | none | | this branch: `getById` named in the upgrade sentence | decided ([#45](DECISIONS.md)) | [36](PLAN-H-1-H-3-upgrade-page.md) | `e571381` |
+| [H-3] | documentation | Low | none | | this branch: 3.x throughout the upgrade page; a search for every item that needs a change | decided ([#46](DECISIONS.md)) | [36](PLAN-H-1-H-3-upgrade-page.md) | `e571381` |
+| [H-4] | documentation | Low | none | | this branch, with D-2 | decided ([#17](DECISIONS.md)) | [25](PLAN-D-2-H-4-fullurl.md) | `3bf7a19` |
+| [H-5] | documentation | Low | none | A-8 | this branch: the two routes in AGENTS.md §4, and any new one | decided ([#47](DECISIONS.md)) | [40](PLAN-H-5-A-8-G-11-agents-and-tooling.md) | `1b15aff` |
+| [F-4] | documentation | Low | none | | this branch: every exported type in the table, checked; *Packaging* names every check | decided ([#48](DECISIONS.md)) | [32](PLAN-G-7-F-4-api-coverage.md) | `8eda398` |
+| [G-7] | documentation | Low | none | | this branch: `@see` to its own heading, headings per section | decided ([#49](DECISIONS.md)) | [32](PLAN-G-7-F-4-api-coverage.md) | `8eda398` |
+| [G-6] | documentation | Low | none | | this branch: the call counts stated; a fresh bench run after the registry changes | decided ([#50](DECISIONS.md)) | [37](PLAN-G-6-benchmark.md) | `f3a058a` |
+| [G-11] | documentation | Low | none | | this branch: the three comments, and a final pass over changed tooling | decided ([#51](DECISIONS.md)) | [40](PLAN-H-5-A-8-G-11-agents-and-tooling.md) | `1b15aff` |
+| [H-6] | documentation | Low | none | | this branch: American spelling; the page renamed without a redirect | decided ([#52](DECISIONS.md)) | [38](PLAN-H-6-spelling.md) | `3e37c74` |
+| [R-3](#r-3-inventorymd-counts-31-pending-changesets) | documentation | Low | none | | review notes only | closed, no action ([#8](DECISIONS.md)) | none | none |
+| [G-8] | suspected | Low | none | | this branch: the tip guard in `pages.yaml` | decided ([#53](DECISIONS.md)) | [4](PLAN-G-3-G-10-G-5-G-8-release-workflows.md) | `3284aa4`, `8beb9d0` |
+| [F-5] | design question | — | patch: the release is 3.0.2 | | AGENTS.md §7 wording; `export-storage-types.md` text | decided ([#6](DECISIONS.md)) | [33](PLAN-F-5-H-8-versioning.md) | `2449c6a` |
+| [H-8] | design question | Low | none | | this branch: markers on the four types (and F-1/F-2's if adopted); AGENTS.md §9 | decided ([#7](DECISIONS.md)) | [33](PLAN-F-5-H-8-versioning.md) | `2449c6a` |
+| [R-4](#r-4-message-punctuation) | design question | — | none | | no convention; each message punctuated as reads best | decided ([#54](DECISIONS.md)) | none | none |
 
 [A-1]: A-session-storage/defect-A-1-batch-lands-on-other-origin.md
 [A-2]: A-session-storage/defect-A-2-about-blank-popup-two-chains.md
