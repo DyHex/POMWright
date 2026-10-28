@@ -14,7 +14,9 @@ the same facts as the API pages.
 
 - **The code decides.** Every chain, description and message a page shows is read back from the build by a probe when
   it is written, never written from memory. A change to a message, a rendering or a mechanism updates the pages that
-  show it in the same change.
+  show it in the same change. `test/tests/docs/docsChains.spec.ts` keeps the chains so: it rebuilds every chain a page
+  or the README shows in a `text` block or a code comment through the packed package, one test per page, and compares
+  it, so a chain that changes fails the harness until the page changes with it.
 - **Examples compile.** `scripts/check-doc-snippets.mjs` takes every `ts` block, one small project per page, and
   compiles it against the installed package with the harness's options and `declaration: true`. A block with
   `title="name.ts"` is that file, which the page's other blocks import; lines up to `// ---cut---` are compiled but not

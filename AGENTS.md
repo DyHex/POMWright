@@ -159,7 +159,8 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   change), and `callSite/`: errors raised after the consumer's line point at it even in consumer files named
   `pageObject.ts` and `sessionStorage.ts`; a page object's check at the `new` line, with a base class too, and the `add`
   lines in its `cause`), `logging/` (the `log` fixture's attachments, read by an auto fixture torn
-  down after it), `step/`, `testApp/`, `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
+  down after it), `step/`, `testApp/`, `docs/` (`docsChains.spec.ts`: every chain the site and the README show in a
+  `text` block or a code comment, rebuilt through the packed package, one test per page), `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
   published entries, one shared copy, closed deep imports, the manifest; `packageFiles.spec.ts`, the installed
   package's exact file list; `publicTypes.typecheck.ts` and `publicTypes.emit.ts`, compile-only). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through
   `playwright.bench.config.ts`, never by `pack-test`. `testApp/urlForms.spec.ts` sweeps the printable ASCII
@@ -173,7 +174,7 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   legacy decorator calls as `tsc` emits them (`pnpm typecheck` writes them; the spec fails clearly without); it needs no browser and
   runs from `test/playwright.steps.config.ts`, which `pack-test.sh` runs after the harness, so no `--reporter` given to
   the harness can switch it off. `testApp/sessionStorageOverlay.spec.ts` runs with Playwright's step overlay
-  (`video: { show: { test } }`), which delays a step's body. 85 spec files, about 13,300 lines. One spec file per DSL method,
+  (`video: { show: { test } }`), which delays a step's body. 86 spec files, about 14,000 lines. One spec file per DSL method,
   for example `add.getById.spec.ts` or `getLocatorSchema.update.spec.ts`; one DOM-level spec per fixture page under
   `testApp/`, for example `testIds.spec.ts`.
 - Know what each spec exercises. 26 `locatorRegistry/` specs import from `../../../../src/locators`, so they run
@@ -500,9 +501,11 @@ Rules:
   rejected and the reason, with the files involved and no line numbers, and link `AGENTS.md` rather than copy it. The
   reasons behind a design live on the Internal pages; a change of design updates them.
 - The code and its tests decide what the docs say. Every chain, description and message a page shows is copied from a
-  probe against the build (section 3); where a rendered string hides an option, the stored record is read instead. A
-  change to a message, a rendering or a mechanism greps `website/` for the old text and updates the pages with it, and a
-  consumer-facing change updates the page that describes it.
+  probe against the build (section 3); where a rendered string hides an option, the stored record is read instead.
+  `test/tests/docs/docsChains.spec.ts` rebuilds every chain a page or the README shows in a `text` block or a code
+  comment, one test per page, and compares it: a change to a chain, on the page or in the code, changes the spec with
+  it. A change to a message, a rendering or a mechanism greps `website/` for the old text and updates the pages with it,
+  and a consumer-facing change updates the page that describes it.
 - Page shapes follow playwright.dev. Getting started pages: *Introduction*, "You will learn", short sections whose
   example grows from the last, *What's next*; one page, one outcome. Concept pages open with the Playwright concept
   beneath them, linked, and say what POMWright adds; then a small fixture (the HTML and the registry or page object the
