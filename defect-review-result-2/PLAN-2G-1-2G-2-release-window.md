@@ -75,7 +75,7 @@ aggregated, the most restrictive version applying, alongside any branch protecti
 branch unless they may bypass the ruleset. A depth-2 fetch of a merge commit reads its first parent's tree (probed).
 
 Not verifiable before the rulesets exist: that the merge box offers no bypass of `main: checks` while it offers one of
-`main: review`. Step 4 of the guide checks it.
+`main: review`. Step 4 of the guide checks it: confirmed on 2026-10-28 (execution notes).
 
 ## The guide: your steps
 
@@ -193,7 +193,7 @@ projects' names.
 ## Decisions checklist
 
 - [x] The `release` job in `pr.yaml` (decision 79, point 1)
-- [x] Two rulesets, set up by the maintainer and to be confirmed on PR #60 (point 2)
+- [x] Two rulesets, set up by the maintainer and confirmed on PR #60 (point 2)
 - [x] Publish's guard on `main`'s tip, no re-run exception (point 3)
 - [x] npm, not tags (point 4)
 - [x] One script, its test in the `lint` job, ShellCheck over both (point 5)
@@ -217,3 +217,9 @@ finding statuses, the ledger rows and this plan in it; the maintainer pushes; th
   and as if actionlint ran ShellCheck on them; the guide missed that a ruleset blocking force pushes keeps `main` from
   being renamed; the merge queue's availability, first an assumption, is now quoted from GitHub's docs; lines past
   120 columns were rewrapped. No code changed.
+- 2026-10-28, the maintainer, after both commits were pushed and PR #60's run was green (the *Release window* job
+  among its checks): the guide's steps 1 to 4. The rules list offered no **Require merge queue**, as GitHub's docs say
+  for a repository of a personal account. GitHub confirmed the old branch protection rule was covered by the rulesets
+  before it was deleted. On a re-run of PR #60's checks, the merge box offered no way past `build` while it ran, and
+  the bypass of `main: review` once it was green (only when the pull request is not a draft); the *Release window*
+  job printed `3.0.1 is on npm`. Plan done; the guard's real run comes with the first Publish run after the merge.

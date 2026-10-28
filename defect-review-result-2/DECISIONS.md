@@ -103,8 +103,9 @@ after `main` moved.
    (a pull request, one approval, Code Owners, conversations resolved), which repository admins may bypass for pull
    requests only, since the only maintainer cannot approve their own pull requests; and `main: checks` (`build`, up to
    date, no deletion, no force push), which nobody may bypass, so the hold binds every merge. GitHub's docs give each
-   ruleset its own bypass list ("the rules in the ruleset") and aggregate the rules of all rulesets; the merge box is
-   to be confirmed on PR #60 (the guide's step 4).
+   ruleset its own bypass list ("the rules in the ruleset") and aggregate the rules of all rulesets. Confirmed on
+   PR #60 on 2026-10-28: while `build` ran, the merge box offered no way past it; once it was green, it offered the
+   bypass of the review rules (on a pull request that is not a draft).
 3. **Publish's guard is the safety net**: it reads `main`'s tip from GitHub (a re-run keeps its old checkout); while the
    tip's version is not on npm and changesets are pending there, it reads npm once more after 5½ minutes (npm's list can
    be five minutes old after a publish), then fails and says to revert the Version Packages pull request that set the

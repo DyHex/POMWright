@@ -1317,7 +1317,7 @@ or none: the release stays 3.0.2.
 
 | ID | Merged IDs | Kind | Severity | Semver | Route | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| [2G-1](G-ci-release-publishing/defect-2G-1-publish-guard-judges-the-tested-commit.md) | | defect | Medium | none | this branch: pull requests held while a release publishes, two rulesets, the guard judges `main`'s tip; with 2G-2 | decided (#79) |
+| [2G-1](G-ci-release-publishing/defect-2G-1-publish-guard-judges-the-tested-commit.md) | | defect | Medium | none | this branch: pull requests held while a release publishes, two rulesets, the guard judges `main`'s tip; with 2G-2 | done (#79: 5c3930e, ae297fa) |
 | [2A-9](A-session-storage/defect-2A-9-unbound-waiting-call-acts-on-other-origin.md) | | defect | Medium | patch | this branch: the joined origin checked at the turn; new message listed | open |
 | [2A-1](A-session-storage/defect-2A-1-seed-fails-during-redirect-chain.md) | | defect | Medium | patch | this branch: a bounded retry of the Navigation API check | open |
 | [2A-2](A-session-storage/defect-2A-2-no-origin-message-on-inherited-or-closed-popup.md) | | defect | Low | patch | this branch: ask the document's origin; with 2A-10 | open |
@@ -1328,7 +1328,7 @@ or none: the release stays 3.0.2.
 | [2D-1](D-page-objects-urls-navigation/defect-2D-1-load-state-timeout-message.md) | | defect | Low | patch | this branch: the load-state message; listed | open |
 | [2D-2](D-page-objects-urls-navigation/defect-2D-2-absolute-url-type.md) | | defect | Low | patch | this branch: `AbsoluteUrl` starts with a letter | open |
 | [2E-1](E-logging-step-fixture/defect-2E-1-locale-hint-names-rejected-tag.md) | | defect | Low | patch | this branch: hint only an accepted tag | open |
-| [2G-2](G-ci-release-publishing/defect-2G-2-publish-rerun-goes-on-after-main-moved.md) | | defect | Low | none | this branch: the guard reads `main`'s tip from GitHub; with 2G-1 | decided (#79) |
+| [2G-2](G-ci-release-publishing/defect-2G-2-publish-rerun-goes-on-after-main-moved.md) | | defect | Low | none | this branch: the guard reads `main`'s tip from GitHub; with 2G-1 | done (#79: 5c3930e, ae297fa) |
 | [2T-1](T-tests-and-checks/defect-2T-1-docs-checks-compare-copies.md) | | defect | Low | none | this branch: the specs read the pages, or say they hold copies | open |
 | [2T-2](T-tests-and-checks/defect-2T-2-snippet-check-misses-spaced-fence.md) | | defect | Low | none | this branch: CommonMark fence language | open |
 | [2T-3](T-tests-and-checks/defect-2T-3-test-fail-hides-assertions.md) | | defect | Low | none | this branch: split the two tests | open |
