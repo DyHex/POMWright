@@ -204,6 +204,8 @@ Each segment gets one row, with these columns:
 - the segment and its area;
 - the findings per kind, marked *so far* while the segment runs;
 - the tokens spent;
+- the context: its size now and its peak while it runs, the peak once it is done, against the model's window, and how
+  many times it was compacted (a segment that compacts has lost detail it read; say so when you report it);
 - the cost so far, and the projected cost while it runs;
 - the progress: an estimate while it runs, and the actual duration once it is done.
 

@@ -1,24 +1,33 @@
 #!/usr/bin/env node
-// Status of a segmented defect review run by subagents: per segment its findings, tokens, cost so far and projected,
-// and progress (an estimate while it runs, the actual duration once done), plus the orchestrator and the totals.
+// Status of a segmented defect review run by subagents: per segment its findings, tokens, context, cost so far and
+// projected, and progress (an estimate while it runs, the actual duration once done), plus the orchestrator and the
+// totals.
 //
 //   node review-status.mjs <state.json>               prints the table (Markdown)
 //   node review-status.mjs <state.json> --check-caps  prints only cap alerts; exit 3 when a cap needs action
 //
-// It reads only the usage records, timestamps and tool-call counts of the transcripts (Claude Code writes one JSON
-// line per content block, so a call's usage repeats and is deduplicated by message id). It never prints content.
+// It reads only the usage records, timestamps, tool-call counts and compaction markers of the transcripts (Claude Code
+// writes one JSON line per content block, so a call's usage repeats and is deduplicated by message id). It never prints
+// content.
+//
+// The context of a call is what it sent: its input, cache-read and cache-write tokens. The table gives a running
+// segment's context now (its last call) and its peak, and a finished segment's peak, against the window when the state
+// file names one, with the number of compactions (Claude Code's "compact_boundary" lines, automatic or manual).
 //
 // state.json, kept by the orchestrator:
 // {
 //   "prices": { "input": 4, "output": 20, "cacheRead": 0.2, "cacheWrite5m": 5, "cacheWrite1h": 8 },  // $ per MTok
+//   "contextWindow": 1000000,              // optional: the model's context window in tokens
 //   "priorMinutes": 60,                    // expected duration of a size-1 segment before any segment is done
 //   "caps": { "total": null, "perSegment": null, "wrapUpAt": 0.9 },  // dollars, or null for no cap
 //   "orchestration": "/path/to/orchestrator.jsonl",                   // optional
 //   "segments": [
 //     { "id": "1", "name": "Session storage", "size": 1.0, "status": "running",   // pending|running|done|partial
-//       "transcript": "/path/to/agent-<id>.jsonl", "results": "/path/to/segment-1.md or a folder", "cap": null }
+//       "transcript": "/path/to/agent-<id>.jsonl", "results": "/path/to/segment-1.md or a folder", "cap": null,
+//       "until": "2026-01-01T12:00:00Z" }                     // optional: where the row ends when the agent is resumed
 //   ],
-//   "extra": [ { "name": "a stopped attempt", "transcript": "/path.jsonl" } ]            // optional, counted in totals
+//   "extra": [ { "name": "a stopped attempt", "transcript": "/path.jsonl",                // optional, counted in totals
+//                "from": "2026-01-01T12:00:00Z", "until": null, "status": "done" } ]   // range and status optional
 // }
 //
 // Progress of a running segment: elapsed time against its expected duration (size x the mean minutes per size unit
@@ -39,8 +48,20 @@ if (!stateFile) {
 const state = JSON.parse(readFileSync(stateFile, "utf8"));
 const P = state.prices;
 
-function readTranscript(file) {
-	const t = { costs: [], tokens: 0, usd: 0, first: undefined, last: undefined, toolCalls: 0 };
+// `from` and `until` (ISO timestamps, optional) limit the lines read: a segment resumed later for a follow-up keeps
+// its row up to `until`, and the follow-up is an `extra` row from `from`, so the follow-up does not skew calibration.
+function readTranscript(file, from, until) {
+	const t = {
+		costs: [],
+		tokens: 0,
+		usd: 0,
+		first: undefined,
+		last: undefined,
+		toolCalls: 0,
+		context: 0,
+		peakContext: 0,
+		compactions: 0,
+	};
 	if (!file || !existsSync(file)) return t;
 	const seen = new Set();
 	for (const line of readFileSync(file, "utf8").split("\n")) {
@@ -51,10 +72,12 @@ function readTranscript(file) {
 		} catch {
 			continue;
 		}
+		if ((from && (o.timestamp ?? "") < from) || (until && (o.timestamp ?? "") > until)) continue;
 		if (o.timestamp) {
 			t.first ??= o.timestamp;
 			t.last = o.timestamp;
 		}
+		if (o.type === "system" && o.subtype === "compact_boundary") t.compactions++;
 		const m = o.message;
 		if (o.type !== "assistant" || !m) continue;
 		for (const b of Array.isArray(m.content) ? m.content : []) if (b.type === "tool_use") t.toolCalls++;
@@ -75,6 +98,8 @@ function readTranscript(file) {
 		t.costs.push(usd);
 		t.usd += usd;
 		t.tokens += input + output + read + w5m + w1h;
+		t.context = input + read + w5m + w1h;
+		t.peakContext = Math.max(t.peakContext, t.context);
 	}
 	t.minutes = t.first ? (Date.parse(t.last) - Date.parse(t.first)) / 60000 : 0;
 	return t;
@@ -139,7 +164,18 @@ function findings(results) {
 
 const money = (x) => `$${x.toFixed(2)}`;
 const mtok = (x) => `${(x / 1e6).toFixed(1)}M`;
-const segs = state.segments.map((s) => ({ ...s, t: readTranscript(s.transcript) }));
+const ktok = (x) => (x >= 1e6 ? `${(x / 1e6).toFixed(2)}M` : `${Math.round(x / 1e3)}k`);
+// A segment's context: now and peak while it runs, the peak once it is done, and its compactions.
+function contextText(t, running) {
+	if (!t.peakContext) return "—";
+	const window = state.contextWindow ? ` of ${ktok(state.contextWindow)}` : "";
+	const share = state.contextWindow ? ` (${Math.round((100 * t.peakContext) / state.contextWindow)}%)` : "";
+	const compacted = `${t.compactions} compaction${t.compactions === 1 ? "" : "s"}`;
+	return running
+		? `${ktok(t.context)} now, peak ${ktok(t.peakContext)}${window}${share}; ${compacted}`
+		: `peak ${ktok(t.peakContext)}${window}${share}; ${compacted}`;
+}
+const segs = state.segments.map((s) => ({ ...s, t: readTranscript(s.transcript, undefined, s.until) }));
 const finished = segs.filter((s) => s.status === "done" && s.t.costs.length);
 const mean = (f) => (finished.length ? finished.reduce((a, s) => a + f(s), 0) / finished.length : undefined);
 const minutesPerUnit = mean((s) => s.t.minutes / s.size) ?? state.priorMinutes ?? 60;
@@ -161,7 +197,11 @@ usdPerUnit ??= running.length ? running.reduce((a, s) => a + s.projected / s.siz
 const caps = state.caps ?? {};
 const wrapUpAt = caps.wrapUpAt ?? 0.9;
 const alerts = [];
-const extras = (state.extra ?? []).map((e) => ({ name: e.name, t: readTranscript(e.transcript) }));
+const extras = (state.extra ?? []).map((e) => ({
+	name: e.name,
+	status: e.status,
+	t: readTranscript(e.transcript, e.from, e.until),
+}));
 const orchestration = state.orchestration ? readTranscript(state.orchestration) : undefined;
 let spent = extras.reduce((a, e) => a + e.t.usd, 0) + (orchestration?.usd ?? 0);
 let projectedTotal = spent;
@@ -183,6 +223,7 @@ for (const s of segs) {
 			s.name,
 			found,
 			mtok(s.t.tokens),
+			contextText(s.t, false),
 			money(s.t.usd) + capText,
 			`${how} in ${Math.round(s.t.minutes)} min`,
 		]);
@@ -194,6 +235,7 @@ for (const s of segs) {
 			s.name,
 			`${found} so far`,
 			mtok(s.t.tokens),
+			contextText(s.t, true),
 			`${money(s.t.usd)} so far, ~${money(s.projected)} projected${capText}`,
 			`~${pct}% (${Math.round(s.t.minutes)} of ~${Math.round(s.expected)} min${s.t.minutes > s.expected ? ", past its estimate" : ""}, ${s.t.toolCalls} tool calls)`,
 		]);
@@ -210,18 +252,29 @@ for (const s of segs) {
 			s.name,
 			"—",
 			"—",
+			"—",
 			(prior === undefined ? "—" : `~${money(prior)} projected`) + capText,
 			`not started (~${Math.round(expected)} min)`,
 		]);
 	}
 }
-for (const e of extras) rows.push(["—", e.name, "—", mtok(e.t.tokens), money(e.t.usd), "stopped"]);
+for (const e of extras)
+	rows.push([
+		"—",
+		e.name,
+		"—",
+		mtok(e.t.tokens),
+		contextText(e.t, e.status === "running"),
+		money(e.t.usd),
+		e.status === "running" ? "running" : `${e.status ?? "stopped"} in ${Math.round(e.t.minutes)} min`,
+	]);
 if (orchestration)
 	rows.push([
 		"—",
 		"Orchestration (this session)",
 		"—",
 		mtok(orchestration.tokens),
+		contextText(orchestration, true),
 		money(orchestration.usd),
 		"ongoing",
 	]);
@@ -234,12 +287,12 @@ if (mode === "--check-caps") {
 	for (const a of alerts) console.log(a);
 	process.exit(alerts.some((a) => / has spent /.test(a)) ? 3 : 0);
 }
-console.log("| Segment | Area | Findings | Tokens | Cost | Progress / time |");
-console.log("| --- | --- | --- | --- | --- | --- |");
+console.log("| Segment | Area | Findings | Tokens | Context | Cost | Progress / time |");
+console.log("| --- | --- | --- | --- | --- | --- | --- |");
 for (const r of rows) console.log(`| ${r.join(" | ")} |`);
 const totalCap = caps.total ? ` (cap ${money(caps.total)})` : "";
 console.log(
-	`| | **Total** | | **${mtok(tokens)}** | **${money(spent)} so far, ~${money(projectedTotal)} projected**${totalCap} | |`,
+	`| | **Total** | | **${mtok(tokens)}** | | **${money(spent)} so far, ~${money(projectedTotal)} projected**${totalCap} | |`,
 );
 if (alerts.length) console.log(`\nCaps: ${alerts.join("; ")}.`);
 console.log(
