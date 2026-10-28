@@ -4,7 +4,9 @@ name: Publish
 # pending it opens or updates the "Version Packages" pull request; once that is merged, the next run publishes the new
 # version. npm authenticates this workflow by Trusted Publishing (OIDC), so no npm token is stored, and pnpm publish
 # records provenance from the same identity. The Trusted Publisher allows npm publish, so a version goes live when this
-# run publishes it; merging the Version Packages pull request is the human gate.
+# run publishes it; merging the Version Packages pull request is the human gate. The job runs in the npm
+# environment, which only main may deploy to, and the Trusted Publisher names it, so a publish.yaml on any other branch
+# cannot publish.
 
 on:
   workflow_run:
@@ -28,6 +30,9 @@ jobs:
       github.event.workflow_run.head_branch == 'main' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
+    # Only main may deploy to npm (the environment's branch rule), and the Trusted Publisher accepts a token only from
+    # this environment, so a publish.yaml pushed to another branch cannot publish.
+    environment: npm
     steps:
       # a workflow_run checks out the newest commit on main, which may not be the one this CI run tested
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

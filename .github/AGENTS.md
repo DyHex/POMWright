@@ -30,7 +30,8 @@ on a push to `main`, guarded by its job condition and by a step that goes no fur
 commit that run tested (a `workflow_run` checks out the newest commit; the newer commit's own run continues the release,
 and publishes only when no changeset is pending), and fails when that commit is a release commit (its version differs
 from its parent's) whose version is not on npm, saying to revert it; it publishes with npm Trusted Publishing
-(`id-token: write`; no npm token is stored; `pnpm publish` exchanges the workflow's OIDC token and records provenance),
+(`id-token: write`; no npm token is stored; `pnpm publish` exchanges the workflow's OIDC token and records provenance)
+from the `npm` environment, which only `main` may deploy to and which the Trusted Publisher names,
 and after publishing warns when a version has no provenance attestation. `pages.yaml` builds `website/` and deploys it
 to GitHub Pages (`https://dyhex.github.io/POMWright/`) after `CI` succeeds on a push to `main`, guarded as
 `publish.yaml` is and building the commit that run tested, only while that commit is `main`'s tip (a re-run of an older
@@ -70,6 +71,7 @@ run deploys nothing), or by `workflow_dispatch`.
 ## Do not
 
 - Reintroduce a second build in a harness job, or build the site in a harness job.
+- Remove the publish job's `npm` environment, or that environment's rule that only `main` deploys to it.
 - Let `CI` (`main.yaml`) run on pull requests, remove the publish guard, or rename the gate job `build` without
   changing the branch-protection rule with it (every pull request would be blocked for non-admins).
 - Deploy the site from anything but a green `CI` run on `main` or a manual run, or give the released site a

@@ -50,10 +50,12 @@ How Publish and Pages run is in [.github/AGENTS.md](../.github/AGENTS.md).
   and the version is never published. If it
   happens, revert the release commit before merging the next Version Packages pull request; that restores its
   changesets, and the next release includes them.
-- Releases are published with npm Trusted Publishing: npmjs.com trusts `publish.yaml` of this repository, `pnpm
-  publish` exchanges the workflow's OIDC token, no npm token is stored, and npm records provenance. The Trusted
-  Publisher allows `npm publish`, so a release goes live when Publish runs, and merging the Version Packages pull
-  request is the human gate. A stage-only publisher, which holds each version until a maintainer approves it with 2FA,
+- Releases are published with npm Trusted Publishing: npmjs.com trusts `publish.yaml` of this repository, `pnpm publish`
+  exchanges the workflow's OIDC token, no npm token is stored, and npm records provenance. The Trusted Publisher allows
+  `npm publish`, so a release goes live when Publish runs, and merging the Version Packages pull request is the human
+  gate. The publish job runs in the GitHub environment `npm`, which only `main` may deploy to, and the Trusted Publisher
+  names that environment, so a `publish.yaml` on another branch cannot publish; the environment and its branch rule are
+  set up before the publisher. A stage-only publisher, which holds each version until a maintainer approves it with 2FA,
   was considered and not adopted: `changeset publish` runs `pnpm publish` and cannot stage, so it would need a publish
   script of its own that also writes the tag and the GitHub release the action creates. npm expires a new Trusted
   Publisher whose first publish has not succeeded within 2 days, so one is set up, or set up again, right before the
