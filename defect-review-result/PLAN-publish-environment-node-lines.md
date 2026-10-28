@@ -6,7 +6,9 @@
 - **Bump**: none (CI)
 - **Stop**: **yes**, after the commits: the maintainer pushes; the PR run validates the lint and runs the Node matrix,
   and the environment's real run comes after the merge (`publish.yaml` runs only on `main`)
-- **Depends on**: plan 41 part 2's commit (`01d1096`); the maintainer's guide step 1 before the merge
+- **Depends on**: plan 41 part 2's commit (`01d1096`); plan 43, which runs first (the maintainer's order, 2026-10-28),
+  so this plan's doc edits go into `docs/ci-and-publishing.md` and `docs/testing.md`; the maintainer's guide step 1
+  before the merge
 
 ## Contract
 
@@ -86,9 +88,10 @@ it and add it again.
 1. `.github/workflows/publish.yaml`: `environment: npm` on the `publish` job, after `runs-on`, with a comment: only
    `main` may deploy to `npm` (its branch rule), and the Trusted Publisher names the environment, so a `publish.yaml`
    on another branch cannot publish. The header comment says the same in one sentence.
-2. AGENTS.md: §2's `publish.yaml` description (the job runs in the `npm` environment, which allows `main` only, and the
-   Trusted Publisher names it); §7's Trusted Publishing bullet (the environment, set up before the publisher); §8,
-   beside "remove the publish guard": remove the publish job's environment or its branch rule.
+2. `docs/ci-and-publishing.md`: the `publish.yaml` description (the job runs in the `npm` environment, which allows
+   `main` only, and the Trusted Publisher names it); the Trusted Publishing paragraph (the environment, set up before
+   the publisher); its *Do not* items, beside "remove the publish guard": remove the publish job's environment or its
+   branch rule.
 3. *Internal → Tests and checks*: one sentence beside Trusted Publishing.
 
 ### Commit 2, B
@@ -101,10 +104,10 @@ it and add it again.
    engines floor"; `pr.yaml` and `main.yaml` pass it with their comments updated. The header comment says which lines
    run and that the list moves with Node's schedule (#55). The `consumer` job's Node 20 loading probe stays: it checks
    the floor.
-2. AGENTS.md: §2's `.github/workflows/` row (the matrix, which lines, where the list lives), §3 where it names the
-   floor job, §4's harness bullet ("Node 20 runs chromium only" and the browsers per line), §7 if it names the job;
-   *Internal → Tests and checks* where it describes the floor job; the `urlForms.spec.ts` sentence in AGENTS.md §4 stays
-   true (it names Node 20 and 22, which now both run it).
+2. `docs/ci-and-publishing.md`'s workflows (the matrix, which lines, where the list lives) and `docs/testing.md` where
+   it names the floor job and the browsers per Node line; *Internal → Tests and checks* where it describes the floor
+   job; AGENTS.md only if its core names the job. The `urlForms.spec.ts` sentence in `docs/testing.md` stays true (it
+   names Node 20 and 22, which now both run it).
 3. DECISIONS.md 74 and 75; PLANS.md row 42 and the maintainer's actions (guide step 1 before the merge; the
    environment name in step 3; #55's body: CI runs every LTS line from the floor, and 24 joins the matrix when 26
    becomes the default).

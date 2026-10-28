@@ -2122,3 +2122,18 @@ the probes folder, come after it, when the maintainer says so.
 
 **Why**: the maintainer wants a second review that re-tests every fix at the final commit and looks for what the first
 run missed, starting from what it found.
+
+## 76. AGENTS.md becomes an index; its areas move to `docs/`; the 1.x and 2.x docs leave the tree (2026-10-28, plan 43)
+
+**Settles**: the maintainer's request to keep the always-loaded contributor guide short, and to drop the frozen docs.
+
+**Decided**: plan 43 as written: `docs/v1/`, `docs/v1-to-v2-migration/` and `docs/v2/` are deleted (the `v2.1.0` tag
+keeps them, and the README and *Upgrading from 2.x* link it; `CHANGELOG.md`'s historical links to them stay); AGENTS.md
+keeps what every task needs and an index naming, for each file in `docs/`, the paths and tasks that require reading it;
+every sentence of the old AGENTS.md lands in exactly one file or is dropped with its reason; a root `CLAUDE.md` holds
+only `@AGENTS.md`. Plan 43 runs before plan 42, whose doc edits then go into the new files.
+
+**Why**: AGENTS.md was about 10,000 words loaded into every session, while most tasks need one or two of its areas.
+Claude Code 2.1.277 and later read AGENTS.md when there is no `CLAUDE.md` and read `CLAUDE.md` instead when there is
+one, so the import loads the text once and older clients get it too; a symlink would check out on Windows as a file
+holding `AGENTS.md`, which Claude Code would read in its place.

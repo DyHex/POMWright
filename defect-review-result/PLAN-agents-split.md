@@ -5,7 +5,8 @@
 - **Bump**: none (contributor docs; nothing published changes)
 - **Stop**: no CI change, so no stop for a push; the plan stops before its first commit only if the sentence ledger
   (step B.7) finds a sentence it cannot place
-- **Depends on**: plan 42 (it edits AGENTS.md's CI lines first, so this plan moves their final text)
+- **Depends on**: plan 41 part 2 (`01d1096`); runs before plan 42 (the maintainer's order, 2026-10-28), whose doc
+  edits then go into `docs/ci-and-publishing.md` and `docs/testing.md`
 
 ## Contract
 
