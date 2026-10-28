@@ -54,4 +54,25 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-28.
+
+- *Every strategy method needs its first argument*: `getById` in the sentence, and its message in the example block,
+  probed through the build for `add(…).getById("")` and `getLocatorSchema(…).update().getById("")`, both
+  `getById requires a non-empty id for "main.panel@settings".`
+- 3.x throughout: the `description`, "POMWright 3 is a major release", step 1's "the latest 3.x", the 13 example titles,
+  the two `// 3.x:` comments, 13 prose mentions; no "3.0.0" is left on the page. The README's link text.
+- Step 3's sentence, and the four items: the `new` search, the `pageActionsToPerformAfterNavigation` search ("Find the
+  implementations, and delete those that return `[]` or `null`"), the `sessionStorage.get(` search (with the `get` calls
+  of a `SessionStorage` created by the project named for review, since the search cannot find a helper held under
+  another name), and "This needs no change" for the waits.
+- The searches, run on a scratch project with each pattern once and a decoy file in `node_modules`: each found its
+  line and nothing in `node_modules` (`tests/broken.spec.ts:2`; `pages/dashboard.page.ts:2`; `tests/storage.spec.ts:2`
+  and `pages/login.page.ts:3`). No real 2.x project was at hand: the external consumer projects already use 3.0.2
+  release candidates.
+- With this commit, plan 35's follow-up agreed at its stop: *Queries*' any-frame list says only `filter` and `nth` reject
+  the replaced segment, and a sentence after it says `describe` is not affected (it applies to the query's own path,
+  which `replace` cannot turn into the any-frame form; probed: `describe("Confirm")` with an ancestor replaced passes,
+  `getLocatorSchema("anyFrame").describe("x")` throws).
+- Checks: `pnpm lint` 0; `pnpm test:unit` 900 passed; `pnpm pack-test --reporter=line` exit 0 (2,427 passed, 3
+  skipped; doc snippets 226, the README's two among them; api coverage 0 problems; error messages 0 problems; step
+  locations 31); `pnpm docs:build` 0.

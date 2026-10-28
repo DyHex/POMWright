@@ -162,7 +162,7 @@ POMWright 3 needs `@playwright/test` 1.64 or later (below 2) and Node 20 or late
 - [Getting started](https://dyhex.github.io/POMWright/docs/installation/): installation, a first page object, page
   objects as fixtures, organising a project
 - [API reference](https://dyhex.github.io/POMWright/api/): every export and member, and every error message
-- [Upgrading from 2.x](https://dyhex.github.io/POMWright/docs/upgrading-from-2x/): every change in 3.0.0 a 2.x project
+- [Upgrading from 2.x](https://dyhex.github.io/POMWright/docs/upgrading-from-2x/): every change in 3.x a 2.x project
   meets, and what to write instead
 - [Internal](https://dyhex.github.io/POMWright/internal/): how POMWright works
 

@@ -182,9 +182,11 @@ The any-frame form has no element of its own, so:
   `replace() cannot apply to "main.frame@payment": it is the path this query resolves, and frameLocator() without a selector has no element to resolve to; replace an ancestor instead.`
 - a segment with steps in the query needs `clearSteps(subPath)` first:
   `replace() cannot apply to "main.frame@payment": it has filter or nth steps, and frameLocator() without a selector takes none; call clearSteps("main.frame@payment") first.`
-- afterwards, `filter` and `nth` reject the segment, as `describe` rejects a query of a path registered as the any-frame
-  form:
+- afterwards, `filter` and `nth` reject the segment:
   `filter() cannot apply to "main.frame@payment": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.`
+
+`describe` is not affected: it applies to the query's own path, which `replace` cannot turn into the any-frame form. It
+rejects only a query of a path registered as that form.
 
 ## Keeping a query
 

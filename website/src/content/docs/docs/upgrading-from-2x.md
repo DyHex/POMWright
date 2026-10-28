@@ -1,23 +1,24 @@
 ---
 title: Upgrading from 2.x
-description: "Every change a POMWright 2.x project meets in 3.0.0: what changed and why, how to find the affected code, and what to write instead."
+description: "Every change a POMWright 2.x project meets in 3.x: what changed and why, how to find the affected code, and what to write instead."
 ---
 
 ## Introduction
 
-POMWright 3.0.0 is a major release. Most of what a 2.x project wrote keeps working; this page lists everything that
+POMWright 3 is a major release. Most of what a 2.x project wrote keeps working; this page lists everything that
 does not, grouped by area. Each item stands on its own: what changed and why, how it shows up in your project, what to
 write instead, and the page that explains the concept. The 2.x documentation stays available at the
 [`v2.1.0` tag](https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2).
 
 ## How to upgrade
 
-1. Upgrade `@playwright/test` to 1.64 or later and `pomwright` to 3.0.0, on Node 20 or later.
+1. Upgrade `@playwright/test` to 1.64 or later and `pomwright` to the latest 3.x, on Node 20 or later.
 2. Run `tsc`. Removed and renamed APIs are compile errors: the items marked **compile error** say what to write
    instead.
-3. Search for the changes that still compile but behave differently, the items marked **compiles**. Each gives the
-   search, run from the project's root; `--exclude-dir=node_modules` keeps out the installed packages, whose own
-   files (Playwright's and POMWright's type declarations among them) would otherwise fill the results.
+3. Search for the changes that still compile but behave differently, the items marked **compiles**. Each item that
+   needs a change gives the search, run from the project's root; the others say they need none.
+   `--exclude-dir=node_modules` keeps out the installed packages, whose own files (Playwright's and POMWright's type
+   declarations among them) would otherwise fill the results.
 4. Run the suite. What is left fails with a message that names the fix: a URL the constructor rejects, a registration
    without its first argument, a locator reference that does not verify, a seed that was never applied. Those items
    are marked **fails at run time**.
@@ -51,7 +52,7 @@ See [Installation](/POMWright/docs/installation/).
 ### `getById` matches the id as written
 
 **Compiles.** 2.x removed a leading `#` or `id=` from the string and built a `#id` selector through a CSS escape that
-broke on most real ids. 3.0.0 matches the string exactly and case-sensitively as `[id="…"]`, so ids with `.`, `:`,
+broke on most real ids. 3.x matches the string exactly and case-sensitively as `[id="…"]`, so ids with `.`, `:`,
 spaces, quotes or a leading digit work, and `getById("#login")` looks for `id="#login"`. Find the prefixed calls:
 
 ```sh
@@ -62,7 +63,7 @@ grep -rnE 'getById\(\s*["'"'"'`](#|id=)' --include=*.ts --exclude-dir=node_modul
 registry.add("main.button@login").getById("#login");
 ```
 
-```ts title="3.0.0"
+```ts title="3.x"
 import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.button@login">;
@@ -76,7 +77,7 @@ registration. See [Locating by id](/POMWright/docs/locating-by-id/).
 ### `getById(RegExp)` is a regular expression
 
 **Compiles.** 2.x used the RegExp's source as literal text: `/order.row/` matched only the text `order.row`, an
-anchored pattern matched nothing, and flags were ignored. 3.0.0 tests the RegExp against each element's id, with its
+anchored pattern matched nothing, and flags were ignored. 3.x tests the RegExp against each element's id, with its
 flags. An unanchored pattern without special characters, such as `/btn-submit/`, matches as before. Find the RegExp
 ids:
 
@@ -91,7 +92,7 @@ character meant literally (`/order\.row/`), and expect a flag such as `i` to tak
 ### Steps on a frame segment apply
 
 **Compiles.** In 2.x, a `filter`, `nth`, `first` or `last` on a `frameLocator(selector)` registration was dropped when
-the chain was built; with several matching iframes, the action failed with a strict mode violation. In 3.0.0 a frame
+the chain was built; with several matching iframes, the action failed with a strict mode violation. In 3.x a frame
 segment is `locator(selector)` with its steps, then `contentFrame()`, so the step selects the `<iframe>`:
 
 ```ts
@@ -102,7 +103,7 @@ declare const registry: LocatorRegistry<"shell.frame@payment" | "shell.frame@pay
 registry.add("shell.frame@payment").frameLocator("iframe").nth(1);
 registry.add("shell.frame@payment.button@pay").getByRole("button", { name: "Pay" });
 // 2.x:   the nth(1) was dropped
-// 3.0.0: locator('iframe').nth(1).contentFrame().getByRole('button', { name: 'Pay' })
+// 3.x: locator('iframe').nth(1).contentFrame().getByRole('button', { name: 'Pay' })
 ```
 
 Review every `frameLocator(…)` registration followed by `.nth(`, `.filter(`, `.first(` or `.last(`; the step now
@@ -117,7 +118,7 @@ grep -rn 'frameLocator(' --include=*.ts --exclude-dir=node_modules .
 ### `update` keeps the strategy; `replace` changes it
 
 **Fails at run time.** 2.x let `update()` switch a definition to another strategy, and kept a cache to switch back.
-In 3.0.0 `update()` patches the registered definition and keeps its strategy; another strategy's method throws:
+In 3.x `update()` patches the registered definition and keeps its strategy; another strategy's method throws:
 
 ```text
 update("main.button@save") cannot change the strategy from "role" to "text"; use replace("main.button@save").getByText(…) instead.
@@ -127,7 +128,7 @@ update("main.button@save") cannot change the strategy from "role" to "text"; use
 registry.getLocatorSchema("main.button@save").update().getByText("Save").getNestedLocator();
 ```
 
-```ts title="3.0.0"
+```ts title="3.x"
 import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.button@save">;
@@ -147,7 +148,7 @@ query.update().getByRole("button", undefined); // cleared every option
 query.update().getByRole("button", { exact: undefined }); // removed exact
 ```
 
-```ts title="3.0.0"
+```ts title="3.x"
 import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.button@save">;
@@ -173,14 +174,15 @@ first argument and drop the `null`. See [Queries](/POMWright/docs/queries/).
 ### Every strategy method needs its first argument
 
 **Fails at run time.** `add`, `createReusable` and `replace` throw at the call when the first argument is missing.
-Every builder, `update` and a seeded `add` included, throws when it is an empty string for `locator`, `frameLocator`
-and `getByRole`, which Playwright cannot use, or, from JavaScript, not a value Playwright takes (`null`, a number or an
-object where a string belongs). In 2.x such a registration was stored and failed later, or registered without its
-value. A page object then fails in its fixture:
+Every builder, `update` and a seeded `add` included, throws when it is an empty string for `locator`, `frameLocator`,
+`getByRole` and `getById`, which Playwright cannot use, or, from JavaScript, not a value Playwright takes (`null`, a
+number or an object where a string belongs). In 2.x such a registration was stored and failed later, or registered
+without its value. A page object then fails in its fixture:
 
 ```text
 locator requires a non-empty selector for "main.list".
 getByRole requires a role value for "main.button@save".
+getById requires a non-empty id for "main.panel@settings".
 ```
 
 On `update` and a seeded `add`, leaving the first argument out still keeps the registered one, as in 2.x: the options
@@ -200,7 +202,7 @@ optional override comes first too; a registration kept in a variable may take it
 
 **Fails at run time.** In 2.x a registration kept in a variable could be given more steps at any time: after other
 registrations, after its path was resolved, from a page object's method in the middle of a test, and the registered
-locator changed with them. In 3.0.0 it ends at the next call on its registry (`add`, `getLocator`, `getNestedLocator`,
+locator changed with them. In 3.x it ends at the next call on its registry (`add`, `getLocator`, `getNestedLocator`,
 `getLocatorSchema`, `verify`, or resolving a query), and a later step, locator method or seeded override of it throws:
 
 ```text
@@ -219,14 +221,14 @@ See [Registering locators](/POMWright/docs/registering-locators/#registered-loca
 ### `remove` is `skip` and `unskip`
 
 **Compile error.** 2.x's `remove(subPath)` deleted a segment's definition, steps and description from the query, and a
-later `update()` brought back the definition only. 3.0.0's `skip(subPath)` leaves an ancestor out of the chain, and
+later `update()` brought back the definition only. 3.x's `skip(subPath)` leaves an ancestor out of the chain, and
 `unskip(subPath)` brings it back exactly as it was. The terminal path cannot be skipped:
 
 ```ts title="2.x" nocheck
 registry.getLocatorSchema("main.list.item").remove("main.list").getNestedLocator();
 ```
 
-```ts title="3.0.0"
+```ts title="3.x"
 import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.list" | "main.list.item">;
@@ -254,7 +256,7 @@ const row = registry.createReusable.locator("tr");
 registry.add("table.row@first", { reuse: row.nth(0) });
 registry.add("table.row@last", { reuse: row.nth("last") });
 // 2.x:   table.row@last resolved to locator('table').locator('tr').first().last(), the first row
-// 3.0.0: table.row@last resolves to locator('table').locator('tr').last()
+// 3.x: table.row@last resolves to locator('table').locator('tr').last()
 ```
 
 A seed method called as a statement no longer changes the seed; use its result:
@@ -264,7 +266,7 @@ row.filter({ hasText: "Total" });
 registry.add("table.row@total", { reuse: row });
 ```
 
-```ts title="3.0.0"
+```ts title="3.x"
 import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"table" | "table.row@total">;
@@ -314,18 +316,23 @@ every element. Call `nth` only when there is an index: `if (index !== undefined)
 ### `defineLocators()` runs after the constructor
 
 **Compiles.** 2.x called `defineLocators()` inside `super(...)`, before the subclass had set anything, so a definition
-that used a constructor argument, a field or an assignment in the constructor silently registered `undefined`. 3.0.0
+that used a constructor argument, a field or an assignment in the constructor silently registered `undefined`. 3.x
 runs it, followed by the check of the locators, right after the code that called `new` has finished, or at the first
 locator call if that comes earlier. Page objects need no change, with three consequences:
 
 - `new` no longer throws for a mistake in the locators; the fixture still fails before the test body, now with the
-  page object's label. A test that expects the throw uses the page object right after creating it:
+  page object's label. A test that expects the throw uses the page object right after creating it. Find the tests that
+  expect `new` to throw:
+
+  ```sh
+  grep -rn "expect(() => new" --include=*.ts --exclude-dir=node_modules .
+  ```
 
   ```ts title="2.x" nocheck
   expect(() => new BrokenPage(page)).toThrow();
   ```
 
-  ```ts title="3.0.0"
+  ```ts title="3.x"
   import { expect, type Page } from "@playwright/test";
   import { PageObject } from "pomwright";
 
@@ -355,7 +362,11 @@ See [Page objects](/POMWright/docs/page-objects/#when-definelocators-runs).
 
 **Compiles**, except with the `noImplicitOverride` compiler option. The method now has a default with no actions, and
 is called each time the actions run, after `goto()` and `expectThisPage()`, instead of once at construction, so it reads
-the page object's current state. Delete implementations that return `[]` or `null`:
+the page object's current state. Find the implementations, and delete those that return `[]` or `null`:
+
+```sh
+grep -rn "pageActionsToPerformAfterNavigation" --include=*.ts --exclude-dir=node_modules .
+```
 
 ```ts title="2.x" nocheck
 protected pageActionsToPerformAfterNavigation() {
@@ -365,7 +376,7 @@ protected pageActionsToPerformAfterNavigation() {
 
 With `noImplicitOverride`, an implementation that stays needs the `override` keyword, or TypeScript reports TS4114:
 
-```ts title="3.0.0"
+```ts title="3.x"
 import { expect, type Page } from "@playwright/test";
 import { PageObject } from "pomwright";
 
@@ -415,7 +426,7 @@ started with `/` and passed the rest to `page.goto` unchanged:
 await loginPage.navigation.gotoThisPage();
 ```
 
-```ts title="3.0.0"
+```ts title="3.x"
 import type { LoginPage } from "./login.page";
 
 declare const loginPage: LoginPage;
@@ -432,7 +443,7 @@ See [URLs and navigation](/POMWright/docs/urls-and-navigation/#navigating).
 ### `waitForLoadState` is `waitUntil`
 
 **Compile error.** In 2.x, `goto` and `expectThisPage` used `waitUntil` and `expectAnotherPage` used
-`waitForLoadState`. In 3.0.0 every method is one `page.waitForURL` or `page.goto` call that takes `waitUntil`, so
+`waitForLoadState`. In 3.x every method is one `page.waitForURL` or `page.goto` call that takes `waitUntil`, so
 `waitForLoadState` is removed from `NavigationOptions`, which gains `timeout`. Rename it in `navOptions` and in options
 passed to a call. POMWright no longer sets `"load"` itself; Playwright's default, also `"load"`, applies. See
 [URLs and navigation](/POMWright/docs/urls-and-navigation/#options-and-timeouts).
@@ -453,7 +464,7 @@ A base with a path moves the path into `urlPath`:
 super(page, "https://shop.example/app", "/login");
 ```
 
-```ts title="3.0.0"
+```ts title="3.x"
 import type { Page } from "@playwright/test";
 import { PageObject } from "pomwright";
 
@@ -484,7 +495,7 @@ origin itself has `https://shop.example/`, with the slash, where 2.x had `https:
 
 **Compile error**, where code used it as a `RegExp`. 2.x joined the two parts into one RegExp, so a base RegExp had to
 match up to the exact character where the path began, flags were dropped, and a `^` on the path broke the match. In
-3.0.0, on a page object with a RegExp `baseUrl` or `urlPath`, `fullUrl` is a `UrlMatcher`: the base is tested against
+3.x, on a page object with a RegExp `baseUrl` or `urlPath`, `fullUrl` is a `UrlMatcher`: the base is tested against
 the URL's origin and the path against the rest, each as written, with its own flags. Pass it to Playwright as before:
 `page.waitForURL(fullUrl)`, `expect(page).toHaveURL(fullUrl)`, `page.route(fullUrl, …)`.
 
@@ -493,7 +504,7 @@ expect(page.url()).toMatch(accountPage.fullUrl);
 const { source, flags } = accountPage.fullUrl;
 ```
 
-```ts title="3.0.0"
+```ts title="3.x"
 import { expect, type Page } from "@playwright/test";
 import type { UrlMatcher } from "pomwright";
 
@@ -509,7 +520,7 @@ A base RegExp that includes a path never matches, since the base only sees the o
 `$` on a base includes the port. A type of your own that tests `fullUrl` or `FullUrlTypeFromOptions` against `RegExp`,
 or a parameter typed `string | RegExp` that receives `fullUrl`, tests or takes `UrlMatcher` instead:
 
-```ts title="3.0.0"
+```ts title="3.x"
 import { expect, type Page } from "@playwright/test";
 import type { UrlMatcher } from "pomwright";
 
@@ -524,17 +535,17 @@ See [URLs and navigation](/POMWright/docs/urls-and-navigation/#pages-whose-url-v
 ### Waits end at the navigation timeout
 
 **Compiles.** In 2.x, `expectThisPage` retried an exact comparison of the URL without a limit of its own, and
-`expectAnotherPage` could pass while the browser was still on the page. In 3.0.0 each is one `page.waitForURL`, bounded
+`expectAnotherPage` could pass while the browser was still on the page. In 3.x each is one `page.waitForURL`, bounded
 by the project's `navigationTimeout` or a `timeout` in `navOptions` or in the call, and a failure names the page
 object, the URL it expected and the URL it found. `expectAnotherPage` waits until the browser has left, and fails at once
-if it came straight back. See [URLs and navigation](/POMWright/docs/urls-and-navigation/#options-and-timeouts).
+if it came straight back. This needs no change. See [URLs and navigation](/POMWright/docs/urls-and-navigation/#options-and-timeouts).
 
 ## Session storage
 
 ### Values are stored as written
 
 **Compiles.** 2.x JSON-encoded every value: `set({ token: "abc" })` reached the app as `"abc"`, with the quotes, and
-objects were stored as JSON. 3.0.0 stores strings exactly as given, as Playwright's `page.sessionStorage` does; a key
+objects were stored as JSON. 3.x stores strings exactly as given, as Playwright's `page.sessionStorage` does; a key
 that holds structured data is declared once with a codec, which also types it. The `set<T>` and `get<T>` type
 arguments are gone:
 
@@ -543,7 +554,7 @@ await accountPage.sessionStorage.set<User>({ user: { name: "Ada", age: 36 } });
 const { user } = await accountPage.sessionStorage.get<User>(["user"]);
 ```
 
-```ts title="3.0.0"
+```ts title="3.x"
 import type { Page } from "@playwright/test";
 import { json, PageObject } from "pomwright";
 
@@ -593,7 +604,7 @@ await loginPage.sessionStorage.setOnNextNavigation({ token: "eyJ…" });
 await loginPage.navigation.gotoThisPage();
 ```
 
-```ts title="3.0.0"
+```ts title="3.x"
 import type { LoginPage } from "./login.page";
 
 declare const loginPage: LoginPage;
@@ -623,11 +634,18 @@ See [Session storage](/POMWright/docs/session-storage/#the-methods).
 **Compiles.** `get(["token", "missing"])` returns `{ token: "abc", missing: null }`, where 2.x left `missing` out;
 `get("token")` returns the value or `null`. A check for `undefined` becomes a check for `null`. A literal `get([])` or
 `clear([])`, which meant every key in 2.x, no longer compiles, and a list that turns out empty reads or removes nothing:
-call `get()` or `clear()` for every key. See [Session storage](/POMWright/docs/session-storage/#the-methods).
+call `get()` or `clear()` for every key. Find the `get` calls of a page object's helper, and review the check after each,
+as after the `get` calls of a `SessionStorage` you create yourself:
+
+```sh
+grep -rn "sessionStorage.get(" --include=*.ts --exclude-dir=node_modules .
+```
+
+See [Session storage](/POMWright/docs/session-storage/#the-methods).
 
 ### A page object's helper stays on its origin
 
-**Fails at run time.** In 2.x a page object's `sessionStorage` read and wrote whatever origin the page was on. In 3.0.0 it
+**Fails at run time.** In 2.x a page object's `sessionStorage` read and wrote whatever origin the page was on. In 3.x it
 refuses another origin, naming both. Use the page object for that origin, or a `SessionStorage` without an origin. See
 [Session storage](/POMWright/docs/session-storage/#through-a-page-object).
 
