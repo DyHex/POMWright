@@ -2137,3 +2137,18 @@ only `@AGENTS.md`. Plan 43 runs before plan 42, whose doc edits then go into the
 Claude Code 2.1.277 and later read AGENTS.md when there is no `CLAUDE.md` and read `CLAUDE.md` instead when there is
 one, so the import loads the text once and older clients get it too; a symlink would check out on Windows as a file
 holding `AGENTS.md`, which Claude Code would read in its place.
+
+## 77. The contributor guide follows the folders; no `CLAUDE.md` (2026-10-28, plan 43 part C)
+
+**Settles**: the maintainer's request to load each folder's rules only when the work is there; revises decision 76's
+`CLAUDE.md`.
+
+**Decided**: an `AGENTS.md` in `src/`, `src/locators/`, `src/helpers/`, `test/`, `website/` and `.github/`; `docs/` keeps
+`repository.md`, `versioning.md` and `releases.md`; the root index names all nine with what loads each and when to read
+it first, and asks for every relevant file up front when a task spans several areas; each rule sits in the file that
+loads for every change that can trigger it; `CLAUDE.md` removed.
+
+**Why**: Claude Code loads a folder's `AGENTS.md` when it reads a file there or below, so the rules arrive without the
+agent choosing to read them; a `CLAUDE.md` in the working directory or above makes it read `CLAUDE.md` files only
+(its docs), which would stop every folder's `AGENTS.md` from loading; Codex reads only the root-to-start-folder chain,
+hence the index. The maintainer uses only current Claude Code clients and Codex.

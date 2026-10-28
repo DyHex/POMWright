@@ -161,6 +161,13 @@ getter under `experimentalDecorators`); E's test gap 7 (no page says that return
 without `await` leaves an unboxed step without a location, as Playwright's own); the British spellings left in specs and
 unit tests written before this branch, and `normaliseOrigin` (plan 38's notes); R-3.
 
+**For the second review** (the maintainer, 2026-10-28): segments run one at a time on the branch's latest commit;
+tests run for the baseline and then only where they add something; each segment maps and reviews its area blind, then
+reads the first review (re-running its reproductions), reconciles both mappings both ways, and hunts again where they
+disagree; agents write each finding to a file as it is confirmed and end with one line per finding; each segment reads
+the guide's files for its scope up front, and each segment's consolidation reads all of them up front (the root index
+asks for that when a task spans several areas). Results in `defect-review-result-2/`.
+
 **For the second review**, added to this folder in the same commit: report.md's ledger gains each finding's plan and
 commits; the issue drafts' numbers mapped to GitHub (01 to 07 are #53 to #59; #61 and #62 were filed from the
 walkthrough).

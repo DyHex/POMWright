@@ -1,13 +1,10 @@
 # AGENTS.md
 
-Persistent context and working rules for AI agents and humans contributing to POMWright. This file holds what every
-task needs; the rest of the contributor guide is in `docs/`, one file per area, and *The index* below says which file
-to read before which work. Read this file fully, and each file the index names for your task, before changing
+Persistent context and working rules for AI agents and humans contributing to POMWright. This file holds what every task
+needs; the rest of the contributor guide is in an `AGENTS.md` in six folders and in `docs/`, and *The index* below says
+which file to read before which work. Read this file fully, and each file the index names for your task, before changing
 anything. Repo-specific facts here override generic defaults. Last revised 2026-10-28, with the fixes from the 3.0.2
-defect review and the guide split into this index and `docs/`.
-
-`CLAUDE.md` holds only `@AGENTS.md`: Claude Code reads it in this file's place when both exist, and the import loads
-this file once (see [repository](docs/repository.md) for why it is not a symlink).
+defect review and the guide split by folder and by task.
 
 ## What POMWright is
 
@@ -28,16 +25,14 @@ this file once (see [repository](docs/repository.md) for why it is not a symlink
   `SessionStorageOptions`, `SeedOptions`, `Decoded` and `AllEntries` types, `PlaywrightReportLogger` with `LogEntry` and `LogLevel`, `step` with `StepDecorator`, `NavigationFor`, `NavigationOptions`,
   `ThisPageOptions` and `UrlMatcher`. Everything else under `src/` is internal even when it carries an `export`
   keyword, so renaming or deleting it is not by itself a breaking change.
-- How it is built and packaged: [repository](docs/repository.md); its versions and releases:
-  [versioning](docs/versioning.md).
+- How it is built and packaged: [docs/repository.md](docs/repository.md); its versions and releases: [docs/versioning.md](docs/versioning.md).
 
 ## How to work
 
 - **Plan first.** A contract change (anything documented behavior relies on) goes through a plan, never in silently
-  ([code conventions](docs/code-conventions.md)); [release planning](docs/release-planning.md) says how plans,
-  decisions and a release's working folder are kept.
+  ([src/AGENTS.md](src/AGENTS.md)); [docs/releases.md](docs/releases.md) says how plans, decisions and a release's working folder are kept.
 - **Verified claims only.** Every runtime or type claim in a plan, a page or a doc comment is backed by a probe or a
-  test run ([testing](docs/testing.md), *Probing*).
+  test run ([test/AGENTS.md](test/AGENTS.md#probing)).
 - **Mirror Playwright**, in the code and in the docs: POMWright builds on Playwright's features and keeps their
   names, and links playwright.dev for what Playwright owns.
 - **Commits only when asked.** Never commit on your own. When the user asks for one commit per execution step,
@@ -64,8 +59,7 @@ this file once (see [repository](docs/repository.md) for why it is not a symlink
   Use the line reporter in non-interactive runs, because the local html reporter opens on failure and blocks.
   Playwright's system libraries are a once-per-machine step (`pnpm -C test exec playwright install-deps`, with
   sudo; `install-deps --dry-run` lists what is missing without it).
-- The other test commands are in [testing](docs/testing.md), the site's scripts in
-  [documentation](docs/documentation.md).
+- The other test commands are in [test/AGENTS.md](test/AGENTS.md), the site's scripts in [website/AGENTS.md](website/AGENTS.md).
 
 ## Do not
 
@@ -74,22 +68,26 @@ this file once (see [repository](docs/repository.md) for why it is not a symlink
 - Change the Playwright peer range or the `test/` pin without a decision.
 - Treat `dist/` or `.pack/` as source when counting, grepping, or reasoning about behavior.
 - Commit without being asked, or commit what an AI wrote or helped write without its `Co-Authored-By:` trailer.
-- The other *Do not* items close each file in `docs/`: read them with the file.
+- The other *Do not* items close each file the index names: read them with the file.
 
 ## The index
 
-Read a file before the work its row names. A task that touches several areas reads each of their files.
+| File | What it holds | Loads by itself | Read it first when |
+| --- | --- | --- | --- |
+| [src/AGENTS.md](src/AGENTS.md) | the runtime's conventions, the `PageObject` lifecycle, pointers to rules held elsewhere | in Claude Code, when a file under `src/` is read | changing `index.ts` |
+| [src/locators/AGENTS.md](src/locators/AGENTS.md) | registration, queries, reuse, paths, frames, `getById`, the `STRATEGIES` table | in Claude Code, when a file under `src/locators/` is read | changing locator behavior, a locator spec or a locator page |
+| [src/helpers/AGENTS.md](src/helpers/AGENTS.md) | session storage, `@step` and where steps are reported, the logger and the `log` fixture, URLs and navigation | in Claude Code, when a file under `src/helpers/` is read | changing `src/fixture/`, the storage, navigation or URL specs, `test/step-locations/` or their pages |
+| [test/AGENTS.md](test/AGENTS.md) | the test commands, probing, the harness | in Claude Code, when a file under `test/` is read | running a test command beyond the ones below; probing a claim; changing `pack-*.sh`, `playwright.base.ts` or `vitest.config.ts` |
+| [website/AGENTS.md](website/AGENTS.md) | the site, the README, doc comments, the docs checks, the site's scripts | in Claude Code, when a file under `website/` is read | changing the README or a doc comment; adding an export or a public member; changing a message, chain or rendering a page shows; changing `scripts/check-*.mjs` |
+| [.github/AGENTS.md](.github/AGENTS.md) | the workflows, Dependabot, how Publish and Pages run, the packaging probes | in Claude Code, when a file under `.github/` is read | changing a script only CI runs or the packaging probes |
+| [docs/repository.md](docs/repository.md) | the repository map, packaging, the toolchain, how this guide is laid out and loads | no | adding a top-level file or folder; changing the toolchain, a dependency or this guide |
+| [docs/versioning.md](docs/versioning.md) | supported versions, bumps, changesets | no | any consumer-facing change, which needs a changeset; moving a supported version |
+| [docs/releases.md](docs/releases.md) | planning a release, its working folder, carrying it out, the Trusted Publisher, the backlog | no | planning or carrying out a release; writing a plan |
 
-| File | What it holds | Read it before |
-| --- | --- | --- |
-| [repository](docs/repository.md) | the repository map, packaging, the toolchain | adding a top-level file or folder; changing the toolchain or a dependency |
-| [testing](docs/testing.md) | the test commands, probing, the harness in `test/` | running, writing or changing tests or probes; changing `test/`, `pack-*.sh`, `playwright.base.ts` or `vitest.config.ts` |
-| [code conventions](docs/code-conventions.md) | style, public types, messages, call sites, refactors, dependencies | any change under `src/` or to `index.ts` |
-| [locator contracts](docs/locator-contracts.md) | registration, queries, reuse, paths, frames, `getById`, the `STRATEGIES` table | changing `src/locators/`, its unit tests, the `locatorRegistry/` specs or the locator pages |
-| [page object contracts](docs/page-object-contracts.md) | the `PageObject` lifecycle, URLs, navigation | changing `src/pageObject.ts`, `src/helpers/url.ts` or `src/helpers/navigation.ts`, their tests or their pages |
-| [session storage contracts](docs/session-storage-contracts.md) | values and codecs, turns, origin checks, `seed` | changing `src/helpers/sessionStorage.ts`, `sessionStorageSeed.ts` or `storageTurns.ts`, their tests or their pages |
-| [steps and logging](docs/steps-and-logging-contracts.md) | `@step`, where steps are reported, the logger, the `log` fixture | changing `stepDecorator.ts`, `callSite.ts`, `playwrightReportLogger.ts`, `thenable.ts`, `src/fixture/` or `test/step-locations/`, or a step a helper opens |
-| [versioning](docs/versioning.md) | supported versions, bumps, changesets, the changelog | any consumer-facing change, which needs a changeset; moving a supported version |
-| [CI and publishing](docs/ci-and-publishing.md) | the workflows, Dependabot, publishing, the packaging probes | changing `.github/` or a script only CI runs; a release |
-| [documentation](docs/documentation.md) | the site, the README, doc comments, the docs checks, the site's scripts | changing `website/`, the README or a doc comment; adding an export or a public member; changing a message, chain or rendering a page shows |
-| [release planning](docs/release-planning.md) | working folders, plans, decisions, the backlog | planning a release, or working from its folder |
+- Claude Code loads a folder's `AGENTS.md` when it reads a file in that folder or below it, together with the
+  `AGENTS.md` of every folder above; other clients, Codex among them, load only the files from the repository root to
+  the folder they started in. So with another client, or for work that touches a folder without reading a file in it,
+  read the folder's file yourself before working there.
+- Before starting, name the areas your task touches and read their files. When it spans several areas or the whole
+  repository (a review, a refactor across areas, a release, a plan that changes more than one area), read all of their
+  files first rather than as you reach each folder.

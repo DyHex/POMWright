@@ -1,8 +1,9 @@
-# CI and publishing
+# CI
 
-The workflows, Dependabot, publishing to npm and deploying the site. Read it before changing `.github/`, a script only
-CI runs, or the packaging probes, and before a release. Part of the contributor guide that [AGENTS.md](../AGENTS.md)
-indexes; AGENTS.md's rules apply here too.
+The workflows, Dependabot, how Publish and Pages run, and the packaging probes. Claude Code loads this file when it
+reads a file under `.github/`; with another client, read it before working there. Read it before changing a script only
+CI runs (`scripts/consumer-check.sh`, `scripts/ci-playwright-version.sh`) or the packaging probes too. Part of the
+contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules apply here too.
 
 ## The workflows
 
@@ -34,7 +35,7 @@ to GitHub Pages (`https://dyhex.github.io/POMWright/`) after `CI` succeeds on a 
 `publish.yaml` is and building the commit that run tested, only while that commit is `main`'s tip (a re-run of an older
 run deploys nothing), or by `workflow_dispatch`.
 
-## Publishing and the site
+## Publish and Pages
 
 - `publish.yaml` starts after `CI` succeeds, and `CI` runs only for pushes to `main` and includes the whole harness;
   its job condition also requires a push run on `main` in this repository. Pull requests run the same jobs through
@@ -45,25 +46,12 @@ run deploys nothing), or by `workflow_dispatch`.
   the newer commit's run continues the release, and publishes only when no changeset is pending. If the tested commit
   is a release commit whose version is not on npm, that version would never be published, so the run fails and names
   the commit.
-- After merging the Version Packages pull request, merge nothing with a changeset until that version is on npm: a
-  commit with a changeset merged while the release commit's `CI` runs, or before its Publish run, makes that run stop,
-  and the version is never published. If it
-  happens, revert the release commit before merging the next Version Packages pull request; that restores its
-  changesets, and the next release includes them.
-- Releases are published with npm Trusted Publishing: npmjs.com trusts `publish.yaml` of this repository, `pnpm
-  publish` exchanges the workflow's OIDC token, no npm token is stored, and npm records provenance. The Trusted
-  Publisher allows `npm publish`, so a release goes live when Publish runs, and merging the Version Packages pull
-  request is the human gate. A stage-only publisher, which holds each version until a maintainer approves it with 2FA,
-  was considered and not adopted: `changeset publish` runs `pnpm publish` and cannot stage, so it would need a publish
-  script of its own that also writes the tag and the GitHub release the action creates. npm expires a new Trusted
-  Publisher whose first publish has not succeeded within 2 days, so one is set up, or set up again, right before the
-  release it is for. After a release, check its attestation (`npm view pomwright@<version> dist --json`, or
-  `https://registry.npmjs.org/-/npm/v1/attestations/pomwright@<version>`); the workflow warns when it finds none.
 - `pages.yaml` deploys the documentation site after `CI` succeeds on a push to `main`, guarded as `publish.yaml` is,
   from the commit that run tested and only while it is `main`'s tip, so every merge updates the site once its checks
   have passed and deployments follow commit order, re-runs included; since nothing reaches
   `main` before it is ready to release, the site is ahead of npm only until the Version Packages pull request is
   merged.
+- A release itself (the merge rule, the Trusted Publisher, the attestation check): [docs/releases.md](../docs/releases.md).
 
 ## Packaging probes
 

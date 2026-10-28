@@ -7,7 +7,7 @@ This section explains how POMWright is built and why, for contributors and for u
 under a call. The [Docs](/POMWright/docs/installation/) show how to use each part and the [API](/POMWright/api/) what
 each method takes and throws; these pages explain the mechanism underneath and the reasons for it. The rules a change
 must keep are in the contributor guide, [AGENTS.md](https://github.com/DyHex/POMWright/blob/main/AGENTS.md) and the
-files in `docs/` it indexes; these pages explain the parts those rules protect.
+files it indexes; these pages explain the parts those rules protect.
 
 ## The terms
 

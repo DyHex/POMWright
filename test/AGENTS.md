@@ -1,9 +1,9 @@
 # Testing
 
-The test commands beyond the everyday ones in AGENTS.md, how to probe, and the harness in `test/`. Read it before
-running, writing or changing tests or probes, or changing `test/`, `pack-*.sh`, `playwright.base.ts` or
-`vitest.config.ts`. Part of the contributor guide that [AGENTS.md](../AGENTS.md) indexes; AGENTS.md's rules apply here
-too.
+The test commands beyond the everyday ones in the root AGENTS.md, how to probe a claim, and the harness in `test/`.
+Claude Code loads this file when it reads a file under `test/`; with another client, read it before working there. Read
+it before running these commands, probing a claim, or changing `pack-*.sh`, `playwright.base.ts` or `vitest.config.ts`
+too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules apply here too.
 
 ## Commands
 
@@ -20,7 +20,7 @@ too.
   the step-location check; then `scripts/check-doc-snippets.mjs`, every `ts` block of `website/src/content/docs` and the
   README against the installed package, `scripts/check-api-coverage.mjs`, the API reference and the doc comments against the
   installed declarations, and `scripts/check-error-messages.mjs`, *Error messages* against the messages `src/` throws
-  and the compile-error messages its types define (see [documentation](documentation.md)). `pack-test.sh` runs all seven, and after the harness
+  and the compile-error messages its types define (see [website/AGENTS.md](../website/AGENTS.md)). `pack-test.sh` runs all seven, and after the harness
   `playwright test -c playwright.steps.config.ts` (see *The harness* below).
 - `pnpm pack:version <version>` (`scripts/pack-version.sh`, run by hand only) builds and packs the package with the
   given semver version in the packed `package.json` only, as `pomwright-<version>.tgz` at the root (gitignored), for
@@ -115,6 +115,11 @@ too.
   the Playwright pin and at the latest 1.x in the peer range. A real behavior difference between browsers on one Playwright version uses the `browserName` fixture (as
   `sessionStorage.spec.ts` does for WebKit's iframe storage). Rendered locator strings depend on the Playwright
   version, not the browser.
+- When changing locator behavior: add focused specs next to the existing ones, keep the existing coverage (add,
+  do not replace), and assert against real DOM where possible rather than only against `toString()`. New specs
+  prefer DOM assertions over rendered locator strings; an existing string assertion is converted when a newer
+  Playwright renders it differently.
+- A spec follows the rules of the code it tests: [src/AGENTS.md](../src/AGENTS.md), [src/locators/AGENTS.md](../src/locators/AGENTS.md) and [src/helpers/AGENTS.md](../src/helpers/AGENTS.md).
 
 ## Do not
 

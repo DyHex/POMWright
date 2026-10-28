@@ -32,7 +32,15 @@ about 10,000 words, loaded into every session; most tasks need one or two of its
   lists `ls` shows). Reworded only where a cross-reference changes ("section 5" becomes a file link) or a sentence is
   split between two files.
 
-## The layout
+**C. The guide follows the folders** (added 2026-10-28 at the maintainer's request, after part B): a folder whose work
+has its own rules gets an `AGENTS.md`, which Claude Code loads when it reads a file in that folder or below it (checked
+with probe folders in this session); `docs/` keeps what applies by task. There is no `CLAUDE.md`: with one, Claude Code
+reads `CLAUDE.md` files only, so no folder's `AGENTS.md` would load (its docs, *When Claude Code reads AGENTS.md*);
+Codex reads only the `AGENTS.md` files from the root to the folder it starts in, so the root index names every file,
+with what loads it and when to read it first, and asks for every relevant file up front when a task spans several
+areas. A rule goes in the file that loads for every change that can trigger it. Part C supersedes the layout below.
+
+## The layout (part B; part C's is in its execution notes)
 
 | File | From today's AGENTS.md | Read before |
 | --- | --- | --- |
@@ -153,6 +161,37 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 - **Links**: *Internal → Documentation* links `docs/documentation.md`; the *Internal* index names AGENTS.md and the files
   it indexes; the README's *Contributing* names both. `git grep` for "section N" and "§N" outside the folder: none.
 - **Memory**: the plan-first note and its index line point at `docs/release-planning.md`.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 904 passed; `pnpm docs:build` 0 (53 pages); `pnpm pack-test --reporter=line`
+  exit 0 (1,746 passed, 3 skipped; doc snippets 226; api coverage 0 problems; error messages 0 problems; step locations
+  31).
+
+### Part C, 2026-10-28
+
+- Built by `split2.py` (scratchpad) from AGENTS.md at `88493f2`, as part B was: six nested files, `src/AGENTS.md` (the
+  conventions, the `PageObject` lifecycle, the files of `src/`, pointers to the rules held elsewhere), `src/locators/`
+  (the locator contracts and its files), `src/helpers/` (session storage, steps and logging, URLs and navigation, its
+  files), `test/` (the test commands, probing, the harness, and how a locator change is tested, back with the harness),
+  `website/` (the documentation rules, the site's files and scripts), `.github/` (the workflows, Publish and Pages, the
+  packaging probes); `docs/repository.md` (a short map, *The contributor guide*, packaging, the toolchain),
+  `docs/versioning.md`, `docs/releases.md` (release planning, the merge rule and the Trusted Publisher, the backlog).
+  `CLAUDE.md` and the eight `docs/` files part B made are removed. Words: root 1,299; nested 776 to 1,992; `docs/` 450
+  to 1,079; 11,717 in all.
+- The probes (folders `zz-probe-a` to `-d`, removed): a nested `CLAUDE.md` importing its `AGENTS.md` loaded both on a
+  Read; a parent folder's `CLAUDE.md`, and a parent folder's `AGENTS.md`, loaded when a file one folder below was read;
+  a lone nested `AGENTS.md` loaded too, but this session started before the root `CLAUDE.md` existed, so Claude Code's
+  docs decide that case: with a `CLAUDE.md` above, `AGENTS.md` files are not read. Codex's docs: the chain from the
+  root down to the working folder, built once at the start.
+- The ledger over the new files against `88493f2`: the same 30 intended differences as part B, 0 sentences in two files.
+  Every relative link resolves to a file and an existing heading (57; the two `(…)` of the changelog example are code).
+- Where each rule is triggered, and what loads it: a change under `src/` loads `src/AGENTS.md` (conventions, page
+  object) and, under `locators/` or `helpers/`, their file; `src/fixture/` and `pageObject.ts` reach the helpers' rules
+  through `src/AGENTS.md`'s pointer; a message, chain or doc comment changed in `src/` reaches `website/AGENTS.md` and a
+  consumer-facing change `docs/versioning.md` the same way; a spec under `test/` loads `test/AGENTS.md`, which points
+  to the contracts of the code it tests; a locator change reaches the locator testing rule through `src/locators/`'s
+  pointer; `index.ts`, the README, `scripts/check-*.mjs`, the CI-only scripts, `pack-*.sh`, the configs at the root, a
+  release, a changeset and the toolchain are task triggers, each named in the root index's last column.
+- Links: *Internal → Documentation* links `website/AGENTS.md`; the README's *Contributing* names the folder files and
+  `docs/`; plan 42's step lists name `.github/AGENTS.md`, `docs/releases.md` and `test/AGENTS.md`.
 - Checks: `pnpm lint` 0; `pnpm test:unit` 904 passed; `pnpm docs:build` 0 (53 pages); `pnpm pack-test --reporter=line`
   exit 0 (1,746 passed, 3 skipped; doc snippets 226; api coverage 0 problems; error messages 0 problems; step locations
   31).

@@ -1,8 +1,24 @@
 # Documentation
 
-How the site, the README and the doc comments are written and checked. Read it before changing `website/`, the README or
-a doc comment, adding an export or a public member, or changing a message, a chain or a rendering that a page shows.
-Part of the contributor guide that [AGENTS.md](../AGENTS.md) indexes; AGENTS.md's rules apply here too.
+How the site, the README and the doc comments in `src/` are written and checked. Claude Code loads this file when it
+reads a file under `website/`; with another client, read it before working there. Read it before changing the README or
+a doc comment, adding an export or a public member, changing a message, a chain or a rendering a page shows, or changing
+`scripts/check-*.mjs` too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules
+apply here too.
+
+## Files
+
+The documentation site's content (below): `src/content/docs/docs/`, the Docs section (Getting started, Principles, one
+page per concept, *Upgrading from 2.x*); `src/content/docs/api/`, the API reference (one page per class or group,
+`errors` and the index); `src/content/docs/internal/`, how POMWright works (`performance` among them); `snippets/`, the
+docs' example app (`login.page.ts`, `account.page.ts`, `orders.page.ts`, `checkout.page.ts`, `fixtures.ts`) that every
+page's examples import. Around them the Starlight site, a pnpm project of its own (`package.json`, `pnpm-lock.yaml`,
+exact versions): `astro.config.mjs` (base `/POMWright`, the link check, Mermaid, the edit links to `main`),
+`sidebar.mjs` (the three sections), `plugins/expressive-code-cut.mjs` (hides an example's `// ---cut---` prelude),
+`src/components/SiteTitle.astro` (the sections as tabs), `src/styles/custom.css`, `src/content/docs/index.mdx` (the home
+page).
+
+## Rules
 
 - The documentation is the Starlight site in `website/`, served at `https://dyhex.github.io/POMWright/`, with its
   content in `website/src/content/docs/`, in three sections: `docs/` to learn, `api/` to look up, `internal/` to
@@ -32,10 +48,10 @@ Part of the contributor guide that [AGENTS.md](../AGENTS.md) indexes; AGENTS.md'
   group, each with **Usage**, **Arguments** (name, type, *(optional)*, nested options indented), **Returns** and
   **Throws** (the real messages); a type of the page has a `## Name` section; types link to their API page or to
   playwright.dev. Internal pages state what a part is for, how it works and why, including the alternatives that were
-  rejected and the reason, with the files involved and no line numbers, and link the contributor docs rather than copy them. The
+  rejected and the reason, with the files involved and no line numbers, and link the contributor guide rather than copy it. The
   reasons behind a design live on the Internal pages; a change of design updates them.
 - The code and its tests decide what the docs say. Every chain, description and message a page shows is copied from a
-  probe against the build (see [testing](testing.md)); where a rendered string hides an option, the stored record is read instead.
+  probe against the build (see [test/AGENTS.md](../test/AGENTS.md#probing)); where a rendered string hides an option, the stored record is read instead.
   `test/tests/docs/docsChains.spec.ts` rebuilds every chain a page or the README shows in a `text` block, a code
   comment or the running text, one test per page, and compares it: a change to a chain, on the page or in the code, changes the spec with
   it. A change to a message, a rendering or a mechanism greps `website/` for the old text and updates the pages with it,

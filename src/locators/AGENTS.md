@@ -1,8 +1,30 @@
-# Locator contracts
+# Locators
 
 The registry, registration, query, reuse and resolution rules: what a locator path, a registration, a query and a seed
-promise. Read it before changing `src/locators/`, its unit tests, the `locatorRegistry/` specs or the locator pages.
-Part of the contributor guide that [AGENTS.md](../AGENTS.md) indexes; AGENTS.md's rules apply here too.
+promise. Claude Code loads this file when it reads a file under `src/locators/`; with another client, read it before
+working there. Read it before changing a locator spec or a locator page too. Part of the contributor guide that the root
+[AGENTS.md](../../AGENTS.md) indexes; its rules apply here too.
+
+## Files
+
+`locatorRegistry.ts` (registry, the open registration it ends at its next call, resolution with frames as `locator` plus
+`contentFrame()` and the any-frame segment, cycle detection, `verify()` with the opt-in `strictChains`, reuse by path
+and by seed through one seeded builder), `locatorRegistrationBuilder.ts` (`add(path).getByRole(...)` DSL, seeded
+registrations with `update`'s argument shapes, the boundary checks, no steps on an any-frame definition),
+`locatorUpdateBuilder.ts` (`update` as a same-strategy JSON Merge Patch, `replace` with Playwright's argument lists
+through a `Mode` type parameter; the class `LocatorUpdateBuilderInternal`, the public alias `LocatorUpdateBuilder`),
+`locatorQueryBuilder.ts` (`getLocatorSchema(path)` chain: `filter`, `nth`, `clearSteps`, `skip`/`unskip`, `describe`,
+`update`, `replace`, `getLocator`, `getNestedLocator`; the class `LocatorQueryBuilderInternal`, the public alias
+`LocatorQueryBuilder`), `reusableLocatorBuilder.ts` (`createReusable`; a seed is a value whose methods return new seeds;
+the class `ReusableLocatorFactoryInternal`, the public alias `ReusableLocatorFactory`), `types.ts` (definitions,
+`ReusableLocator`, `FilterDefinition`, `IndexSelector`, `OptionsPatch`, compile-time path validation), `utils.ts` (the
+`STRATEGIES` table, one row per strategy, that creation, cloning, the seeded patch, `update` and `replace` read; path
+validation with `LOCATOR_SCHEMA_PATH_WHITESPACE`, `assertStrategyPrimary` over `assertPrimaryValue` and `assertIdValue`,
+`assertDescription`, the id selector helpers, `createLocator`, `applyIndexSelector`, `isAnyFrameDefinition`,
+`isLocatorInstance`, `isReusableLocator`, `methodForStrategy`, `mergeOptions`, cloning and copying (`copyValue`,
+`copyFields`, `copyFilter`, `normalizeSteps`), patching).
+
+## Contracts
 
 - Preserve the fluent registry API and its semantics: `add(path).getByRole(...)`, seeded registrations,
   `getLocatorSchema(path)` followed by `update()`, `replace()`, `filter()`, `nth()`, `clearSteps()`, `skip()`,
@@ -57,10 +79,7 @@ Part of the contributor guide that [AGENTS.md](../AGENTS.md) indexes; AGENTS.md'
 - A `frameLocator(selector)` segment is `locator(selector)` plus its steps, then `contentFrame()` for the descendants
   and the `<iframe>` element as a terminal; `frameLocator()` is Playwright's any-frame locator, first segment only, no
   steps, no terminal form. Never reintroduce `target.frameLocator(selector)` with dropped steps.
-- When changing locator behavior: add focused specs next to the existing ones, keep the existing coverage (add,
-  do not replace), and assert against real DOM where possible rather than only against `toString()`. New specs
-  prefer DOM assertions over rendered locator strings; an existing string assertion is converted when a newer
-  Playwright renders it differently.
+- A locator change is tested as [test/AGENTS.md](../../test/AGENTS.md#the-harness-test) says for locator behavior.
 - Considered and not planned: validating `nth`'s index, which Playwright's `locator.nth` takes as given (rejecting
   `nth(undefined)`, documented as matching nothing, would be breaking).
 

@@ -1,8 +1,8 @@
 # Versions, bumps and changesets
 
 The supported versions, how a change is versioned, and how a changeset is written. Read it before any consumer-facing
-change, which needs a changeset, or before a supported version moves. Part of the contributor guide that
-[AGENTS.md](../AGENTS.md) indexes; AGENTS.md's rules apply here too.
+change, which needs a changeset, and before a supported version moves. Part of the contributor guide that the root
+[AGENTS.md](../AGENTS.md) indexes; its rules apply here too.
 
 ## Supported versions
 
@@ -15,7 +15,7 @@ change, which needs a changeset, or before a supported version moves. Part of th
 ## Changesets
 
 - The published version is `package.json`'s `version`, which changesets sets; the next release is the changesets in
-  `.changeset/`. Neither is restated in the contributor guide, so it does not go stale at a release. [release planning](release-planning.md) describes
+  `.changeset/`. Neither is restated in the contributor guide, so it does not go stale at a release. [docs/releases.md](releases.md) describes
   how release work is organized.
 - Changesets: `pnpm changeset` creates `.changeset/<name>.md`. The `publish.yaml` workflow opens a "Version
   Packages" PR and publishes when it merges. Do not edit `package.json#version` or `CHANGELOG.md` by hand.
@@ -25,7 +25,7 @@ change, which needs a changeset, or before a supported version moves. Part of th
   is a type corrected to what the docs promise and the runtime does, even when code that relied on the wrong type stops
   compiling (its changeset gives the migration). Providing what a released version's docs or doc comments promise but
   the package lacks is a patch too, unless it breaks code written against those docs, which is a major: an export such
-  a promise requires is one ([code conventions](code-conventions.md): every public method returns a type a consumer can import; *Types* and
+  a promise requires is one ([src/AGENTS.md](../src/AGENTS.md): every public method returns a type a consumer can import; *Types* and
   *TypeScript*: "Every type is imported from `pomwright`"; *Installation*: "Everything is imported from `pomwright`").
   Utility types that only shape parameters (`EntriesFor`, `NonEmpty`, `KeyOnly`, `GotoTarget`) are outside that
   promise. A new export, member, option or accepted input that no such promise requires is a minor; code written
