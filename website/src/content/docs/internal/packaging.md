@@ -44,11 +44,24 @@ consumer's declarations spell that type out, down to the registration builders, 
 
 ## Checked on the packed package
 
-The harness installs the tarball `pnpm pack` produced, extracted, so it tests what npm would publish. A spec in ESM,
-`test/tests/packaging/esmEntry.spec.mts`, checks both entries, that they share one copy, that deep imports fail, and the
-manifest. Two compile-only files check the published types: `publicTypes.typecheck.ts`, every export and the types
-that must and must not compile, and `publicTypes.emit.ts`, which a project with `declaration: true` must be able to
-emit without annotations: every public member returned on its own, so a type that is not exported fails it.
+The harness installs the tarball `pnpm pack` produced, extracted, so it tests what npm would publish. In
+`test/tests/packaging/`:
+
+- `esmEntry.spec.mts`, a spec in ESM, checks both entries, that they share one copy, that deep imports fail, and the
+  manifest.
+- `packageFiles.spec.ts` checks the installed package's exact file list: in `dist/`, `index.js` and `index.d.ts` from
+  tsup and `index.mjs` and `index.d.mts` from `scripts/write-esm-entry.mjs`, and nothing else, so a stale file from an
+  earlier build cannot ship.
+- Three compile-only files check the published types: `publicTypes.typecheck.ts`, every export and the types that must
+  and must not compile; `publicTypes.emit.ts`, which a project with `declaration: true` must be able to emit without
+  annotations, every public member returned on its own, so a type that is not exported fails it; and
+  `stepLegacyDecorators.typecheck.ts`, `@step` under `experimentalDecorators` as well as under the standard decorators.
+- `@step`'s legacy decorator calls are emitted by `tsc` and run against the package by the step-location check (see
+  [tests and checks](/POMWright/internal/tests-and-checks/#type-checks)).
+
+CI's `consumer` job installs the same tarball with npm into projects of their own: TypeScript under every module
+resolution and from 5.0 to the latest release, attw, Playwright's runner in a CommonJS and an ESM project, and Node 20
+loading both entries (see [CI](/POMWright/internal/tests-and-checks/#ci)).
 
 ## A build for testing before a release
 

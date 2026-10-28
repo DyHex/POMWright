@@ -162,7 +162,8 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   down after it), `step/`, `testApp/`, `docs/` (`docsChains.spec.ts`: every chain the site and the README show in a
   `text` block, a code comment or the running text, rebuilt through the packed package, one test per page), `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
   published entries, one shared copy, closed deep imports, the manifest; `packageFiles.spec.ts`, the installed
-  package's exact file list; `publicTypes.typecheck.ts` and `publicTypes.emit.ts`, compile-only). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through
+  package's exact file list; `publicTypes.typecheck.ts`, `publicTypes.emit.ts` and `stepLegacyDecorators.typecheck.ts`,
+  compile-only, the last also under `experimentalDecorators`; the emit check returns every public member on its own). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through
   `playwright.bench.config.ts`, never by `pack-test`. `testApp/urlForms.spec.ts` sweeps the printable ASCII
   characters through the URL each browser reports (but `# ? / % \`), with the known differences listed: Chromium's `|`
   in a path, and, on Node 20 and 22, whose `new URL` keeps a `^`, every browser's `%5E`. `testApp/urlHosts.spec.ts`
@@ -535,11 +536,15 @@ Rules:
   harness job) and in CI's `site` job.
 - `scripts/check-api-coverage.mjs` reads the installed declarations (`.pack/pomwright/dist/index.d.ts`, the extracted
   tarball in CI; a path argument overrides it) and fails on an export without an API page (its `title`) or a `## Name`
-  section, a public or protected member without a `### member` heading on that page, or an export, member or
-  constructor without a summary or a `@param` for each parameter, an export, method, class property or constructor
-  without a `@see` (the methods of what `add(path)` and `createReusable` return too), and a
-  `https://dyhex.github.io/POMWright/` URL in the declarations whose page or heading does not exist in
-  `website/src/content/docs`. A union, a conditional type or a tuple has no members to check. A Mermaid diagram renders in the browser, so the build does not catch its syntax:
+  section, a public or protected member without a `### member` heading in its own section (under the `## Name` of the
+  export that declares it, or, for the export a page is titled after, under the page's other `##` headings), or an
+  export, member or constructor without a summary or a `@param` for each parameter, an export, method, class property
+  or constructor without a `@see` (the methods of what `add(path)` and `createReusable` return too), a `@see` that is not
+  its own entry's link (an export's page or its `## Name` anchor; a member's or constructor's own `###` anchor, a
+  repeated heading's `-1` suffix included), a `https://dyhex.github.io/POMWright/` URL in the declarations whose page or
+  heading does not exist in `website/src/content/docs`, and an exported type missing from the type table of
+  *TypeScript* or linked there to anything but its API page or section. A union, a conditional type or a tuple has no
+  members to check. A Mermaid diagram renders in the browser, so the build does not catch its syntax:
   `scripts/check-diagrams.mjs` (`pnpm docs:diagrams`, and the `site` job) opens every page with a diagram in Chromium,
   light and dark, and fails on a diagram without an SVG, Mermaid's error diagram, or an error the page logs (a semicolon
   in a sequence message, or parentheses in an unquoted edge label, break one). How a diagram looks is still checked by

@@ -5,7 +5,7 @@ import type { TestInfo } from "@playwright/test";
  * A log level, lowest first: `"debug"`, `"info"`, `"warn"`, `"error"`. A logger records an entry at its current level
  * or above.
  *
- * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#loglevel
+ * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#loglevel-1
  */
 export type LogLevel = "debug" | "info" | "warn" | "error";
 

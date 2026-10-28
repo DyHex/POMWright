@@ -62,7 +62,7 @@ the errors thrown, with the real messages. The same text is in the doc comments,
 | --- | --- |
 | [`test`](/POMWright/api/fixtures/) | Playwright's `test` with the `log` fixture |
 | [`PlaywrightReportLogger`](/POMWright/api/class-playwrightreportlogger/) | a logger whose entries are attached to the report |
-| [`LogEntry`](/POMWright/api/class-playwrightreportlogger/#logentry), [`LogLevel`](/POMWright/api/class-playwrightreportlogger/#loglevel) | one entry; the levels |
+| [`LogEntry`](/POMWright/api/class-playwrightreportlogger/#logentry), [`LogLevel`](/POMWright/api/class-playwrightreportlogger/#loglevel-1) | one entry; the levels |
 | [`step`](/POMWright/api/step/) | the `@step` decorator |
 | [`StepDecorator`](/POMWright/api/step/#stepdecorator) | the type of the decorator `step()` returns |
 

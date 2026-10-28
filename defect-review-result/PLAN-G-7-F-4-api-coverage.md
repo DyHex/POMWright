@@ -62,4 +62,40 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-28.
+
+- Step 1, `check-api-coverage.mjs`:
+  - Sections: each API page is read heading by heading (fences skipped, anchors as the site makes them, a repeated one
+    with `-1`). A `## Name` of an export starts that export's section; the page's title owns the headings before it and
+    under its other `##` headings (Constructor, Methods, Properties, Locator methods, …). The builders of `add(path)` are
+    owned by the page titled Registration.
+  - A member's `### heading` must be in the section of the export that **declares** it, so `ThisPageOptions`'
+    `timeout` and `waitUntil` are found under `NavigationOptions`, whose type it intersects, as its section says. **Not
+    predicted**: the section scoping alone failed them (the page-wide lookup had found them).
+  - Every `@see` must be a link to the site and its entry's own: an export's page or that page at its own `## Name`
+    anchor; a member's or constructor's own `###` anchor in its section (`new X()` included). The `createReusable`
+    exception the plan names is no longer needed: since plan 13 the factory's methods link their own headings in the
+    `## ReusableLocatorFactory` section of *ReusableLocator*.
+  - The *TypeScript* table rule: every exported type (class, interface or type alias: 36) appears in *The types* as a
+    link whose target is its API page or section.
+  - The header comment describes the rules; its CI sentence ("CI passes the tarball's declarations") was wrong, since
+    CI extracts the tarball and the script reads its default path, and now says so.
+- **Found by the check**: `LogLevel`'s `@see` linked `class-playwrightreportlogger/#loglevel`, which is `LogEntry`'s
+  `### logLevel` field (it comes first on the page); the `## LogLevel` section is `#loglevel-1`. The same wrong link was
+  on the API index page. Both corrected (the doc comment in `src/helpers/playwrightReportLogger.ts`, `api/index.md`).
+- Step 2, *TypeScript*: **beyond the rows the plan names**, the table had no links at all, while the contract wants each
+  type linked to its API section: every type is now a link (computed from the pages' headings, then held by the check),
+  the storage rows gain `SessionStorageOptions<S>`, `SeedOptions`, `Decoded<S, K>` and `AllEntries<S>`, and the table
+  gains `ReusableLocatorFactory<Paths>` and `StepDecorator`.
+- Step 3: *Internal → Packaging*, *Checked on the packed package*, as a list: `esmEntry.spec.mts`, `packageFiles.spec.ts`,
+  the three compile-only files (`stepLegacyDecorators.typecheck.ts` under both decorator modes), the legacy-decorator
+  emit run by the step-location check, and CI's `consumer` job. AGENTS.md §4's `packaging/` list names the three files
+  and the emit check.
+- Step 4, tests (in place, restored; declarations planted in a scratch copy passed as the argument): SeedOptions' `###
+  origin` removed while SessionStorageOptions keeps its own; `get`'s `@see` to `#set`; `get`'s `@see` without a URL
+  (`@see SessionStorage.set`); `### get()` demoted to `####`; `### get()` removed while a fenced example shows it; a
+  type left out of the table; `LogLevel` linked to `#loglevel` in the table. Each failed with exit 1 and its problem
+  named; the repository is at 0 problems.
+- Step 5: AGENTS.md §9; *Internal → Tests and checks* (item 6) and *Internal → Documentation* (*The API is complete*).
+- Checks: `pnpm lint` 0; `pnpm test:unit` 900 passed; `pnpm pack-test --reporter=line` exit 0 (2,424 passed, 3
+  skipped; doc snippets 223; api coverage 0 problems; error messages 0 problems; step locations 31); `pnpm docs:build` 0.

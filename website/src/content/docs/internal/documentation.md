@@ -30,9 +30,10 @@ the same facts as the API pages.
   `ts`), and `nocheck` on any other page (make the example compile, with `// ---cut---` for the setup lines and
   `// @ts-expect-error` for a deliberate error). Blocks in other languages, `js`, `sh` or `text`, are not checked.
 - **The API is complete.** `scripts/check-api-coverage.mjs` reads the installed declarations and fails on an export
-  without a page or section, a member without a heading, a doc comment without a summary or a `@param`, a method or
-  class property without a `@see` to its heading, and a link to the site whose page or heading does not exist. So an
-  editor's hover always links the member's API entry, which links the Docs section.
+  without a page or section, a member without a heading in its own section, a doc comment without a summary or a
+  `@param`, a method or class property without a `@see` to its own heading, a link to the site whose page or heading
+  does not exist, and an exported type missing from *TypeScript*'s type table. So an editor's hover always links the
+  member's own API entry, which links the Docs section.
 - **Every message is listed.** `scripts/check-error-messages.mjs` compares *Error messages* with the code both ways:
   a message the source throws, or a compile-error message its types define, that the page does not show fails it, and
   so does a line on the page that no message ends as. Errors no user can reach are listed in the script with their

@@ -60,8 +60,10 @@ its own so that no `--reporter` given to the harness can switch it off.
 5. `scripts/check-doc-snippets.mjs`: every TypeScript example of the documentation and the README, compiled against
    the installed package (see [documentation](/POMWright/internal/documentation/)).
 6. `scripts/check-api-coverage.mjs`: every export of the installed declarations has an API page or section, every
-   member a heading on it, every export and member a doc comment with a summary and its parameters, every method and
-   class property a `@see` to its heading, and every link to the site a page and heading that exist.
+   member a heading in its own section, every export and member a doc comment with a summary and its parameters, every
+   method and class property a `@see` to its own heading (not merely one that exists), every link to the site a page
+   and heading that exist, and every exported type a row of the [type table](/POMWright/docs/typescript/#the-types),
+   linked to its API section.
 7. `scripts/check-error-messages.mjs`: *Error messages* against the code, both ways. Every message the source throws,
    read with the compiler API (a varying part matches anything, a ternary inside a message offers its branches), and
    every compile-error message its types define, must be on the page; every message line on the page must end as one

@@ -14,23 +14,27 @@ query, a module that returns a seed, a base class generic in its paths, or a pac
 
 | type | what it is |
 | --- | --- |
-| `PageObject<Paths, Options>` | the base class (a value and a type) |
-| `PageObjectOptions<Options>` | the constructor's options: `label`, `navOptions`, `sessionStorage`, `locators` |
-| `PageObjectTypeOptions` | the second type argument: `baseUrlType`, `urlPathType`, `storage` |
-| `BaseUrlTypeFromOptions`, `UrlPathTypeFromOptions`, `FullUrlTypeFromOptions`, `StorageTypeFromOptions` | the types those options produce |
-| `LocatorRegistry<Paths>` | a registry: `add`, `createReusable`, `getLocator`, `getNestedLocator`, `getLocatorSchema`, `verify` |
-| `LocatorRegistryOptions` | the registry's options: `strictChains` |
-| `AddAccessor`, `GetLocatorAccessor`, `GetNestedLocatorAccessor`, `GetLocatorSchemaAccessor` | the registry's methods as standalone functions, as `createRegistryWithAccessors` returns them |
-| `LocatorQueryBuilder<Paths, Path>` | a query, what `getLocatorSchema(path)` and its methods return |
-| `LocatorUpdateBuilder<Paths, Path, SubPath, Mode>` | what a query's `update()` and `replace()` return |
-| `ReusableLocator<Paths, Strategy>` | a seed from `createReusable` |
-| `FilterDefinition<Paths>` | the argument of `filter`, with paths as `has` and `hasNot` |
-| `IndexSelector` | the argument of `nth`: a number, `"first"` or `"last"` |
-| `LocatorSchemaPathFormat<Path>` | the path rules as a type |
-| `LocatorSchemaPathArgument<Path>` | the path parameter of `add` and the resolving methods |
-| `NavigationFor`, `NavigationOptions`, `ThisPageOptions`, `UrlMatcher` | the navigation helper, its options, a varying page's URL |
-| `SessionStorage`, `SessionStorageSchema`, `Codec<T>` | the storage helper, its schema, a codec |
-| `PlaywrightReportLogger`, `LogEntry`, `LogLevel` | the logger and its entries |
+| [`PageObject<Paths, Options>`](/POMWright/api/class-pageobject/) | the base class (a value and a type) |
+| [`PageObjectOptions<Options>`](/POMWright/api/types/#pageobjectoptions) | the constructor's options: `label`, `navOptions`, `sessionStorage`, `locators` |
+| [`PageObjectTypeOptions`](/POMWright/api/types/#pageobjecttypeoptions) | the second type argument: `baseUrlType`, `urlPathType`, `storage` |
+| [`BaseUrlTypeFromOptions`](/POMWright/api/types/#baseurltypefromoptions), [`UrlPathTypeFromOptions`](/POMWright/api/types/#urlpathtypefromoptions), [`FullUrlTypeFromOptions`](/POMWright/api/types/#fullurltypefromoptions), [`StorageTypeFromOptions`](/POMWright/api/types/#storagetypefromoptions) | the types those options produce |
+| [`LocatorRegistry<Paths>`](/POMWright/api/class-locatorregistry/) | a registry: `add`, `createReusable`, `getLocator`, `getNestedLocator`, `getLocatorSchema`, `verify` |
+| [`LocatorRegistryOptions`](/POMWright/api/class-locatorregistry/#locatorregistryoptions) | the registry's options: `strictChains` |
+| [`AddAccessor`](/POMWright/api/class-locatorregistry/#addaccessor), [`GetLocatorAccessor`](/POMWright/api/class-locatorregistry/#getlocatoraccessor), [`GetNestedLocatorAccessor`](/POMWright/api/class-locatorregistry/#getnestedlocatoraccessor), [`GetLocatorSchemaAccessor`](/POMWright/api/class-locatorregistry/#getlocatorschemaaccessor) | the registry's methods as standalone functions, as `createRegistryWithAccessors` returns them |
+| [`LocatorQueryBuilder<Paths, Path>`](/POMWright/api/class-locatorquerybuilder/) | a query, what `getLocatorSchema(path)` and its methods return |
+| [`LocatorUpdateBuilder<Paths, Path, SubPath, Mode>`](/POMWright/api/class-locatorupdatebuilder/) | what a query's `update()` and `replace()` return |
+| [`ReusableLocatorFactory<Paths>`](/POMWright/api/class-reusablelocator/#reusablelocatorfactory) | `createReusable`: the ten locator methods that make a seed |
+| [`ReusableLocator<Paths, Strategy>`](/POMWright/api/class-reusablelocator/) | a seed from `createReusable` |
+| [`FilterDefinition<Paths>`](/POMWright/api/types/#filterdefinition) | the argument of `filter`, with paths as `has` and `hasNot` |
+| [`IndexSelector`](/POMWright/api/types/#indexselector) | the argument of `nth`: a number, `"first"` or `"last"` |
+| [`LocatorSchemaPathFormat<Path>`](/POMWright/api/types/#locatorschemapathformat) | the path rules as a type |
+| [`LocatorSchemaPathArgument<Path>`](/POMWright/api/types/#locatorschemapathargument) | the path parameter of `add` and the resolving methods |
+| [`NavigationFor`](/POMWright/api/class-navigation/#navigationfor), [`NavigationOptions`](/POMWright/api/class-navigation/#navigationoptions), [`ThisPageOptions`](/POMWright/api/class-navigation/#thispageoptions), [`UrlMatcher`](/POMWright/api/class-navigation/#urlmatcher) | the navigation helper, its options, a varying page's URL |
+| [`SessionStorage`](/POMWright/api/class-sessionstorage/), [`SessionStorageSchema`](/POMWright/api/class-sessionstorage/#sessionstorageschema), [`Codec<T>`](/POMWright/api/class-sessionstorage/#codec) | the storage helper, its schema, a codec |
+| [`SessionStorageOptions<S>`](/POMWright/api/class-sessionstorage/#sessionstorageoptions), [`SeedOptions`](/POMWright/api/class-sessionstorage/#seedoptions) | the helper's options (`label`, `origin`, `schema`) and `seed`'s (`origin`) |
+| [`Decoded<S, K>`](/POMWright/api/class-sessionstorage/#decoded), [`AllEntries<S>`](/POMWright/api/class-sessionstorage/#allentries) | a key's value under a schema, and what `get()` returns without an argument |
+| [`PlaywrightReportLogger`](/POMWright/api/class-playwrightreportlogger/), [`LogEntry`](/POMWright/api/class-playwrightreportlogger/#logentry), [`LogLevel`](/POMWright/api/class-playwrightreportlogger/#loglevel-1) | the logger and its entries |
+| [`StepDecorator`](/POMWright/api/step/#stepdecorator) | the decorator `step()` returns |
 
 What `add(path)` returns is not exported: it registers as you chain and is not meant to be held. See the
 [API reference](/POMWright/api/) for each.
