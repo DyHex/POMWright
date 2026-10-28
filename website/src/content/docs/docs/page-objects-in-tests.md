@@ -64,7 +64,8 @@ export const test = base.extend<PageObjects>({
 ```
 
 Each page object is a fixture of its own. The file also re-exports Playwright's `expect`, so a test that asserts imports
-both from one place. A test imports `test` from that file and asks for the fixtures it uses:
+both from one place; under pnpm with `declaration: true`, that import also lets TypeScript name the Playwright types in
+`test`'s type (see [`declaration: true`](/POMWright/docs/typescript/#declaration-true)). A test imports `test` from that file and asks for the fixtures it uses:
 
 ```ts title="login.spec.ts"
 import { test } from "./fixtures";

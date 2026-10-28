@@ -42,6 +42,15 @@ consumer's declarations spell that type out, down to the registration builders, 
 `AddAccessor` is an interface that repeats `add`'s signature, a unit test holds the two to each other, and
 `LocatorRegistry` types its `add` with it instead of picking the method from the class.
 
+A type in a declaration file is written through a module specifier TypeScript can resolve from that file. Playwright
+declares its types in `playwright` and `playwright-core`, which `@playwright/test` re-exports. Under npm every package
+is at the top of `node_modules`, and the declarations name the declaring packages directly, for POMWright's values as
+for Playwright's own. Under pnpm only a project's own dependencies are there, so TypeScript can name Playwright's types
+only through `@playwright/test`, and it finds that way only when the compilation imports `@playwright/test`. A module
+that exports an extended `test` or a seed's `definition`, in a compilation where no file imports it, then fails with
+TS2883. POMWright cannot name the types for the consumer: the fix is the consumer's import, or an annotation with
+POMWright's own types (see [`declaration: true`](/POMWright/docs/typescript/#declaration-true)).
+
 ## Checked on the packed package
 
 The harness installs the tarball `pnpm pack` produced, extracted, so it tests what npm would publish. In

@@ -56,9 +56,10 @@ const log = new PlaywrightReportLogger({ current: "warn", initial: "warn" }, ent
 
 ### attachLogsToTest()
 
-Attaches the recorded entries to the test, one attachment per entry in call order, named with the time, the date, the
-level and the logger's name. The `log` fixture calls it when the test ends; call it in a fixture of your own. See
-[your own fixture](/POMWright/docs/logging/#your-own-fixture).
+Attaches every recorded entry, a child logger's included, one attachment per entry in call order, named with the time,
+the date, the level and the logger's name. Call it once, at the end of the test, in your own `log` fixture, which
+replaces POMWright's. With POMWright's `test`, the `log` fixture calls it; don't call it yourself, or every entry is
+attached twice. See [your own fixture](/POMWright/docs/logging/#your-own-fixture).
 
 **Usage**
 

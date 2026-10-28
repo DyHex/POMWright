@@ -66,8 +66,8 @@ settings change how code that uses POMWright is checked. None is required, and e
   `pageActionsToPerformAfterNavigation()`, as on any method that replaces one from a base class, and reports TS4114
   without it. With the setting off, the keyword is allowed but not needed. `defineLocators()` never needs it.
 - **`declaration: true`.** Off by default, and only needed by a project that publishes its page objects as a package.
-  When it is on, every exported value's type must be nameable. POMWright's types are, except in one pattern; see
-  [Locator modules](/POMWright/docs/locator-modules/#what-a-module-may-return).
+  When it is on, every exported value's type must be nameable. POMWright's types are, with two exceptions; see
+  [`declaration: true`](/POMWright/docs/typescript/#declaration-true).
 
 The examples in these docs are compiled with `strict` and `noUncheckedIndexedAccess`.
 

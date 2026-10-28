@@ -272,16 +272,17 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Attaches the recorded entries to the test, one attachment per entry in call order, each body exactly as logged:
-	 * `application/json` when the message is a JSON object or array, `text/plain` otherwise. Each name is the time, the
-	 * date, the level and the logger's name (`11:39:57 PM 10/16/2026 - WARN : [TestCase]`). The `log` fixture calls it
-	 * when the test ends; call it in a fixture of your own.
+	 * Attaches every recorded entry, a child logger's included, one attachment per entry in call order, each body exactly
+	 * as logged: `application/json` when the message is a JSON object or array, `text/plain` otherwise. Each name is the
+	 * time, the date, the level and the logger's name (`11:39:57 PM 10/16/2026 - WARN : [TestCase]`). Call it once, at
+	 * the end of the test, in your own `log` fixture, which replaces POMWright's. With POMWright's `test`, the `log`
+	 * fixture calls it; don't call it yourself, or every entry is attached twice.
 	 *
 	 * @param testInfo The test's `TestInfo`.
 	 * @param format `{ locale, timeZone }` for the time and date in the names; the `log` fixture passes Playwright's
 	 * `locale` and `timezoneId`. Each one left out is the project's `use.locale` or `use.timezoneId` from the config
 	 * (`testInfo.project.use`), and the machine's where the config sets none or `""`. A value set with `test.use()` reaches
-	 * only the fixtures, so a fixture of your own passes them to honour it.
+	 * only the fixtures, so a fixture of your own passes them to honor it.
 	 * @throws Before attaching anything, when the locale is not a BCP 47 language tag or the time zone is one Node's `Intl`
 	 * does not know: `attachLogsToTest: locale "en_US" is not a BCP 47 language tag; write it with hyphens, such as
 	 * "en-US"`, `attachLogsToTest: timeZone "Invalid/Zone" is not a time zone Node's Intl knows`.

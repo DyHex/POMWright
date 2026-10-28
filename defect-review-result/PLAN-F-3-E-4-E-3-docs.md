@@ -74,4 +74,37 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+2026-10-28.
+
+- Re-probed at this build, in a fresh pnpm project with the current tarball (`@playwright/test` 1.64.0, TypeScript
+  6.0.3, `--declaration --emitDeclarationOnly`, each module compiled alone) and the same under npm:
+  - pnpm: a module importing only from `pomwright` that exports an extended `test` (5 × TS2883) or a seed's `definition`
+    (TS2883) fails; with `export { expect } from "@playwright/test"`, with `import type {} from "@playwright/test"`, or
+    annotated with `ReusableLocator<Paths>["definition"]`, it emits, naming `import("@playwright/test")`; a function
+    returning a registration fails with TS4023.
+  - **Not predicted**: the failure depends on the compilation, not on the module. The same module compiled together with
+    any file that imports `@playwright/test` (an unrelated `import type { Page }` module) emits without error. So the
+    snippet check, whose example app imports `@playwright/test`, can compile the examples but cannot show the error;
+    the page states the rule as the compilation's ("only when the compilation imports `@playwright/test`") and advises
+    the import in the module that exports the value, which holds whatever else the compilation holds.
+  - **Not as the plan worded it**: under npm the declarations name `playwright/test` and `playwright-core` whether or
+    not the module imports `@playwright/test`, and so do those of a module that uses Playwright alone; it is TypeScript's
+    and Playwright's behaviour, not POMWright's, and the page says so in one sentence.
+  - The page's example (`list.locators.ts`, a `Page` taken from `@playwright/test`, a resolved locator returned, and an
+    annotated `definition`) emits alone under pnpm; the same module with its `Page` type taken through `pomwright`
+    instead fails with TS2883.
+- Pages: *TypeScript*, `declaration: true` (the two exceptions, the TS2883 message as `tsc` prints it, the example, the
+  npm sentence, a link to *Packaging*); *Installation*'s bullet links there ("with two exceptions"); *Page objects in
+  tests* and `api/fixtures.md` say the `expect` import also lets TypeScript name the Playwright types in `test`'s type;
+  *Internal → Packaging*, *Declarations*, the portability rule.
+- Logging: `attachLogsToTest`'s API entry and doc comment as the contract words them; *Logging to the report*, *Your own
+  fixture*: why to write one, the retry-based example, the outcome-based one from the walkthrough's probe (statuses as
+  the probe printed them: a failure in a fixture torn down after `log` is not seen, so the page says so), "such a fixture
+  is its only caller"; *Child loggers*: a child's entries are attached with the test's, and the teardown rule.
+- `api/step.md`'s `options` line as the contract words it; `step`'s doc comment unchanged.
+- Spelling: "honours" became "honors" in the two sentences rewritten (decision 52).
+- Test: `logging.spec.ts`, a fixture that depends on `log` and logs in its teardown; its entry is attached after the
+  test's (checked by the folder's auto fixture, torn down after `log`), on the three browsers.
+- Checks: `pnpm lint` 0; `pnpm test:unit` 900 passed; `pnpm pack-test --reporter=line` exit 0 (2,427 passed, the
+  teardown case on three browsers among them, 3 skipped; doc snippets 225; api coverage 0 problems; error messages 0
+  problems; step locations 31); `pnpm docs:build` 0.

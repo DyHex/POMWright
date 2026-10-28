@@ -61,7 +61,8 @@ export class Checkout {
 
 - `options` Object *(optional)*
 
-  `test.step()`'s options, such as `box` (report the step at the line that called the method) and `timeout`.
+  `test.step()`'s options, such as `box` (an error inside the method points at the line that called it, not at the line
+  inside the method; the step is reported at the calling line either way) and `timeout`.
 
 `@step` also works without parentheses, and then takes neither.
 

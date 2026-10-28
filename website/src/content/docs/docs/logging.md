@@ -118,11 +118,16 @@ export class CheckoutPage extends PageObject<"main"> {
 ```
 
 Its fixture passes the test's `log`: `checkoutPage: async ({ page, log }, use) => use(new CheckoutPage(page, log))`.
-Changing the level on any logger of the tree changes it for all of them.
+Changing the level on any logger of the tree changes it for all of them, and a child's entries are attached with the
+test's.
+
+An entry logged after the `log` fixture has attached the entries is not attached. A fixture that logs in its teardown
+depends on `log`, so Playwright tears it down first, and its entries are attached.
 
 ## Your own fixture
 
-To use the logger with Playwright's own `test`, create the fixture yourself:
+Write a `log` fixture of your own to use the logger with Playwright's own `test`, or to decide which levels are recorded
+and which are attached. This one records as POMWright's does, from `warn` on the first run and from `debug` on a retry:
 
 ```ts
 import { test as base } from "@playwright/test";
@@ -139,10 +144,34 @@ export const test = base.extend<{ log: PlaywrightReportLogger }>({
 });
 ```
 
-`attachLogsToTest(testInfo, { locale, timeZone })` attaches the entries. Without the second argument, or for a part
-of it left out, it uses the project's `use.locale` and `use.timezoneId` from the config (`testInfo.project.use`), and
-the machine's where the config sets none. A value set with `test.use()` reaches only the fixtures, so passing the
-`locale` and `timezoneId` fixtures, as above, also honours it.
+This one records every level, and when the test went as expected attaches only `warn` and `error`, otherwise every
+level:
+
+```ts
+import { test as base } from "@playwright/test";
+import { type LogEntry, PlaywrightReportLogger } from "pomwright";
+
+export const test = base.extend<{ log: PlaywrightReportLogger }>({
+  log: async ({ locale, timezoneId }, use, testInfo) => {
+    const entries: LogEntry[] = [];
+    const log = new PlaywrightReportLogger({ current: "debug", initial: "debug" }, entries, "TestCase");
+    await use(log);
+    if (testInfo.status === testInfo.expectedStatus) {
+      const kept = entries.filter((entry) => entry.logLevel === "warn" || entry.logLevel === "error");
+      entries.splice(0, entries.length, ...kept);
+    }
+    log.attachLogsToTest(testInfo, { locale, timeZone: timezoneId });
+  },
+});
+```
+
+`testInfo.status` is the outcome so far: the body, the hooks and the fixtures torn down before `log`. A failure in a
+fixture torn down after it is not seen.
+
+`attachLogsToTest(testInfo, { locale, timeZone })` attaches the entries; such a fixture is its only caller. Without the
+second argument, or for a part of it left out, it uses the project's `use.locale` and `use.timezoneId` from the config
+(`testInfo.project.use`), and the machine's where the config sets none. A value set with `test.use()` reaches only the
+fixtures, so passing the `locale` and `timezoneId` fixtures, as above, also honors it.
 
 ## Reference
 

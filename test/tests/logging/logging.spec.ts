@@ -152,3 +152,22 @@ test.describe("the locale and the time zone, checked when the test starts", () =
 		});
 	});
 });
+
+// a fixture that depends on log is torn down before it, so what it logs in its teardown is still attached
+const withTeardownLog = test.extend<{ loggingTeardown: undefined }>({
+	loggingTeardown: async ({ log }, use) => {
+		await use(undefined);
+		log.warn("logged in a fixture's teardown");
+	},
+});
+
+withTeardownLog(
+	"an entry a fixture that depends on log logs in its teardown is attached, after the test's",
+	async ({ log, afterLog, loggingTeardown }) => {
+		void loggingTeardown;
+		log.warn("logged in the test");
+		afterLog.check = (attachments) => {
+			expect(bodies(attachments)).toEqual(["logged in the test", "logged in a fixture's teardown"]);
+		};
+	},
+);

@@ -88,8 +88,43 @@ const isMatcher: AccountUrl extends UrlMatcher ? true : false = true;
 ## `declaration: true`
 
 A project that publishes page objects as a package compiles with `declaration: true`, which needs every exported value's
-type to be nameable. With the types above it is, except for a function that returns a registration by accident; see
-[Locator modules](/POMWright/docs/locator-modules/#what-a-module-may-return).
+type to be nameable. With the types above it is, with two exceptions:
+
+- **A registration.** What `add(path)` returns is not exported, by design: a registration ends at the next call on its
+  registry. Don't return one: give a function that registers a block body or `: void` (see
+  [Locator modules](/POMWright/docs/locator-modules/#what-a-module-may-return)), and share a locator by reuse by path or
+  by a seed instead (see [Reusing locators](/POMWright/docs/reusing-locators/)). Otherwise TypeScript reports TS4023.
+- **Playwright's types under pnpm.** A value that holds Playwright's types, such as an extended `test` or a seed's
+  `definition`, is named through `@playwright/test`. Under pnpm, TypeScript can do so only when the compilation imports
+  `@playwright/test`; when no file does, it reports TS2883: `The inferred type of 'test' cannot be named without a
+  reference to 'TestType' from '.pnpm/playwright@…/node_modules/playwright/test'. This is likely not portable. A type
+  annotation is necessary.` Import
+  from `@playwright/test` in the module that exports the value, as the fixture examples do with `expect`, or annotate
+  the value with POMWright's types, such as `ReusableLocator<Paths>["definition"]`.
+
+A module that takes the `Page` imports it from `@playwright/test` anyway, which is all it needs; the second function
+shows the annotation:
+
+```ts title="list.locators.ts"
+import type { Page } from "@playwright/test";
+import { createRegistryWithAccessors, type ReusableLocator } from "pomwright";
+
+type Paths = "list" | "list.items";
+
+export function listItems(page: Page) {
+  const { registry, getNestedLocator } = createRegistryWithAccessors<Paths>(page);
+  registry.add("list").locator("ul");
+  registry.add("list.items").getByRole("listitem");
+  registry.verify();
+  return getNestedLocator("list.items");
+}
+
+export const definitionOf = (seed: ReusableLocator<Paths>): ReusableLocator<Paths>["definition"] => seed.definition;
+```
+
+Under npm the declarations name `playwright/test` and `playwright-core` instead, as they do for code that uses
+Playwright alone. Why TypeScript needs the import is explained on
+[Packaging](/POMWright/internal/packaging/#declarations).
 
 ## Reference
 

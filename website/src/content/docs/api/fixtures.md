@@ -37,7 +37,9 @@ export const test = base.extend<PageObjects>({
 });
 ```
 
-`expect` comes from `@playwright/test`; POMWright does not export it. Guide:
+`expect` comes from `@playwright/test`; POMWright does not export it. Under pnpm with `declaration: true`, that import
+also lets TypeScript name the Playwright types in `test`'s type (see
+[`declaration: true`](/POMWright/docs/typescript/#declaration-true)). Guide:
 [page objects in tests](/POMWright/docs/page-objects-in-tests/).
 
 ---
