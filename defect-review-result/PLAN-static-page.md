@@ -158,3 +158,19 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   that open the static page (`testPage`, `testNav`, `getLocatorSchema`, `verify`, `step`) 20 times on chromium: 960
   passed. Screenshots before and after in the scratchpad, for the maintainer.
 - **Stop**: the commit adds a CI job; the maintainer pushes, and the PR run shows "Test server: no external requests".
+
+### After the commit: one test per page (2026-10-28, at the maintainer's request)
+
+The single test opened the 25 pages one after another (14.6 s); the routes were read over HTTP from `/__routes` because
+loading `server.js` in the spec's process ran its `app.listen(9000)`, a second server on a port in use, and HTTP is only
+available once the tests run, after Playwright has collected them. Now `server.js` exports the app and listens only when
+started as a program (`require.main === module`, which `node ./server.js` is), and the spec imports it and reads
+`app.router.stack` when the tests are collected: one test per page, in parallel (`mode: "parallel"`), each in its own
+`page` and `context`, the page in the test's title; `/__routes` is gone. Nothing else changes: `pnpm start`, both
+Playwright configs, `pack-test.sh`, `test-server-check.sh` and the CI job; nothing else loads `server.js`. 26 tests (25
+pages and the scan) in 2.4 s on 16 workers. The three breakages again, then reverted: four tests fail (`/`, `/testids`,
+`/zz-probe/:id`, the scan), each naming its URL; 23 pass. The parts of the contract and steps above that name
+`/__routes` and one test with a step per page are superseded by this note.
+- Checks for the follow-up: `pnpm lint` 0; `tsc --noEmit -p test` 0; `pnpm test:unit` 904 passed; `pnpm pack-test
+  --reporter=line` exit 0 (1,746 passed, 3 skipped; doc snippets 226; api coverage 0 problems; error messages 0
+  problems; step locations 31; the test-server check, 26 passed in 2.5 s).

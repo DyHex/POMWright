@@ -69,10 +69,11 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   `window.navigation`), `/sw.js` and `/sw-passthrough.js`: the session storage fixture,
   whose first script snapshots `sessionStorage` and which shows the navigation's type and `document.referrer`; hops to
   the second origin `http://127.0.0.1:9000`, the same server, by every kind of navigation; iframes, COOP and COEP
-  flags, and two service workers). New fixture pages go in as new routes, not into the static page. `/__routes` lists
-  every route, read from Express's router. No page loads anything from outside the test server: a slow host once made
-  the harness flaky. `test-server/externalRequests.spec.ts` opens every listed route and `/` in chromium and checks
-  every request, and scans `server.js` and `test-data/` for any other host (an XML namespace aside), through
+  flags, and two service workers). New fixture pages go in as new routes, not into the static page. `server.js` exports
+  the app and listens only when started as a program (`pnpm start`), so a spec can load it. No page loads anything from
+  outside the test server: a slow host once made the harness flaky. `test-server/externalRequests.spec.ts` reads every
+  route from Express's router and runs one test per page (every `GET` route and `/`, in parallel, in chromium) that
+  checks every request, and scans `server.js` and `test-data/` for any other host (an XML namespace aside), through
   `playwright.test-server.config.ts` and the root's `test-server-check.sh`, which `pack-test.sh` runs at its end
   outside CI and CI runs in a job of its own, once per run. A new route with a parameter needs a sample in the spec's
   `SAMPLES`; the spec fails until it has one.

@@ -1,13 +1,15 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import app from "../server";
 
 // No page of the test server loads anything from another host: a slow host once stalled a page's load event past the
 // navigation timeout and made the harness flaky, and a page that needs the internet tests the network, not POMWright.
-// Every route server.js lists at /__routes, and the static page at "/", is opened in a browser context of its own, and
-// every request that context reports is checked. The browser's own background traffic is not reported to a context
-// (and Playwright starts Chromium with it switched off). A scan of the server's source and its test data covers what
-// opening the routes cannot reach: the POST routes, and anything a page would load only on a click or a timer.
+// One test per page: every GET route of server.js, read from Express's router when the tests are collected, and the
+// static page at "/". Each page opens in a browser context of its own, and every request that context reports is
+// checked. The browser's own background traffic is not reported to a context (and Playwright starts Chromium with it
+// switched off). A scan of the server's source and its test data covers what opening the pages cannot reach: the POST
+// routes, and anything a page would load only on a click or a timer.
 
 const TEST_SERVER = "http://localhost:9000";
 const OWN_ORIGINS = new Set([TEST_SERVER, "http://127.0.0.1:9000"]);
@@ -19,11 +21,16 @@ const NAMESPACES = new Set([
 	"http://www.w3.org/1999/xlink",
 	"http://www.w3.org/1999/xhtml",
 ]);
-// A route with a parameter is opened with a sample; one without a sample fails the test until it gets one here.
+// A route with a parameter is opened with a sample; one without a sample fails its test until it gets one here.
 const SAMPLES: Record<string, string> = {
 	"/testpath/:color": "/testpath/red",
 	"/testnav/item/:id": "/testnav/item/42",
 };
+
+// Express 5 keeps its routes in app.router.stack, each with the methods it answers, which Express's types leave out.
+type Layer = { route?: { path: string; methods: Record<string, boolean> } };
+const layers = (app as unknown as { router: { stack: Layer[] } }).router.stack;
+const pagePaths = ["/", ...layers.flatMap((layer) => (layer.route?.methods.get ? [layer.route.path] : []))];
 
 function isOwn(url: string): boolean {
 	const { protocol, origin } = new URL(url);
@@ -37,37 +44,22 @@ function filesUnder(dir: string): string[] {
 	});
 }
 
-test("every page the test server serves loads only from the test server", async ({ browser, request }, testInfo) => {
-	test.setTimeout(180_000);
-	const routes: { method: string; path: string }[] = await (await request.get(`${TEST_SERVER}/__routes`)).json();
-	const paths = ["/", ...routes.filter((route) => route.method === "get").map((route) => route.path)];
-	const seen: Record<string, string[]> = {};
-	for (const routePath of paths) {
-		await test.step(routePath, async () => {
-			const target = routePath.includes(":") ? SAMPLES[routePath] : routePath;
-			expect.soft(target, `a sample for ${routePath} in SAMPLES`).toBeDefined();
-			if (!target) return;
-			const context = await browser.newContext();
-			const urls: string[] = [];
-			context.on("request", (req) => urls.push(req.url()));
-			const page = await context.newPage();
-			// a download, a 204, or a document that leaves at once can end the navigation without a page to load; the
-			// requests made until then are what is checked
-			await page.goto(`${TEST_SERVER}${target}`).catch(() => undefined);
-			await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => undefined);
-			await context.close();
-			seen[routePath] = urls;
-			expect.soft(urls, `${target} was requested`).toContain(`${TEST_SERVER}${target}`);
-			expect
-				.soft(
-					urls.filter((url) => !isOwn(url)),
-					`${target} loads only from the test server`,
-				)
-				.toEqual([]);
-		});
-	}
-	await testInfo.attach("requests.json", { body: JSON.stringify(seen, null, "\t"), contentType: "application/json" });
-});
+test.describe.configure({ mode: "parallel" });
+
+for (const routePath of pagePaths) {
+	test(`${routePath} loads only from the test server`, async ({ context, page }) => {
+		const target = routePath.includes(":") ? SAMPLES[routePath] : routePath;
+		expect(target, `a sample for ${routePath} in SAMPLES`).toBeDefined();
+		const urls: string[] = [];
+		context.on("request", (request) => urls.push(request.url()));
+		// a download, a 204, or a document that leaves at once can end the navigation without a page to load; the
+		// requests made until then are what is checked
+		await page.goto(`${TEST_SERVER}${target}`).catch(() => undefined);
+		await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => undefined);
+		expect.soft(urls, `${target} was requested`).toContain(`${TEST_SERVER}${target}`);
+		expect(urls.filter((url) => !isOwn(url))).toEqual([]);
+	});
+}
 
 test("the server's source and test data name no other host", () => {
 	const root = path.join(__dirname, "..");

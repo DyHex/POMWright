@@ -2160,7 +2160,8 @@ stylesheets and fonts from W3Schools, cdnjs and Google Fonts).
 
 **Decided**: the static page is rebuilt with a local stylesheet (the rules it uses, taken from `w3.css` and its theme,
 renamed without `w3-`), inline SVG icons, SVG placeholder images and neutral texts, nothing of W3Schools left; the server
-lists its routes at `/__routes`; `test/test-server/externalRequests.spec.ts` opens every route and `/` and scans the
+exports its app and listens only when started as a program, and `test/test-server/externalRequests.spec.ts` reads its
+routes from Express's router and runs one test per page (every route and `/`) and a scan of the
 source and test data; it runs once per run, on chromium, through `test-server-check.sh`: at the end of `pack-test` outside
 CI, and in CI in the job "Test server: no external requests", which the `build` gate requires with the rest of `checks`.
 
