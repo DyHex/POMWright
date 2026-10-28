@@ -62,13 +62,20 @@ Prototypes in the second review's probes folder, `G/triage/`: `guard.sh` with `s
 as the contract says; actionlint 1.7.12 and ShellCheck 0.11.0 (the pinned versions) pass on patched copies of
 `publish.yaml` and `pr.yaml`. Also checked: PR #60's merge ref has `main`'s tip as its first parent; changesets/action
 v2.1.2 neither publishes nor opens a pull request while only empty changesets are pending; `@changesets/read` 1.0.1
-ignores dotfiles, `README.md` (any case), `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`; npm's package document is served from
-a CDN cache with `max-age=300`; pnpm 12.14.0's provenance records `GITHUB_SHA`. Two flaws of the review's sketches were
-corrected: `git log -G'"version":'` named a commit that only changed the version line's formatting, and an npm read in
-an `if` condition turned an npm outage into a revert instruction.
+ignores dotfiles, `README.md` (any case), `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`; npm's package document is served
+from a CDN cache with `max-age=300`; pnpm 12.14.0's provenance records `GITHUB_SHA`. Two flaws of the review's sketches
+were corrected: `git log -G'"version":'` named a commit that only changed the version line's formatting, and an npm read
+in an `if` condition turned an npm outage into a revert instruction.
 
-Not verifiable before the rulesets exist: that bypassing `main: review` leaves `main: checks` in force in the merge
-box (GitHub's docs give each ruleset its own bypass list, but do not show the merge box). Step 4 of the guide checks it.
+From GitHub's docs (their source, `github/docs`, read 2026-10-28): merge queues are "available in any public
+repository owned by an organization, or in private repositories owned by organizations using GitHub Enterprise Cloud";
+a ruleset lets certain users "bypass the rules in the ruleset", and the rules of all rulesets targeting a branch are
+aggregated, the most restrictive version applying, alongside any branch protection rule; *Restrict deletions* and
+*Block force pushes* are selected by default; with force pushes blocked, administrators cannot rename the default
+branch unless they may bypass the ruleset. A depth-2 fetch of a merge commit reads its first parent's tree (probed).
+
+Not verifiable before the rulesets exist: that the merge box offers no bypass of `main: checks` while it offers one of
+`main: review`. Step 4 of the guide checks it.
 
 ## The guide: your steps
 
@@ -86,11 +93,10 @@ them depends on the npm Trusted Publisher, which still comes right before the me
 6. **Rules**, under *Branch rules*:
    - **Restrict deletions**: selected (the default).
    - **Block force pushes**: selected (the default).
-   - **Require status checks to pass**: select it. Under it, select **Require branches to be up to date before
-     merging**, leave **Do not require status checks on creation** unselected, click **Add checks**, type `build`, and
-     choose `build` with the GitHub Actions icon.
-   - Leave every other rule unselected. If the list offers **Require merge queue**, tell me: decision 79 assumed GitHub
-     offers it only to repositories of organizations.
+   - **Require status checks to pass** (GitHub's docs call it *Require status checks to pass before merging*): select
+     it. Under it, select **Require branches to be up to date before merging**, leave **Do not require status checks on
+     creation** unselected, click **Add checks**, type `build`, and choose `build` with the GitHub Actions icon.
+   - Leave every other rule unselected.
 7. Click **Create**.
 
 ### 2. Create the ruleset `main: review`
@@ -106,7 +112,8 @@ them depends on the npm Trusted Publisher, which still comes right before the me
      everyone.
    - **Require a pull request before merging**: select it. Under it: **Required approvals** `1`; select **Require review
      from Code Owners** and **Require conversation resolution before merging**; leave the other options as they are
-     (today's rule has none of them); keep every merge method allowed.
+     (an option GitHub selects by default, such as the extra approval for Copilot's unattributed pull requests, can
+     stay); keep every merge method allowed.
    - Leave every other rule unselected.
 6. Click **Create**.
 
@@ -143,7 +150,8 @@ minutes after the merge that made it stale. If a release cannot publish, pull re
 Publish run, or revert the Version Packages pull request (its revert passes at once).
 
 If `build` itself is broken (a flaky test, an outage) and something must merge, edit `main: checks` (set
-**Enforcement status** to **Disabled**), merge, and set it back to **Active**.
+**Enforcement status** to **Disabled**), merge (not while a release is publishing), and set it back to **Active**. The
+same goes for renaming `main`: GitHub refuses it while a ruleset nobody may bypass blocks force pushes.
 
 ## Implementation (Claude)
 
@@ -185,7 +193,7 @@ projects' names.
 ## Decisions checklist
 
 - [x] The `release` job in `pr.yaml` (decision 79, point 1)
-- [x] Two rulesets, set up by the maintainer, confirmed on PR #60 (point 2)
+- [x] Two rulesets, set up by the maintainer and to be confirmed on PR #60 (point 2)
 - [x] Publish's guard on `main`'s tip, no re-run exception (point 3)
 - [x] npm, not tags (point 4)
 - [x] One script, its test in the `lint` job, ShellCheck over both (point 5)
@@ -196,3 +204,16 @@ projects' names.
 
 One commit, `ci: hold pull requests while a release publishes; Publish judges main's tip`, with the decision, the
 finding statuses, the ledger rows and this plan in it; the maintainer pushes; then the guide's steps 1 to 4.
+
+### Execution notes
+
+- 2026-10-28, `5c3930e`: as planned. The test caught one weakness of its own before the commit: run against copies of
+  the script with a deliberate fault, it missed an npm failure read as an empty list in `pull-request` mode, until the
+  npm-down path also failed on any `::error::` line; every other faulty copy failed it.
+- 2026-10-28, a review of `5c3930e` at the maintainer's request found wording mistakes, corrected in the next commit:
+  `docs/releases.md` implied that auto-merge is allowed and garbled what a stray changeset does; decision 79 and this
+  plan's checklist said the rulesets were confirmed on PR #60; *Tests and checks* and decision 79 said the guard
+  reports a re-run that "gets past" the window (it stops one); `.github/AGENTS.md` read as if the scripts were pinned
+  and as if actionlint ran ShellCheck on them; the guide missed that a ruleset blocking force pushes keeps `main` from
+  being renamed; the merge queue's availability, first an assumption, is now quoted from GitHub's docs; lines past
+  120 columns were rewrapped. No code changed.

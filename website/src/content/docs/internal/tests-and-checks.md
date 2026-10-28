@@ -81,9 +81,9 @@ the jobs tested the merge commit, so after the base moved a documentation-only p
 untested merge.
 
 - **lint**: biome over the whole repository, warnings failing, then actionlint over the workflows (with shellcheck over
-  their scripts and over `scripts/release-check.sh`), its version and checksum pinned in the step, then the release
-  checks' test (`scripts/release-check.test.sh`), which runs every path of a release in throwaway repositories with a
-  fake npm.
+  their scripts, then over `scripts/release-check.sh` and its test), its version and checksum pinned in the step, then
+  the release checks' test (`scripts/release-check.test.sh`), which runs every path of a release in throwaway
+  repositories with a fake npm.
 - **package**: the unit tests, then one build and one tarball, kept as an artifact.
 - **harness**: that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs
   chromium, `main` all three, on Node 24; one more job per older LTS Node line, from the `engines` floor (20 and 22),
@@ -117,21 +117,23 @@ checks share `scripts/release-check.sh`:
   before the release was merged has to be updated, which runs the job again. The review rules sit in a ruleset of their
   own, which the maintainer may bypass to merge their own pull requests. The rulesets are described in
   [`.github/AGENTS.md`](https://github.com/DyHex/POMWright/blob/main/.github/AGENTS.md).
-- **Publish's guard** reports what gets past: a disabled ruleset, a re-run. A run that `workflow_run` starts checks out
-  the newest commit on `main` when it first starts, and a re-run keeps that checkout, so the guard reads `main`'s tip
-  from GitHub. While the tip has a version npm does not have and changesets are pending, every run fails and says to
-  revert the Version Packages pull request that set the version, after reading npm once more 5½ minutes later: npm
-  serves its list of versions with a five-minute cache, so it can still lack a version that was just published, and
-  reading it once would say to revert a published release. Otherwise a run goes on only when the commit `CI` tested is
-  the tip and the checkout; when `main` has moved on, the newer commit's own run continues the release, and publishes
-  the version when no changeset is pending.
+- **Publish's guard** reports what gets past the window, such as a merge while the ruleset was disabled, and stops a
+  re-run that `main` has moved past. A run that `workflow_run` starts checks out the newest commit on `main` when it
+  first starts, and a re-run keeps that checkout, so the guard reads `main`'s tip from GitHub. While the tip has a
+  version npm does not have and changesets are pending, every run fails and says to revert the Version Packages pull
+  request that set the version, after reading npm once more 5½ minutes later: npm serves its list of versions with a
+  five-minute cache, so it can still lack a version that was just published, and reading it once would say to revert a
+  published release. Otherwise a run goes on only when the commit `CI` tested is the tip and the checkout; when `main`
+  has moved on, the newer commit's own run continues the release, and publishes the version when no changeset is
+  pending.
 
-Rejected: GitHub's merge queue, which would queue the merges themselves, is not offered for a repository of a personal
-account; publishing as the last job of `CI`, on the commit it tested, would queue the work behind a release without any
-setting, but it is a larger change of the release path, and a failed publish would turn `CI` red and hold back the
-site; the git tags as the record of what is published, since the changesets action pushes a tag only after the
-publish, so a missing tag can follow a published release; and a guard that judges the tested commit, as the first one
-did, which missed a release commit whose own run never came and failed a release that the next run published.
+Rejected: GitHub's merge queue, which would queue the merges themselves, is offered only to repositories owned by an
+organization, and this one belongs to a personal account; publishing as the last job of `CI`, on the commit it tested,
+would queue the work behind a release without any setting, but it is a larger change of the release path, and a failed
+publish would turn `CI` red and hold back the site; the git tags as the record of what is published, since the
+changesets action pushes a tag only after the publish, so a missing tag can follow a published release; and a guard that
+judges the tested commit, as the first one did, which missed a release commit whose own run never came and failed a
+release that the next run published.
 
 Publish authenticates to npm with Trusted Publishing,
 which allows `npm publish` from the `npm` environment only, which only `main` may deploy to, so a version goes live when

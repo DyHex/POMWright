@@ -47,9 +47,10 @@ How Publish and Pages run is in [.github/AGENTS.md](../.github/AGENTS.md).
 
 - After the Version Packages pull request is merged, every other pull request into `main` waits until that version is
   on npm: its `build` holds in the *Release window* job, and since `main: checks` requires an up-to-date branch, a pull
-  request that passed earlier must be updated, which holds it too. Merge it when `build` turns green (with auto-merge,
-  a pull request you approved merges itself). A changeset merged before the version is on npm would make the release
-  skip it (*The rulesets on `main`* in [.github/AGENTS.md](../.github/AGENTS.md)).
+  request that passed earlier must be updated, which holds it too. Merge it when `build` turns green; if auto-merge is
+  allowed in the repository's settings, a pull request with auto-merge on and its review approved merges itself. A
+  changeset merged before then would leave that version unpublished: the next Version Packages pull request would bump
+  past it (*The rulesets on `main`* in [.github/AGENTS.md](../.github/AGENTS.md)).
 - Do not use **Update branch** on a Version Packages pull request: it merges `main` in without running
   `changeset version`, so a changeset merged since would ride along unversioned. The *Release window* job fails it;
   Publish rebuilds the pull request a few minutes after the merge that made it stale.

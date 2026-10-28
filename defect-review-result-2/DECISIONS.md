@@ -102,7 +102,9 @@ after `main` moved.
 2. **Two rulesets replace `main`'s branch protection rule**, set up by the maintainer (the plan's guide): `main: review`
    (a pull request, one approval, Code Owners, conversations resolved), which repository admins may bypass for pull
    requests only, since the only maintainer cannot approve their own pull requests; and `main: checks` (`build`, up to
-   date, no deletion, no force push), which nobody may bypass, so the hold binds every merge. Confirmed on PR #60.
+   date, no deletion, no force push), which nobody may bypass, so the hold binds every merge. GitHub's docs give each
+   ruleset its own bypass list ("the rules in the ruleset") and aggregate the rules of all rulesets; the merge box is
+   to be confirmed on PR #60 (the guide's step 4).
 3. **Publish's guard is the safety net**: it reads `main`'s tip from GitHub (a re-run keeps its old checkout); while the
    tip's version is not on npm and changesets are pending there, it reads npm once more after 5½ minutes (npm's list can
    be five minutes old after a publish), then fails and says to revert the Version Packages pull request that set the
@@ -114,17 +116,19 @@ after `main` moved.
    repositories with a fake npm, run by the `lint` job, and ShellCheck over both scripts there.
 6. **`docs/releases.md`** describes the hold and the **Update branch** trap in place of the rule "merge nothing with a
    changeset until that version is on npm".
-7. **Not adopted**: GitHub's merge queue (not offered for this repository, as far as known, since it belongs to a
-   personal account); publishing as `CI`'s last job (a larger change of the release path before its first Trusted
-   Publishing release, and a failed publish would turn `CI` red and hold back the site); a pull-request check without
-   the up-to-date rule (it judges the base its run saw); required reviewers on the `npm` environment (every Publish run
-   would wait, and the window would grow); a pull-request check in place of the guard (a ruleset edit or a re-run gets
-   past it).
+7. **Not adopted**: GitHub's merge queue (GitHub's docs: "available in any public repository owned by an organization,
+   or in private repositories owned by organizations using GitHub Enterprise Cloud"; this one belongs to a personal
+   account); publishing as `CI`'s last job (a larger change of the release path before its first Trusted Publishing
+   release, and a failed publish would turn `CI` red and hold back the site); a pull-request check without the
+   up-to-date rule (it judges the base its run saw); required reviewers on the `npm` environment (every Publish run
+   would wait, and the window would grow); a pull-request check in place of the guard (it neither sees a merge made
+   while a ruleset is disabled nor stops a stale re-run).
 8. **Replaces decision 4's points 2 and 4** (the check on the tested release commit; "the gap is accepted"). Its
    recovery by revert stays.
 
 **Why**: the window closes where it opens, at the merge, for every pull request, the maintainer's own included; Publish
-keeps the design of decisions 72 and 74; the guard catches what a ruleset edit or a re-run lets through.
+keeps the design of decisions 72 and 74; the guard reports a merge made while a ruleset is disabled, and stops a stale
+re-run.
 
 **Depends on / affects**: decision 4; item 28 (2G-5, 2H-1) edits the same section of *Tests and checks*. Plan:
 [PLAN-2G-1-2G-2-release-window.md](PLAN-2G-1-2G-2-release-window.md).
