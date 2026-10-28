@@ -55,4 +55,29 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## Execution notes
 
-(filled in at execution)
+### Part 1, 2026-10-28
+
+1. **Every plan done**: every row of PLANS.md is `done` (41 is this one), with its commits; the changeset tables'
+   statuses set to `done`.
+2. **The full harness**, on the tree of `1b15aff`:
+   - three browsers at the pin (1.64.0): `pnpm pack-test --reporter=line` exit 0, 1,746 passed, 3 skipped (plan 40's
+     run, on the same tree);
+   - the Node 20 floor: Node v20.20.2, `POMWRIGHT_TARBALL=pomwright-test-build.tgz bash pack-test.sh
+     --project=chromium --reporter=line` exit 0, 583 passed, as the floor job runs it;
+   - the latest Playwright 1.x, 1.64.1 (`scripts/ci-playwright-version.sh latest`), on three browsers:
+     `PLAYWRIGHT_VERSION=1.64.1 bash pack-test.sh --reporter=line` exit 0, 1,746 passed, 3 skipped; then
+     `git checkout -- package.json pnpm-lock.yaml test/package.json test/pnpm-lock.yaml`, `pnpm install
+     --frozen-lockfile` and `pnpm harness:install` (both exit 0; `test/` back on 1.64.0; the tree clean).
+   Each run's typecheck: doc snippets 226, api coverage 0 problems, error messages 0 problems; step locations 31.
+3. **The changesets**: 50 pending, all read against the final code: the 30 of PLANS.md's tables and 20 from this
+   branch's fixes before the review (2026-10-22 and 23). Each starts with a sentence and declares `patch`; every message
+   one quotes in a `text` block or a code span matches a message of the code (the error-message check's matcher run over
+   `.changeset/`: what it did not match is code, Playwright's own messages quoted as the behaviour before a fix, and the
+   never-applied list's continuation line); no claim contradicts a later plan. No correction. `pnpm changeset status`:
+   `pomwright` patch.
+4. **The packaging probes**: `bash scripts/consumer-check.sh pomwright-test-build.tgz` exit 0 (TypeScript 6.0.3 under
+   node10, node16 and nodenext in CommonJS and ESM, and bundler; TypeScript 5.0.4, 5.9.3, 6.0.3 and 7.0.2 in both
+   decorator modes; attw 0.18.5; the runner in a CommonJS and a `"type": "module"` project); the file-list spec is part
+   of the harness runs above. `engines` is `>=20`, as on `main`, so `EBADENGINE` is not needed.
+5. **Stop.** Left to the maintainer: the Trusted Publisher on npmjs.com; every Mermaid diagram checked by hand on the
+   site built locally (`pnpm docs:preview`); pushing, and CI's run on PR #60.

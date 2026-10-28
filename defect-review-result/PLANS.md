@@ -84,8 +84,8 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 37 | [*Performance*: the call counts, and a fresh benchmark](PLAN-G-6-benchmark.md) | 50 | none | | done, stopped (the round trip re-measured: 370–710 µs, not 950) | `f3a058a` |
 | 38 | [American spelling; *Organizing a project*](PLAN-H-6-spelling.md) | 52 | none | | done | `3e37c74` |
 | 39 | [The source-level specs evaluated against their twins](PLAN-T10-source-specs-evaluated.md) | 55 (phase 2) | none | stop | done after the maintainer's decisions (#71) | `a7d5ba7` |
-| 40 | [AGENTS.md complete; tooling comments current](PLAN-H-5-A-8-G-11-agents-and-tooling.md) | 47, 51 | none | if CI | done (no workflow changed) | filled by the next commit |
-| 41 | [Release gates and the folder audit](PLAN-release-gates-and-audit.md) | 2, 5, 8 | none | stop | planned | |
+| 40 | [AGENTS.md complete; tooling comments current](PLAN-H-5-A-8-G-11-agents-and-tooling.md) | 47, 51 | none | if CI | done (no workflow changed) | `1b15aff` |
+| 41 | [Release gates and the folder audit](PLAN-release-gates-and-audit.md) | 2, 5, 8 | none | stop | part 1 done, stopped for the maintainer | part 1: filled by the next commit |
 
 The order follows the decisions' dependencies: the clean build first (decision 33); CI early, so its stops come
 before the long run of code plans and every later push is linted and checked against TypeScript 5.0; C-1, B-4 and B-3
@@ -104,15 +104,15 @@ in plan 41 (decision 2, gate 3).
 
 | Changeset | Plan | What changes | Status |
 | --- | --- | --- | --- |
-| `batch-navigation-message.md` | 20 | every call checked before and after, the keys done and in flight, the final message | planned |
-| `boxed-step-location.md` | 16 | nested boxed steps and the navigation and storage helpers | planned |
+| `batch-navigation-message.md` | 20 | every call checked before and after, the keys done and in flight, the final message | done |
+| `boxed-step-location.md` | 16 | nested boxed steps and the navigation and storage helpers | done |
 | `options-read-like-playwright.md` | 11 | own non-enumerable properties | done |
 | `ended-registration-message.md` | 10 | `locator()`'s options and queries | done |
-| `sandboxed-document-message.md` | 22 | the message names the error page too | planned |
-| `storage-string-key-types.md` | 23 | patterns and branded keys, with the migration | planned |
-| `storage-schema-hint.md` | 24 | "Nothing checks that both are there" corrected | planned |
-| `caret-in-url-path.md` | 25 | `fullUrl` writes `^` as `%5E` | planned |
-| `export-storage-types.md` | 33 | the promise it fulfils, instead of "as every other public signature already allows" | planned |
+| `sandboxed-document-message.md` | 22 | the message names the error page too | done |
+| `storage-string-key-types.md` | 23 | patterns and branded keys, with the migration | done |
+| `storage-schema-hint.md` | 24 | "Nothing checks that both are there" corrected | done |
+| `caret-in-url-path.md` | 25 | `fullUrl` writes `^` as `%5E` | done |
+| `export-storage-types.md` | 33 | the promise it fulfils, instead of "as every other public signature already allows" | done |
 
 ### New changesets (all `patch`)
 
@@ -126,19 +126,19 @@ in plan 41 (decision 2, gate 3).
 | `failed-locator-method-unchanged.md` | 9 | a locator method that throws leaves the registration as it was | done |
 | `query-describe-any-frame.md` | 12 | a query's `describe()` on an any-frame terminal throws at the call | done |
 | `kept-query-sub-path-message.md` | 12 | a kept query's sub-path message | done |
-| `declaration-emit-registry.md` | 13 | the registry's values emit; `ReusableLocatorFactory` exported | planned |
-| `step-generic-methods.md` | 14 | `@step` on generic methods | planned |
-| `step-decorator-type.md` | 15 | `StepDecorator` exported | planned |
-| `page-object-check-at-new.md` | 16 | a page object's failed check points at the `new` line | planned |
-| `async-define-locators.md` | 17 | a Promise from `defineLocators()` fails with a labelled error | planned |
-| `step-promise-at-runtime.md` | 18 | `@step` on a method returning a plain value throws at run time | planned |
-| `log-locale-check.md` | 19 | the `log` fixture checks `locale` and `timezoneId` at setup | planned |
-| `about-blank-storage-order.md` | 21 | overlapping calls on an `about:blank` page keep their order | planned |
-| `seed-inherited-origin.md` | 21 | `seed` writes at once on a popup that inherited the origin | planned |
-| `never-applied-several-seeds.md` | 22 | the never-applied failure lists every seed | planned |
-| `schema-type-and-value.md` | 24 | a schema's type and value must agree | planned |
-| `navigation-for-goto.md` | 26 | a RegExp page's `navigation` is not a string page's | planned |
-| `cannot-resolve-label.md` | 26 | `goto(target)`'s `Cannot resolve` message names the page object | planned |
+| `declaration-emit-registry.md` | 13 | the registry's values emit; `ReusableLocatorFactory` exported | done |
+| `step-generic-methods.md` | 14 | `@step` on generic methods | done |
+| `step-decorator-type.md` | 15 | `StepDecorator` exported | done |
+| `page-object-check-at-new.md` | 16 | a page object's failed check points at the `new` line | done |
+| `async-define-locators.md` | 17 | a Promise from `defineLocators()` fails with a labelled error | done |
+| `step-promise-at-runtime.md` | 18 | `@step` on a method returning a plain value throws at run time | done |
+| `log-locale-check.md` | 19 | the `log` fixture checks `locale` and `timezoneId` at setup | done |
+| `about-blank-storage-order.md` | 21 | overlapping calls on an `about:blank` page keep their order | done |
+| `seed-inherited-origin.md` | 21 | `seed` writes at once on a popup that inherited the origin | done |
+| `never-applied-several-seeds.md` | 22 | the never-applied failure lists every seed | done |
+| `schema-type-and-value.md` | 24 | a schema's type and value must agree | done |
+| `navigation-for-goto.md` | 26 | a RegExp page's `navigation` is not a string page's | done |
+| `cannot-resolve-label.md` | 26 | `goto(target)`'s `Cannot resolve` message names the page object | done |
 
 ## Before PR #60 is marked ready
 
