@@ -1,7 +1,6 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
 import { createRegistryWithAccessors } from "pomwright";
-import { LocatorRegistryInternal } from "../../../../src/locators";
 
 // strictChains is an opt-in of a registry (and of a page object, through locators: { strictChains }): verify()
 // then requires every proper ancestor of every path to be registered. Without it an unregistered segment is a
@@ -10,7 +9,7 @@ import { LocatorRegistryInternal } from "../../../../src/locators";
 type Paths = "main" | "main.section" | "main.section.reset" | "app" | "app.frames" | "app.frames.any" | "anyFrame";
 
 const createRegistry = (page: Page, options?: { strictChains?: boolean }) =>
-	new LocatorRegistryInternal<Paths>(page, options);
+	createRegistryWithAccessors<Paths>(page, options).registry;
 const strict = (missing: string) => `strictChains requires every ancestor to be registered; ${missing}`;
 
 test.beforeEach(async ({ testFilters }) => {

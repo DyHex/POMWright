@@ -86,7 +86,7 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   extraction and `test/pnpm-lock.yaml` does not change with builds. `pnpm harness:install` packs and installs without
   running anything, for `pnpm typecheck` or a quick `pnpm -C test exec playwright test …` of one spec.
 - `pnpm typecheck` runs `tsc --noEmit -p test` against the installed package: specs, page objects, fixtures,
-  `playwright.base.ts`, the `src/locators` files the source-level specs import, and the compile-only probes; then
+  `playwright.base.ts`, and the compile-only probes; then
   `tsc -p test/tsconfig.declarations.json` (`declaration: true`, `noEmit`), the declaration emit of
   `tests/packaging/publicTypes.emit.ts`; then `tsc -p test/tsconfig.legacyDecorators.json`, `@step` under
   `experimentalDecorators` (`tests/packaging/stepLegacyDecorators.typecheck.ts`, also compiled under the standard
@@ -175,16 +175,14 @@ from two reviews of 3.0.1 and from the triage of the session storage findings th
   legacy decorator calls as `tsc` emits them (`pnpm typecheck` writes them; the spec fails clearly without); it needs no browser and
   runs from `test/playwright.steps.config.ts`, which `pack-test.sh` runs after the harness, so no `--reporter` given to
   the harness can switch it off. `testApp/sessionStorageOverlay.spec.ts` runs with Playwright's step overlay
-  (`video: { show: { test } }`), which delays a step's body. 86 spec files, about 14,000 lines. One spec file per DSL method,
+  (`video: { show: { test } }`), which delays a step's body. 60 spec files, about 9,900 lines. One spec file per DSL method,
   for example `add.getById.spec.ts` or `getLocatorSchema.update.spec.ts`; one DOM-level spec per fixture page under
   `testApp/`, for example `testIds.spec.ts`.
-- Know what each spec exercises. 26 `locatorRegistry/` specs import from `../../../../src/locators`, so they run
-  against source and can read the stored records. Each has a packed twin beside it, `<name>.packed.spec.ts`, with every
-  scenario under the same title through `pomwright`'s public API (`createRegistryWithAccessors`), observed on the DOM,
-  in Playwright's rendering of the same call (`locator.describe("")`) and in `description()`, instead of in the record.
-  Fixture-based specs and anything importing from `pomwright` (the page objects, the twins, `testApp/`, `skip`,
-  `replace`, `registry.binding`, `callSite/`, `logging/`) run against the packed tarball. A green source-level spec says
-  nothing about a stale tarball install.
+- Every spec imports `pomwright`, the packed tarball, never `src/`: what a spec checks is what npm would publish. The
+  `locatorRegistry/` specs observe a registration through the public API (`createRegistryWithAccessors`): on the DOM,
+  in Playwright's rendering of the same call (`locator.describe("")`) and in `description()`. What is stored inside, the
+  records, is the unit tests' (`src/locators/*.test.ts`), which read them directly; a check of a record belongs there,
+  not in a spec.
 - `validation.locatorSchemaPath.typecheck.ts` and `packaging/publicTypes.typecheck.ts` are compile-only probes:
   Playwright does not match the file names, and `pnpm typecheck` (in `pack-test` and CI) enforces their
   `@ts-expect-error` directives. `publicTypes.typecheck.ts` holds the public types against the published declarations

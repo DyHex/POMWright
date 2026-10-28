@@ -1,8 +1,10 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
-import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../../src/locators";
+import type { Locator, Page } from "@playwright/test";
+import { createRegistryWithAccessors } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
+/** A locator as Playwright renders it without a description, which a resolved locator otherwise prints instead. */
+const render = (locator: Locator) => `${locator.describe("")}`;
 
 test("add reuse by path returns filter, nth and describe", async ({ page }) => {
 	type LocatorSchemaPaths = "button" | "button.copy";
@@ -14,11 +16,9 @@ test("add reuse by path returns filter, nth and describe", async ({ page }) => {
 	const builder = registry.add("button.copy", { reuse: "button" });
 
 	expect(Object.keys(builder).sort()).toEqual(["describe", "filter", "nth"]);
-	expect(registry.get("button.copy")).toEqual({
-		definition: { role: "button", options: { name: "Submit" }, type: "role" },
-		locatorSchemaPath: "button.copy",
-		steps: [{ filter: { hasText: "Submit" }, kind: "filter" }],
-	});
+	expect(render(registry.getLocator("button.copy"))).toEqual(
+		render(page.getByRole("button", { name: "Submit" }).filter({ hasText: "Submit" })),
+	);
 });
 
 test("add reuse by path with empty string does not silently skip reuse", async ({ page }) => {
@@ -72,29 +72,20 @@ test("add reuse by path clones records so mutations do not leak", async ({ page 
 
 	registry.add("button.copy", { reuse: "button" });
 
-	expect(registry.get("button.copy")).toEqual({
-		definition: { role: "button", options: { name: "Submit" }, type: "role" },
-		locatorSchemaPath: "button.copy",
-		steps: [{ filter: { hasText: "Submit" }, kind: "filter" }],
-	});
+	const submit = render(page.getByRole("button", { name: "Submit" }).filter({ hasText: "Submit" }));
+	expect(render(registry.getLocator("button.copy"))).toEqual(submit);
 
-	registry.replace("button.copy", {
-		definition: { role: "link", options: { name: "Copy" }, type: "role" },
-		locatorSchemaPath: "button.copy",
-		steps: [{ filter: { hasText: "Copy" }, kind: "filter" }],
-	});
-
-	expect(registry.get("button.copy")).toEqual({
-		definition: { role: "link", options: { name: "Copy" }, type: "role" },
-		locatorSchemaPath: "button.copy",
-		steps: [{ filter: { hasText: "Copy" }, kind: "filter" }],
-	});
-
-	expect(registry.get("button")).toEqual({
-		definition: { role: "button", options: { name: "Submit" }, type: "role" },
-		locatorSchemaPath: "button",
-		steps: [{ filter: { hasText: "Submit" }, kind: "filter" }],
-	});
+	// the registry's own replace is internal; a query is the public way to change a copy, and it changes neither path
+	const changed = registry
+		.getLocatorSchema("button.copy")
+		.replace()
+		.getByRole("link", { name: "Copy" })
+		.clearSteps()
+		.filter({ hasText: "Copy" })
+		.getLocator();
+	expect(render(changed)).toEqual(render(page.getByRole("link", { name: "Copy" }).filter({ hasText: "Copy" })));
+	expect(render(registry.getLocator("button.copy"))).toEqual(submit);
+	expect(render(registry.getLocator("button"))).toEqual(submit);
 });
 
 test("add reuse by path throws when the source path is missing", async ({ page }) => {
@@ -167,7 +158,7 @@ test("a reuse value that is neither a path nor a seed throws one message and reg
 		expect(() => addUnsafe.call(registry, "button", { reuse })).toThrowError(
 			'reuse requires a registered path or a seed from createReusable for "button".',
 		);
-		expect(() => registry.get("button")).toThrowError('No locator schema registered for path "button".');
+		expect(() => registry.getLocator("button")).toThrowError('No locator schema registered for path "button".');
 	}
 });
 

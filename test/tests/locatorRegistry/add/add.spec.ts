@@ -1,8 +1,10 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
-import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../../src/locators";
+import type { Locator, Page } from "@playwright/test";
+import { createRegistryWithAccessors } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
+/** A locator as Playwright renders it without a description, which a resolved locator otherwise prints instead. */
+const render = (locator: Locator) => `${locator.describe("")}`;
 
 test("add regex-driven getBy* registrations to registry", async ({ page }) => {
 	type LocatorSchemaPaths =
@@ -26,41 +28,18 @@ test("add regex-driven getBy* registrations to registry", async ({ page }) => {
 	registry.add("regex.reuse.text", { reuse: reusableText }).getByText({ exact: true });
 	registry.add("regex.reusePath.text", { reuse: "regex.text" });
 
-	expect(registry.get("regex.text")).toEqual({
-		definition: { text: /Welcome/i, type: "text" },
-		locatorSchemaPath: "regex.text",
-		steps: [],
-	});
-	expect(registry.get("regex.label")).toEqual({
-		definition: { text: /Username/i, type: "label" },
-		locatorSchemaPath: "regex.label",
-		steps: [],
-	});
-	expect(registry.get("regex.placeholder")).toEqual({
-		definition: { text: /Enter your name/i, type: "placeholder" },
-		locatorSchemaPath: "regex.placeholder",
-		steps: [],
-	});
-	expect(registry.get("regex.altText")).toEqual({
-		definition: { text: /Sample Image/i, type: "altText" },
-		locatorSchemaPath: "regex.altText",
-		steps: [],
-	});
-	expect(registry.get("regex.title")).toEqual({
-		definition: { text: /Home Page/i, type: "title" },
-		locatorSchemaPath: "regex.title",
-		steps: [],
-	});
-	expect(registry.get("regex.reuse.text")).toEqual({
-		definition: { text: /Seeded/i, options: { exact: true }, type: "text" },
-		locatorSchemaPath: "regex.reuse.text",
-		steps: [],
-	});
-	expect(registry.get("regex.reusePath.text")).toEqual({
-		definition: { text: /Welcome/i, type: "text" },
-		locatorSchemaPath: "regex.reusePath.text",
-		steps: [],
-	});
+	expect(render(registry.getLocator("regex.text"))).toEqual(render(page.getByText(/Welcome/i)));
+	expect(render(registry.getLocator("regex.label"))).toEqual(render(page.getByLabel(/Username/i)));
+	expect(render(registry.getLocator("regex.placeholder"))).toEqual(render(page.getByPlaceholder(/Enter your name/i)));
+	expect(render(registry.getLocator("regex.altText"))).toEqual(render(page.getByAltText(/Sample Image/i)));
+	expect(render(registry.getLocator("regex.title"))).toEqual(render(page.getByTitle(/Home Page/i)));
+	expect(render(registry.getLocator("regex.reuse.text"))).toEqual(render(page.getByText(/Seeded/i, { exact: true })));
+	expect(render(registry.getLocator("regex.reusePath.text"))).toEqual(render(page.getByText(/Welcome/i)));
+	// the flags reach the page: case-insensitive matches
+	await page.setContent("<p>WELCOME home</p><p>seeded</p><p>goodbye</p>");
+	await expect(registry.getLocator("regex.text")).toHaveText("WELCOME home");
+	await expect(registry.getLocator("regex.reusePath.text")).toHaveText("WELCOME home");
+	await expect(registry.getLocator("regex.reuse.text")).toHaveText("seeded");
 });
 
 test("add prevents multiple locator type definitions", async ({ page }) => {
@@ -101,61 +80,38 @@ test("A LocatorSchemaPath can only be added once", async ({ page }) => {
 
 test("add getByRole overloads accept optional options and support chained steps", async ({ page }) => {
 	type LocalPath = "root" | "root.options" | "root.minimal";
-	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	const registry = createRegistryWithAccessors<LocalPath>(page).registry;
 
 	registry.add("root").locator("body");
 
 	registry.add("root.options").getByRole("button", { name: "opts" }).filter({ hasText: "filtered" }).nth("last");
 	registry.add("root.minimal").getByRole("button");
 
-	expect(registry.get("root.options")).toEqual({
-		locatorSchemaPath: "root.options",
-		definition: { type: "role", role: "button", options: { name: "opts" } },
-		steps: [
-			{ kind: "filter", filter: { hasText: "filtered" } },
-			{ kind: "index", index: "last" },
-		],
-	});
-
-	expect(registry.get("root.minimal")).toEqual({
-		locatorSchemaPath: "root.minimal",
-		definition: { type: "role", role: "button" },
-		steps: [],
-	});
+	expect(render(registry.getLocator("root.options"))).toEqual(
+		render(page.getByRole("button", { name: "opts" }).filter({ hasText: "filtered" }).last()),
+	);
+	expect(render(registry.getLocator("root.minimal"))).toEqual(render(page.getByRole("button")));
+	await page.setContent("<button>opts filtered</button><button>opts filtered too</button><button>opts</button>");
+	await expect(registry.getNestedLocator("root.options")).toHaveText("opts filtered too");
 });
 
 test("add overloads support other strategies with options and chained steps", async ({ page }) => {
 	type LocalPath = "root.text" | "root.locator" | "root.frame";
 
-	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	const registry = createRegistryWithAccessors<LocalPath>(page).registry;
 
 	registry.add("root.text").getByText("needle", { exact: true }).filter({ hasText: "filtered" }).nth(0);
 	registry.add("root.locator").locator(".selector", { hasText: "opt" }).filter({ hasText: "filtered" }).nth(0);
 	registry.add("root.frame").frameLocator("iframe[name=child]");
 
-	expect(registry.get("root.text")).toEqual({
-		locatorSchemaPath: "root.text",
-		definition: { type: "text", text: "needle", options: { exact: true } },
-		steps: [
-			{ kind: "filter", filter: { hasText: "filtered" } },
-			{ kind: "index", index: 0 },
-		],
-	});
-
-	expect(registry.get("root.locator")).toEqual({
-		locatorSchemaPath: "root.locator",
-		definition: { type: "locator", selector: ".selector", options: { hasText: "opt" } },
-		steps: [
-			{ kind: "filter", filter: { hasText: "filtered" } },
-			{ kind: "index", index: 0 },
-		],
-	});
-
-	expect(registry.get("root.frame")).toEqual({
-		locatorSchemaPath: "root.frame",
-		definition: { type: "frameLocator", selector: "iframe[name=child]" },
-		steps: [],
-	});
+	expect(render(registry.getLocator("root.text"))).toEqual(
+		render(page.getByText("needle", { exact: true }).filter({ hasText: "filtered" }).nth(0)),
+	);
+	expect(render(registry.getLocator("root.locator"))).toEqual(
+		render(page.locator(".selector", { hasText: "opt" }).filter({ hasText: "filtered" }).nth(0)),
+	);
+	// a frame segment as a terminal is the iframe element itself
+	expect(render(registry.getLocator("root.frame"))).toEqual(render(page.locator("iframe[name=child]")));
 });
 
 const STRATEGIES =
@@ -163,7 +119,7 @@ const STRATEGIES =
 
 test("filter, nth and describe need a locator strategy first", async ({ page }) => {
 	type LocalPath = "a";
-	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	const registry = createRegistryWithAccessors<LocalPath>(page).registry;
 
 	// the builder returned by add(path) has the ten strategies only; the runtime check covers JavaScript callers
 	const builder = registry.add("a") as unknown as {
@@ -180,7 +136,7 @@ test("filter, nth and describe need a locator strategy first", async ({ page }) 
 	expect(() => builder.describe("d")).toThrowError(
 		`describe() needs a locator strategy first for "a"; call ${STRATEGIES} before it.`,
 	);
-	expect(registry.getIfExists("a")).toBeUndefined();
+	expect(() => registry.getLocator("a")).toThrowError('No locator schema registered for path "a".');
 
 	// @ts-expect-error filter is not available before a strategy
 	const _filterBefore = registry.add("a").filter;
@@ -190,32 +146,20 @@ test("filter, nth and describe need a locator strategy first", async ({ page }) 
 	const _describeBefore = registry.add("a").describe;
 
 	registry.add("a").getByRole("button").filter({ hasText: "x" }).nth(0).describe("d");
-	expect(registry.get("a")).toEqual({
-		locatorSchemaPath: "a",
-		definition: { type: "role", role: "button" },
-		steps: [
-			{ kind: "filter", filter: { hasText: "x" } },
-			{ kind: "index", index: 0 },
-		],
-		description: "d",
-	});
+	expect(render(registry.getLocator("a"))).toEqual(render(page.getByRole("button").filter({ hasText: "x" }).nth(0)));
+	expect(registry.getLocator("a").description()).toEqual("d");
 });
 
 test("a seeded registration keeps filter, nth and describe before its override", async ({ page }) => {
 	type LocalPath = "seeded";
-	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	const registry = createRegistryWithAccessors<LocalPath>(page).registry;
 	const seed = registry.createReusable.getByRole("button", { name: "Submit" });
 
 	registry.add("seeded", { reuse: seed }).filter({ hasText: "x" }).nth(0).describe("d");
-	expect(registry.get("seeded")).toEqual({
-		locatorSchemaPath: "seeded",
-		definition: { type: "role", role: "button", options: { name: "Submit" } },
-		steps: [
-			{ kind: "filter", filter: { hasText: "x" } },
-			{ kind: "index", index: 0 },
-		],
-		description: "d",
-	});
+	expect(render(registry.getLocator("seeded"))).toEqual(
+		render(page.getByRole("button", { name: "Submit" }).filter({ hasText: "x" }).nth(0)),
+	);
+	expect(registry.getLocator("seeded").description()).toEqual("d");
 });
 
 test("the duplicate-registration message shows a Locator in a step as Playwright prints it", async ({ page }) => {

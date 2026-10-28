@@ -2066,3 +2066,22 @@ would test TypeScript, not POMWright). Agreed by the maintainer.
 
 **Why**: in a fresh pnpm project, the same module compiled alongside any file importing `@playwright/test` emits; under
 npm, a Playwright-only module's declarations name the same packages (plan 34's execution notes).
+
+## 71. The source-level locator specs are removed; their twins take the plain names (2026-10-28, plan 39)
+
+**Settles**: decision 55, phase 2 (plan 39's evaluation table).
+
+**Decided** (the maintainer chose all three recommendations):
+
+1. **Two checks move to the unit tests first**, the only ones no other test made: `get` and `getIfExists` hand out
+   copies (changing one leaves the stored record), and `verify()` changes no record, passing or failing; in
+   `src/locators/locatorRegistry.test.ts`, *a registered locator cannot change after registration*. Each was seen to
+   fail against a temporary break of its guarantee.
+2. **All 26 source-level specs under `test/tests/locatorRegistry/` are removed.** Eight made only the calls their twins
+   make; sixteen read records whose shape the unit tests already pin, or whose effect their twins check publicly; the
+   remaining two are covered by point 1.
+3. **The twins take the plain names** (`add.spec.ts`, …), and lose the header that called them twins.
+4. **Docs**: AGENTS.md §2 to §4 and *Internal → Tests and checks* describe the specs as they now are.
+
+**Why**: about 4,200 lines kept in step with their twins, and 681 test runs per full `pack-test`, for checks the unit
+tests (which run on the source) and the twins (which run on the package) already make.

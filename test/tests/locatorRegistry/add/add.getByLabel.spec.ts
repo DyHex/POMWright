@@ -1,23 +1,25 @@
-import { expect, test } from "@fixtures/testApp.fixtures";
-import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../../src/locators";
+import { expect, test } from "@playwright/test";
+import { createRegistryWithAccessors } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
-
-const errMsg = "No locator schema registered for path";
+// Checked on a page, and against Playwright's own locator built with the same arguments.
 
 test("add getByLabel to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "elementByLabel";
 
-	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	const { registry } = createRegistryWithAccessors<LocatorSchemaPaths>(page);
 
-	expect(() => registry.get("elementByLabel")).toThrowError(`${errMsg} "elementByLabel".`);
+	expect(() => registry.getLocator("elementByLabel")).toThrowError(
+		'No locator schema registered for path "elementByLabel".',
+	);
 
 	registry.add("elementByLabel").getByLabel("Username");
 
-	expect(registry.get("elementByLabel")).toEqual({
-		definition: { text: "Username", type: "label" },
-		locatorSchemaPath: "elementByLabel",
-		steps: [],
-	});
+	await page.setContent('<label>Username <input name="user"></label><label>Password <input name="pass"></label>');
+	await expect(registry.getLocator("elementByLabel")).toHaveCount(1);
+	await expect(registry.getLocator("elementByLabel")).toHaveAttribute("name", "user");
+	// the stored definition, as Playwright renders the same call without a description
+	expect(`${registry.getLocatorSchema("elementByLabel").describe("").getLocator()}`).toBe(
+		`${page.getByLabel("Username")}`,
+	);
+	expect(registry.getLocator("elementByLabel").description()).toBe("elementByLabel");
 });

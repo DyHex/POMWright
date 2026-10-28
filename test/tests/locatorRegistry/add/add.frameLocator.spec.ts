@@ -1,8 +1,8 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../../src/locators";
+import { createRegistryWithAccessors } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
 const errMsg = "No locator schema registered for path";
 const render = (locator: { describe: (description: string) => unknown }) => `${locator.describe("")}`;
@@ -16,15 +16,13 @@ test("add frameLocator to registry", async ({ page }) => {
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
-	expect(() => registry.get("iframe")).toThrowError(`${errMsg} "iframe".`);
+	expect(() => registry.getLocator("iframe")).toThrowError(`${errMsg} "iframe".`);
 
 	registry.add("iframe").frameLocator("iframe#my-frame");
 
-	expect(registry.get("iframe")).toEqual({
-		definition: { selector: "iframe#my-frame", type: "frameLocator" },
-		locatorSchemaPath: "iframe",
-		steps: [],
-	});
+	// a frame segment as a terminal is the iframe element itself
+	expect(render(registry.getLocator("iframe"))).toEqual(render(page.locator("iframe#my-frame")));
+	expect(registry.getLocator("iframe").description()).toEqual("iframe");
 });
 
 test("a frame segment is locator(selector) plus its steps, then contentFrame() for the descendants", async ({
@@ -36,7 +34,6 @@ test("a frame segment is locator(selector) plus its steps, then contentFrame() f
 	registry.add("frames").frameLocator("iframe").nth(1);
 	registry.add("frames.button").getByRole("button");
 
-	expect(registry.get("frames").steps).toEqual([{ kind: "index", index: 1 }]);
 	expect(render(registry.getNestedLocator("frames.button"))).toEqual(
 		render(page.locator("iframe").nth(1).contentFrame().getByRole("button")),
 	);
@@ -98,17 +95,10 @@ test("a seeded frame keeps its step, accepts more, and inherits on an omitted se
 	const seed = registry.createReusable.frameLocator("iframe").nth(1);
 
 	registry.add("frames", { reuse: seed }).filter({ visible: true });
-	expect(registry.get("frames")).toEqual({
-		locatorSchemaPath: "frames",
-		definition: { type: "frameLocator", selector: "iframe" },
-		steps: [
-			{ kind: "index", index: 1 },
-			{ kind: "filter", filter: { visible: true } },
-		],
-	});
 
+	// an override with no selector keeps the seed's
 	registry.add("frames.copy", { reuse: seed }).frameLocator(undefined);
-	expect(registry.get("frames.copy").definition).toEqual({ type: "frameLocator", selector: "iframe" });
+	expect(render(registry.getLocator("frames.copy"))).toEqual(render(page.locator("iframe").nth(1)));
 	expect(render(registry.getLocator("frames"))).toEqual(
 		render(page.locator("iframe").nth(1).filter({ visible: true })),
 	);
@@ -121,13 +111,13 @@ test("frameLocator('') throws on every builder and registers nothing", async ({ 
 	expect(() => registry.add("frames").frameLocator("")).toThrowError(
 		'frameLocator requires a non-empty selector for "frames".',
 	);
-	expect(registry.getIfExists("frames")).toBeUndefined();
+	expect(() => registry.getLocator("frames")).toThrowError(`${errMsg} "frames".`);
 
 	const seed = registry.createReusable.frameLocator("iframe");
 	expect(() => registry.add("frames.copy", { reuse: seed }).frameLocator("")).toThrowError(
 		'frameLocator requires a non-empty selector for "frames.copy".',
 	);
-	expect(registry.get("frames.copy").definition).toEqual({ type: "frameLocator", selector: "iframe" });
+	expect(render(registry.getLocator("frames.copy"))).toEqual(render(page.locator("iframe")));
 
 	expect(() => registry.createReusable.frameLocator("")).toThrowError(
 		"createReusable.frameLocator requires a non-empty selector.",
@@ -177,11 +167,6 @@ test("the any-frame segment has no element: no terminal form, no reference, no s
 	expect(result).toBeUndefined();
 	registry.add("anyFrame.button").getByRole("button");
 
-	expect(registry.get("anyFrame")).toEqual({
-		locatorSchemaPath: "anyFrame",
-		definition: { type: "frameLocator" },
-		steps: [],
-	});
 	expect(render(registry.getNestedLocator("anyFrame.button"))).toEqual("frameLocator().getByRole('button')");
 	expect(render(registry.getLocator("anyFrame.button"))).toEqual("getByRole('button')");
 

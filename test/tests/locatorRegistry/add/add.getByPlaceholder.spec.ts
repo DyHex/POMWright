@@ -1,23 +1,25 @@
-import { expect, test } from "@fixtures/testApp.fixtures";
-import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../../src/locators";
+import { expect, test } from "@playwright/test";
+import { createRegistryWithAccessors } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
-
-const errMsg = "No locator schema registered for path";
+// Checked on a page, and against Playwright's own locator built with the same arguments.
 
 test("add getByPlaceholder to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "elementByPlaceholder";
 
-	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	const { registry } = createRegistryWithAccessors<LocatorSchemaPaths>(page);
 
-	expect(() => registry.get("elementByPlaceholder")).toThrowError(`${errMsg} "elementByPlaceholder".`);
+	expect(() => registry.getLocator("elementByPlaceholder")).toThrowError(
+		'No locator schema registered for path "elementByPlaceholder".',
+	);
 
 	registry.add("elementByPlaceholder").getByPlaceholder("Enter your name");
 
-	expect(registry.get("elementByPlaceholder")).toEqual({
-		definition: { text: "Enter your name", type: "placeholder" },
-		locatorSchemaPath: "elementByPlaceholder",
-		steps: [],
-	});
+	await page.setContent('<input placeholder="Enter your name"><input placeholder="Enter your email">');
+	await expect(registry.getLocator("elementByPlaceholder")).toHaveCount(1);
+	await expect(registry.getLocator("elementByPlaceholder")).toHaveAttribute("placeholder", "Enter your name");
+	// the stored definition, as Playwright renders the same call without a description
+	expect(`${registry.getLocatorSchema("elementByPlaceholder").describe("").getLocator()}`).toBe(
+		`${page.getByPlaceholder("Enter your name")}`,
+	);
+	expect(registry.getLocator("elementByPlaceholder").description()).toBe("elementByPlaceholder");
 });

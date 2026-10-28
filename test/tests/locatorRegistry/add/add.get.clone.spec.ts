@@ -1,10 +1,11 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
 import { createRegistryWithAccessors } from "pomwright";
-import { LocatorRegistryInternal } from "../../../../src/locators";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
+// get and getIfExists are internal; their clone-on-read shows publicly as a query that is a copy: changing it leaves
+// the registry as registered
 test("registry.get returns a cloned definition copy", async ({ page }) => {
 	type LocatorSchemaPaths = "button";
 
@@ -12,35 +13,14 @@ test("registry.get returns a cloned definition copy", async ({ page }) => {
 
 	registry.add("button").getByRole("button", { name: "Submit", exact: true });
 
-	const firstRecord = registry.get("button");
+	await page.setContent("<button>Submit</button><button>Mutated</button>");
+	const changed = registry.getLocatorSchema("button").update().getByRole({ name: "Mutated" }).getNestedLocator();
+	await expect(changed).toHaveText("Mutated");
 
-	expect(firstRecord).toEqual({
-		locatorSchemaPath: "button",
-		definition: {
-			type: "role",
-			role: "button",
-			options: { name: "Submit", exact: true },
-		},
-		steps: [],
-	});
-
-	if (firstRecord.definition.type !== "role") {
-		throw new Error("Expected role definition for mutation test");
-	}
-
-	firstRecord.definition.options = { name: "Mutated" };
-
-	const secondRecord = registry.get("button");
-
-	expect(secondRecord).toEqual({
-		locatorSchemaPath: "button",
-		definition: {
-			type: "role",
-			role: "button",
-			options: { name: "Submit", exact: true },
-		},
-		steps: [],
-	});
+	await expect(registry.getLocator("button")).toHaveText("Submit");
+	expect(`${registry.getLocator("button").describe("")}`).toEqual(
+		`${page.getByRole("button", { name: "Submit", exact: true })}`,
+	);
 });
 
 test("registry.getIfExists returns a cloned definition copy", async ({ page }) => {
@@ -50,30 +30,21 @@ test("registry.getIfExists returns a cloned definition copy", async ({ page }) =
 
 	registry.add("banner").locator("section.banner", { hasText: "Welcome" });
 
-	const firstRecord = registry.getIfExists("banner");
-	expect(firstRecord).toBeDefined();
+	await page.setContent(
+		'<section class="banner">Welcome</section><section class="banner">Mutated</section><section class="banner">Welcome back</section>',
+	);
+	const changed = registry
+		.getLocatorSchema("banner")
+		.update()
+		.locator({ hasText: "Mutated" })
+		.nth(0)
+		.getNestedLocator();
+	await expect(changed).toHaveText("Mutated");
 
-	if (firstRecord?.definition.type !== "locator") {
-		throw new Error("Expected locator definition for mutation test");
-	}
-
-	firstRecord.definition.options = { hasText: "Mutated" };
-	if (!firstRecord.steps) {
-		throw new Error("Expected steps array on cloned record");
-	}
-	firstRecord.steps.push({ kind: "index", index: 0 });
-
-	const secondRecord = registry.getIfExists("banner");
-
-	expect(secondRecord).toEqual({
-		locatorSchemaPath: "banner",
-		definition: {
-			type: "locator",
-			selector: "section.banner",
-			options: { hasText: "Welcome" },
-		},
-		steps: [],
-	});
+	await expect(registry.getLocator("banner")).toHaveCount(2);
+	expect(`${registry.getLocator("banner").describe("")}`).toEqual(
+		`${page.locator("section.banner", { hasText: "Welcome" })}`,
+	);
 });
 
 test("a registered locator stays as registered when the caller changes what it passed", async ({

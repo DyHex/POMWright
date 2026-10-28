@@ -1,8 +1,8 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../../src/locators";
+import { createRegistryWithAccessors, type LocatorRegistry } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
 test("getLocator resolves the terminal locator when ancestor paths are registered", async ({ page }) => {
 	type LocatorSchemaPaths =
@@ -61,67 +61,67 @@ test.describe("getLocator applies terminal filters for registered definitions", 
 	const cases = [
 		{
 			label: "role",
-			build: (registry: LocatorRegistryInternal<"terminal">) =>
+			build: (registry: LocatorRegistry<"terminal">) =>
 				registry.add("terminal").getByRole("button").filter({ hasText: "filtered" }),
 			expected: "getByRole('button').filter({ hasText: 'filtered' })",
 		},
 		{
 			label: "text",
-			build: (registry: LocatorRegistryInternal<"terminal">) =>
+			build: (registry: LocatorRegistry<"terminal">) =>
 				registry.add("terminal").getByText("text").filter({ hasText: "filtered" }),
 			expected: "getByText('text').filter({ hasText: 'filtered' })",
 		},
 		{
 			label: "label",
-			build: (registry: LocatorRegistryInternal<"terminal">) =>
+			build: (registry: LocatorRegistry<"terminal">) =>
 				registry.add("terminal").getByLabel("label").filter({ hasText: "filtered" }),
 			expected: "getByLabel('label').filter({ hasText: 'filtered' })",
 		},
 		{
 			label: "placeholder",
-			build: (registry: LocatorRegistryInternal<"terminal">) =>
+			build: (registry: LocatorRegistry<"terminal">) =>
 				registry.add("terminal").getByPlaceholder("placeholder").filter({ hasText: "filtered" }),
 			expected: "getByPlaceholder('placeholder').filter({ hasText: 'filtered' })",
 		},
 		{
 			label: "altText",
-			build: (registry: LocatorRegistryInternal<"terminal">) =>
+			build: (registry: LocatorRegistry<"terminal">) =>
 				registry.add("terminal").getByAltText("altText").filter({ hasText: "filtered" }),
 			expected: "getByAltText('altText').filter({ hasText: 'filtered' })",
 		},
 		{
 			label: "title",
-			build: (registry: LocatorRegistryInternal<"terminal">) =>
+			build: (registry: LocatorRegistry<"terminal">) =>
 				registry.add("terminal").getByTitle("title").filter({ hasText: "filtered" }),
 			expected: "getByTitle('title').filter({ hasText: 'filtered' })",
 		},
 		{
 			label: "locator",
-			build: (registry: LocatorRegistryInternal<"terminal">) =>
+			build: (registry: LocatorRegistry<"terminal">) =>
 				registry.add("terminal").locator("locator").filter({ hasText: "filtered" }),
 			expected: "locator('locator').filter({ hasText: 'filtered' })",
 		},
 		{
 			label: "testId",
-			build: (registry: LocatorRegistryInternal<"terminal">) =>
+			build: (registry: LocatorRegistry<"terminal">) =>
 				registry.add("terminal").getByTestId("testId").filter({ hasText: "filtered" }),
 			expected: "getByTestId('testId').filter({ hasText: 'filtered' })",
 		},
 		{
 			label: "id",
-			build: (registry: LocatorRegistryInternal<"terminal">) =>
+			build: (registry: LocatorRegistry<"terminal">) =>
 				registry.add("terminal").getById("unique-id").filter({ hasText: "filtered" }),
 			expected: `locator('[id="unique-id"]').filter({ hasText: 'filtered' })`,
 		},
 		{
 			label: "id with CSS-significant characters",
-			build: (registry: LocatorRegistryInternal<"terminal">) =>
+			build: (registry: LocatorRegistry<"terminal">) =>
 				registry.add("terminal").getById("settings.panel").filter({ hasText: "filtered" }),
 			expected: `locator('[id="settings.panel"]').filter({ hasText: 'filtered' })`,
 		},
 		{
 			label: "id as RegExp",
-			build: (registry: LocatorRegistryInternal<"terminal">) =>
+			build: (registry: LocatorRegistry<"terminal">) =>
 				registry
 					.add("terminal")
 					.getById(/^settings\.panel$/i)

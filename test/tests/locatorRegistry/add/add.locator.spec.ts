@@ -1,23 +1,21 @@
-import { expect, test } from "@fixtures/testApp.fixtures";
-import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../../src/locators";
+import { expect, test } from "@playwright/test";
+import { createRegistryWithAccessors } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
-
-const errMsg = "No locator schema registered for path";
+// Checked on a page, and against Playwright's own locator built with the same arguments.
 
 test("add locator to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "body";
 
-	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	const { registry } = createRegistryWithAccessors<LocatorSchemaPaths>(page);
 
-	expect(() => registry.get("body")).toThrowError(`${errMsg} "body".`);
+	expect(() => registry.getLocator("body")).toThrowError('No locator schema registered for path "body".');
 
 	registry.add("body").locator("body");
 
-	expect(registry.get("body")).toEqual({
-		definition: { selector: "body", type: "locator" },
-		locatorSchemaPath: "body",
-		steps: [],
-	});
+	await page.setContent("<p>content</p>");
+	await expect(registry.getLocator("body")).toHaveCount(1);
+	await expect(registry.getLocator("body")).toContainText("content");
+	// the stored definition, as Playwright renders the same call without a description
+	expect(`${registry.getLocatorSchema("body").describe("").getLocator()}`).toBe(`${page.locator("body")}`);
+	expect(registry.getLocator("body").description()).toBe("body");
 });

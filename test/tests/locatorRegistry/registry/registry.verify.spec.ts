@@ -1,6 +1,6 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
-import { type FilterDefinition, LocatorRegistryInternal } from "../../../../src/locators";
+import { createRegistryWithAccessors, type FilterDefinition } from "pomwright";
 
 // verify() resolves every selector-bearing path once, terminal-only, so every has/hasNot path
 // reference goes through the normal resolution, and checks every any-frame path against its
@@ -21,7 +21,7 @@ type Paths =
 	| "shell.anyFrame"
 	| "sparse.chain.leaf";
 
-const createRegistry = (page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createRegistry = (page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
 test("a clean registry and an empty one pass", async ({ page }) => {
 	const registry = createRegistry(page);
@@ -166,10 +166,15 @@ test("verify() has no state: it reports the same result twice and changes nothin
 	const registry = createRegistry(page);
 	registry.add("list").locator("ul").filter({ hasText: "x" }).describe("The list");
 	registry.add("list.item").getByRole("listitem").filter({ has: "list.badge" });
-	const before = registry.get("list");
+	const rendered = () => {
+		const list = registry.getLocator("list");
+		return [`${list.describe("")}`, list.description()];
+	};
+	const before = rendered();
 	expect(() => registry.verify()).toThrowError("1 of 2 paths");
 	expect(() => registry.verify()).toThrowError("1 of 2 paths");
-	expect(registry.get("list")).toEqual(before);
+	expect(rendered()).toEqual(before);
+	expect(before).toEqual([`${page.locator("ul").filter({ hasText: "x" })}`, "The list"]);
 });
 
 test("an array or a filter-only object in has is an unsupported reference, as a FrameLocator is", async ({ page }) => {

@@ -82,8 +82,8 @@ where a decision differs from a finding's *Fix plan*, the decision applies.
 | 35 | [Docs: renaming a path; the any-frame form in a query](PLAN-B-6-C-3-docs.md) | 43, 44 | none | | done, stopped (`describe` worded more precisely than decision 44) | `8f185be`; the `describe` sentence in plan 36's commit |
 | 36 | [Docs: *Upgrading from 2.x*](PLAN-H-1-H-3-upgrade-page.md) | 45, 46 | none | | done | `e571381` |
 | 37 | [*Performance*: the call counts, and a fresh benchmark](PLAN-G-6-benchmark.md) | 50 | none | | done, stopped (the round trip re-measured: 370–710 µs, not 950) | `f3a058a` |
-| 38 | [American spelling; *Organizing a project*](PLAN-H-6-spelling.md) | 52 | none | | done | filled by the next commit |
-| 39 | [The source-level specs evaluated against their twins](PLAN-T10-source-specs-evaluated.md) | 55 (phase 2) | none | stop | planned | |
+| 38 | [American spelling; *Organizing a project*](PLAN-H-6-spelling.md) | 52 | none | | done | `3e37c74` |
+| 39 | [The source-level specs evaluated against their twins](PLAN-T10-source-specs-evaluated.md) | 55 (phase 2) | none | stop | done after the maintainer's decisions (#71) | filled by the next commit |
 | 40 | [AGENTS.md complete; tooling comments current](PLAN-H-5-A-8-G-11-agents-and-tooling.md) | 47, 51 | none | if CI | planned | |
 | 41 | [Release gates and the folder audit](PLAN-release-gates-and-audit.md) | 2, 5, 8 | none | stop | planned | |
 

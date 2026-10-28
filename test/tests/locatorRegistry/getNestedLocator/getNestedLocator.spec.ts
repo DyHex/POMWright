@@ -1,8 +1,8 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../../src/locators";
+import { createRegistryWithAccessors, type LocatorRegistry } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
 test("getNestedLocator should resolve chained locators automatically", async ({ page }) => {
 	type LocatorSchemaPaths =
@@ -80,67 +80,67 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	const cases = [
 		{
 			label: "role",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByRole("button"),
 			expected: "getByRole('button')",
 		},
 		{
 			label: "text",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByText("text"),
 			expected: "getByText('text')",
 		},
 		{
 			label: "label",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByLabel("label"),
 			expected: "getByLabel('label')",
 		},
 		{
 			label: "placeholder",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByPlaceholder("placeholder"),
 			expected: "getByPlaceholder('placeholder')",
 		},
 		{
 			label: "altText",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByAltText("altText"),
 			expected: "getByAltText('altText')",
 		},
 		{
 			label: "title",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByTitle("title"),
 			expected: "getByTitle('title')",
 		},
 		{
 			label: "locator",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").locator("locator"),
 			expected: "locator('locator')",
 		},
 		{
 			label: "testId",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByTestId("testId"),
 			expected: "getByTestId('testId')",
 		},
 		{
 			label: "id",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getById("id"),
 			expected: `locator('[id="id"]')`,
 		},
 		{
 			label: "id with CSS-significant characters",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getById("a.b"),
 			expected: `locator('[id="a.b"]')`,
 		},
 		{
 			label: "id as RegExp",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getById(/^a\.b$/),
 			expected: `locator('internal:attr=[id=/^a\\\\.b$/]')`,
 		},

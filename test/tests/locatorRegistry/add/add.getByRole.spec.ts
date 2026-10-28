@@ -1,23 +1,25 @@
-import { expect, test } from "@fixtures/testApp.fixtures";
-import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../../src/locators";
+import { expect, test } from "@playwright/test";
+import { createRegistryWithAccessors } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
-
-const errMsg = "No locator schema registered for path";
+// Checked on a page, and against Playwright's own locator built with the same arguments.
 
 test("add getByRole to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "buttonByRole";
 
-	const registry = createTestRegistry<LocatorSchemaPaths>(page);
+	const { registry } = createRegistryWithAccessors<LocatorSchemaPaths>(page);
 
-	expect(() => registry.get("buttonByRole")).toThrowError(`${errMsg} "buttonByRole".`);
+	expect(() => registry.getLocator("buttonByRole")).toThrowError(
+		'No locator schema registered for path "buttonByRole".',
+	);
 
 	registry.add("buttonByRole").getByRole("button", { name: "Submit" });
 
-	expect(registry.get("buttonByRole")).toEqual({
-		definition: { role: "button", options: { name: "Submit" }, type: "role" },
-		locatorSchemaPath: "buttonByRole",
-		steps: [],
-	});
+	await page.setContent("<button>Submit</button><button>Cancel</button>");
+	await expect(registry.getLocator("buttonByRole")).toHaveCount(1);
+	await expect(registry.getLocator("buttonByRole")).toHaveText("Submit");
+	// the stored definition, as Playwright renders the same call without a description
+	expect(`${registry.getLocatorSchema("buttonByRole").describe("").getLocator()}`).toBe(
+		`${page.getByRole("button", { name: "Submit" })}`,
+	);
+	expect(registry.getLocator("buttonByRole").description()).toBe("buttonByRole");
 });

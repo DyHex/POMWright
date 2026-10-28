@@ -189,6 +189,32 @@ describe("a registered locator cannot change after registration", () => {
 		);
 		expect(chain(registry.getLocator("list.item"))).toBe("locator('li').filter({ hasText: 'Row' }).nth(0)");
 	});
+
+	it("hands out copies: changing what get or getIfExists returns leaves the stored record", () => {
+		const registry = createRegistry();
+		const before = registry.get("list.item");
+		const fromGet = registry.get("list.item");
+		const fromGetIfExists = registry.getIfExists("list.item");
+		(fromGet.definition as { selector: string }).selector = "ol";
+		const [filterStep] = fromGet.steps ?? [];
+		(filterStep as { filter: { hasText: string } }).filter.hasText = "Other";
+		fromGet.description = "changed";
+		fromGetIfExists?.steps?.splice(0);
+		expect(registry.get("list.item")).toEqual(before);
+		expect(chain(registry.getLocator("list.item"))).toBe("locator('li').filter({ hasText: 'Row' }).nth(0)");
+	});
+
+	it("verify() changes no record, when it passes and when it fails", () => {
+		const registry = createRegistry();
+		const records = () => [registry.get("list"), registry.get("list.item")];
+		const before = records();
+		registry.verify();
+		expect(records()).toEqual(before);
+		registry.add("btn").getByRole("button").filter({ has: "row" });
+		const withButton = [...records(), registry.get("btn")];
+		expect(() => registry.verify()).toThrowError("1 of 3 paths");
+		expect([...records(), registry.get("btn")]).toEqual(withButton);
+	});
 });
 
 describe("filter references", () => {
