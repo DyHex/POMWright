@@ -1,7 +1,8 @@
 // Checks that the API reference and the doc comments cover the public surface of the published declarations.
 //
 // - Every export has an API page or a section: a page whose `title:` is its name, or a `## Name` heading.
-// - Every public or protected member of an exported class, interface or object type has a `### member` heading
+// - Every public or protected member of an exported class, interface or object type, a class's static members included,
+//   has a `### member` heading
 //   (`### member` or `### member()`) in its own section: under the `## Name` heading of the export that declares it
 //   (`ThisPageOptions` takes `timeout` from `NavigationOptions`), or, for the export a page is named after, under the
 //   page's other `##` headings (Constructor, Methods, Properties, …).
@@ -16,6 +17,8 @@
 // - Every https://dyhex.github.io/POMWright/ URL in the declarations names a page of website/src/content/docs and, after
 //   a `#`, one of its headings.
 // - Every exported type is in the type table of docs/typescript.md (*The types*), linked to its API page or section.
+// - Every import of the declarations resolves: one that does not would drop its types, and with them members, silently,
+//   so the check fails first ("install the root first").
 //
 //   node scripts/check-api-coverage.mjs [declarations]   # default: the installed package, .pack/pomwright/dist/index.d.ts
 //
@@ -37,7 +40,30 @@ if (!fs.existsSync(declarations)) {
 	process.exit(1);
 }
 
-const program = ts.createProgram([declarations], { strict: true, skipLibCheck: true, noEmit: true });
+const options = { strict: true, skipLibCheck: true, noEmit: true };
+const program = ts.createProgram([declarations], options);
+// An import the declarations cannot resolve would take its types away silently, and with them members to check
+// (skipLibCheck keeps TypeScript from reporting it in a .d.ts): every one must resolve.
+const unresolved = (node) => {
+	const specifier =
+		(ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier
+			? node.moduleSpecifier
+			: ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)
+				? node.argument.literal
+				: undefined;
+	if (specifier && ts.isStringLiteral(specifier)) {
+		const { resolvedModule } = ts.resolveModuleName(specifier.text, declarations, options, ts.sys);
+		if (!resolvedModule) return specifier.text;
+	}
+	return ts.forEachChild(node, unresolved);
+};
+const missing = ts.forEachChild(program.getSourceFile(declarations), unresolved);
+if (missing) {
+	console.error(
+		`api coverage: cannot resolve ${missing} from ${path.relative(root, declarations)}; install the root first`,
+	);
+	process.exit(1);
+}
 const checker = program.getTypeChecker();
 const moduleSymbol = checker.getSymbolAtLocation(program.getSourceFile(declarations));
 
@@ -127,8 +153,15 @@ for (const exported of checker.getExportsOfModule(moduleSymbol)) {
 			type.flags & (ts.TypeFlags.Union | ts.TypeFlags.Conditional) ||
 			checker.isTupleType(type) ||
 			checker.isArrayType(type);
-		if (!opaque) {
-			for (const property of checker.getPropertiesOfType(type)) {
+		// a class's static members sit on its constructor's type, beside `prototype`
+		const statics =
+			symbol.flags & ts.SymbolFlags.Class
+				? checker
+						.getPropertiesOfType(checker.getTypeOfSymbol(symbol))
+						.filter((property) => property.name !== "prototype")
+				: [];
+		if (!opaque || statics.length > 0) {
+			for (const property of [...(opaque ? [] : checker.getPropertiesOfType(type)), ...statics]) {
 				const memberDeclaration = property.valueDeclaration ?? property.declarations?.[0] ?? declaration;
 				const modifiers = ts.getCombinedModifierFlags(memberDeclaration);
 				if (modifiers & ts.ModifierFlags.Private || property.name.startsWith("#") || property.name.startsWith("__")) {
