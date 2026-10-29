@@ -182,14 +182,17 @@ AccountPage.SessionStorage.get: the page is on https://login.example, not on thi
 AccountPage.SessionStorage.set: the page (about:blank) is on https://login.example, not on this page object's origin https://shop.example; another origin's sessionStorage is reachable only from a document on it. Use the page object for https://login.example, or a standalone SessionStorage without an origin
 ```
 
-A helper without an origin, `new SessionStorage(page)`, works on whatever origin the page is on. On a page without an
-origin, before the first navigation, every call fails at once: `Shop.SessionStorage.set: the page has no origin yet
-(about:blank); navigate to the origin first or use seed()`. An `about:blank` popup from `window.open()` is not such a
-page: its document inherited its opener's origin, so a call there works on that origin's storage, and when the browser
-refuses one (its storage quota), the error is the browser's, labeled. A document whose own origin is opaque has no session
-storage at all, so every call there fails too, saying so: a document served with `Content-Security-Policy: sandbox`
-without `allow-same-origin`, or the error page Firefox shows at the origin's URL after a failed navigation. The message
-names both, since nothing a browser guarantees tells them apart.
+A helper without an origin, `new SessionStorage(page)`, works on whatever origin the page is on, the one its call is
+made on: a call that waited for its turn behind an overlapping one, while the page left that origin, fails and does
+nothing, rather than act on an origin it was not called on (`Shop.SessionStorage.set: the page left https://shop.example
+for https://login.example while set() waited for its turn; the call did nothing`). On a page without an origin, before
+the first navigation, every call fails at once: `Shop.SessionStorage.set: the page has no origin yet (about:blank);
+navigate to the origin first or use seed()`. An `about:blank` popup from `window.open()` is not such a page: its
+document inherited its opener's origin, so a call there works on that origin's storage, and when the browser refuses one
+(its storage quota), the error is the browser's, labeled. A document whose own origin is opaque has no session storage
+at all, so every call there fails too, saying so: a document served with `Content-Security-Policy: sandbox` without
+`allow-same-origin`, or the error page Firefox shows at the origin's URL after a failed navigation. The message names
+both, since nothing a browser guarantees tells them apart.
 
 ## As a fixture
 
@@ -216,6 +219,7 @@ export const test = base.extend<{ storage: SessionStorage<{ user: Codec<User> }>
 | a page on another origin | `AccountPage.SessionStorage.get: the page is on …, not on this page object's origin …` |
 | a value that is not a string, for a key without a codec | `Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)` |
 | a navigation during a call | `Shop.SessionStorage.set: the page navigated to https://shop.example/home while set() was writing to https://shop.example; 2 of 60 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document` |
+| a call of a helper without an origin that waited while the page left its origin | `Shop.SessionStorage.set: the page left https://shop.example for https://login.example while set() waited for its turn; the call did nothing` |
 | a stored value its codec cannot decode | `Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"` |
 
 ## Reference

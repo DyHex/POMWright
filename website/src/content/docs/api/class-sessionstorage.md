@@ -119,10 +119,12 @@ await storage.clear(); // everything
 ```text
 Shop.SessionStorage.clear: the page navigated to https://shop.example/home while clear() was removing keys from https://shop.example; 1 of 3 keys were removed ("token"); "locale" was being removed and may have reached the new document
 Shop.SessionStorage.clear: the page navigated to https://shop.example/home while clear() was removing every entry from https://shop.example; it may have reached the new document
+Shop.SessionStorage.clear: the page left https://shop.example for https://login.example while clear() waited for its turn; the call did nothing
 ```
 
 When the page leaves the origin during the call: the keys it names as removed are gone, and the one in flight, or
-`clear()`'s, may have reached the new document.
+`clear()`'s, may have reached the new document. The third for a helper without an origin, when the call waited for its
+turn while the page left the origin the call was made on: it removes nothing.
 
 ### get()
 
@@ -158,10 +160,12 @@ await storage.get(["token", "missing"]); // { token: "abc", missing: null }
 ```text
 Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"
 Shop.SessionStorage.get: the page navigated to https://login.example/ while get() was reading "token" from https://shop.example; it may have read the new document
+Shop.SessionStorage.get: the page left https://shop.example for https://login.example while get() waited for its turn; the call did nothing
 ```
 
 The codec's error is the `cause`. The second when the page leaves the origin during the read: it fails rather than
-return what it may have read from the new document.
+return what it may have read from the new document. The third for a helper without an origin, when the call waited for
+its turn while the page left the origin the call was made on: it reads nothing.
 
 ### seed()
 
@@ -265,13 +269,15 @@ Shop.SessionStorage.set: value for "user" could not be encoded
 Shop.SessionStorage.set: the codec for "user" returned undefined instead of a string
 Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)
 Shop.SessionStorage.set: the page navigated to https://shop.example/home while set() was writing to https://shop.example; 2 of 60 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document
+Shop.SessionStorage.set: the page left https://shop.example for https://login.example while set() waited for its turn; the call did nothing
 ```
 
 The second when the key's codec throws, with its error as `cause`; the third when it returns something other than a
 string; the fourth on a document whose origin is opaque, a sandboxed one or the browser's error page after a failed
 navigation, as from `get`, `clear` and `seed` there; the fifth
-when the page leaves the origin during the batch, naming the keys already written and the one in flight. Any other error from
-Playwright gets the label in front of its message and is the `cause`.
+when the page leaves the origin during the batch, naming the keys already written and the one in flight; the sixth for
+a helper without an origin, when the call waited for its turn while the page left the origin the call was made on: it
+writes nothing. Any other error from Playwright gets the label in front of its message and is the `cause`.
 
 ---
 

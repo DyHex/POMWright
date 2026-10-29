@@ -357,8 +357,19 @@ Shop.SessionStorage.clear: the page navigated to https://shop.example/home while
 ```
 
 Every call checks the page's origin before and after each storage call, so a navigation to another origin stops it,
-whether or not the storage call failed. The keys named as done stay so; the one in flight, or a single call, may have
-reached the new document, and a `get` fails rather than return what it may have read there. Any other error from Playwright gets the label in front of its message and is the `cause`.
+whether or not the storage call failed, and so does a reload or a redirect within the origin that interrupts it. The
+message names where the page went, by its origin and path. The keys named as done stay so; the one in flight, or a
+single call, may have reached the new document, and a `get` fails rather than return what it may have read there. Any
+other error from Playwright gets the label in front of its message and is the `cause`.
+
+```text
+Shop.SessionStorage.set: the page left https://shop.example for https://login.example while set() waited for its turn; the call did nothing
+```
+
+A call of a helper without an origin that waited for its turn, behind an overlapping call on the page, fails when the
+page has left the origin the call was made on, or, on a page whose URL has no origin, when the URL has changed. It does
+nothing, rather than act on an origin it was not called on. A helper with an origin gets the origin message above
+instead.
 
 ```text
 Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)

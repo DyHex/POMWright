@@ -258,6 +258,57 @@ test.describe("a batch the page leaves", () => {
 			);
 			expect(await liveStorage(page)).toEqual({});
 		});
+
+		test("the waiting calls of a helper without an origin fail, and the other origin's storage stays as it was", async ({
+			page,
+			testStorage,
+		}) => {
+			await onB(page, { k0: "B's own" });
+			await testStorage.navigation.goto();
+			const unbound = new SessionStorage(page, { label: "Unbound" });
+			commitOnBAfter(page, "setItem", 1);
+			const outcomes = await Promise.all([
+				outcomeOf(unbound.set({ k0: "A", k1: "A" })),
+				outcomeOf(unbound.set("k2", "A")),
+				outcomeOf(unbound.get()),
+				outcomeOf(unbound.clear()),
+			]);
+			const waited = (method: string) =>
+				`Unbound.SessionStorage.${method}: the page left ${A} for ${B} while ${method}() waited for its turn; the call did nothing`;
+			expect(outcomes).toEqual([
+				`Unbound.SessionStorage.set: the page navigated to ${B}/testpath while set() was writing to ${A}; 0 of 2 keys were written; "k0" was being written and may have reached the new document`,
+				waited("set"),
+				waited("get"),
+				waited("clear"),
+			]);
+			expect(await liveStorage(page)).toEqual({ k0: "B's own" });
+		});
+
+		test("the waiting call of a helper with an origin fails with the origin message", async ({ page, testStorage }) => {
+			await onB(page, { k0: "B's own" });
+			await testStorage.navigation.goto();
+			commitOnBAfter(page, "setItem", 1);
+			const [, waiting] = await Promise.all([
+				outcomeOf(testStorage.sessionStorage.set("k0", "A")),
+				outcomeOf(testStorage.sessionStorage.get("k0")),
+			]);
+			expect(waiting).toBe(
+				`TestStorage.SessionStorage.get: the page is on ${B}, not on this page object's origin ${A}; another origin's sessionStorage is reachable only from a document on it. Use the page object for ${B}, or a standalone SessionStorage without an origin`,
+			);
+			expect(await liveStorage(page)).toEqual({ k0: "B's own" });
+		});
+
+		test("a helper without an origin follows the page between awaited calls", async ({ page, testStorage }) => {
+			await onB(page);
+			await testStorage.navigation.goto();
+			const unbound = new SessionStorage(page, { label: "Unbound" });
+			await unbound.set("k0", "on A");
+			await page.goto(`${B}/testpath`);
+			await unbound.set("k0", "on B");
+			expect(await unbound.get("k0")).toBe("on B");
+			await testStorage.navigation.goto();
+			expect(await unbound.get("k0")).toBe("on A");
+		});
 	});
 });
 

@@ -16,5 +16,8 @@ await Promise.all([storage.seed({ first: "1", shared: "earlier" }), storage.seed
 
 `set`, `get` and `clear` interleaved the same way. Every call now takes its turn per page and origin, across every
 helper on the page (a page object's and a standalone one), so overlapping calls end exactly as awaited ones do. A call
-that waited checks the origin again when its turn comes, and throws the usual origin message if the page has left.
+that waited checks the origin again when its turn comes. A helper with an origin throws the usual origin message if the
+page has left it; a helper without one fails, and does nothing, if the page has left the origin the call was made on,
+rather than act on an origin it was not called on:
+`Shop.SessionStorage.set: the page left https://shop.example for https://login.example while set() waited for its turn; the call did nothing`.
 Awaited calls behave as before.

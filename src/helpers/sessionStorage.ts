@@ -465,15 +465,37 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * Runs `task` in its turn among the page's session storage calls for the origin this call touches: the helper's, or
 	 * the one the page is on; on a page whose URL has no origin, a page-wide turn, since the origin its document may have
 	 * inherited cannot be read synchronously. The origin is checked again when the turn starts, since the page may have
-	 * left while the call waited.
+	 * left while the call waited: a helper with an origin checks it as at the call; a helper without one checks that the
+	 * page is still where the call joined, the origin, or on a page-wide turn the URL, compared whole as `guarded` does.
 	 */
 	private inTurn<T>(method: string, task: () => Promise<T>): Promise<T> {
-		const onPage = originOf(this.page.url());
+		const joinedUrl = this.page.url();
+		const onPage = originOf(joinedUrl);
 		return takeTurn(this.page, onPage === undefined ? PAGE_WIDE : (this.origin ?? onPage), async () => {
 			this.assertOnOrigin(method);
 			await this.assertInheritedOrigin(method);
+			this.assertStillJoined(method, joinedUrl);
 			return await task();
 		});
+	}
+
+	/**
+	 * A helper without an origin acts on the origin its call was made on: a call that waited for its turn while the page
+	 * moved fails and does nothing, rather than act on an origin it was not called on.
+	 */
+	private assertStillJoined(method: string, joinedUrl: string): void {
+		if (this.origin !== undefined) {
+			return;
+		}
+		const now = this.page.url();
+		const joined = originOf(joinedUrl);
+		if (joined === undefined ? now === joinedUrl : originOf(now) === joined) {
+			return;
+		}
+		throw new Error(
+			`${this.title(method)}: the page left ${joined ?? joinedUrl} for ${originOf(now) ?? now} while ${method}() ` +
+				"waited for its turn; the call did nothing",
+		);
 	}
 
 	private async write(method: string, encoded: Record<string, string>): Promise<void> {
@@ -501,7 +523,10 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * (`Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`),
 	 * and when the page leaves the origin during the batch, which is written one key at a time and stops there; the key in
 	 * flight may have reached the new document
-	 * (`Shop.SessionStorage.set: the page navigated to https://shop.example/home while set() was writing to https://shop.example; 2 of 60 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document`).
+	 * (`Shop.SessionStorage.set: the page navigated to https://shop.example/home while set() was writing to https://shop.example; 2 of 60 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document`);
+	 * for a helper without an origin, also when its call waited for its turn while the page left the origin it was made
+	 * on, so it does nothing
+	 * (`Shop.SessionStorage.set: the page left https://shop.example for https://login.example while set() waited for its turn; the call did nothing`).
 	 *
 	 * @example
 	 * ```ts
@@ -536,7 +561,10 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * than the helper's, when the page has no origin yet, when the document's origin is opaque, as for `set`
 	 * (`Shop.SessionStorage.get: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`),
 	 * and when the page leaves the origin during the read, rather than return what it may have read from the new document
-	 * (`Shop.SessionStorage.get: the page navigated to https://login.example/ while get() was reading "token" from https://shop.example; it may have read the new document`).
+	 * (`Shop.SessionStorage.get: the page navigated to https://login.example/ while get() was reading "token" from https://shop.example; it may have read the new document`);
+	 * for a helper without an origin, also when its call waited for its turn while the page left the origin it was made
+	 * on, so it reads nothing
+	 * (`Shop.SessionStorage.get: the page left https://shop.example for https://login.example while get() waited for its turn; the call did nothing`).
 	 *
 	 * @example
 	 * ```ts
@@ -597,7 +625,10 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * (`Shop.SessionStorage.clear: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`),
 	 * and when the page leaves the origin during the call; the keys named as removed are gone, and the one in flight may
 	 * have reached the new document
-	 * (`Shop.SessionStorage.clear: the page navigated to https://shop.example/home while clear() was removing keys from https://shop.example; 1 of 3 keys were removed ("token"); "locale" was being removed and may have reached the new document`).
+	 * (`Shop.SessionStorage.clear: the page navigated to https://shop.example/home while clear() was removing keys from https://shop.example; 1 of 3 keys were removed ("token"); "locale" was being removed and may have reached the new document`);
+	 * for a helper without an origin, also when its call waited for its turn while the page left the origin it was made
+	 * on, so it removes nothing
+	 * (`Shop.SessionStorage.clear: the page left https://shop.example for https://login.example while clear() waited for its turn; the call did nothing`).
 	 *
 	 * @example
 	 * ```ts

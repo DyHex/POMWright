@@ -247,4 +247,51 @@ describe("SessionStorage calls for one origin take turns", () => {
 		);
 		expect(fake.state.writes).toEqual(["a=1"]);
 	});
+
+	describe("a call that waited for its turn", () => {
+		const waited = (method: string, from: string, to: string) =>
+			`Any.SessionStorage.${method}: the page left ${from} for ${to} while ${method}() waited for its turn; the call did nothing`;
+
+		it("of a helper without an origin, whose page moved to another origin meanwhile, fails and does nothing", async () => {
+			const storage = new SessionStorage(fake.page, { label: "Any" });
+			fake.state.afterNextWrite = () => {
+				fake.state.url = `${B}/faq`;
+			};
+			const results = await Promise.allSettled([
+				storage.set("a", "1"),
+				storage.set("b", "2"),
+				storage.get("a"),
+				storage.clear(),
+			]);
+			const messages = results.map((result) => (result.status === "rejected" ? (result.reason as Error).message : ""));
+			// the first call was in flight when the page left; the others waited
+			expect(messages[0]).toMatch(
+				/^Any\.SessionStorage\.set: the page navigated to https:\/\/help\.example\/faq while/,
+			);
+			expect(messages.slice(1)).toEqual([waited("set", A, B), waited("get", A, B), waited("clear", A, B)]);
+			expect(fake.state.writes).toEqual(["a=1"]);
+			expect([...fake.state.store.keys()]).toEqual(["a"]);
+		});
+
+		it("on a page-wide turn, whose page's URL changed meanwhile, fails and does nothing", async () => {
+			const popup = fakePage("about:blank");
+			const storage = new SessionStorage(popup.page, { label: "Any" });
+			popup.state.afterNextWrite = () => {
+				popup.state.url = `${A}/account`;
+			};
+			const [first, second] = await Promise.allSettled([storage.set("a", "1"), storage.set("b", "2")]);
+			expect(first.status).toBe("rejected");
+			expect(second.status === "rejected" && (second.reason as Error).message).toBe(waited("set", "about:blank", A));
+			expect(popup.state.writes).toEqual(["a=1"]);
+		});
+
+		it("of a helper without an origin follows the page between awaited calls", async () => {
+			const storage = new SessionStorage(fake.page, { label: "Any" });
+			await storage.set("a", "1");
+			fake.state.url = `${B}/faq`;
+			await storage.set("b", "2");
+			expect(await storage.get("b")).toBe("2");
+			expect(fake.state.writes).toEqual(["a=1", "b=2"]);
+		});
+	});
 });
