@@ -86,11 +86,12 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   the actions hook, `lifecycle.outcomes.spec.ts`, which runs `test/lifecycle-outcomes/` as a Playwright run of its own on
   its project's browser and compares the JSON report with the docs' table of where a broken page object is built (which
   tests fail, how far each body gets, which do not run: what a test cannot see of itself, and what `test.fail()` would
-  change), and `callSite/`: errors raised after the consumer's line point at it even in consumer files named
+  change), the table read from *Page objects* itself, and `callSite/`: errors raised after the consumer's line point at it even in consumer files named
   `pageObject.ts` and `sessionStorage.ts`; a page object's check at the `new` line, with a base class too, and the `add`
   lines in its `cause`), `logging/` (the `log` fixture's attachments, read by an auto fixture torn
   down after it), `step/`, `testApp/`, `docs/` (`docsChains.spec.ts`: every chain the site and the README show in a
-  `text` block, a code comment or the running text, rebuilt through the packed package, one test per page), `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
+  `text` block, a code comment or the running text, rebuilt through the packed package, one test per page, which also
+  checks that its page shows every chain, selector and message it compares), `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
   published entries, one shared copy, closed deep imports, the manifest; `packageFiles.spec.ts`, the installed
   package's exact file list; `publicTypes.typecheck.ts`, `publicTypes.emit.ts` and `stepLegacyDecorators.typecheck.ts`,
   compile-only, the last also under `experimentalDecorators`; the emit check returns every public member on its own). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through

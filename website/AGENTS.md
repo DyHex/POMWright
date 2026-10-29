@@ -53,8 +53,8 @@ page).
 - The code and its tests decide what the docs say. Every chain, description and message a page shows is copied from a
   probe against the build (see [test/AGENTS.md](../test/AGENTS.md#probing)); where a rendered string hides an option, the stored record is read instead.
   `test/tests/docs/docsChains.spec.ts` rebuilds every chain a page or the README shows in a `text` block, a code
-  comment or the running text, one test per page, and compares it: a change to a chain, on the page or in the code, changes the spec with
-  it. A change to a message, a rendering or a mechanism greps `website/` for the old text and updates the pages with it,
+  comment or the running text, one test per page, compares it, and checks that the page still shows it: a change to a
+  chain, on the page or in the code, fails until the spec and the page change together. A change to a message, a rendering or a mechanism greps `website/` for the old text and updates the pages with it,
   and a consumer-facing change updates the page that describes it.
 - Page shapes follow playwright.dev. Getting started pages: *Introduction*, "You will learn", short sections whose
   example grows from the last, *What's next*; one page, one outcome. Concept pages open with the Playwright concept
