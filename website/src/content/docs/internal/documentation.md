@@ -24,11 +24,17 @@ the same facts as the API pages.
   deliberate error is shown with `// @ts-expect-error`, which the check enforces. The example app in
   `website/snippets/`, four page objects on `shop.example` and their fixtures, can be imported from every page. The
   README's examples are compiled as one more page, their blocks titled in the fence (`title="orders.page.ts"`), which
-  GitHub and npm do not show.
-- **Nothing is skipped silently.** A TypeScript block the check would not compile fails it, with the fix in the
-  message: one in a `~~~` fence (write it as a ` ```ts ` block), one labeled `tsx`, `mts` or `cts` (write it as
-  `ts`), and `nocheck` on any other page (make the example compile, with `// ---cut---` for the setup lines and
-  `// @ts-expect-error` for a deliberate error). Blocks in other languages, `js`, `sh` or `text`, are not checked.
+  GitHub and npm do not show. The doc comments' `@example` blocks are compiled too, in a project of their own: each is
+  a fragment of a consumer's file, so the check imports the exports and Playwright types it names and declares the
+  instances it assumes (`page`, `registry`, a login page object, …) once in the script; an error points at the source
+  line, and `nocheck` after the fence skips an example that cannot stand alone and lists it.
+- **Nothing is skipped silently.** A block's language is the fence's first word, after any spaces, as CommonMark and the
+  site read it. A TypeScript block the check would not compile fails it, with the fix in the message: one in a `~~~`
+  fence (write it as a ` ```ts ` block), one labeled `tsx`, `mts` or `cts` (write it as `ts`), one labeled `ts` written
+  otherwise, after a space or in upper case (write it as ` ```ts `), an `@example` block labeled anything but `ts`, and
+  `nocheck` on any other page (make the example compile, with `// ---cut---` for the setup lines and
+  `// @ts-expect-error` for a deliberate error). Blocks in other languages, `js`, `sh` or `text`, are not checked. A
+  `tsc` that fails without reporting a type error, a crash or a missing install, fails the check with what it printed.
 - **The API is complete.** `scripts/check-api-coverage.mjs` reads the installed declarations and fails on an export
   without a page or section, a member without a heading in its own section, a doc comment without a summary or a
   `@param`, a method or class property without a `@see` to its own heading, a link to the site whose page or heading

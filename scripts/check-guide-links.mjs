@@ -10,7 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
-const SKIP_DIRS = new Set(["node_modules", ".git", ".pack", "dist", "defect-review-result", "defect-review-result-2"]);
+const SKIP_DIRS = new Set(["node_modules", ".git", ".pack", "dist"]);
 
 function guideFiles(dir) {
 	return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

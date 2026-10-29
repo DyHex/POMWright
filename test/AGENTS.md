@@ -18,9 +18,10 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   decorators by the first `tsc`); then `tsc -p test/tsconfig.legacyDecorators.emit.json`, which emits
   `step-locations/legacy/legacyWidget.ts` with `experimentalDecorators`, as CommonJS, into `test/.legacy-decorators/` for
   the step-location check; then `scripts/check-doc-snippets.mjs`, every `ts` block of `website/src/content/docs` and the
-  README against the installed package, `scripts/check-api-coverage.mjs`, the API reference and the doc comments against the
-  installed declarations, and `scripts/check-error-messages.mjs`, *Error messages* against the messages `src/` throws
-  and the compile-error messages its types define (see [website/AGENTS.md](../website/AGENTS.md)). `pack-test.sh` runs all seven, and after the harness
+  README, and the doc comments' examples, against the installed package; `scripts/check-api-coverage.mjs`, the API
+  reference and the doc comments against the installed declarations; and `scripts/check-error-messages.mjs`,
+  *Error messages* against the messages `src/` throws and the compile-error messages its types define (see
+  [website/AGENTS.md](../website/AGENTS.md)). `pack-test.sh` runs all seven, and after the harness
   `playwright test -c playwright.steps.config.ts` (see *The harness* below), then, outside CI, `test-server-check.sh`.
 - `pnpm pack:version <version>` (`scripts/pack-version.sh`, run by hand only) builds and packs the package with the
   given semver version in the packed `package.json` only, as `pomwright-<version>.tgz` at the root (gitignored), for
