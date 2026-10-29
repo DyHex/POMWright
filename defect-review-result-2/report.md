@@ -1329,13 +1329,13 @@ or none: the release stays 3.0.2.
 | [2D-2](D-page-objects-urls-navigation/defect-2D-2-absolute-url-type.md) | | defect | Low | patch | this branch: `AbsoluteUrl` starts with a letter; docs exact; a changeset | decided (#90) |
 | [2E-1](E-logging-step-fixture/defect-2E-1-locale-hint-names-rejected-tag.md) | | defect | Low | patch | this branch: the codeset dropped, no hint for a modifier; changeset corrected | decided (#94) |
 | [2G-2](G-ci-release-publishing/defect-2G-2-publish-rerun-goes-on-after-main-moved.md) | | defect | Low | none | this branch: the guard reads `main`'s tip from GitHub; with 2G-1 | done (#79: 5c3930e, ae297fa) |
-| [2T-1](T-tests-and-checks/defect-2T-1-docs-checks-compare-copies.md) | | defect | Low | none | this branch: both specs read their pages (checks plan) | decided (#95) |
-| [2T-2](T-tests-and-checks/defect-2T-2-snippet-check-misses-spaced-fence.md) | | defect | Low | none | this branch: the language read as CommonMark does; odd spellings rejected (checks plan) | decided (#96) |
+| [2T-1](T-tests-and-checks/defect-2T-1-docs-checks-compare-copies.md) | | defect | Low | none | this branch: both specs read their pages (checks plan) | done (#95: da019d6) |
+| [2T-2](T-tests-and-checks/defect-2T-2-snippet-check-misses-spaced-fence.md) | | defect | Low | none | this branch: the language read as CommonMark does; odd spellings rejected (checks plan) | done (#96: b6f141d) |
 | [2T-3](T-tests-and-checks/defect-2T-3-test-fail-hides-assertions.md) | | defect | Low | none | this branch: restructured, every claim can fail (session storage plan) | decided (#97) |
-| [2T-4](T-tests-and-checks/defect-2T-4-steps-config-allows-only.md) | | defect | Low | none | this branch: `forbidOnly` in the steps and outcomes configs (checks plan) | decided (#98) |
-| [2T-5](T-tests-and-checks/defect-2T-5-api-coverage-skips-members.md) | | defect | Low | none | this branch: statics walked; an unresolved import fails (checks plan) | decided (#99) |
-| [2T-7](T-tests-and-checks/defect-2T-7-test-server-check-blind-spots.md) | | defect | Low | none | this branch: WebSockets, `wss`, `//host`, routers' routes (checks plan) | decided (#100) |
-| [2T-9](T-tests-and-checks/defect-2T-9-snippet-check-ignores-tsc-exit-code.md) | | defect | Low | none | this branch: `tsc` judged by its exit code (checks plan) | decided (#96) |
+| [2T-4](T-tests-and-checks/defect-2T-4-steps-config-allows-only.md) | | defect | Low | none | this branch: `forbidOnly` in the steps and outcomes configs (checks plan) | done (#98: 3553e60) |
+| [2T-5](T-tests-and-checks/defect-2T-5-api-coverage-skips-members.md) | | defect | Low | none | this branch: statics walked; an unresolved import fails (checks plan) | done (#99: ac614fe) |
+| [2T-7](T-tests-and-checks/defect-2T-7-test-server-check-blind-spots.md) | | defect | Low | none | this branch: WebSockets, `wss`, `//host`, routers' routes (checks plan) | done (#100: dfbc812) |
+| [2T-9](T-tests-and-checks/defect-2T-9-snippet-check-ignores-tsc-exit-code.md) | | defect | Low | none | this branch: `tsc` judged by its exit code (checks plan) | done (#96: b6f141d) |
 | [2I-2](I-contributor-guide/defect-2I-2-rules-their-trigger-does-not-reach.md) | | documentation | Medium | none | this branch: pointers and index rows from the triggers, `.github/` included | decided (#82) |
 | [2A-5](A-session-storage/defect-2A-5-sandboxed-arrival-not-listed.md) | | documentation | Low | none | this branch: session storage plan (docs) | decided (#102) |
 | [2A-6](A-session-storage/defect-2A-6-schema-extra-codec-compiles.md) | | documentation | Low | none | this branch: session storage plan (docs) | decided (#102) |
@@ -1370,7 +1370,7 @@ or none: the release stays 3.0.2.
 | [2I-8](I-contributor-guide/defect-2I-8-subfolder-files-do-not-point-to-src.md) | | documentation | Low | none | this branch: the fallback and the subfolder intros | decided (#82) |
 | [2I-9](I-contributor-guide/defect-2I-9-editorconfig-mdx.md) | | documentation | Low | none | this branch: contributor guide plan | decided (#109) |
 | [2T-8](T-tests-and-checks/defect-2T-8-base-config-comment-stale-again.md) | | documentation | Low | none | this branch: contributor guide plan | decided (#109) |
-| 2Z-1 (section 5) | | documentation | Low | none | this branch: the example fixed with a check of the doc examples (checks plan) | decided (#104) |
+| 2Z-1 (section 5) | | documentation | Low | none | this branch: the example fixed with a check of the doc examples (checks plan) | done (#104: 9557f58) |
 | 2Z-2 (section 5) | | documentation | Low | none | this branch: session storage plan (docs) | decided (#102) |
 | 2Z-3 (section 5) | | documentation | Low | none | this branch: the rule in the guide; wording; an issue filed by the maintainer | decided (#111) |
 | [2A-8](A-session-storage/defect-2A-8-same-origin-navigation-stops-a-batch.md) | | design question | Low | none (behavior kept) | this branch: keep failing; the messages name the destination; docs | decided (#86) |

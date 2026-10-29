@@ -107,3 +107,25 @@ check included), the grep for the external consumer projects' names.
 Seven commits, one per decision, named `test: …` or `chore(checks): …` with `Plan:
 defect-review-result-2/PLAN-2T-checks.md` and the `Co-Authored-By:` trailer. The maintainer pushes; CI runs every check
 on the real pages.
+
+### Execution notes
+
+- 2026-10-29, seven commits: `da019d6` (95), `b6f141d` (96), `3553e60` (98), `ac614fe` (99), `dfbc812` (100),
+  `9557f58` (104, points 3 and 4), `d78096c` (112). Each fix was shown to catch what it is for (the verification list
+  above), and the full harness on three browsers was green before the last commit (1746 passed, 3 skipped; 31 step
+  locations; 27 test-server tests; 226 page blocks and 96 doc examples compiled; API coverage 40 exports, 108 members).
+- Deviations, for the maintainer's decision:
+  1. **Decision 100, point 3 (routers)**: Express 5's router (2.2.0) keeps no mount path on a layer, only its
+     matchers, so the spec cannot open a mounted router's pages. Built instead: a test that fails when `server.js`
+     mounts a router, saying to put its routes on the app, where every route is today.
+  2. **Decision 99, point 2 (an unresolved import)**: with `skipLibCheck`, TypeScript does not report an unresolved
+     import inside a `.d.ts`, so the check resolves each import and import type itself (`ts.resolveModuleName`)
+     rather than reading TS2307 from the diagnostics. Same result.
+  3. **Decision 104, point 4 (the doc examples)**: 96 examples in `src/` and `index.ts` (the triage counted 97 tags,
+     one of them not an example); the instances they assume are declared in the script, so a new one goes there;
+     none needed `nocheck`.
+  4. **Decision 112 (the link check)**: exposed as `pnpm lint:guide`, beside `pnpm lint:workflows`, rather than inside
+     `pnpm lint`, whose documented meaning is biome; CI's `lint` job runs both.
+  5. `docsChains.spec.ts`'s diff is large: biome reflowed every `expect\n.soft(…)` into `shows(…)`; the assertions are
+     the same, plus each test's page check.
+- Stop: the last commit changes CI's `lint` job; the maintainer pushes and checks PR #60's run.
