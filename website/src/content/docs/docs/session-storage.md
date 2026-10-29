@@ -219,9 +219,10 @@ export const test = base.extend<{ storage: SessionStorage<{ user: Codec<User> }>
 
 An app may reload or redirect itself as it loads (a login guard, a locale redirect, a reload after it writes a flag),
 or after an action, once a request or a timer is done. A storage call made while that is under way fails with the
-navigation message above. `page.goto()` waits for the first document's `load` event, not for what the app starts after
-it: with an app that reloads itself as its first script runs, `goto` returned after the reload in Chromium and Firefox,
-and before it in WebKit. So wait, in the test, for where the app ends up, then call:
+navigation message above. `page.goto()`, and a page object's `navigation.goto()` that calls it, waits for the page's
+`load` event, as Playwright [documents](https://playwright.dev/docs/navigations); a navigation the app starts after
+that, after a request, a timer, or as it finishes loading, is not waited for. So wait, in the test, for where the app
+ends up, then call:
 
 ```ts
 import { expect, test } from "./fixtures";
@@ -235,7 +236,7 @@ test("the app redirects to the account page as it loads", async ({ page, account
 
 test("the app reloads itself as it loads", async ({ accountPage }) => {
   await accountPage.navigation.goto();
-  // the URL does not change: wait for what the app shows once it has settled
+  // the URL does not change, so expectThisPage would not wait: wait for what the app shows once it has settled
   await expect(accountPage.getNestedLocator("main.heading")).toBeVisible();
   await accountPage.sessionStorage.set("theme", "dark");
 });
@@ -253,16 +254,20 @@ app may already have started without the values.
 
 ## Size and cost
 
-Each key of a call is one storage call, a round trip to the browser, as Playwright's `setItem`, `getItem` and
-`removeItem` take one key. After each, the call checks its document, one more round trip, and it takes and releases
-its handle to the document, two more per call (see [Internal → Seed
+Each key of a call is one of Playwright's storage calls, a round trip to the browser, as with `page.sessionStorage`
+itself, since `setItem`, `getItem` and `removeItem` take one key. POMWright adds the document check: one more round
+trip after each, and two per call to take and release its handle to the document (see [Internal → Seed
 registry](/POMWright/internal/seed-registry/#the-origin-around-every-call)). A call has no timeout of its own, as
 Playwright's storage calls have none; the test's timeout applies.
 
+For the sizes tests use, a few to a few dozen keys, a call takes milliseconds. Its time grows with the number of keys
+far more than with the size of the values: a long value takes a little longer to send, with Playwright's calls alone as
+through POMWright, while every key adds round trips. Only thousands of keys add up to a second or more, about twice
+what the same Playwright calls take alone.
+
 The browser's quota is 5,242,880 characters per origin, keys and values together, in each browser Playwright 1.64
 ships; one value may take nearly all of it. A write past it fails with the browser's error, labeled, and the keys
-written before it stay. Up to tens of thousands of characters, a value's size hardly changes a call's time; a value of a
-million characters takes noticeably longer to send.
+written before it stay.
 
 Neither the number of keys nor their size makes a call fail, apart from the quota: a navigation during the call does,
 and a longer call is a longer window for one. Wait for the app to settle first, as above.

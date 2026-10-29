@@ -279,8 +279,19 @@ against a build without its step's change; at the end `pnpm typecheck`, `pnpm do
      as the unit tests' fakes did.
   3. **`documentHandle.spec.ts` imports nothing of POMWright**, beside `test/AGENTS.md`'s "every spec imports
      `pomwright`": it pins a behavior of Playwright's; `test/AGENTS.md` says so.
-  4. **WebKit's `goto` on *Session storage*** ("returned before it in WebKit") rests on the probe of 2026-10-29 (10 of
-     10 on WebKit, none on Chromium and Firefox), not on a harness test: a test of when `goto` returns against an app's
-     own reload would depend on timing. The three patterns the page teaches are harness cases.
-  5. **"Size and cost"** says that a value of a million characters takes noticeably longer to send, without numbers:
-     the numbers come with the benchmarks plan (decision 115).
+  4. **WebKit's `goto`.** Probed on 2026-10-29 with the test server's pages, 20 rounds per case at 1 and 16 workers,
+     the same in every round: when an app's first script reloads it, or replaces it with its own URL, `goto` resolved
+     at the first document's `load` on WebKit, before the reload committed; Chromium and Firefox waited (their first
+     document fires no `load`), and so did WebKit for a `location.replace()` to another URL and on the larger static
+     page. A page with one stylesheet behaves as the bare one, so what decides it is not established. A page object's
+     `expectThisPage()` (one `page.waitForURL`) returned at once there too. It is Playwright's and WebKit's behavior, the
+     same with `page.goto()` alone, against Playwright's "If the page does a client-side redirect before load,
+     page.goto() will wait for the redirected page to fire the load event". With the maintainer: the page does not
+     restate it (it says what `goto` waits for and links Playwright's guide); no pin in the harness, which would test
+     WebKit and protect nothing in POMWright; an upstream issue drafted with a minimal reproduction (its own server,
+     10 of 10 failing on WebKit, 20 of 20 passing on the others), for the maintainer to file.
+  5. **"Size and cost"** said that a value of a million characters takes noticeably longer to send, which read as a
+     cost of POMWright's. Rewritten with the maintainer: each key is one of Playwright's storage calls, as with
+     `page.sessionStorage` itself; POMWright adds the document check; a call's time grows with its keys, not its
+     values' size; thousands of keys take a second or more, about twice Playwright's calls alone. The link to the
+     numbers comes with the benchmarks plan (decision 115).

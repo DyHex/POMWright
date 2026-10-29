@@ -46,7 +46,8 @@ Then **stop**: report the findings and the proposed fixes and improvements to th
 4. Rerun `pnpm bench` several times on one machine, at rest, and keep every run's output.
 5. Rewrite *Internal → Performance* from that output, thoroughly: every number and claim traced to the output; ranges
    and the spread across runs where the machine's noise is larger than a fixed percentage can carry; the machine line;
-   the conclusion only as strong as the numbers; *Limitations* updated; a section for the storage benchmark.
+   the conclusion only as strong as the numbers; *Limitations* updated; a section for the storage benchmark, which
+   *Session storage*'s *Size and cost* then links.
 6. `test/AGENTS.md`'s `pnpm bench` bullet, if the commands or what they print change.
 
 ## Verification

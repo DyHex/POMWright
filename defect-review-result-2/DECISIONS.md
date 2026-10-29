@@ -1173,7 +1173,9 @@ rare: 270 reloads timed by the page itself each destroyed one call in flight.
    refresh and `page.goto`, and survives `pushState` and a hash change, on three browsers.
 7. **Docs**: *Session storage* (*The methods*; a section on size and cost; what to do when the app navigates by
    itself: wait for where it ends up, wait for its final state, or seed before the navigation; on WebKit
-   `page.goto()` returned before an app's own reload), *Error messages*, the API page and the `@throws`, *Internal →
+   `page.goto()` returned before an app's own reload, a sentence later dropped with the maintainer, as Playwright's and
+   WebKit's behavior, see the session storage plan's execution note 4), *Error messages*, the API page and the
+   `@throws`, *Internal →
    Seed registry* (*The origin around every call*), `src/helpers/AGENTS.md`.
 8. **In the session storage plan's follow-up**, with the test gaps the maintainer named (an awaited `clear` then a
    reload, a codec's object changed after the call, the quota) and the comments of that plan's stand-ins.
