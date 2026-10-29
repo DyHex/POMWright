@@ -347,7 +347,9 @@ The Playwright page the page object was constructed with.
 
 ### sessionStorage
 
-The session storage helper for the page object's origin, typed by the schema. See
+The session storage helper, labeled with the page object's label and typed by the schema. With a string `baseUrl` it
+belongs to that origin: it touches only that origin's storage, and `seed()` needs no origin. With a RegExp `baseUrl` it
+has no origin: it works on the origin the page is on, and `seed()` needs `{ origin }`. See
 [`SessionStorage`](/POMWright/api/class-sessionstorage/) and
 [through a page object](/POMWright/docs/session-storage/#through-a-page-object).
 

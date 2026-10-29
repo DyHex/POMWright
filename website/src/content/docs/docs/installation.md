@@ -25,7 +25,9 @@ and no browser handling of its own; your tests stay Playwright tests.
 - **TypeScript** is what these docs use. POMWright also works from JavaScript: paths, the first argument of every
   locator method, URLs and session storage values are checked at runtime as the types check them. An index is not:
   `nth` hands it to Playwright as given, as Playwright's `locator.nth` takes it (see
-  [indices](/POMWright/docs/filters-and-indices/#indices-nth)).
+  [indices](/POMWright/docs/filters-and-indices/#indices-nth)). Nor is the value of a key with a codec: it goes to its
+  codec as given, so `json<T>()` stores whatever `JSON.stringify` makes of it, while a key without a codec must be a
+  string (see [codecs](/POMWright/docs/session-storage/#codecs-for-structured-values)).
 
 ## Install
 

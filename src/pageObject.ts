@@ -202,7 +202,8 @@ export abstract class PageObject<
 	readonly label: string;
 	/**
 	 * The session storage helper, labeled with `label` and typed by the `sessionStorage.schema` option. With a string
-	 * `baseUrl` it touches only that origin's storage, and `seed()` needs no origin.
+	 * `baseUrl` it touches only that origin's storage, and `seed()` needs no origin. With a RegExp `baseUrl` it has no
+	 * origin: it works on the origin the page is on, and `seed()` needs `{ origin }`.
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#sessionstorage
 	 */

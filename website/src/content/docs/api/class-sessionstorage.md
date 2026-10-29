@@ -213,7 +213,7 @@ without a codec), in a browser without the Navigation API, when the page commits
 origin while the seed is being registered, when the page closes before it is registered, and, on the origin already,
 when the document's origin is opaque or the page leaves it during the write, as for `set`; later, failing the test with this call's line in the stack, when the
 browser refuses the write, when the document that arrives on the origin does not take the seed (a failed navigation
-there), or when the page closes before the seed was applied:
+there, or a sandboxed document), or when the page closes before the seed was applied:
 
 ```text
 Shop.SessionStorage.seed: an origin is required; pass { origin } or construct the helper with one

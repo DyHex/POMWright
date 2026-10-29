@@ -1039,6 +1039,36 @@ test.describe("a navigation to a seeded origin that fails", () => {
 	}
 });
 
+test.describe("a seed whose arrival on the origin is a sandboxed document", () => {
+	test.describe.configure({ mode: "serial" });
+	// thrown from a page listener, so the test cannot catch it: a hook hands it to the next test through a file
+	const messageFile = () =>
+		path.join(
+			test.info().project.outputDir,
+			`sandboxed-arrival-${test.info().project.name}-${test.info().repeatEachIndex}.txt`,
+		);
+	test.afterEach(() => {
+		if (test.info().expectedStatus === "failed") {
+			writeFileSync(messageFile(), test.info().errors[0]?.message ?? "");
+		}
+	});
+
+	test("fails the test", async ({ page, testStorage }) => {
+		test.fail(true, "a sandboxed document has no session storage, so it cannot receive the seed");
+		await page.goto(`${B}/testpath`);
+		await testStorage.sessionStorage.seed({ token: "x" });
+		await page.goto(`${A}/teststorage/sandboxed`);
+	});
+
+	test("and the message says the arriving document's origin is opaque", () => {
+		const message = readFileSync(messageFile(), "utf8");
+		rmSync(messageFile());
+		expect(message.split("\n")[0]).toBe(
+			`Error: TestStorage.SessionStorage.seed: the seed for ${A} (keys: "token") was not applied: the document that arrived on ${A} has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)`,
+		);
+	});
+});
+
 test.describe("a seed's failure and the page's other listeners", () => {
 	test.describe.configure({ mode: "serial" });
 	// the failing test's worker is replaced, so what it saw is handed to the next test through files

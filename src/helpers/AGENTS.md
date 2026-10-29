@@ -28,7 +28,9 @@ Promise checks of `@step` and `defineLocators()`).
 - Session storage mirrors `page.sessionStorage`: values are strings stored verbatim unless a codec is declared for the
   key (`json<T>()`, `Codec<T>`); a schema's type and value must agree, which the compiler checks (a page object's schema
   option is keyed by the declared type's keys, `Required` of them, and a message type without any; a standalone helper
-  with an explicit schema type requires the value), except a page object's type without its value (issue #58), `get` returns `null` for a missing key, a literal `[]` does not compile, and a helper
+  with an explicit schema type requires the value), except a page object's type without its value (issue #58) and a schema
+  value passed through a variable with a codec its type does not declare (TypeScript checks extra keys on literals
+  only, so that key is decoded while typed as a string), `get` returns `null` for a missing key, a literal `[]` does not compile, and a helper
   with an origin touches only that origin. `seed` never navigates and never intercepts a navigation: away from the
   origin it adds one `page.addInitScript` per pending origin, which writes only in the main frame, on the origin (`location.origin` and
   the document's own `self.origin`, so never into a browser's error page), on the first arrival there

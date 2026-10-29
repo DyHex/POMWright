@@ -167,11 +167,13 @@ TypeScript then holds the two together: a value without its type, and a value mi
 compile errors, and so is a standalone `new SessionStorage<typeof accountStorage>(page)` without the value.
 
 :::note
-One case still compiles: a page object that declares `storage` but passes no `sessionStorage.schema`. Its helper has no
-codecs: a declared key is stored and read as the raw string, so `get("user")` returns the stored text where its type
-says an object, and a `json<string>()` value is stored without its quotes. Only writing a value that is not a string
-fails, with the message in [Errors](#errors). Making the value required is [planned for the next major
-version](https://github.com/DyHex/POMWright/issues/58).
+Two cases still compile. A page object that declares `storage` but passes no `sessionStorage.schema`: its helper has no
+codecs, so a declared key is stored and read as the raw string, `get("user")` returns the stored text where its type
+says an object, and a `json<string>()` value is stored without its quotes; only writing a value that is not a string
+fails, with the message in [Errors](#errors). And a schema passed through a variable, with a codec its type does not
+declare: TypeScript checks an object literal for keys its type lacks, not a variable, so the helper decodes that key
+while its type says a string, and `get("count")` returns `42`, a number, typed `string | null`. [Issue
+#58](https://github.com/DyHex/POMWright/issues/58), planned for the next major version, would close both.
 :::
 
 A helper that belongs to an origin refuses to touch another one, since another origin's storage can only be reached
