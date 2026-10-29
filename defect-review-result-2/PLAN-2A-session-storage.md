@@ -180,3 +180,33 @@ re-run against the build.
 Eight commits, one per step above, each with its tests, docs and changeset text, named
 `fix(storage): …` with `Plan: defect-review-result-2/PLAN-2A-session-storage.md` and the `Co-Authored-By:` trailer; the
 decisions, finding statuses and ledger rows of items 2 to 8 go in with the first. The maintainer pushes.
+
+## Execution notes
+
+- 2026-10-29, eight commits, one per step: `56a8e3d` (0, decision 97), `277adc6` (1, 83), `e37a039` (2, 85 and 86),
+  `287a8a7` (3, 80), `ac9046f` (4, 84), `53f571f` (5, 81), `1817e47` (6, 102), `e551ead` (7, 106 point 3). Each new
+  test failed against a build without its step's change and passed with it (the harness cases by building with the
+  step's source stashed); each assertion of step 0 was inverted once and failed on three browsers.
+- Verification: the full harness on three browsers (1788 passed, 3 skipped; 33 step locations; 27 test-server tests;
+  226 page blocks and 96 doc examples compiled; API coverage 40 exports, 108 members; error messages 78 and 9); unit
+  938; the review's reproductions against the build: p09 (the waiting calls fail, the other origin untouched), p02 on
+  chromium (0 of 15 seeds failed for 1, 2, 3 and 5 redirects, where the review saw 15 of 15), p01 `-g P1` (taken as
+  passed), `A/triage/domain.spec.ts` (3 passed). No name of the external consumer projects in the branch.
+- Unexpected, for the maintainer:
+  1. **Decision 81 is not Chromium's alone.** With the fixture's own pages (nested `/teststorage/bounce`) instead of the
+     probe's `page.route` documents, all nine new harness cases (2, 3 and 5 redirects) failed before the change on
+     Firefox and WebKit too. The fix is the same; the changeset and *Internal → Seed registry* do not say "on
+     Chromium".
+  2. **Added beyond the plan**: a harness serial pair for the seed whose arrival is a sandboxed document (2A-5's test
+     gap, which the finding named and the plan left out; it also gives the docs row its message from a run); a
+     step-location probe for a codec error, made at the call and thrown in the step (decision 84's "the reported line
+     stays"); `?globals=1` on `/teststorage/sandboxed` (in `test/AGENTS.md`).
+  3. **Where**: the unit tests of decisions 80 and 84 are in `storageTurns.test.ts`, not `sessionStorage.test.ts`: its
+     fake page makes calls wait, and its `test.step` mock now can defer the body as the step overlay does.
+  4. **Docs beyond the plan's list**: *Error messages* also says that a reload within the origin that interrupts a
+     call stops it (decision 86's sentence, which the plan put on *Session storage*); `batch-navigation-message.md`'s
+     sentence, not only its example, names a reload within the origin and the destination; *Internal → Seed registry*,
+     *The origin around every call*, gained why a failed call is judged by `document.domain` (the plan's "where the
+     page describes it" found no such place).
+  5. **Left as it is**: `empty-seed.md` quotes the released message as the state before (`(keys: )`), which the
+     quoting does not change.

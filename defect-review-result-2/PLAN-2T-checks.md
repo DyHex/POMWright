@@ -129,3 +129,7 @@ on the real pages.
   5. `docsChains.spec.ts`'s diff is large: biome reflowed every `expect\n.soft(…)` into `shows(…)`; the assertions are
      the same, plus each test's page check.
 - Stop: the last commit changes CI's `lint` job; the maintainer pushes and checks PR #60's run.
+- Later the same day, from my own review of the commits, `f2cdd6c`: four descriptions of the snippet check
+  (`docs/repository.md`, `test/AGENTS.md`, *Internal → Documentation*, *Internal → Tests and checks*) gained the doc
+  comments' examples and decision 96's rules, and the link check stopped skipping the review folders by name. The
+  maintainer pushed the plan and CI was green (2026-10-29).
