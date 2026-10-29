@@ -577,7 +577,7 @@ export abstract class ForwardingShop<Paths extends string> extends PageObject<Pa
 }
 export class ForwardingWithValue extends ForwardingShop<"main"> {
 	constructor() {
-		// @ts-expect-error a value the base class cannot type: use the generic base class below
+		// @ts-expect-error a value the base class cannot type: use the generic base class below (ForwardingWayOut)
 		super("/", { sessionStorage: { schema: accountSchema } });
 	}
 	protected defineLocators() {}
@@ -628,6 +628,18 @@ export class GenericNeither extends GenericShop<"main"> {
 	}
 	protected defineLocators() {}
 }
+// the way out the message names for the forwarding base class's subclass above: the same subclass on the generic base
+// class, its storage declared in the base class's options type parameter
+export class ForwardingWayOut extends GenericShop<"main", { storage: typeof accountSchema }> {
+	constructor() {
+		super("/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export const wayOutReads = async (page: ForwardingWayOut) => {
+	const name: string | undefined = (await page.sessionStorage.get("user"))?.name;
+	return name;
+};
 // a type without its value still compiles
 export class GenericTypeWithoutValue extends GenericShop<
 	"main",

@@ -121,10 +121,12 @@ Defaults for every navigation method (`waitUntil`, `timeout`); a call's own opti
 
 The codecs of the session storage keys that hold structured values: the value of the type `Options["storage"]`
 declares, with a codec for every declared key, optional ones included. Take the type from the value,
-`PageObject<Paths, { storage: typeof schema }>`. Without declared keys no codec may be passed, a compile error:
+`PageObject<Paths, { storage: typeof schema }>`, or, for a subclass of a base class of your own, the base class's options
+type parameter (see [a base class for your site](/POMWright/docs/organizing-a-project/#a-base-class-for-your-site)).
+Without declared keys no codec may be passed, a compile error:
 
 ```text
-Type '{ user: Codec<{ name: string; }>; }' is not assignable to type 'Record<string, "declare the schema's type in the page object's type options: PageObject<Paths, { storage: typeof schema }>">'.
+Type '{ user: Codec<{ name: string; }>; }' is not assignable to type 'Record<string, "declare the schema's type in the page object's type options: PageObject<Paths, { storage: typeof schema }>, or a base class's options type parameter">'.
 ```
 
 ---

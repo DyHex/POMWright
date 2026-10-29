@@ -328,11 +328,14 @@ included: pass its `href`.
 ## Session storage
 
 ```text
-Type '{ user: Codec<{ name: string; }>; }' is not assignable to type 'Record<string, "declare the schema's type in the page object's type options: PageObject<Paths, { storage: typeof schema }>">'.
+Type '{ user: Codec<{ name: string; }>; }' is not assignable to type 'Record<string, "declare the schema's type in the page object's type options: PageObject<Paths, { storage: typeof schema }>, or a base class's options type parameter">'.
 ```
 
 A compile error, on a page object that passes `sessionStorage.schema` without declaring its type. Take the type from
-the value: `PageObject<Paths, { storage: typeof schema }>`. A value without a codec for a declared key, and a standalone
+the value: `PageObject<Paths, { storage: typeof schema }>`. A subclass of a base class that forwards `PageObjectOptions`
+cannot declare it there: the base class takes the options as a type parameter, and the subclass declares
+`{ storage: typeof schema }` in it (see [a base class for your
+site](/POMWright/docs/organizing-a-project/#a-base-class-for-your-site)). A value without a codec for a declared key, and a standalone
 helper given a schema type without its value, are compile errors too, in TypeScript's own words. See
 [through a page object](/POMWright/docs/session-storage/#through-a-page-object).
 

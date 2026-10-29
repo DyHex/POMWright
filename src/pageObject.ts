@@ -81,7 +81,7 @@ export type StorageTypeFromOptions<T extends PageObjectTypeOptions> = T extends 
 
 /** What a schema value is checked against where the type options declare no keys: no codec may be passed. */
 type SchemaNeedsStorageType =
-	"declare the schema's type in the page object's type options: PageObject<Paths, { storage: typeof schema }>";
+	"declare the schema's type in the page object's type options: PageObject<Paths, { storage: typeof schema }>, or a base class's options type parameter";
 
 /**
  * The schema value a page object takes: with declared keys, a codec for every one of them; without, none at all, so a

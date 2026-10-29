@@ -98,6 +98,13 @@ every page of the shop is on its origin. `urlPathType` and `storage` are passed 
 `{ urlPathType: RegExp }` takes a RegExp path, and one that declares `storage` gets a typed session storage helper. A
 subclass with neither is written `ShopPage<Paths>`, as with the first base class.
 
+A subclass of the first base class cannot pass a storage schema: `ShopPage<Paths>` has no options type to declare its
+type in, so `{ sessionStorage: { schema } }` is a compile error, "declare the schema's type in the page object's type
+options: …, or a base class's options type parameter". The base class above is the way out: the subclass declares the
+schema's type, `ShopPage<Paths, { storage: typeof cartStorage }>`, and passes the value,
+`super(page, "/cart", { sessionStorage: { schema: cartStorage } })` (see [Session
+storage](/POMWright/docs/session-storage/#through-a-page-object)).
+
 ## Locators in modules
 
 A page object with many locators keeps them in a module beside it, a function that registers them on a registry. The
