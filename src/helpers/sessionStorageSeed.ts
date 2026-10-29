@@ -114,7 +114,8 @@ export const seedScript = ({ origin, entries, prefix }: SeedScriptArg): void => 
 	}
 };
 
-const describeKeys = (keys: readonly string[]): string => keys.join(", ");
+/** The keys a message names, each quoted as `get`'s messages quote theirs, so an empty key or one holding `, ` reads as itself. */
+export const describeKeys = (keys: readonly string[]): string => keys.map((key) => JSON.stringify(key)).join(", ");
 
 export const noNavigationApiError = (title: string, origin: string, userAgent: string, site: Error): Error =>
 	atCallSite(

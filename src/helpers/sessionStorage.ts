@@ -11,7 +11,7 @@
  */
 import { type Page, test } from "@playwright/test";
 import { callerLocation, captureCallSite, type StepLocation, siteLocation } from "./callSite";
-import { originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSeed";
+import { describeKeys, originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSeed";
 import { PAGE_WIDE, takeTurn } from "./storageTurns";
 
 /**
@@ -161,6 +161,18 @@ const describeOrigin = (value: string): string | undefined => {
 	return url.host !== "" && url.pathname === "/" && url.search === "" && url.hash === "" && url.origin !== "null"
 		? url.origin
 		: undefined;
+};
+
+/**
+ * Where the page went, for a navigation message: the origin and path of its URL, without the query and fragment, which
+ * may hold a redirect's tokens; a URL without an origin whole, as `guarded` compares it.
+ */
+const destinationOf = (url: string): string => {
+	if (originOf(url) === undefined) {
+		return url;
+	}
+	const { origin, pathname } = new URL(url);
+	return `${origin}${pathname}`;
 };
 
 /** Throws unless `value` is an origin; returns it normalized. */
@@ -351,14 +363,14 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	/**
 	 * One storage call, checked against a navigation: the page's URL is read before and after it (a field Playwright's
 	 * client keeps current, so no round trip), and when its origin moved, or the call failed because the document went
-	 * away, the call fails with `navigated(from)`, whether or not it threw. A call in flight when the page leaves may have
-	 * acted on the new document: it is detected, not prevented. A URL without an origin (an `about:blank` popup) is
-	 * compared whole.
+	 * away, the call fails with `navigated(from, to)`, whether or not it threw; `to` is where the page is when the
+	 * message is made (`destinationOf`). A call in flight when the page leaves may have acted on the new document: it is
+	 * detected, not prevented. A URL without an origin (an `about:blank` popup) is compared whole.
 	 */
 	private async guarded<T>(
 		method: string,
 		call: () => Promise<T>,
-		navigated: (from: string, cause: unknown) => Error,
+		navigated: (from: string, to: string, cause: unknown) => Error,
 	): Promise<T> {
 		const before = this.page.url();
 		const from = originOf(before);
@@ -373,21 +385,21 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 			const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
 			const destroyed = cause instanceof Error && /Execution context was destroyed/.test(cause.message);
 			if (destroyed || moved()) {
-				throw navigated(from ?? before, cause);
+				throw navigated(from ?? before, destinationOf(this.page.url()), cause);
 			}
 			throw error;
 		}
 		if (moved()) {
-			throw navigated(from ?? before, undefined);
+			throw navigated(from ?? before, destinationOf(this.page.url()), undefined);
 		}
 		return result;
 	}
 
 	/** The failure of a single call the page left: what it was doing, and what it may have done to the new document. */
 	private navigatedDuring(method: string, doing: string, consequence: string) {
-		return (from: string, cause: unknown) =>
+		return (from: string, to: string, cause: unknown) =>
 			new Error(
-				`${this.title(method)}: the page navigated while ${method}() was ${doing} ${from}; ${consequence}`,
+				`${this.title(method)}: the page navigated to ${to} while ${method}() was ${doing} ${from}; ${consequence}`,
 				cause === undefined ? undefined : { cause },
 			);
 	}
@@ -407,13 +419,13 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 			await this.guarded(
 				method,
 				() => call(key),
-				(from, cause) => {
+				(from, to, cause) => {
 					const finished = keys.slice(0, index);
 					return new Error(
-						`${this.title(method)}: the page navigated while ${method}() was ${doing} ${from}; ` +
+						`${this.title(method)}: the page navigated to ${to} while ${method}() was ${doing} ${from}; ` +
 							`${finished.length} of ${keys.length} ${keys.length === 1 ? "key was" : "keys were"} ${done}` +
-							(finished.length > 0 ? ` (${finished.join(", ")})` : "") +
-							`; ${key} was being ${done} and may have reached the new document`,
+							(finished.length > 0 ? ` (${describeKeys(finished)})` : "") +
+							`; ${JSON.stringify(key)} was being ${done} and may have reached the new document`,
 						cause === undefined ? undefined : { cause },
 					);
 				},
@@ -489,7 +501,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * (`Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`),
 	 * and when the page leaves the origin during the batch, which is written one key at a time and stops there; the key in
 	 * flight may have reached the new document
-	 * (`Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1); k2 was being written and may have reached the new document`).
+	 * (`Shop.SessionStorage.set: the page navigated to https://shop.example/home while set() was writing to https://shop.example; 2 of 60 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document`).
 	 *
 	 * @example
 	 * ```ts
@@ -524,7 +536,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * than the helper's, when the page has no origin yet, when the document's origin is opaque, as for `set`
 	 * (`Shop.SessionStorage.get: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`),
 	 * and when the page leaves the origin during the read, rather than return what it may have read from the new document
-	 * (`Shop.SessionStorage.get: the page navigated while get() was reading "token" from https://shop.example; it may have read the new document`).
+	 * (`Shop.SessionStorage.get: the page navigated to https://login.example/ while get() was reading "token" from https://shop.example; it may have read the new document`).
 	 *
 	 * @example
 	 * ```ts
@@ -585,7 +597,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * (`Shop.SessionStorage.clear: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`),
 	 * and when the page leaves the origin during the call; the keys named as removed are gone, and the one in flight may
 	 * have reached the new document
-	 * (`Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token); locale was being removed and may have reached the new document`).
+	 * (`Shop.SessionStorage.clear: the page navigated to https://shop.example/home while clear() was removing keys from https://shop.example; 1 of 3 keys were removed ("token"); "locale" was being removed and may have reached the new document`).
 	 *
 	 * @example
 	 * ```ts
@@ -640,10 +652,10 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * (`… value for "orderId" is not a string and no codec is declared for it; …`, `… could not be encoded`,
 	 * `… the codec for "orderId" returned undefined instead of a string`), when the browser has no Navigation API, when the page commits a document on the
 	 * origin while the seed is being registered, when the page closes before it is registered (`… the page closed
-	 * while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends`),
+	 * while seed() was registering the seed for https://pay.example (keys: "orderId"); await seed() before the test ends`),
 	 * and, on the origin already, when the document's origin is opaque or the page leaves it during the write, as for
 	 * `set` (`… the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`, `… the
-	 * page navigated while seed() was writing to https://shop.example; …`);
+	 * page navigated to https://shop.example/home while seed() was writing to https://shop.example; …`);
 	 * later, failing the test with the line of this call in the stack, when the browser refuses the write (the storage
 	 * quota), when the document that arrives on the origin does not take the seed (after a navigation there that failed:
 	 * `… was not applied: the document that arrived on https://pay.example has an opaque origin …`), or when the page

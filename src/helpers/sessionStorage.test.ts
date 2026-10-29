@@ -187,7 +187,7 @@ describe("a batch the page leaves", () => {
 	it("names the keys already written when the page navigates during the batch", async () => {
 		const error = await write(pageFailingAt(3, destroyed), { a: "1", b: "2", c: "3", d: "4" }).catch((e: Error) => e);
 		expect((error as Error).message).toBe(
-			"Shop.SessionStorage.set: the page navigated while set() was writing to http://localhost:9000; 2 of 4 keys were written (a, b); c was being written and may have reached the new document",
+			`Shop.SessionStorage.set: the page navigated to http://localhost:9000/ while set() was writing to http://localhost:9000; 2 of 4 keys were written ("a", "b"); "c" was being written and may have reached the new document`,
 		);
 		expect((error as Error).cause).toBe(destroyed);
 	});
@@ -197,7 +197,14 @@ describe("a batch the page leaves", () => {
 			(e: Error) => e,
 		);
 		expect((error as Error).message).toBe(
-			"Shop.SessionStorage.set: the page navigated while set() was writing to http://localhost:9000; 0 of 1 key was written; token was being written and may have reached the new document",
+			`Shop.SessionStorage.set: the page navigated to http://127.0.0.1:9000/x while set() was writing to http://localhost:9000; 0 of 1 key was written; "token" was being written and may have reached the new document`,
+		);
+	});
+
+	it("quotes every key it names, so an empty key and one holding a comma read as themselves", async () => {
+		const error = await write(pageFailingAt(3, destroyed), { "": "1", "a, b": "2", c: "3" }).catch((e: Error) => e);
+		expect((error as Error).message).toBe(
+			`Shop.SessionStorage.set: the page navigated to http://localhost:9000/ while set() was writing to http://localhost:9000; 2 of 3 keys were written ("", "a, b"); "c" was being written and may have reached the new document`,
 		);
 	});
 
@@ -228,7 +235,7 @@ describe("a batch the page leaves", () => {
 			)
 			.catch((e: Error) => e);
 		expect((error as Error).message).toBe(
-			"Shop.SessionStorage.clear: the page navigated while clear() was removing keys from http://localhost:9000; 1 of 3 keys were removed (token); locale was being removed and may have reached the new document",
+			`Shop.SessionStorage.clear: the page navigated to http://localhost:9000/ while clear() was removing keys from http://localhost:9000; 1 of 3 keys were removed ("token"); "locale" was being removed and may have reached the new document`,
 		);
 	});
 });
@@ -265,8 +272,12 @@ describe("a call the page leaves while it succeeds", () => {
 	type Internals = {
 		write(m: string, e: Record<string, string>): Promise<void>;
 		read(keys: string | readonly string[] | undefined): Promise<unknown>;
-		guarded<T>(m: string, call: () => Promise<T>, navigated: (from: string, cause: unknown) => Error): Promise<T>;
-		navigatedDuring(m: string, doing: string, consequence: string): (from: string, cause: unknown) => Error;
+		guarded<T>(
+			m: string,
+			call: () => Promise<T>,
+			navigated: (from: string, to: string, cause: unknown) => Error,
+		): Promise<T>;
+		navigatedDuring(m: string, doing: string, consequence: string): (from: string, to: string, cause: unknown) => Error;
 	};
 	const internals = (page: Page) => new SessionStorage(page, { label: "Shop" }) as unknown as Internals;
 	const failure = (promise: Promise<unknown>) => promise.then(() => undefined).catch((error: Error) => error);
@@ -275,7 +286,7 @@ describe("a call the page leaves while it succeeds", () => {
 		const { page, written } = pageMovingAt(2, "http://127.0.0.1:9000/");
 		const error = await failure(internals(page).write("set", { a: "1", b: "2", c: "3" }));
 		expect(error?.message).toBe(
-			"Shop.SessionStorage.set: the page navigated while set() was writing to http://localhost:9000; 1 of 3 keys were written (a); b was being written and may have reached the new document",
+			`Shop.SessionStorage.set: the page navigated to http://127.0.0.1:9000/ while set() was writing to http://localhost:9000; 1 of 3 keys were written ("a"); "b" was being written and may have reached the new document`,
 		);
 		expect(error?.cause).toBeUndefined();
 		expect(written).toEqual(["a", "b"]);
@@ -290,15 +301,15 @@ describe("a call the page leaves while it succeeds", () => {
 	it("fails a read that came from the new origin instead of returning its value, one key, several or all", async () => {
 		const one = await failure(internals(pageMovingAt(1, "http://127.0.0.1:9000/").page).read("token"));
 		expect(one?.message).toBe(
-			'Shop.SessionStorage.get: the page navigated while get() was reading "token" from http://localhost:9000; it may have read the new document',
+			'Shop.SessionStorage.get: the page navigated to http://127.0.0.1:9000/ while get() was reading "token" from http://localhost:9000; it may have read the new document',
 		);
 		const several = await failure(internals(pageMovingAt(2, "http://127.0.0.1:9000/").page).read(["a", "b", "c"]));
 		expect(several?.message).toMatch(
-			/^Shop\.SessionStorage\.get: the page navigated while get\(\) was reading "[abc]" from http:\/\/localhost:9000; it may have read the new document$/,
+			/^Shop\.SessionStorage\.get: the page navigated to http:\/\/127\.0\.0\.1:9000\/ while get\(\) was reading "[abc]" from http:\/\/localhost:9000; it may have read the new document$/,
 		);
 		const all = await failure(internals(pageMovingAt(1, "http://127.0.0.1:9000/").page).read(undefined));
 		expect(all?.message).toBe(
-			"Shop.SessionStorage.get: the page navigated while get() was reading every entry from http://localhost:9000; it may have read the new document",
+			"Shop.SessionStorage.get: the page navigated to http://127.0.0.1:9000/ while get() was reading every entry from http://localhost:9000; it may have read the new document",
 		);
 	});
 
@@ -313,7 +324,7 @@ describe("a call the page leaves while it succeeds", () => {
 			),
 		);
 		expect(error?.message).toBe(
-			"Shop.SessionStorage.clear: the page navigated while clear() was removing every entry from http://localhost:9000; it may have reached the new document",
+			"Shop.SessionStorage.clear: the page navigated to http://127.0.0.1:9000/ while clear() was removing every entry from http://localhost:9000; it may have reached the new document",
 		);
 	});
 
@@ -321,7 +332,23 @@ describe("a call the page leaves while it succeeds", () => {
 		const { page } = pageMovingAt(1, "http://localhost:9000/", "about:blank");
 		const error = await failure(internals(page).write("set", { a: "1" }));
 		expect(error?.message).toBe(
-			"Shop.SessionStorage.set: the page navigated while set() was writing to about:blank; 0 of 1 key was written; a was being written and may have reached the new document",
+			`Shop.SessionStorage.set: the page navigated to http://localhost:9000/ while set() was writing to about:blank; 0 of 1 key was written; "a" was being written and may have reached the new document`,
+		);
+	});
+
+	it("names where the page went by its origin and path, without the query or fragment", async () => {
+		const { page } = pageMovingAt(2, "https://login.example/callback?code=secret#state");
+		const error = await failure(internals(page).write("set", { a: "1", b: "2" }));
+		expect(error?.message).toBe(
+			`Shop.SessionStorage.set: the page navigated to https://login.example/callback while set() was writing to http://localhost:9000; 1 of 2 keys were written ("a"); "b" was being written and may have reached the new document`,
+		);
+	});
+
+	it("names a destination without an origin by its whole URL", async () => {
+		const { page } = pageMovingAt(1, "data:text/html,<p>left?x=1</p>");
+		const error = await failure(internals(page).read("token"));
+		expect(error?.message).toBe(
+			'Shop.SessionStorage.get: the page navigated to data:text/html,<p>left?x=1</p> while get() was reading "token" from http://localhost:9000; it may have read the new document',
 		);
 	});
 });

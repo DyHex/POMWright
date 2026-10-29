@@ -166,13 +166,13 @@ Shop.SessionStorage.seed: value for "orderId" could not be encoded
 Shop.SessionStorage.seed: the codec for "orderId" returned undefined instead of a string
 Shop.SessionStorage.seed: the page committed a document on https://pay.example while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it
 Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation) to write only on the first arrival at https://pay.example, and this browser has none (Mozilla/5.0 …); use set() on the origin and reload instead
-Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends
+Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: "orderId"); await seed() before the test ends
 Shop.SessionStorage.seed: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)
-Shop.SessionStorage.seed: the page navigated while seed() was writing to https://shop.example; 1 of 2 keys were written (orderId); amount was being written and may have reached the new document
-Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
-Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
-Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the document that arrived on https://pay.example has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)
-Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the browser counted the page's arrival on https://pay.example as a return there (navigation.activation.from is set): the document before it was already on the origin, as after a failed navigation to it
+Shop.SessionStorage.seed: the page navigated to https://shop.example/home while seed() was writing to https://shop.example; 1 of 2 keys were written ("orderId"); "amount" was being written and may have reached the new document
+Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: "orderId"): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: "orderId") was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: "orderId") was not applied: the document that arrived on https://pay.example has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: "orderId") was not applied: the browser counted the page's arrival on https://pay.example as a return there (navigation.activation.from is set): the document before it was already on the origin, as after a failed navigation to it
 ```
 
 The first nine are thrown by the `seed` call, the eighth and ninth by a seed on the origin already, which writes as

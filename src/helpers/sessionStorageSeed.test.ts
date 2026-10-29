@@ -7,6 +7,7 @@ import {
 	type NavigationSupport,
 	neverAppliedError,
 	noNavigationApiError,
+	notAppliedError,
 	originOf,
 	type PendingSeed,
 	registryFor,
@@ -447,7 +448,7 @@ describe("SeedRegistry", () => {
 				[{ a: "1", k: "third", b: "2", c: "3" }, 0],
 			]);
 			expect(failure(() => page.close())?.message).toBe(
-				`${title}: the seed for ${B} (keys: a, k, b, c) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
+				`${title}: the seed for ${B} (keys: "a", "k", "b", "c") was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
 			);
 		});
 
@@ -529,7 +530,7 @@ describe("SeedRegistry", () => {
 			page.failNextAdd = new Error("page.addInitScript: Target page, context or browser has been closed");
 			const error = await registry.add(B, { token: "t", locale: "nb" }, title, site).catch((e: Error) => e);
 			expect((error as Error).message).toBe(
-				`${title}: the page closed while seed() was registering the seed for ${B} (keys: token, locale); await seed() before the test ends`,
+				`${title}: the page closed while seed() was registering the seed for ${B} (keys: "token", "locale"); await seed() before the test ends`,
 			);
 			expect((error as Error).cause).toEqual(
 				new Error("page.addInitScript: Target page, context or browser has been closed"),
@@ -556,7 +557,7 @@ describe("SeedRegistry", () => {
 			page.navigate(`${B}/app`);
 			const error = failure(() => page.console(refused(B)));
 			expect(error?.message).toBe(
-				`${title}: could not write sessionStorage for ${B} (keys: token, user): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries`,
+				`${title}: could not write sessionStorage for ${B} (keys: "token", "user"): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries`,
 			);
 			expect(error?.stack).toBe(`Error: ${error?.message}\n${siteFrame}`);
 			expect(page.listeners).toEqual([]);
@@ -598,7 +599,7 @@ describe("SeedRegistry", () => {
 				await registry.add(B, { token: "1" }, title, site);
 				page.navigate(`${B}/app`);
 				const error = failure(() => page.console(skipped(B, reason)));
-				expect(error?.message).toBe(`${title}: the seed for ${B} (keys: token) was not applied: ${why}`);
+				expect(error?.message).toBe(`${title}: the seed for ${B} (keys: "token") was not applied: ${why}`);
 				expect(error?.stack).toBe(`Error: ${error?.message}\n${siteFrame}`);
 				expect(page.listeners).toEqual([]);
 			}
@@ -627,9 +628,9 @@ describe("SeedRegistry", () => {
 			const error = failure(() => page.close());
 			expect(error?.message).toBe(
 				`${title}: 3 seeds were never applied: the page closed without navigating to their origins; remove the seed calls, or navigate to the origins before the test ends:\n` +
-					`  ${title} at /suite/tests/login.spec.ts:12:34, for ${B} (keys: token, user)\n` +
-					`  Popup.SessionStorage.seed at ${path.join("tests", "popup.spec.ts")}:20:5, for ${C} (keys: other)\n` +
-					`  Popup.SessionStorage.seed at ${path.join("tests", "popup.spec.ts")}:20:5, for ${D} (keys: k)`,
+					`  ${title} at /suite/tests/login.spec.ts:12:34, for ${B} (keys: "token", "user")\n` +
+					`  Popup.SessionStorage.seed at ${path.join("tests", "popup.spec.ts")}:20:5, for ${C} (keys: "other")\n` +
+					`  Popup.SessionStorage.seed at ${path.join("tests", "popup.spec.ts")}:20:5, for ${D} (keys: "k")`,
 			);
 			// the report's code frame stays at the first seed's call
 			expect(error?.stack).toBe(`Error: ${error?.message}\n${siteFrame}`);
@@ -682,6 +683,19 @@ describe("error builders", () => {
 		]) {
 			expect(error.stack).toBe(`Error: ${error.message}\n${siteFrame}`);
 		}
+	});
+
+	it("quote every key they name, so an empty key and one holding a comma read as themselves", () => {
+		const keys = ["", "a, b", "c"];
+		expect(writeFailedError({ keys, title, site }, B, "QuotaExceededError").message).toBe(
+			`${title}: could not write sessionStorage for ${B} (keys: "", "a, b", "c"): QuotaExceededError; the app loaded without the entries`,
+		);
+		expect(notAppliedError({ keys, title, site }, B, "opaque").message).toContain(
+			`${title}: the seed for ${B} (keys: "", "a, b", "c") was not applied:`,
+		);
+		expect(neverAppliedError([[B, { ...pending, entries: { "": "1", "a, b": "2", c: "3" } }]]).message).toContain(
+			`${title}: the seed for ${B} (keys: "", "a, b", "c") was never applied:`,
+		);
 	});
 
 	it("leave the stack alone when no site was captured", () => {

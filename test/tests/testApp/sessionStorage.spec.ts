@@ -164,7 +164,7 @@ test.describe("a batch the page leaves", () => {
 			(error: Error) => error.message,
 		);
 		const navigated =
-			/^TestStorage\.SessionStorage\.set: the page navigated while set\(\) was writing to http:\/\/localhost:9000; \d+ of 60 keys were written/;
+			/^TestStorage\.SessionStorage\.set: the page navigated to http:\/\/127\.0\.0\.1:9000\/teststorage while set\(\) was writing to http:\/\/localhost:9000; \d+ of 60 keys were written/;
 		if (browserName === "webkit") {
 			// WebKit finishes the batch before it leaves (60 of 60 in every probe); either outcome is correct
 			expect(outcome === "resolved" || navigated.test(outcome), outcome).toBe(true);
@@ -173,7 +173,7 @@ test.describe("a batch the page leaves", () => {
 		}
 		await page.waitForURL(onSecondOrigin);
 		// the other origin's live storage: at most the key that was in flight when the page left, which the message names
-		const inFlight = /; (k\d+) was being written and may have reached the new document$/.exec(outcome)?.[1];
+		const inFlight = /; "(k\d+)" was being written and may have reached the new document$/.exec(outcome)?.[1];
 		expect(Object.keys(await liveStorage(page)).filter((key) => key !== inFlight)).toEqual([]);
 	});
 
@@ -210,7 +210,7 @@ test.describe("a batch the page leaves", () => {
 			await testStorage.navigation.goto();
 			commitOnBAfter(page, "setItem", 3);
 			expect(await outcomeOf(testStorage.sessionStorage.set(Object.fromEntries(keys.map((key) => [key, "A"]))))).toBe(
-				`TestStorage.SessionStorage.set: the page navigated while set() was writing to ${A}; 2 of 6 keys were written (k0, k1); k2 was being written and may have reached the new document`,
+				`TestStorage.SessionStorage.set: the page navigated to ${B}/testpath while set() was writing to ${A}; 2 of 6 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document`,
 			);
 			expect(await liveStorage(page)).toEqual({});
 		});
@@ -221,7 +221,7 @@ test.describe("a batch the page leaves", () => {
 			await testStorage.navigation.goto();
 			commitOnBAfter(page, "removeItem", 3);
 			expect(await outcomeOf(testStorage.sessionStorage.clear(keys))).toBe(
-				`TestStorage.SessionStorage.clear: the page navigated while clear() was removing keys from ${A}; 2 of 6 keys were removed (k0, k1); k2 was being removed and may have reached the new document`,
+				`TestStorage.SessionStorage.clear: the page navigated to ${B}/testpath while clear() was removing keys from ${A}; 2 of 6 keys were removed ("k0", "k1"); "k2" was being removed and may have reached the new document`,
 			);
 			expect(await liveStorage(page)).toEqual(own);
 		});
@@ -231,7 +231,7 @@ test.describe("a batch the page leaves", () => {
 			await testStorage.navigation.goto();
 			commitOnBAfter(page, "clear", 1);
 			expect(await outcomeOf(testStorage.sessionStorage.clear())).toBe(
-				`TestStorage.SessionStorage.clear: the page navigated while clear() was removing every entry from ${A}; it may have reached the new document`,
+				`TestStorage.SessionStorage.clear: the page navigated to ${B}/testpath while clear() was removing every entry from ${A}; it may have reached the new document`,
 			);
 			expect(await liveStorage(page)).toEqual({ token: "B's own" });
 		});
@@ -242,7 +242,7 @@ test.describe("a batch the page leaves", () => {
 			await testStorage.sessionStorage.set({ k0: "A", k1: "A", k2: "A" });
 			commitOnBAfter(page, "getItem", 2);
 			expect(await outcomeOf(testStorage.sessionStorage.get(["k0", "k1", "k2"]))).toMatch(
-				/^TestStorage\.SessionStorage\.get: the page navigated while get\(\) was reading "k[012]" from http:\/\/localhost:9000; it may have read the new document$/,
+				/^TestStorage\.SessionStorage\.get: the page navigated to http:\/\/127\.0\.0\.1:9000\/testpath while get\(\) was reading "k[012]" from http:\/\/localhost:9000; it may have read the new document$/,
 			);
 		});
 
@@ -254,7 +254,7 @@ test.describe("a batch the page leaves", () => {
 			await testStorage.navigation.goto();
 			commitOnBAfter(page, "setItem", 3);
 			expect(await outcomeOf(testStorage.sessionStorage.seed(Object.fromEntries(keys.map((key) => [key, "A"]))))).toBe(
-				`TestStorage.SessionStorage.seed: the page navigated while seed() was writing to ${A}; 2 of 6 keys were written (k0, k1); k2 was being written and may have reached the new document`,
+				`TestStorage.SessionStorage.seed: the page navigated to ${B}/testpath while seed() was writing to ${A}; 2 of 6 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document`,
 			);
 			expect(await liveStorage(page)).toEqual({});
 		});
@@ -864,7 +864,7 @@ test.describe("a seed that is never applied, at the page's own close", () => {
 		const message = readFileSync(messageFile(test.info()), "utf8");
 		rmSync(messageFile(test.info()));
 		expect(message.split("\n")[0]).toBe(
-			`Error: TestStorageSecond.SessionStorage.seed: the seed for ${B} (keys: token) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
+			`Error: TestStorageSecond.SessionStorage.seed: the seed for ${B} (keys: "token") was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
 		);
 	});
 });
@@ -929,7 +929,7 @@ test.describe("a navigation to a seeded origin that fails", () => {
 					? "the browser counted the page's arrival on http://127.0.0.1:9000 as a return there"
 					: "the document that arrived on http://127.0.0.1:9000 has an opaque origin";
 			expect(message).toContain(
-				`TestStorageSecond.SessionStorage.seed: the seed for http://127.0.0.1:9000 (keys: token) was not applied: ${reason}`,
+				`TestStorageSecond.SessionStorage.seed: the seed for http://127.0.0.1:9000 (keys: "token") was not applied: ${reason}`,
 			);
 			expect(stack.split("\n").find((line: string) => line.trim().startsWith("at "))).toMatch(
 				/sessionStorage\.spec\.ts:\d+:\d+/,
@@ -993,7 +993,7 @@ test.describe("a seed's failure and the page's other listeners", () => {
 	test("the later console listener ran, and the failure was the refused write", () => {
 		expect(read("later-console-listener")).toBe("ran");
 		expect(read("listener-failure")).toMatch(
-			/^(Error: )?TestStorageSecond\.SessionStorage\.seed: could not write sessionStorage for http:\/\/127\.0\.0\.1:9000 \(keys: big\)/,
+			/^(Error: )?TestStorageSecond\.SessionStorage\.seed: could not write sessionStorage for http:\/\/127\.0\.0\.1:9000 \(keys: "big"\)/,
 		);
 	});
 });
@@ -1006,7 +1006,7 @@ test.describe("a page that closes while seed registers", () => {
 		await page.close();
 		const error = await seeding.catch((e: Error) => e);
 		expect((error as Error).message).toBe(
-			`TestStorageSecond.SessionStorage.seed: the page closed while seed() was registering the seed for ${B} (keys: token); await seed() before the test ends`,
+			`TestStorageSecond.SessionStorage.seed: the page closed while seed() was registering the seed for ${B} (keys: "token"); await seed() before the test ends`,
 		);
 		expect((error as Error).stack?.split("\n")[1]).toContain(`sessionStorage.spec.ts:${here + 1}:`);
 	});
@@ -1043,7 +1043,7 @@ test.describe("overlapping seeds that are never applied", () => {
 		const message = readFileSync(messageFile(), "utf8");
 		rmSync(messageFile());
 		expect(message.split("\n")[0]).toBe(
-			`Error: TestStorageSecond.SessionStorage.seed: the seed for ${B} (keys: a, b, c) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
+			`Error: TestStorageSecond.SessionStorage.seed: the seed for ${B} (keys: "a", "b", "c") was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
 		);
 	});
 
@@ -1066,8 +1066,8 @@ test.describe("overlapping seeds that are never applied", () => {
 		expect(message).toMatch(
 			new RegExp(
 				"^Error: TestStorageSecond\\.SessionStorage\\.seed: 2 seeds were never applied: the page closed without navigating to their origins; remove the seed calls, or navigate to the origins before the test ends:\\n" +
-					`  TestStorageSecond\\.SessionStorage\\.seed ${at}, for http://127\\.0\\.0\\.1:9000 \\(keys: a\\)\\n` +
-					`  Pay\\.SessionStorage\\.seed ${at}, for https://pay\\.example \\(keys: orderId\\)$`,
+					`  TestStorageSecond\\.SessionStorage\\.seed ${at}, for http://127\\.0\\.0\\.1:9000 \\(keys: "a"\\)\\n` +
+					`  Pay\\.SessionStorage\\.seed ${at}, for https://pay\\.example \\(keys: "orderId"\\)$`,
 			),
 		);
 	});

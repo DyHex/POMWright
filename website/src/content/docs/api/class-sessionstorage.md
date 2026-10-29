@@ -117,8 +117,8 @@ await storage.clear(); // everything
 **Throws**
 
 ```text
-Shop.SessionStorage.clear: the page navigated while clear() was removing keys from https://shop.example; 1 of 3 keys were removed (token); locale was being removed and may have reached the new document
-Shop.SessionStorage.clear: the page navigated while clear() was removing every entry from https://shop.example; it may have reached the new document
+Shop.SessionStorage.clear: the page navigated to https://shop.example/home while clear() was removing keys from https://shop.example; 1 of 3 keys were removed ("token"); "locale" was being removed and may have reached the new document
+Shop.SessionStorage.clear: the page navigated to https://shop.example/home while clear() was removing every entry from https://shop.example; it may have reached the new document
 ```
 
 When the page leaves the origin during the call: the keys it names as removed are gone, and the one in flight, or
@@ -157,7 +157,7 @@ await storage.get(["token", "missing"]); // { token: "abc", missing: null }
 
 ```text
 Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"
-Shop.SessionStorage.get: the page navigated while get() was reading "token" from https://shop.example; it may have read the new document
+Shop.SessionStorage.get: the page navigated to https://login.example/ while get() was reading "token" from https://shop.example; it may have read the new document
 ```
 
 The codec's error is the `cause`. The second when the page leaves the origin during the read: it fails rather than
@@ -218,13 +218,13 @@ Shop.SessionStorage.seed: value for "orderId" could not be encoded
 Shop.SessionStorage.seed: the codec for "orderId" returned undefined instead of a string
 Shop.SessionStorage.seed: the page committed a document on https://pay.example while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it
 Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation) to write only on the first arrival at https://pay.example, and this browser has none (Mozilla/5.0 …); use set() on the origin and reload instead
-Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: orderId); await seed() before the test ends
+Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: "orderId"); await seed() before the test ends
 Shop.SessionStorage.seed: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)
-Shop.SessionStorage.seed: the page navigated while seed() was writing to https://shop.example; 1 of 2 keys were written (orderId); amount was being written and may have reached the new document
-Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
-Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
-Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the document that arrived on https://pay.example has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)
-Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was not applied: the browser counted the page's arrival on https://pay.example as a return there (navigation.activation.from is set): the document before it was already on the origin, as after a failed navigation to it
+Shop.SessionStorage.seed: the page navigated to https://shop.example/home while seed() was writing to https://shop.example; 1 of 2 keys were written ("orderId"); "amount" was being written and may have reached the new document
+Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: "orderId"): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: "orderId") was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: "orderId") was not applied: the document that arrived on https://pay.example has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: "orderId") was not applied: the browser counted the page's arrival on https://pay.example as a return there (navigation.activation.from is set): the document before it was already on the origin, as after a failed navigation to it
 ```
 
 [What `seed` cannot do](/POMWright/docs/seeding-session-storage/#what-seed-cannot-do) lists every such case.
@@ -264,7 +264,7 @@ Shop.SessionStorage.set: value for "user" is not a string and no codec is declar
 Shop.SessionStorage.set: value for "user" could not be encoded
 Shop.SessionStorage.set: the codec for "user" returned undefined instead of a string
 Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)
-Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1); k2 was being written and may have reached the new document
+Shop.SessionStorage.set: the page navigated to https://shop.example/home while set() was writing to https://shop.example; 2 of 60 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document
 ```
 
 The second when the key's codec throws, with its error as `cause`; the third when it returns something other than a

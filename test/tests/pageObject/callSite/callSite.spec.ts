@@ -63,7 +63,7 @@ test.describe("a seed's refused write", () => {
 		const stack = readFileSync(stackFile(), "utf8");
 		rmSync(stackFile());
 		expect(stack.split("\n")[0]).toMatch(
-			/^Error: TestStorageSecond\.SessionStorage\.seed: could not write sessionStorage for http:\/\/127\.0\.0\.1:9000 \(keys: big\): .+; the app loaded without the entries$/,
+			/^Error: TestStorageSecond\.SessionStorage\.seed: could not write sessionStorage for http:\/\/127\.0\.0\.1:9000 \(keys: "big"\): .+; the app loaded without the entries$/,
 		);
 		expect(firstFrame(stack)).toMatch(/[\\/]callSite[\\/]sessionStorage\.ts:\d+:\d+/);
 	});

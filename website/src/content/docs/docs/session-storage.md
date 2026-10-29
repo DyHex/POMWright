@@ -120,13 +120,17 @@ Playwright's `setItem` takes one. A literal `[]` is a compile error for `get` an
 runtime reads or removes nothing.
 
 Every call checks the page's origin before and after each storage call it makes, so a navigation to another origin stops
-it: the call fails, naming the keys done, which stay, and the one in flight. That one may have reached the new
-document, since a call already sent cannot be taken back; the check detects it, but cannot prevent it. A `get` the page
-left fails rather than return what it may have read there:
+it: the call fails, naming where the page went, the keys done, which stay, and the one in flight. That one may have
+reached the new document, since a call already sent cannot be taken back; the check detects it, but cannot prevent it.
+A `get` the page left fails rather than return what it may have read there. A reload or a redirect within the origin
+that interrupts a call stops it too: the call was in flight in a document that went away, and the app's next document
+may read storage before a repeated key would land, so the call fails where the race is. Await the navigation first, or
+seed before it. The message names where the page went by its origin and path, without the query or fragment, which may
+hold a redirect's tokens:
 
 ```text
-Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1); k2 was being written and may have reached the new document
-Shop.SessionStorage.get: the page navigated while get() was reading "token" from https://shop.example; it may have read the new document
+Shop.SessionStorage.set: the page navigated to https://shop.example/home while set() was writing to https://shop.example; 2 of 60 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document
+Shop.SessionStorage.get: the page navigated to https://login.example/ while get() was reading "token" from https://shop.example; it may have read the new document
 ```
 
 Calls for one origin act in the order they were made, also when they overlap. In a `Promise.all`, a `get` after a `set`
@@ -211,7 +215,7 @@ export const test = base.extend<{ storage: SessionStorage<{ user: Codec<User> }>
 | a document with an opaque origin | `Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)` |
 | a page on another origin | `AccountPage.SessionStorage.get: the page is on …, not on this page object's origin …` |
 | a value that is not a string, for a key without a codec | `Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)` |
-| a navigation during a call | `Shop.SessionStorage.set: the page navigated while set() was writing to https://shop.example; 2 of 60 keys were written (k0, k1); k2 was being written and may have reached the new document` |
+| a navigation during a call | `Shop.SessionStorage.set: the page navigated to https://shop.example/home while set() was writing to https://shop.example; 2 of 60 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document` |
 | a stored value its codec cannot decode | `Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"` |
 
 ## Reference
