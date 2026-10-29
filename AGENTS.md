@@ -46,7 +46,9 @@ defect review and the guide split by folder and by task.
 - `pnpm install --frozen-lockfile`
 - `pnpm lint` runs `biome check --error-on-warnings .`, so a warning fails it and CI (lint, import order and format check over the whole repository; biome does not
   process `.md`; `test/test-data` and `.pack` are excluded). `pnpm format` (`biome format --write .`) rewrites
-  formatting only; import order and lint fixes come from `biome check --write`.
+  formatting only; import order and lint fixes come from `biome check --write`. `pnpm lint:workflows` runs actionlint
+  and ShellCheck over the workflows at CI's pinned versions, and `pnpm lint:guide` checks every relative link and
+  anchor of this guide; CI's `lint` job runs both.
 - `pnpm build` runs `tsup index.ts --format cjs --dts --clean`, which empties `dist/` first, then
   `scripts/write-esm-entry.mjs`, so a local pack holds exactly what the source produces, as CI's fresh checkout does.
 - `pnpm test:unit` runs the vitest unit tests for the pure helpers in seconds and type-checks the test files and

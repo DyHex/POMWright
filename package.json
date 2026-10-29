@@ -43,6 +43,8 @@
 		"build": "tsup index.ts --format cjs --dts --clean && node scripts/write-esm-entry.mjs",
 		"release": "pnpm run build && changeset publish",
 		"lint": "biome check --error-on-warnings .",
+		"lint:workflows": "bash scripts/lint-workflows.sh",
+		"lint:guide": "node scripts/check-guide-links.mjs",
 		"format": "biome format --write .",
 		"harness:install": "bash pack-build.sh && pnpm -C test install --frozen-lockfile",
 		"typecheck": "tsc --noEmit -p test && tsc -p test/tsconfig.declarations.json && tsc -p test/tsconfig.legacyDecorators.json && tsc -p test/tsconfig.legacyDecorators.emit.json && node scripts/check-doc-snippets.mjs && node scripts/check-api-coverage.mjs && node scripts/check-error-messages.mjs",

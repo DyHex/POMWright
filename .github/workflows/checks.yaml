@@ -42,35 +42,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
-      # actionlint over .github/workflows, with ShellCheck over their run: scripts. Both are pinned here, each version
-      # with its SHA-256 (ShellCheck's releases publish none: computed from the release archive), so CI and a local run
-      # use the same versions whatever the runner image has; they move by hand, since Dependabot does not see them.
+      # actionlint over .github/workflows with ShellCheck, both pinned in the script, which `pnpm lint:workflows` runs
+      # locally too
       - name: Lint the workflows
-        shell: bash # -eo pipefail: a failed command anywhere in a pipe fails the step
-        env:
-          ACTIONLINT_VERSION: 1.7.12
-          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
-          SHELLCHECK_VERSION: 0.11.0
-          SHELLCHECK_SHA256: 8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198
-        run: |
-          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          curl -sSfL -o "$RUNNER_TEMP/$archive" \
-            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
-          echo "${ACTIONLINT_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
-          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
-          archive="shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz"
-          curl -sSfL -o "$RUNNER_TEMP/$archive" \
-            "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/${archive}"
-          echo "${SHELLCHECK_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
-          tar -xJf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" --strip-components=1 "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
-          # actionlint runs the first shellcheck on PATH: the pinned one
-          PATH="$RUNNER_TEMP:$PATH" "$RUNNER_TEMP/actionlint" -color
-          # actionlint prints nothing when it finds nothing
-          echo "actionlint ${ACTIONLINT_VERSION}: no problems in $(cd .github/workflows && echo *.yaml)"
-          echo "run: scripts checked with ShellCheck $("$RUNNER_TEMP/shellcheck" --version | sed -n 's/^version: //p')"
-          # the release checks, which pr.yaml and publish.yaml run from a script rather than a run: block
-          "$RUNNER_TEMP/shellcheck" scripts/release-check.sh scripts/release-check.test.sh
-          echo "scripts/release-check.sh and its test checked with ShellCheck"
+        run: bash scripts/lint-workflows.sh
+      # every relative link and anchor of the contributor guide (pnpm lint:guide)
+      - name: Check the guide's links
+        run: node scripts/check-guide-links.mjs
       # every path of the release checks, in throwaway repositories with a fake npm (seconds, no network)
       - name: Test the release checks
         run: bash scripts/release-check.test.sh

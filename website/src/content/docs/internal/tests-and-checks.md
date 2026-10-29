@@ -80,10 +80,11 @@ it saved minutes on pushes that changed only documentation, and compared the bra
 the jobs tested the merge commit, so after the base moved a documentation-only push could skip the harness on an
 untested merge.
 
-- **lint**: biome over the whole repository, warnings failing, then actionlint over the workflows (with shellcheck over
-  their scripts, then over `scripts/release-check.sh` and its test), its version and checksum pinned in the step, then
-  the release checks' test (`scripts/release-check.test.sh`), which runs every path of a release in throwaway
-  repositories with a fake npm.
+- **lint**: biome over the whole repository, warnings failing; actionlint over the workflows, with shellcheck over
+  their scripts and the scripts they run instead, both pinned by version and checksum in `scripts/lint-workflows.sh`,
+  which `pnpm lint:workflows` runs locally too; every relative link and anchor of the contributor guide
+  (`scripts/check-guide-links.mjs`); then the release checks' test (`scripts/release-check.test.sh`), which runs every
+  path of a release in throwaway repositories with a fake npm.
 - **package**: the unit tests, then one build and one tarball, kept as an artifact.
 - **harness**: that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs
   chromium, `main` all three, on Node 24; one more job per older LTS Node line, from the `engines` floor (20 and 22),

@@ -9,40 +9,41 @@ contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules app
 ## The workflows
 
 `checks.yaml` (reusable), every job on every run, whatever changed, so a run always tests what it reports on (on a pull
-request, GitHub's merge commit): `lint` (biome, then actionlint with ShellCheck for the `run:` scripts, each pinned by
-version and SHA-256 in the step and moved by hand, then that ShellCheck over `scripts/release-check.sh` and its test,
-then the test, `scripts/release-check.test.sh`: every path of the release checks in throwaway repositories with a fake
-npm), `package` (unit tests, build and pack once, the tarball as a run artifact) and `harness` (the browsers the caller
-passes, each at the Playwright pin and at the latest 1.x, each testing that tarball), on Node 24, the default, and with
-the `older-node-lines` input, which `pr.yaml` and `main.yaml` set, `harness-node` (chromium at the pin on every LTS Node
-line below the default, from the `engines` floor: a matrix of 20 and 22 in `checks.yaml`, which moves with Node's
-schedule; issue #55 makes 26 the default and moves 24 into it); every third-party action is pinned to a commit with its
-version in a comment, kept current by `.github/dependabot.yml` (monthly, minor and patch updates grouped, each major as
-a pull request of its own), which also proposes the npm versions of the root, `test/` and `website/`, never
-`@playwright/test`, and holds the majors of `typescript` (issue #54) and `@types/node` (issue #55); `test-server`
-(`test-server-check.sh`), once per run, on chromium: no page of the test server loads anything from another host;
-`consumer` (`scripts/consumer-check.sh`): the tarball installed with npm into projects of its own, TypeScript under each
-module resolution, attw, Playwright's runner in a CommonJS and a `"type": "module"` project, TypeScript 5.0 to the
-latest release in both decorator modes, then on Node 20 `import` and `require` sharing one copy; `site`: the tarball
-installed into `test/`, the snippet and coverage checks, the site's frozen install and build on Node 24, and every
-diagram rendered (`scripts/check-diagrams.mjs`). `pr.yaml` (`PR`) runs it for every pull request, draft or not, with the
-harness on chromium only, and for a pull request into `main` the job `release` (*Release window*,
-`scripts/release-check.sh pull-request`, see *The rulesets on `main`*); `main.yaml` (`CI`) for pushes to `main` only, on
-chromium, firefox and webkit, one run at a time in push order (a `concurrency` group without `cancel-in-progress`, so
-Publish and Pages follow the order of the commits and an older run never deploys over a newer site; a waiting run gives
-way to a newer push); both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs
-`changesets/action` v2 (`@changesets/cli` 3, `@changesets/changelog-github` 1) after `CI` succeeds on a push to `main`,
-guarded by its job condition and by a step (`scripts/release-check.sh publish`) that fails while `main`'s tip, read from
-GitHub, has a version npm does not have and changesets are pending (that version would never be published), saying to
-revert the Version Packages pull request that set it, and otherwise goes no further unless the commit that run tested is
-`main`'s tip and the checkout (a `workflow_run` checks out the newest commit when it first starts, and a re-run keeps
-it; the newer commit's own run continues the release); it publishes with npm Trusted Publishing (`id-token: write`; no
-npm token is stored; `pnpm publish` exchanges the workflow's OIDC token and records provenance) from the `npm`
-environment, which only `main` may deploy to and which the Trusted Publisher names, and after publishing warns when a
-version has no provenance attestation. `pages.yaml` builds `website/` and deploys it to GitHub Pages
-(`https://dyhex.github.io/POMWright/`) after `CI` succeeds on a push to `main`, guarded as `publish.yaml` is and
-building the commit that run tested, only while that commit is `main`'s tip (a re-run of an older run deploys nothing),
-or by `workflow_dispatch`.
+request, GitHub's merge commit): `lint` (biome; then `scripts/lint-workflows.sh`, which `pnpm lint:workflows` runs
+locally too: actionlint with ShellCheck for the `run:` scripts, each pinned by version and SHA-256 in the script and
+moved by hand, and that ShellCheck over the scripts the workflows run instead; then `scripts/check-guide-links.mjs`,
+`pnpm lint:guide`, every relative link and anchor of the contributor guide; then `scripts/release-check.test.sh`, every
+path of the release checks in throwaway repositories with a fake npm), `package` (unit tests, build and pack once, the
+tarball as a run artifact) and `harness` (the browsers the caller passes, each at the Playwright pin and at the latest
+1.x, each testing that tarball), on Node 24, the default, and with the `older-node-lines` input, which `pr.yaml` and
+`main.yaml` set, `harness-node` (chromium at the pin on every LTS Node line below the default, from the `engines` floor:
+a matrix of 20 and 22 in `checks.yaml`, which moves with Node's schedule; issue #55 makes 26 the default and moves 24
+into it); every third-party action is pinned to a commit with its version in a comment, kept current by
+`.github/dependabot.yml` (monthly, minor and patch updates grouped, each major as a pull request of its own), which also
+proposes the npm versions of the root, `test/` and `website/`, never `@playwright/test`, and holds the majors of
+`typescript` (issue #54) and `@types/node` (issue #55); `test-server` (`test-server-check.sh`), once per run, on
+chromium: no page of the test server loads anything from another host; `consumer` (`scripts/consumer-check.sh`): the
+tarball installed with npm into projects of its own, TypeScript under each module resolution, attw, Playwright's runner
+in a CommonJS and a `"type": "module"` project, TypeScript 5.0 to the latest release in both decorator modes, then on
+Node 20 `import` and `require` sharing one copy; `site`: the tarball installed into `test/`, the snippet and coverage
+checks, the site's frozen install and build on Node 24, and every diagram rendered (`scripts/check-diagrams.mjs`).
+`pr.yaml` (`PR`) runs it for every pull request, draft or not, with the harness on chromium only, and for a pull request
+into `main` the job `release` (*Release window*, `scripts/release-check.sh pull-request`, see *The rulesets on `main`*);
+`main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit, one run at a time in push order (a
+`concurrency` group without `cancel-in-progress`, so Publish and Pages follow the order of the commits and an older run
+never deploys over a newer site; a waiting run gives way to a newer push); both end with the gate job `build`, `main`'s
+required status check. `publish.yaml` runs `changesets/action` v2 (`@changesets/cli` 3, `@changesets/changelog-github`
+1) after `CI` succeeds on a push to `main`, guarded by its job condition and by a step (`scripts/release-check.sh
+publish`) that fails while `main`'s tip, read from GitHub, has a version npm does not have and changesets are pending
+(that version would never be published), saying to revert the Version Packages pull request that set it, and otherwise
+goes no further unless the commit that run tested is `main`'s tip and the checkout (a `workflow_run` checks out the
+newest commit when it first starts, and a re-run keeps it; the newer commit's own run continues the release); it
+publishes with npm Trusted Publishing (`id-token: write`; no npm token is stored; `pnpm publish` exchanges the
+workflow's OIDC token and records provenance) from the `npm` environment, which only `main` may deploy to and which the
+Trusted Publisher names, and after publishing warns when a version has no provenance attestation. `pages.yaml` builds
+`website/` and deploys it to GitHub Pages (`https://dyhex.github.io/POMWright/`) after `CI` succeeds on a push to
+`main`, guarded as `publish.yaml` is and building the commit that run tested, only while that commit is `main`'s tip (a
+re-run of an older run deploys nothing), or by `workflow_dispatch`.
 
 ## Publish and Pages
 
