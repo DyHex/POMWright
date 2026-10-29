@@ -1,6 +1,7 @@
 # 2E-3: `ClassName` in a step's title is the class of the object the method is called on, which no page says; a `super` call shows two steps with one title
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 105 in [DECISIONS.md](../DECISIONS.md); planned in the steps and logging plan (docs)
 - **Area**: E15 `@step` title; E23 forms (inventory-blind.md); `api/step.md`, `docs/test-steps.md`, the `step` doc comment
 - **Severity**: Low (a contract that is ambiguous on a common pattern, base classes shared by page objects; the report
   is not wrong, but an override that calls `super` shows two identical titles)

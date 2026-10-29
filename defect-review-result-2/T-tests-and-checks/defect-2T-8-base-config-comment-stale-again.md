@@ -1,6 +1,7 @@
 # 2T-8: `playwright.base.ts` says it holds the options of `test/playwright.config.ts`; since 0905892 the test-server config spreads it too, with its `forbidOnly` and retries
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 109 in [DECISIONS.md](../DECISIONS.md); planned in the contributor guide plan
 - **Area**: the harness's mechanics: `playwright.base.ts`'s header comment
 - **Severity**: Low (a tooling comment; it hides from a reader which configs share `forbidOnly`, retries and
   `failOnFlakyTests`, which 2T-4 turns on)

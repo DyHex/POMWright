@@ -1,6 +1,7 @@
 # 2B-4: an `add(path)` left without its locator method registers nothing and passes `verify()`, so the chains below it silently lose that segment
 
 - **Kind**: design question
+- **Status**: decided 2026-10-29, decision 88 in [DECISIONS.md](../DECISIONS.md) (verify() reports an add(path) without a locator method; a changeset); planned in the locators plan
 - **Area**: B-13 the end of a registration, B-26 `verify()`, B-22 resolution (unregistered segments)
 - **Severity**: Low (a typing slip or an edit that drops `.locator(…)` from a line; the chains below then match more
   widely than written, which a test notices only when the page has a second match outside the lost segment)

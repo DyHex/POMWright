@@ -1,6 +1,7 @@
 # 2F-3: The changeset rule asks for a migration hint when something "a 2.x user wrote" stops working; in 3.x the code that breaks is the previous 3.x release's
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 109 in [DECISIONS.md](../DECISIONS.md); planned in the contributor guide plan
 - **Area**: Changesets: the rule for a changeset's body, `docs/versioning.md` *Changesets* (the contributor guide;
   shared with 2I)
 - **Severity**: Low (the 3.0.2 changesets give their hints anyway; read literally, the rule exempts every break between

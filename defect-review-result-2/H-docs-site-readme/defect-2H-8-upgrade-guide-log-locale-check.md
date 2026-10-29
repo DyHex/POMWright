@@ -1,6 +1,7 @@
 # 2H-8: *Upgrading from 2.x* does not say that a project `locale` Playwright accepts but `Intl` rejects (`"en_US"`) now fails every test that requests `log`; 2.x's fixture never read the locale
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 101 in [DECISIONS.md](../DECISIONS.md) (the upgrade guide: four fixes and the sentence that a project meets only some items); planned in its own docs plan
 - **Area**: *Upgrading from 2.x*, *Reports → Log attachments keep what was logged* (the page's completeness), against
   *Logging to the report*, *Names in your locale*
 - **Severity**: Low (a configuration Playwright accepts in Chromium; on upgrade every test that requests `log` fails at

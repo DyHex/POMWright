@@ -1,6 +1,7 @@
 # 2A-4: Batch and seed failure messages print keys unquoted, so an empty key or a key with ", " in it reads as no key or as two
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 85 in [DECISIONS.md](../DECISIONS.md) (every key quoted with JSON.stringify; a new changeset for the released seed messages); planned with the other session storage items
 - **Area**: messages: the navigation message of a batch (`set`, `clear(keys)`, an on-origin `seed`) and the seed messages that list keys
 - **Severity**: Low (a misleading message for a legal but uncommon key; `get`'s message for the same situation quotes the key)
 - **Semver of the fix**: patch (message text; the documented examples change from `(k0, k1)` to `("k0", "k1")`)

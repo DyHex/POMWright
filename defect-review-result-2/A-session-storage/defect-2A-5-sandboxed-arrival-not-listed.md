@@ -1,6 +1,7 @@
 # 2A-5: *What `seed` cannot do*, which the API page says "lists every such case", leaves out an arrival on a sandboxed document
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 102 in [DECISIONS.md](../DECISIONS.md); planned in the session storage plan (docs)
 - **Area**: `seed`: a pending seed whose arriving document has an opaque origin
 - **Severity**: Low (the failure's own message names a sandboxed document, so the cause can be found; the page that claims to list every case does not have it)
 - **Semver of the fix**: none (docs only)

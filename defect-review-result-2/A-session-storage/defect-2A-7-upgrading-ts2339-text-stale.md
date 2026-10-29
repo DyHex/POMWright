@@ -1,6 +1,7 @@
 # 2A-7: *Upgrading from 2.x* quotes a TS2339 message that TypeScript no longer prints for the 2.x lines
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 101 in [DECISIONS.md](../DECISIONS.md) (the upgrade guide: four fixes and the sentence that a project meets only some items); planned in its own docs plan
 - **Area**: docs: `docs/upgrading-from-2x.md`, *Session storage* → *Values are stored as written*
 - **Severity**: Low (a quoted compiler message that does not match what the reader sees; the other two messages and the advice are right)
 - **Semver of the fix**: none (docs only)

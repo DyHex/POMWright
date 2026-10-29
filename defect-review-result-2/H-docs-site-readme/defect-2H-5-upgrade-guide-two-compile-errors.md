@@ -1,6 +1,7 @@
 # 2H-5: *Upgrading from 2.x* misses one compile error a 2.x project meets in 3.0.2 (`createRegistryWithAccessors` without its type argument) and marks another (a structured value without a codec) **Compiles**
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 101 in [DECISIONS.md](../DECISIONS.md) (the upgrade guide: four fixes and the sentence that a project meets only some items); planned in its own docs plan
 - **Area**: *Upgrading from 2.x* as a whole (its claim to list every change), and the README's *Documentation* line
   that repeats the claim
 - **Severity**: Low (both are compile errors, so `tsc` finds them, and the first names its fix in its own text; but the

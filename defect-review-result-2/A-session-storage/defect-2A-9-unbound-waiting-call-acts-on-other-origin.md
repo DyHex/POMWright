@@ -1,6 +1,7 @@
 # 2A-9: A call of a helper without an origin that waited for its turn does not check the origin again, and acts on the origin the page moved to: it writes there, reads it, or clears it
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 80 in [DECISIONS.md](../DECISIONS.md) (a waiting call of a helper without an origin compares the origin, or on a page-wide turn the URL, it joined); planned with the other session storage items
 - **Area**: turns: the origin check when a waiting call's turn starts (`SessionStorage.inTurn`)
 - **Severity**: Medium (overlapping calls of a standalone helper and a navigation to another origin, a plausible edge case; a `clear()` that waited empties the other origin's storage, and a `get` returns the other origin's entries, silently)
 - **Semver of the fix**: patch (behaviour brought in line with the documented turn-start check)

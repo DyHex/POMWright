@@ -1,6 +1,7 @@
 # 2A-6: The docs say one schema mismatch still compiles; a schema variable with a codec the type does not declare compiles too, and `get` then returns that codec's value typed as a string
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 102 in [DECISIONS.md](../DECISIONS.md); planned in the session storage plan (docs)
 - **Area**: types: a page object's or helper's storage schema, type and value (`SchemaOptionFor`, the constructor's rest tuple)
 - **Severity**: Low (it needs the type and the value to come from two declarations, which the docs advise against; the result is `get` typed `string | null` returning another type, the very disagreement the change set says is gone)
 - **Semver of the fix**: none (docs; the code cannot reject it, see *Fix plan*)

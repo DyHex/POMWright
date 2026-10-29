@@ -1,6 +1,7 @@
 # 2I-9: `.editorconfig` gives `.mdx` two-space indentation and says "as every such file here is", but the one `.mdx` page is indented with tabs
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 109 in [DECISIONS.md](../DECISIONS.md); planned in the contributor guide plan
 - **Area**: the repository files the guide describes: `.editorconfig` (`docs/repository.md` map: "tabs for code and two spaces for YAML and Markdown")
 - **Severity**: Low (an editor that follows the file indents new lines of the home page's JSX with spaces beside tab-indented ones; nothing processes `.mdx` for style, so nothing fails)
 - **Semver of the fix**: none (repository configuration or one page's whitespace)

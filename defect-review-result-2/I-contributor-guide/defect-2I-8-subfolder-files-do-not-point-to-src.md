@@ -1,6 +1,7 @@
 # 2I-8: With a client other than Claude Code, the guide says to read "the folder's file"; `src/locators/AGENTS.md` and `src/helpers/AGENTS.md` never point to `src/AGENTS.md`, which holds rules about the files under them
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 82 in [DECISIONS.md](../DECISIONS.md) (decided together: 2I-2, 2I-1, 2I-8); planned in one contributor-guide plan with items 28, 30 and 31
 - **Area**: the contributor guide: reach for clients that do not load folder files (`AGENTS.md` *The index*; the intros of `src/locators/AGENTS.md` and `src/helpers/AGENTS.md`)
 - **Severity**: Low (a Codex or human contributor started at the root and working in `src/helpers/` or `src/locators/` can miss the runtime's conventions, among them the call-site and no-retry rules for helpers code; a careful reading of the index's "Loads by itself" column implies `src/AGENTS.md` applies)
 - **Semver of the fix**: none (guide text only)

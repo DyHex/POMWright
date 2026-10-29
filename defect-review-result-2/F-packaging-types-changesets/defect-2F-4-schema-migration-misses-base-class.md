@@ -1,6 +1,7 @@
 # 2F-4: `schema-type-and-value`'s migration, and the compile error it brings, do not cover a page object whose base class forwards `PageObjectOptions`, the base class *Organizing a project* shows first
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 106 in [DECISIONS.md](../DECISIONS.md)
 - **Area**: Changesets: `.changeset/schema-type-and-value.md`; the compile-error message of `PageObjectOptions`'s
   `sessionStorage.schema` (`src/pageObject.ts:81-82`)
 - **Severity**: Low (an upgrade meets a compile error whose advice cannot be followed where it is reported; the way out

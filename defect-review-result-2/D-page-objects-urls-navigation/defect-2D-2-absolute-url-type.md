@@ -1,6 +1,7 @@
 # 2D-2: On a RegExp baseUrl, goto(target) compiles for a relative target that has a colon, which the runtime rejects
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 90 in [DECISIONS.md](../DECISIONS.md) (AbsoluteUrl starts with a letter; a changeset); planned in the page objects and URLs plan
 - **Area**: Navigation types: `NavigationFor<RegExp, …>`'s `goto(target)` (`AbsoluteUrl`, `GotoTarget` in `src/helpers/navigation.ts`)
 - **Severity**: Low (a type that accepts an input the runtime always rejects; the call fails at once with a clear message, and the input, a relative target with a `:` on a page object whose base is a RegExp, is uncommon)
 - **Semver of the fix**: patch (a type corrected to what the docs promise and the runtime does, docs/versioning.md; the only code that stops compiling is code that throws on every run)

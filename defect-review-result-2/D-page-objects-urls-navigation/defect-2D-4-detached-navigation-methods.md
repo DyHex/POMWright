@@ -1,6 +1,7 @@
 # 2D-4: The navigation helper's methods fail with an internal TypeError when called detached, while goto is typed as a property
 
 - **Kind**: design question
+- **Status**: decided 2026-10-29, decision 91 in [DECISIONS.md](../DECISIONS.md): not adopted (the methods stay unbound, as Playwright's; reconsidered on request); no change
 - **Area**: Navigation: the helper object (`Navigation` in `src/helpers/navigation.ts`) and `NavigationFor`'s `goto` property
 - **Severity**: Low (a call written in an uncommon way fails at once, with a message about an internal field)
 - **Semver of the fix**: patch if adopted (binding the methods adds no member and breaks nothing)

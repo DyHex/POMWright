@@ -1,6 +1,7 @@
 # 2T-7: The test-server check does not see a WebSocket to another host, nor a protocol-relative URL loaded on a click or a timer
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 100 in [DECISIONS.md](../DECISIONS.md) (WebSockets, wss, //host and routers' routes); planned in the checks plan
 - **Area**: the test server's external-request check: `test/test-server/externalRequests.spec.ts`
 - **Severity**: Low (no page does either today; the check's stated coverage is wider than what it checks)
 - **Semver of the fix**: none (test only)

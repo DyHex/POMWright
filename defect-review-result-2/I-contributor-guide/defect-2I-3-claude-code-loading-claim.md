@@ -1,6 +1,7 @@
 # 2I-3: The guide says Claude Code loads a folder's `AGENTS.md` when "a file" there "is read"; Claude Code's documentation says only a Read-tool open, in a subdirectory of the working directory, does it
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 109 in [DECISIONS.md](../DECISIONS.md); planned in the contributor guide plan
 - **Area**: the contributor guide: how it loads (`AGENTS.md` *The index*; `docs/repository.md` *The contributor guide*)
 - **Severity**: Low (a Claude Code contributor can believe a folder's rules are loaded when they are not; the Edit tool's read-first requirement and the guide's "read the folder's file yourself" limit the harm)
 - **Semver of the fix**: none (guide text only)

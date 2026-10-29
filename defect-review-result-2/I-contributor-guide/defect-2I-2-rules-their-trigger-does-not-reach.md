@@ -1,6 +1,7 @@
 # 2I-2: Rules whose trigger is in one area sit in another area's file, and neither the trigger's file nor the index leads there: page updates after a mechanism or behaviour change, and what moves with the Node floor
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 82 in [DECISIONS.md](../DECISIONS.md) (decided together: 2I-2, 2I-1, 2I-8); planned in one contributor-guide plan with items 28, 30 and 31
 - **Area**: the contributor guide: reach of the index and the pointers (`docs/repository.md` *The contributor guide*; `AGENTS.md` *The index*)
 - **Severity**: Medium (the rule that keeps the Internal and Docs pages in step with the code is not reached for a change to a mechanism or a behaviour that touches no doc comment and no shown message; the Node-floor part alone would be Low)
 - **Semver of the fix**: none (guide text only)

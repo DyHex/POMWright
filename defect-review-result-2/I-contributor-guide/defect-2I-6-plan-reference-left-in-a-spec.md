@@ -1,6 +1,7 @@
 # 2I-6: A spec still cites "the plan's section 1.9" as its contract, a 3.0.0 plan deleted with its working folder, against the rule that no reference to a plan stays outside the folder
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 109 in [DECISIONS.md](../DECISIONS.md); planned in the contributor guide plan
 - **Area**: the contributor guide's release rule 7 against the repository (`docs/releases.md` *Planning*); the comment is in a spec (`test/`)
 - **Severity**: Low (a comment points at a contract a reader cannot find; the spec itself is unaffected)
 - **Semver of the fix**: none (a comment)

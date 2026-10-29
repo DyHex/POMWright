@@ -1,6 +1,7 @@
 # 2F-1: *Installation* says TypeScript 5.0 needs `skipLibCheck` for Playwright's declarations; it is TypeScript 5.0 and 5.1, depending on `@types/node`, and for Node's declarations as much as Playwright's
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 106 in [DECISIONS.md](../DECISIONS.md)
 - **Area**: Docs: `docs/installation.md` *TypeScript settings*; the TypeScript floor (5.0)
 - **Severity**: Low (POMWright's own declarations compile on every 5.x; the sentence only misplaces when a consumer's
   `tsc` needs `skipLibCheck` for other packages' declarations)

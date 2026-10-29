@@ -1,6 +1,7 @@
 # 2T-2: The snippet check neither compiles nor rejects a TypeScript block whose fence has a space before `ts`, which the site renders as TypeScript
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 96 in [DECISIONS.md](../DECISIONS.md) (decided together: 2T-2, 2T-9); planned in the checks plan
 - **Area**: documentation checks: `scripts/check-doc-snippets.mjs`
 - **Severity**: Low (no such block on the site today; a latent hole in the check's own promise that every TypeScript
   example it cannot compile fails it)

@@ -1,6 +1,7 @@
 # 2G-5: Two CI descriptions lag the jobs added on 2026-10-28: *Tests and checks* lists no test-server job, and `pr.yaml`'s header names Node 20 only
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 107 in [DECISIONS.md](../DECISIONS.md)
 - **Area**: CI: the CI section of `website/src/content/docs/internal/tests-and-checks.md`; `pr.yaml`'s header comment
 - **Severity**: Low (descriptions only; the guide's `.github/AGENTS.md` and `checks.yaml` describe both correctly)
 - **Semver of the fix**: none (docs and a workflow comment)

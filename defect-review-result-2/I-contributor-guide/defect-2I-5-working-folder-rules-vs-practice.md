@@ -1,6 +1,7 @@
 # 2I-5: `docs/releases.md` says a release's working documents live in `release-<version>/` with one plan per item or coupled pair; the 3.0.2 work lives in `defect-review-result/`, with plans of three and four items
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 110 in [DECISIONS.md](../DECISIONS.md); planned in the contributor guide plan
 - **Area**: the contributor guide: release planning (`docs/releases.md` *Planning*) against how this branch's work is organized
 - **Severity**: Low (process text that does not describe the practice; a contributor looking for the release's plans by the rule's name finds none)
 - **Semver of the fix**: none (guide text only)

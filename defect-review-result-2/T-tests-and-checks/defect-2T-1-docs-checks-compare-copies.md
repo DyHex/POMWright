@@ -1,6 +1,7 @@
 # 2T-1: The documentation-chain spec and the lifecycle-outcomes spec compare the code with copies of the pages, so a page edited on its own goes stale without failing either
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 95 in [DECISIONS.md](../DECISIONS.md) (both specs read their pages; the inverted demonstration must fail); planned in the checks plan
 - **Area**: run-level checks: `test/tests/docs/docsChains.spec.ts`, `test/tests/pageObject/lifecycle.outcomes.spec.ts`
 - **Severity**: Low (no stale chain or row on the site today; the checks miss one of the two directions they are
   documented to cover, so a docs-only edit can ship a wrong chain or outcome)

@@ -1,6 +1,7 @@
 # 2G-4: Performance's round-trip comparison comes from no script in the repository, so `pnpm bench` cannot refresh it, and a re-measurement by the page's own description does not support "under 5%"
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 107 in [DECISIONS.md](../DECISIONS.md)
 - **Area**: The benchmark: `internal/performance.md`'s claims against `scripts/benchmark.mjs`
 - **Severity**: Low (an order-of-magnitude comparison in the conclusion; the tables themselves reproduce)
 - **Semver of the fix**: none (the page, and the benchmark script, which is not published)

@@ -1,6 +1,7 @@
 # 2A-10: The opaque-origin message is lost on a sandboxed document whose script declares a global `origin`, because the check reads `self.origin` in the page's world
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 83 in [DECISIONS.md](../DECISIONS.md) (with 2A-2/2A-10: one evaluation of `document.domain`); planned with the other session storage items
 - **Area**: `set`, `get`, `clear`, an on-origin `seed`: the opaque-origin explanation (`SessionStorage.access`)
 - **Severity**: Low (needs a sandboxed document that runs scripts and has a global named `origin`; the call still fails, but with the browser's wording, which on WebKit is "The operation is insecure.")
 - **Semver of the fix**: patch (the message promised "on every browser" for such a document)

@@ -1,6 +1,7 @@
 # 2A-3: `set`, `seed`, `get` and `clear` read their entries, values and key lists after the call returns, so a change the caller makes before the call settles changes what the call does
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 84 in [DECISIONS.md](../DECISIONS.md) (every argument taken at the call, values encoded then); planned with the other session storage items
 - **Area**: turns and overlapping calls: when a call reads its input
 - **Severity**: Low (only a caller who changes an object or array it passed, while the call is pending, sees it; the guide promises that such overlapping calls end exactly as awaited ones)
 - **Semver of the fix**: patch (behaviour brought in line with the guide's promise; no signature changes)

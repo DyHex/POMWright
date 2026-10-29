@@ -1,6 +1,7 @@
 # 2H-1: *Internal → Documentation* says CI's site job runs all three checks only on changes that touch code or pages, and that the harness runs two; the site job runs two, on every run, and the harness runs all three
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 107 in [DECISIONS.md](../DECISIONS.md)
 - **Area**: *Internal → Documentation* (`internal/documentation.md`), *What keeps it true*
 - **Severity**: Low (a contributor-facing statement about which job runs which check; no behavior is wrong, but a
   contributor who relies on the site job to catch an *Error messages* drift, or who expects a docs-only push to skip

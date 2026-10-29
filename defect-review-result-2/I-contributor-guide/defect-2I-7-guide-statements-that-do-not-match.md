@@ -1,6 +1,7 @@
 # 2I-7: Twelve small statements of the guide, its index and the README do not match the repository at `d850405`
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 109 in [DECISIONS.md](../DECISIONS.md); planned in the contributor guide plan
 - **Area**: the contributor guide's accuracy: the index, the repository map, cross-references, and the README as the guide describes it
 - **Severity**: Low (each is a wrong pointer, count or description; none hides a rule, which 2I-1 and 2I-2 cover)
 - **Semver of the fix**: none (guide and README text only)

@@ -1,6 +1,7 @@
 # 2H-6: *Installation* says session storage values are checked at runtime as the types check them; a value for a key with a codec is not checked at all, as *Session storage* itself says
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 102 in [DECISIONS.md](../DECISIONS.md); planned in the session storage plan (docs)
 - **Area**: *Installation*, *Requirements* (what a JavaScript user can rely on), against *Session storage* and
   *Principles*
 - **Severity**: Low (a broad claim on the first page a JavaScript user reads; the narrower pages state the truth, and

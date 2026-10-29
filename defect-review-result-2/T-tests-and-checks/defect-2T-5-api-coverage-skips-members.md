@@ -1,6 +1,7 @@
 # 2T-5: The API coverage check never walks a class's static members, and walks fewer members without a word when the declarations it is given cannot resolve `@playwright/test`
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 99 in [DECISIONS.md](../DECISIONS.md) (statics walked; an unresolved import fails); planned in the checks plan
 - **Area**: documentation checks: `scripts/check-api-coverage.mjs`
 - **Severity**: Low (no static member is public today, and every CI job installs the root so the default path resolves;
   the check would pass an undocumented static member, or a declarations file checked from elsewhere, while reporting

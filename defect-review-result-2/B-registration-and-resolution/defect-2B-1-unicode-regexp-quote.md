@@ -1,6 +1,7 @@
 # 2B-1: a `u`- or `v`-flag RegExp with a quote, a backtick or `>>` fails at the first action once POMWright resolves it
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 87 in [DECISIONS.md](../DECISIONS.md) (hex escapes in getById; the rest documented with a link to #40446); planned in the locators plan
 - **Area**: B-18 `getById`, B-17 the `STRATEGIES` table against Playwright, B-22 resolution (the terminal's `describe`)
 - **Severity**: Low (a rare input: a unicode-mode RegExp holding `"`, `'`, `` ` `` or `>>`, such as `/don't save/iu`; it
   fails loudly, at the first action, with Playwright's selector parse error, never silently)

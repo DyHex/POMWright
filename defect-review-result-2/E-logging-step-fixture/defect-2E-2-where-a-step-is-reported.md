@@ -1,6 +1,7 @@
 # 2E-2: The pages say a `@step` step is reported at the line that called the method, boxed or not; where the call is not awaited on its own line, it is not
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 105 in [DECISIONS.md](../DECISIONS.md); planned in the steps and logging plan (docs)
 - **Area**: E25 where a step is reported (inventory-blind.md); `api/step.md` *Arguments*, `docs/test-steps.md`
 - **Severity**: Low (a statement that does not hold in some call shapes: a step one or two lines off, or with no line,
   in the report; behavior is otherwise right and, unboxed, the same as Playwright's own `test.step`)

@@ -1,6 +1,7 @@
 # 2A-2: On an `about:blank` page, any failed storage call says "the page has no origin yet", also when the document inherited the origin or the page is closed
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 83 in [DECISIONS.md](../DECISIONS.md) (with 2A-2/2A-10: one evaluation of `document.domain`); planned with the other session storage items
 - **Area**: `set`, `get`, `clear` and an on-origin `seed`: the failure of a storage call (`SessionStorage.access`)
 - **Severity**: Low (a misleading message in a rare case: the call fails for another reason on a popup that inherited the origin, or the popup was closed; the message names the wrong cause and a fix that does not apply)
 - **Semver of the fix**: patch (a message brought in line with the documented behaviour of an inherited origin)

@@ -1,6 +1,7 @@
 # 2D-3: The table of where a broken page object is built has no row for the test body, the place the docs' first example builds it
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 104 in [DECISIONS.md](../DECISIONS.md); planned in the page objects and URLs plan (docs)
 - **Area**: Page objects: how a mistake is reported (*Page objects* → *How a mistake is reported*, the outcomes table)
 - **Severity**: Low (a hole in the docs; the run does fail, at the right line, but in a way no page describes)
 - **Semver of the fix**: none (docs only)

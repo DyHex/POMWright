@@ -1,6 +1,7 @@
 # 2H-3: The README's example "logs the orders to the report" with `log.info`, which the `log` fixture does not record on a test's first run, so the passing example attaches nothing
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 108 in [DECISIONS.md](../DECISIONS.md): not adopted, by the maintainer; the README stays as it is
 - **Area**: the README, *Example*; the `log` fixture's levels as the README presents them
 - **Severity**: Low (the README is the first thing a user reads and the example is copied as written; a user who
   copies it sees no log in the report of a passing test and is not told why, while the site states the rule correctly)

@@ -1,6 +1,7 @@
 # 2H-2: "misspelt", the British form, is left on four pages and in a doc comment after the change to American spelling throughout
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 108 in [DECISIONS.md](../DECISIONS.md); planned in the contributor guide plan (final pass)
 - **Area**: the language conventions across the pages and the doc comments (`website/AGENTS.md`, *Rules*: American
   spelling)
 - **Severity**: Low (a style rule the guide states, kept "by review", broken in five places; no reader is misled)

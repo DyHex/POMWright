@@ -1,6 +1,7 @@
 # 2B-2: the docs say a registry typed `<string>` gives up the compile-time check of a path's format; a literal that breaks the rules is still a compile error
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 103 in [DECISIONS.md](../DECISIONS.md); planned in the locators plan (docs)
 - **Area**: B-11 typed paths (`<string>`), B-05 `LocatorSchemaPathArgument`, B-01 `createRegistryWithAccessors`
 - **Severity**: Low (an inconsistency without wrong behavior: TypeScript checks more than the pages say, never less)
 - **Semver of the fix**: none (docs and doc comments only)

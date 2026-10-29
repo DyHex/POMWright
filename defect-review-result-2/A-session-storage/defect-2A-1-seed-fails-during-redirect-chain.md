@@ -1,6 +1,7 @@
 # 2A-1: On Chromium, a page's first `seed` fails with Playwright's "Execution context was destroyed" when the page is going through two or more script redirects on another origin
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 81 in [DECISIONS.md](../DECISIONS.md) (the check retries while the document is replaced, up to 20 times; a patch changeset); planned with the other session storage items
 - **Area**: `seed` at the call: the Navigation API check (`SeedRegistry.assertNavigationApi`)
 - **Severity**: Medium (a plausible edge case: an app that redirects itself twice as it loads, and a test that seeds the next origin meanwhile; the page's first seed fails every time on Chromium, with a message that does not say why)
 - **Semver of the fix**: patch (brings the call in line with the failures it documents; the code's own comment already intends to survive a navigation during the check)

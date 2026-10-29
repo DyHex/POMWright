@@ -1,6 +1,7 @@
 # 2T-4: The step-location run accepts a stray `test.only` in CI, and then checks only the focused test's file and passes
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 98 in [DECISIONS.md](../DECISIONS.md) (forbidOnly in the steps and outcomes configs); planned in the checks plan
 - **Area**: run-level checks: `test/playwright.steps.config.ts`, `test/step-locations/locationReporter.ts`
 - **Severity**: Low (needs a `test.only` committed by mistake; then 31 location checks drop out of every CI run without
   a sign)

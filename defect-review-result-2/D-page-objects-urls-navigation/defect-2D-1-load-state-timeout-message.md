@@ -1,6 +1,7 @@
 # 2D-1: When the URL is right but the load state does not come in time, expectThisPage() says it expected that URL and found it
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 89 in [DECISIONS.md](../DECISIONS.md) (the load-state message on the right URL; a changeset); planned in the page objects and URLs plan
 - **Area**: Navigation: `expectThisPage()` and `expectAnotherPage()`, their failure messages (`waitForUrl` in `src/helpers/navigation.ts`)
 - **Severity**: Low (a misleading message, no wrong behavior: the call fails when it should, but its message says the URL was wrong when the page is on the right URL and only the load state was late; it happens in ordinary use, whenever a page's `load` event is slower than the timeout with the default `waitUntil: "load"`)
 - **Semver of the fix**: patch (a message brought in line with what happened; no type or behavior a consumer relies on changes)

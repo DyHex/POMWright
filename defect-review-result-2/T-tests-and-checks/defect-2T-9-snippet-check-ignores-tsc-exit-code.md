@@ -1,6 +1,7 @@
 # 2T-9: The snippet check judges `tsc` by its stdout, so a `tsc` that fails with its message on stderr (a crash, an out-of-memory abort) passes the check
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 96 in [DECISIONS.md](../DECISIONS.md) (decided together: 2T-2, 2T-9); planned in the checks plan
 - **Area**: documentation checks: `scripts/check-doc-snippets.mjs`
 - **Severity**: Low (needs `tsc` itself to fail rather than report; then every example is reported as checked and none
   was)

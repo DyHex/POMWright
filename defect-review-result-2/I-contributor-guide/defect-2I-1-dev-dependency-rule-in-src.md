@@ -1,6 +1,7 @@
 # 2I-1: The rule for adding a dev dependency is stated only in `src/AGENTS.md`, which a dependency change in the root, `test/` or `website/` never reaches
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 82 in [DECISIONS.md](../DECISIONS.md) (decided together: 2I-2, 2I-1, 2I-8); planned in one contributor-guide plan with items 28, 30 and 31
 - **Area**: the contributor guide: placement of cross-area rules (`docs/repository.md` *The contributor guide*)
 - **Severity**: Low (a contributor-process rule silently missing for the task that triggers it; no effect on the package)
 - **Semver of the fix**: none (guide text only)

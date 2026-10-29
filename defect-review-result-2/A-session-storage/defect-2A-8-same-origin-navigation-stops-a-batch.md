@@ -1,6 +1,7 @@
 # 2A-8: A navigation within the origin stops a batch and fails the call, although the origin's storage is the one being written
 
 - **Kind**: design question
+- **Status**: decided 2026-10-29, decision 86 in [DECISIONS.md](../DECISIONS.md) (the call keeps failing; the navigation messages name where the page went; docs); planned with the other session storage items
 - **Area**: `set`, `get`, `clear`, an on-origin `seed`: a storage call interrupted by a navigation (`SessionStorage.guarded`)
 - **Severity**: Low (a test that writes storage while the app reloads or redirects within its origin fails, intermittently, with a message that suggests the writes went somewhere else)
 - **Semver of the fix**: patch if adopted (a call that failed would succeed; nothing that worked changes)

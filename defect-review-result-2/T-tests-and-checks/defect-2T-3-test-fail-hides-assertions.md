@@ -1,6 +1,7 @@
 # 2T-3: Two session storage tests marked `test.fail(true)` hold an assertion that cannot fail them, so "a new tab has its own storage" is checked by no test
 
 - **Kind**: defect
+- **Status**: decided 2026-10-29, decision 97 in [DECISIONS.md](../DECISIONS.md) (restructured so every claim can fail); planned in the session storage plan, first step
 - **Area**: the specs as a whole: false passes; `test/tests/testApp/sessionStorage.spec.ts:749-762` and `:1340-1346`
 - **Severity**: Low (the library behaves as documented today; the spec cannot see it stop doing so for the popup)
 - **Semver of the fix**: none (test only)

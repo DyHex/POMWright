@@ -1,6 +1,7 @@
 # 2G-3: The guide says every merge updates the site once its checks pass, but a green commit main has moved past is never deployed when the newer commit's CI fails
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 107 in [DECISIONS.md](../DECISIONS.md)
 - **Area**: Pages: which commit `pages.yaml` deploys on each path; `.github/AGENTS.md` *Publish and Pages*
 - **Severity**: Low (the deploy rule is sound and decided, only to deploy main's tip; the guide's broader promise and the
   workflow's comment overstate it, and a reader expecting a green fix to be live will not find it)

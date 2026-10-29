@@ -1,6 +1,7 @@
 # 2C-1: The docs say `replace`'s first argument is always required, and that every update-builder method throws without it, but `replace(…).frameLocator()` takes none
 
 - **Kind**: documentation
+- **Status**: decided 2026-10-29, decision 103 in [DECISIONS.md](../DECISIONS.md); planned in the locators plan (docs)
 - **Area**: `LocatorUpdateBuilder` in `replace` mode; the any-frame form in a query
 - **Severity**: Low (two statements on the same page, and three on other pages, contradict the `frameLocator()`
   section; nothing behaves wrongly, and the any-frame section of each page gives the right rule)
