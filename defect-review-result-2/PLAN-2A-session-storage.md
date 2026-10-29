@@ -288,8 +288,9 @@ against a build without its step's change; at the end `pnpm typecheck`, `pnpm do
      same with `page.goto()` alone, against Playwright's "If the page does a client-side redirect before load,
      page.goto() will wait for the redirected page to fire the load event". With the maintainer: the page does not
      restate it (it says what `goto` waits for and links Playwright's guide); no pin in the harness, which would test
-     WebKit and protect nothing in POMWright; an upstream issue drafted with a minimal reproduction (its own server,
-     10 of 10 failing on WebKit, 20 of 20 passing on the others), for the maintainer to file.
+     WebKit and protect nothing in POMWright; an upstream issue with a minimal reproduction (its own server, failing
+     on WebKit and passing on the others in every run, on 1.64.0, 1.64.1 and 1.65.0-alpha-2026-10-29), filed by the
+     maintainer as [microsoft/playwright#43765](https://github.com/microsoft/playwright/issues/43765).
   5. **"Size and cost"** said that a value of a million characters takes noticeably longer to send, which read as a
      cost of POMWright's. Rewritten with the maintainer: each key is one of Playwright's storage calls, as with
      `page.sessionStorage` itself; POMWright adds the document check; a call's time grows with its keys, not its
