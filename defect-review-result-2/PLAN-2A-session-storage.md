@@ -210,3 +210,46 @@ decisions, finding statuses and ledger rows of items 2 to 8 go in with the first
      page describes it" found no such place).
   5. **Left as it is**: `empty-seed.md` quotes the released message as the state before (`(keys: )`), which the
      quoting does not change.
+
+## Follow-up (decisions 113 to 115, 2026-10-29)
+
+Agreed with the maintainer after the report of the unexpected points above.
+
+- **Decisions**: [114](DECISIONS.md) is built here; [113](DECISIONS.md) in the contributor guide plan, except the
+  comments of this plan's own stand-ins; [115](DECISIONS.md) in the benchmarks plan
+- **Bump**: patch, no new changeset (`batch-navigation-message.md`, unreleased, corrected)
+- **Stop**: none, unless something unexpected comes up
+
+### Steps (one commit each)
+
+8. **The document check (decision 114).** In `sessionStorage.ts`, a call's document: a handle from
+   `page.evaluateHandle(() => document)`, taken inside the first storage call's `guarded` before the storage call (so a
+   document replaced while it is taken reads as a navigation), evaluated after every storage call inside `guarded`, and
+   disposed when the call ends, also when it fails; `eachKey`, `read` and `clear()` each make one. Unit tests in
+   `sessionStorage.test.ts` (*a call whose document is replaced*), the fakes given a document handle; harness cases in
+   `sessionStorage.spec.ts` (a reload between keys, timed by wrapping `setItem`, stops `set`, `get(keys)`, `clear(keys)`
+   and a `seed` on the origin; a reload by the page's own timer during a call; `pushState` and a hash change between
+   keys do not stop it; a call that waited for its turn through a reload runs in the new document) and the pin of the
+   handle, in a spec of its own; the docs of point 7 that describe the check (*The methods*, *Error messages*, the API
+   page, the `@throws`, *Internal → Seed registry*, `src/helpers/AGENTS.md`); `batch-navigation-message.md`. With it,
+   the records: decisions 113 to 115, the steps added to the contributor guide and benchmarks plans, 2A-8's status.
+9. **The test gaps.** Harness: an awaited `clear` followed by a reload; a codec's object changed after the call (in
+   *every call takes its arguments*); the quota, 5,242,880 characters per origin: one value of 5,242,879 characters
+   under a one-character key is stored, one more character is refused with the browser's error, labeled, on three
+   browsers.
+10. **Size, cost and an app that navigates by itself (decision 114, point 7).** *Session storage*: a section on size
+    and cost (each key a round trip, and the check one more; the quota and how it counts; large values take longer to
+    send; a call has no timeout of its own, the test's applies; what fails a call is a navigation during it) and one on
+    an app that navigates by itself (wait for where it ends up with `expectThisPage`, wait for its final state, or seed
+    before the navigation; `page.goto()` waits for the first document's load, and on WebKit it returned before an app's
+    own reload); harness cases for the three patterns.
+11. **The stand-ins disclosed and the notes (decision 113, point 4).** Comments on this plan's stand-ins: the
+    `test.step` mock and the fakes of `storageTurns.test.ts` and `sessionStorage.test.ts`, `commitOnBAfter` and the
+    new wrappers of the harness; execution note 1 corrected with the numbers of the redirect probe; the follow-up's
+    execution recorded.
+
+### Verification
+
+As for the plan: per step `pnpm lint`, `pnpm test:unit` and the storage specs on three browsers; each new test fails
+against a build without its step's change; at the end `pnpm typecheck`, `pnpm docs:build`, the full
+`pnpm pack-test --reporter=line`, and the grep for the external consumer projects' names.

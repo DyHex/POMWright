@@ -39,6 +39,11 @@ const fakePage = (url: string) => {
 		documentOrigin: "null",
 		/** Runs once after the next write, in the same tick: a navigation the app starts as it stores. */
 		afterNextWrite: undefined as (() => void) | undefined,
+		/**
+		 * The document, counted: a stand-in for Playwright's handle to it, which throws once its document is replaced (as
+		 * after a reload); the harness pins the real handle (`test/tests/testApp/documentHandle.spec.ts`).
+		 */
+		document: 0,
 	};
 	const later = <T>(effect: () => T) =>
 		new Promise<T>((resolve, reject) =>
@@ -54,6 +59,19 @@ const fakePage = (url: string) => {
 		url: () => state.url,
 		mainFrame: () => ({ url: () => state.url }),
 		evaluate: async () => state.documentOrigin,
+		evaluateHandle: async () => {
+			const document = state.document;
+			return {
+				evaluate: async () => {
+					if (state.document !== document) {
+						throw new Error(
+							"elementHandle.evaluate: Execution context was destroyed, most likely because of a navigation",
+						);
+					}
+				},
+				dispose: async () => undefined,
+			};
+		},
 		on: () => undefined,
 		off: () => undefined,
 		sessionStorage: {
@@ -295,6 +313,20 @@ describe("SessionStorage calls for one origin take turns", () => {
 			expect(first.status).toBe("rejected");
 			expect(second.status === "rejected" && (second.reason as Error).message).toBe(waited("set", "about:blank", A));
 			expect(popup.state.writes).toEqual(["a=1"]);
+		});
+
+		it("of a helper without an origin, whose page reloaded meanwhile, runs in the new document", async () => {
+			const storage = new SessionStorage(fake.page, { label: "Any" });
+			fake.state.afterNextWrite = () => {
+				fake.state.document++;
+			};
+			const [first, second] = await Promise.allSettled([storage.set({ a: "1", b: "2" }), storage.set("late", "x")]);
+			// the first call's document was replaced as its first key landed; the second's turn began in the new one
+			expect(first.status === "rejected" && (first.reason as Error).message).toBe(
+				`Any.SessionStorage.set: the page navigated to ${A}/account while set() was writing to ${A}; 0 of 2 keys were written; "a" was being written and may have reached the new document`,
+			);
+			expect(second.status).toBe("fulfilled");
+			expect(fake.state.writes).toEqual(["a=1", "late=x"]);
 		});
 
 		it("of a helper without an origin follows the page between awaited calls", async () => {

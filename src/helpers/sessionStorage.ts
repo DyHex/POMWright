@@ -9,7 +9,7 @@
  * which writes at once when the page is on the origin and otherwise adds an init script that writes on the
  * first arrival there. Calls for one origin take turns on the page (`storageTurns.ts`), in call order.
  */
-import { type Page, test } from "@playwright/test";
+import { type JSHandle, type Page, test } from "@playwright/test";
 import { callerLocation, captureCallSite, type StepLocation, siteLocation } from "./callSite";
 import { describeKeys, originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSeed";
 import { PAGE_WIDE, takeTurn } from "./storageTurns";
@@ -263,6 +263,37 @@ const readTestOutcome: ReadTestOutcome = () => {
 };
 
 /**
+ * The document a call works in: a handle to it, taken before the call's first storage call and evaluated after each,
+ * so a call stops when its document is replaced, also by a reload or a redirect within the origin, which leave the
+ * page's URL on the origin. Playwright disposes of a handle when its frame navigates to a new document, and evaluating it
+ * then throws "Execution context was destroyed", which `guarded` reads as a navigation; a same-document navigation
+ * (`pushState`, a hash change) leaves it alive. A handle rather than a value the page reports: `performance.timeOrigin`,
+ * the obvious one, is computed from two clocks on every read in WebKit and can change within a document.
+ */
+class CallDocument {
+	private handle: Promise<JSHandle> | undefined;
+
+	constructor(private readonly page: Page) {}
+
+	/** Before a storage call: the handle, taken by the call's first, which the parallel reads of `get` share. */
+	async enter(): Promise<void> {
+		this.handle ??= this.page.evaluateHandle(() => document);
+		await this.handle;
+	}
+
+	/** After a storage call: Playwright's error when the document is gone. */
+	async check(): Promise<void> {
+		await (await this.handle)?.evaluate(() => undefined);
+	}
+
+	/** When the call ends, however it ends. */
+	async dispose(): Promise<void> {
+		const handle = await this.handle?.catch(() => undefined);
+		await handle?.dispose().catch(() => undefined);
+	}
+}
+
+/**
  * Playwright's `page.sessionStorage` with batches, report steps, an origin check, per-key codecs and `seed`. Values are
  * strings unless the schema declares a codec for the key. Every page object has one, `sessionStorage`.
  *
@@ -362,15 +393,17 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 
 	/**
 	 * One storage call, checked against a navigation: the page's URL is read before and after it (a field Playwright's
-	 * client keeps current, so no round trip), and when its origin moved, or the call failed because the document went
-	 * away, the call fails with `navigated(from, to)`, whether or not it threw; `to` is where the page is when the
-	 * message is made (`destinationOf`). A call in flight when the page leaves may have acted on the new document: it is
-	 * detected, not prevented. A URL without an origin (an `about:blank` popup) is compared whole.
+	 * client keeps current, so no round trip), and the call's document after it (`CallDocument`, one round trip); when
+	 * the URL's origin moved, or the document went away during the call or since the call's previous storage call, the
+	 * call fails with `navigated(from, to)`, whether or not it threw; `to` is where the page is when the message is made
+	 * (`destinationOf`). A call in flight when the page leaves may have acted on the new document: it is detected, not
+	 * prevented. A URL without an origin (an `about:blank` popup) is compared whole.
 	 */
 	private async guarded<T>(
 		method: string,
 		call: () => Promise<T>,
 		navigated: (from: string, to: string, cause: unknown) => Error,
+		doc: CallDocument,
 	): Promise<T> {
 		const before = this.page.url();
 		const from = originOf(before);
@@ -380,7 +413,13 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		};
 		let result: T;
 		try {
-			result = await this.access(method, call);
+			result = await this.access(method, async () => {
+				// taken here, so a document replaced while it is taken reads as a navigation too
+				await doc.enter();
+				const value = await call();
+				await doc.check();
+				return value;
+			});
 		} catch (error) {
 			const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
 			const destroyed = cause instanceof Error && /Execution context was destroyed/.test(cause.message);
@@ -395,6 +434,16 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		return result;
 	}
 
+	/** Runs `work` with the call's document, disposed when the call ends. */
+	private async inDocument<T>(work: (doc: CallDocument) => Promise<T>): Promise<T> {
+		const doc = new CallDocument(this.page);
+		try {
+			return await work(doc);
+		} finally {
+			await doc.dispose();
+		}
+	}
+
 	/** The failure of a single call the page left: what it was doing, and what it may have done to the new document. */
 	private navigatedDuring(method: string, doing: string, consequence: string) {
 		return (from: string, to: string, cause: unknown) =>
@@ -405,9 +454,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	}
 
 	/**
-	 * One storage call per key, in order: Playwright has no batch call, so a navigation can stop the batch partway. The
-	 * failure then says so, names the keys already done, which stay, and the key in flight, which may have reached the
-	 * new document.
+	 * One storage call per key, in order, all in one document: Playwright has no batch call, so a navigation can stop the
+	 * batch partway. The failure then says so, names the keys already done, which stay, and the key in flight, which may
+	 * have reached the new document.
 	 */
 	private async eachKey(
 		method: string,
@@ -415,22 +464,25 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		[doing, done]: readonly [doing: string, done: string],
 		call: (key: string) => Promise<void>,
 	): Promise<void> {
-		for (const [index, key] of keys.entries()) {
-			await this.guarded(
-				method,
-				() => call(key),
-				(from, to, cause) => {
-					const finished = keys.slice(0, index);
-					return new Error(
-						`${this.title(method)}: the page navigated to ${to} while ${method}() was ${doing} ${from}; ` +
-							`${finished.length} of ${keys.length} ${keys.length === 1 ? "key was" : "keys were"} ${done}` +
-							(finished.length > 0 ? ` (${describeKeys(finished)})` : "") +
-							`; ${JSON.stringify(key)} was being ${done} and may have reached the new document`,
-						cause === undefined ? undefined : { cause },
-					);
-				},
-			);
-		}
+		await this.inDocument(async (doc) => {
+			for (const [index, key] of keys.entries()) {
+				await this.guarded(
+					method,
+					() => call(key),
+					(from, to, cause) => {
+						const finished = keys.slice(0, index);
+						return new Error(
+							`${this.title(method)}: the page navigated to ${to} while ${method}() was ${doing} ${from}; ` +
+								`${finished.length} of ${keys.length} ${keys.length === 1 ? "key was" : "keys were"} ${done}` +
+								(finished.length > 0 ? ` (${describeKeys(finished)})` : "") +
+								`; ${JSON.stringify(key)} was being ${done} and may have reached the new document`,
+							cause === undefined ? undefined : { cause },
+						);
+					},
+					doc,
+				);
+			}
+		});
 	}
 
 	/**
@@ -538,8 +590,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * when the document's origin is opaque, as the browser's error page after a failed navigation and a sandboxed
 	 * document have
 	 * (`Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`),
-	 * and when the page leaves the origin during the batch, which is written one key at a time and stops there; the key in
-	 * flight may have reached the new document
+	 * and when the page leaves the origin, or its document is replaced by a reload or a redirect within the origin, during
+	 * the batch, which is written one key at a time and stops there; the key in flight may have reached the new document
 	 * (`Shop.SessionStorage.set: the page navigated to https://shop.example/home while set() was writing to https://shop.example; 2 of 60 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document`);
 	 * for a helper without an origin, also when its call waited for its turn while the page left the origin it was made
 	 * on, so it does nothing
@@ -580,7 +632,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * (`Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"`), when the page is on another origin
 	 * than the helper's, when the page has no origin yet, when the document's origin is opaque, as for `set`
 	 * (`Shop.SessionStorage.get: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`),
-	 * and when the page leaves the origin during the read, rather than return what it may have read from the new document
+	 * and when the page leaves the origin, or its document is replaced, during the read, rather than return what it may
+	 * have read from the new document
 	 * (`Shop.SessionStorage.get: the page navigated to https://login.example/ while get() was reading "token" from https://shop.example; it may have read the new document`);
 	 * for a helper without an origin, also when its call waited for its turn while the page left the origin it was made
 	 * on, so it reads nothing
@@ -609,31 +662,37 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	}
 
 	/** What `get` reads, in its turn: one key, several, or every entry, each through its key's codec. */
-	private async read(keyOrKeys: string | readonly string[] | undefined): Promise<unknown> {
+	private read(keyOrKeys: string | readonly string[] | undefined): Promise<unknown> {
 		const title = this.title("get");
-		// a read the page left may have come from the new document: it fails instead of returning that
-		const readKey = (key: string) =>
-			this.guarded(
+		return this.inDocument(async (doc) => {
+			// a read the page left may have come from the new document: it fails instead of returning that
+			const readKey = (key: string) =>
+				this.guarded(
+					"get",
+					() => this.page.sessionStorage.getItem(key),
+					this.navigatedDuring("get", `reading ${JSON.stringify(key)} from`, "it may have read the new document"),
+					doc,
+				);
+			if (typeof keyOrKeys === "string") {
+				return decodeValue(this.schema, keyOrKeys, await readKey(keyOrKeys), title);
+			}
+			if (keyOrKeys !== undefined) {
+				// in parallel; the first that fails rejects the whole read
+				const pairs = await Promise.all(
+					keyOrKeys.map(async (key) => [key, decodeValue(this.schema, key, await readKey(key), title)] as const),
+				);
+				return Object.fromEntries(pairs);
+			}
+			const items = await this.guarded(
 				"get",
-				() => this.page.sessionStorage.getItem(key),
-				this.navigatedDuring("get", `reading ${JSON.stringify(key)} from`, "it may have read the new document"),
+				() => this.page.sessionStorage.items(),
+				this.navigatedDuring("get", "reading every entry from", "it may have read the new document"),
+				doc,
 			);
-		if (typeof keyOrKeys === "string") {
-			return decodeValue(this.schema, keyOrKeys, await readKey(keyOrKeys), title);
-		}
-		if (keyOrKeys !== undefined) {
-			// in parallel; the first that fails rejects the whole read
-			const pairs = await Promise.all(
-				keyOrKeys.map(async (key) => [key, decodeValue(this.schema, key, await readKey(key), title)] as const),
+			return Object.fromEntries(
+				items.map((item) => [item.name, decodeValue(this.schema, item.name, item.value, title)]),
 			);
-			return Object.fromEntries(pairs);
-		}
-		const items = await this.guarded(
-			"get",
-			() => this.page.sessionStorage.items(),
-			this.navigatedDuring("get", "reading every entry from", "it may have read the new document"),
-		);
-		return Object.fromEntries(items.map((item) => [item.name, decodeValue(this.schema, item.name, item.value, title)]));
+		});
 	}
 
 	/**
@@ -645,8 +704,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * @throws When the page is on another origin than the helper's, when the page has no origin yet, when the document's
 	 * origin is opaque, as for `set`
 	 * (`Shop.SessionStorage.clear: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`),
-	 * and when the page leaves the origin during the call; the keys named as removed are gone, and the one in flight may
-	 * have reached the new document
+	 * and when the page leaves the origin, or its document is replaced, during the call; the keys named as removed are
+	 * gone, and the one in flight may have reached the new document
 	 * (`Shop.SessionStorage.clear: the page navigated to https://shop.example/home while clear() was removing keys from https://shop.example; 1 of 3 keys were removed ("token"); "locale" was being removed and may have reached the new document`);
 	 * for a helper without an origin, also when its call waited for its turn while the page left the origin it was made
 	 * on, so it removes nothing
@@ -671,10 +730,13 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 			this.assertOnOrigin("clear");
 			await this.inTurn("clear", async () => {
 				if (keys === undefined) {
-					await this.guarded(
-						"clear",
-						() => this.page.sessionStorage.clear(),
-						this.navigatedDuring("clear", "removing every entry from", "it may have reached the new document"),
+					await this.inDocument((doc) =>
+						this.guarded(
+							"clear",
+							() => this.page.sessionStorage.clear(),
+							this.navigatedDuring("clear", "removing every entry from", "it may have reached the new document"),
+							doc,
+						),
 					);
 					return;
 				}
@@ -708,8 +770,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * `… the codec for "orderId" returned undefined instead of a string`), when the browser has no Navigation API, when the page commits a document on the
 	 * origin while the seed is being registered, when the page closes before it is registered (`… the page closed
 	 * while seed() was registering the seed for https://pay.example (keys: "orderId"); await seed() before the test ends`),
-	 * and, on the origin already, when the document's origin is opaque or the page leaves it during the write, as for
-	 * `set` (`… the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`, `… the
+	 * and, on the origin already, when the document's origin is opaque, or the page leaves it or its document is replaced
+	 * during the write, as for `set` (`… the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (…)`, `… the
 	 * page navigated to https://shop.example/home while seed() was writing to https://shop.example; …`);
 	 * later, failing the test with the line of this call in the stack, when the browser refuses the write (the storage
 	 * quota), when the document that arrives on the origin does not take the seed (after a navigation there that failed,

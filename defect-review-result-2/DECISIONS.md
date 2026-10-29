@@ -1090,3 +1090,112 @@ triage's records).
 >   standard-decorator output at run time.
 
 **Why**: the review's purpose is that nothing it found is left without a decision; these are the last of them.
+
+## 113. The real thing over a stand-in: a principle of the root guide (2026-10-29)
+
+**Settles**: raised by the session storage plan's execution (its execution note 1), not a finding.
+
+**The case**: the review's probe for 2A-1 served its redirect chain through `page.route` and concluded that the failure
+was Chromium's alone. With the test server's pages the chain failed on Firefox and WebKit too. Before the fix, 30
+rounds per cell: Chromium failed every round at 1, 6 and 16 workers however the pages were served; Firefox and WebKit
+failed 4 to 12 rounds of 30 with the server's pages, and 0 or 1 through `page.route`, also when the route only
+continued the request. The stand-in hid the result, and the probe did not say what it could hide.
+
+**Decided**:
+
+1. **A principle in the root `AGENTS.md`**, under *How to work* beside *Verified claims only*, worded for any work that
+   establishes what is true:
+
+   > - **The real thing over a stand-in.** Whatever establishes what is true (a probe, a test at any level, a
+   >   reproduction, a benchmark, exploratory testing, a review, a claim in a plan, page or doc comment) is based on what
+   >   a user runs: the packed build, Playwright's runner, real browsers and pages, and realistic conditions (all three
+   >   browsers, parallel workers, enough rounds to show a race). A stand-in (a mock, a fake page, `page.route`, a
+   >   hand-built document, a single worker, a small sample) is used only where the real thing cannot produce the case
+   >   or costs far more than the claim is worth. A stand-in's result holds for the stand-in, so a claim that something
+   >   does not happen is never made from one. Every stand-in MUST be disclosed where its result is reported (the plan,
+   >   finding, report, reply, or the test's own comment): what it replaced, why, and what it could hide. A claim that
+   >   only a stand-in backs is a gap.
+
+2. **The folder files add only what is particular to them**, each pointing back to the root rule: `test/AGENTS.md`
+   *Probing* (the test server's pages over `page.route`; a navigation timed by wrapping a Playwright call, disclosed;
+   rounds and workers); `src/AGENTS.md` (a fake page or a mocked `test.step` in a unit test is a stand-in by design: its
+   comment names the harness test that checks the same claim for real); the benchmarks' bullet (running at rest is a
+   declared condition, reported with the machine line).
+3. **A pass over the tests' stand-ins**: each gets a comment saying what it replaces, why, what it could hide and which
+   real test covers it; a claim that only a stand-in backs is listed as a gap.
+4. **In the contributor guide plan**, a step of its own. The session storage plan's follow-up discloses its own
+   stand-ins.
+
+**Why**: a stand-in changes timing and behavior, and a result that holds only for it must not pass for a fact about the
+real thing; the rule applies to every kind of work that establishes what is true, so it belongs where every task reads.
+
+## 114. A call stops when its document is replaced, also between two of its storage calls (2026-10-29)
+
+**Settles**: a gap found while answering the maintainer's questions on decision 86, not a finding of the review.
+
+**The case**: a navigation within the origin is detected only when it destroys a storage call in flight (`guarded`
+reads Playwright's "Execution context was destroyed"). One that commits between two of a call's storage calls goes
+unseen: the call resolves and writes the rest into the new document, whose first script ran without them (a reload
+timed between `set`'s third and fourth `setItem`: 9 of 9 on three browsers; the reloaded document's first script saw
+three keys). The docs say that a reload within the origin that interrupts a call stops it. With real timing the gap is
+rare: 270 reloads timed by the page itself each destroyed one call in flight.
+
+**Decided**:
+
+1. **A handle to the page's document**, `page.evaluateHandle(() => document)`, taken before a call's first storage
+   call, evaluated after each (every key of a batch and every read of `get` included) and disposed when the call ends.
+   Playwright documents that "JSHandles are auto-disposed when their origin frame gets navigated or the parent context
+   gets destroyed"; evaluating one whose document is gone throws "Execution context was destroyed", which `guarded`
+   reads as a navigation, so the call fails with the navigation message, naming the keys done and the one that may have
+   reached the new document. A same-document navigation (`pushState`, a hash change) leaves the handle alive, and the
+   call goes on.
+2. **Not `performance.timeOrigin`**: WebKit computes it on every read from two clocks (`m_timeOrigin -
+   MonotonicTime::now() + WallTime::now()`, rounded to 1 ms), so it can change within one document; it gave a false
+   failure under load (1 of 48 benchmark copies, WebKit).
+3. **Option A, not A2.** A2 (look only after `framenavigated`) costs almost nothing, but depends, besides the handle, on
+   two behaviors of Playwright: an event for every new document of the main frame (its code does so; its docs say "a
+   different URL") and that event delivered before the result of any call that ran in the new document (half by its
+   code, half by the browsers' order of events, promised nowhere). A depends on the handle alone, which is documented.
+   Its cost, measured with prototypes of both: one round trip per key and two per call. Median of 32 copies under 16
+   workers, `set` of 10 short keys 14 to 16 ms today, 29 to 35 ms with A; 60 keys of 1,000 characters 60 to 82 ms, 123
+   to 172 ms with A; A2 matched today. At worst about 10,000 short keys fit a 30-second test timeout, and values of
+   1,000 characters or more fill the whole quota (5,242,880 characters per origin) within it.
+4. **No option to turn it off**: off by default every call would race silently; on by default, the option would be an
+   opt-in to that race.
+5. **No new changeset**: the navigation messages and the within-origin stop are new in 3.0.2 (`e8831b8`), and
+   `.changeset/batch-navigation-message.md` says that a call checks its document too.
+6. **Tests**: unit, with a fake page (a document replaced between two calls stops a batch, a read and `clear()`; a
+   same-document navigation goes on; the handle taken once and disposed, also when the call fails; a handle that cannot
+   be taken while the document is replaced; a closed page); harness (a reload between keys stops `set`, `get(keys)`,
+   `clear(keys)` and a `seed` on the origin; a reload by the page's own timer during a call; `pushState` and a hash
+   change between keys do not; a call waiting for its turn through a reload runs in the new document), and a pin of
+   the handle: it dies on a reload, `location.replace`, `location.assign`, a link, a form, back and forward, a meta
+   refresh and `page.goto`, and survives `pushState` and a hash change, on three browsers.
+7. **Docs**: *Session storage* (*The methods*; a section on size and cost; what to do when the app navigates by
+   itself: wait for where it ends up, wait for its final state, or seed before the navigation; on WebKit
+   `page.goto()` returned before an app's own reload), *Error messages*, the API page and the `@throws`, *Internal →
+   Seed registry* (*The origin around every call*), `src/helpers/AGENTS.md`.
+8. **In the session storage plan's follow-up**, with the test gaps the maintainer named (an awaited `clear` then a
+   reload, a codec's object changed after the call, the quota) and the comments of that plan's stand-ins.
+
+**Why**: decision 86 keeps a call failing where the race is; whether it does must not depend on the navigation
+landing during a storage call or between two.
+
+## 115. The storage calls benchmarked against plain Playwright (2026-10-29)
+
+**Settles**: the maintainer's request while deciding 114.
+
+**Decided**:
+
+1. **A storage benchmark in the benchmarks plan**: `set`, `get`, `clear` and `seed` by key count and value size, on
+   three browsers, each against the fewest plain Playwright calls that do the same storage work (`set` of ten entries
+   against ten `page.sessionStorage.setItem` calls; `get` and `clear` against `getItem`, `items`, `removeItem` and
+   `clear`); `seed` against two hand-written baselines, `page.addInitScript` writing the entries when
+   `location.origin` matches (removed through its `Disposable`) and one that also writes only on the first arrival,
+   timing the call and the arrival, with what the minimal script does not do listed. The quota is measured too, and
+   decision 114's check is shown against a build of the commit before it.
+2. **Published on *Internal → Performance***, with the machine line and both conditions: at rest, and under the
+   harness's parallel workers.
+
+**Why**: these numbers decided 114, and a reader of the performance page should be able to reproduce them and see them
+against what they would write by hand.

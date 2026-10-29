@@ -360,8 +360,9 @@ Shop.SessionStorage.clear: the page navigated to https://shop.example/home while
 ```
 
 Every call checks the page's origin before and after each storage call, so a navigation to another origin stops it,
-whether or not the storage call failed, and so does a reload or a redirect within the origin that interrupts it. The
-message names where the page went, by its origin and path. The keys named as done stay so; the one in flight, or a
+whether or not the storage call failed. It also checks after each that the page's document is the one it started in,
+so a reload or a redirect within the origin stops it too, during one of its storage calls or between two. The message
+names where the page went, by its origin and path. The keys named as done stay so; the one in flight, or a
 single call, may have reached the new document, and a `get` fails rather than return what it may have read there. Any
 other error from Playwright gets the label in front of its message and is the `cause`.
 

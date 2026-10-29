@@ -44,7 +44,11 @@ Promise checks of `@step` and `defineLocators()`).
   origins still register side by side; a call that waited checks the origin again when its turn starts, and a failing call leaves the
   pending seed as it was. Every storage call (each key of a batch, a single call, each read of `get(keys)`) reads the
   page's origin before and after it (`page.url()`, no round trip) and fails with the navigation message when it moved,
-  whether or not the call threw, naming the keys done and the one in flight; a call in flight is detected, not prevented. `seed` decides in its turn whether to write at once (the page was on the origin at the call
+  whether or not the call threw, naming the keys done and the one in flight; a call in flight is detected, not prevented.
+  After each, it also evaluates a handle to the call's document (`CallDocument`: `page.evaluateHandle(() => document)`,
+  taken before the call's first storage call and disposed at its end), which Playwright disposes of when the document is
+  replaced, so a reload or a redirect within the origin stops a call too, between two of its storage calls as well
+  (`test/tests/testApp/documentHandle.spec.ts` pins the handle). `seed` decides in its turn whether to write at once (the page was on the origin at the call
   and still is, or its URL has no origin and its document inherited the seeded one) or to register; it reads the page and starts its commit watch at the call, before its step's body,
   which Playwright may delay (the step overlay). Keys are never property names on the way to the page: a `__proto__` key is stored. `seed` throws at
   the call in a browser without the Navigation API (checked once per page) and when the main frame commits on the
@@ -90,5 +94,7 @@ Promise checks of `@step` and `defineLocators()`).
 - Reintroduce JSON-encoding every session storage value, or `setOnNextNavigation`.
 - Give `seed` a route, a proxy or a document of POMWright's own, a script without the first-arrival check, or a
   binding exposed to the app's page.
+- Tell a replaced document by a value the page reports, such as `performance.timeOrigin`, which WebKit recomputes from
+  two clocks on every read.
 - Reintroduce `@step` on methods that do not return a Promise, a hard-coded log locale or sorted log entries, JSON
   re-formatting of log messages, or a navigation or session storage step without `box: true`.

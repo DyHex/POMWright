@@ -87,7 +87,10 @@ test.describe("a popup on about:blank, which inherits its opener's origin", () =
 		const storage = new SessionStorage(popup, { label: "Popup" });
 		await popup.close();
 		const error = await storage.get("token").catch((e: Error) => e);
-		expect((error as Error).message).toMatch(/^Popup\.SessionStorage\.get: webStorage\.getItem: .*closed/);
+		// from the call's first request to the page, its handle to the document
+		expect((error as Error).message).toBe(
+			"Popup.SessionStorage.get: page.evaluateHandle: Target page, context or browser has been closed",
+		);
 	});
 
 	test("a seed then a set for the inherited origin: the app starts with the set's value", async ({ page }) => {
@@ -309,6 +312,126 @@ test.describe("a batch the page leaves", () => {
 			await testStorage.navigation.goto();
 			expect(await unbound.get("k0")).toBe("on A");
 		});
+	});
+});
+
+test.describe("a reload or a redirect within the origin", () => {
+	/**
+	 * Runs `actions[n]` after the helper's storage call number `n` to `method` returns, before the call resolves: a
+	 * navigation timed between two storage calls, which real timing hits only by chance. It stands in for the moment
+	 * alone (the navigation, the documents and the storage are real), so it cannot show how often real timing lands
+	 * there; the test with the page's own timer below shows a reload during a call.
+	 */
+	const afterStorageCall = (
+		page: Page,
+		method: "setItem" | "removeItem" | "getItem",
+		actions: Record<number, () => Promise<unknown>>,
+	) => {
+		const storage = page.sessionStorage as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>;
+		const original = storage[method]?.bind(storage);
+		let count = 0;
+		storage[method] = async (...args: unknown[]) => {
+			const result = await original?.(...args);
+			await actions[++count]?.();
+			return result;
+		};
+		return () => {
+			if (original) storage[method] = original;
+		};
+	};
+	const outcomeOf = (call: Promise<unknown>) =>
+		call.then(
+			() => "resolved",
+			(error: Error) => error.message,
+		);
+	const keys = ["k0", "k1", "k2", "k3", "k4", "k5"];
+	const entries = Object.fromEntries(keys.map((key) => [key, "A"]));
+
+	test("between two storage calls stops set, and the reloaded app's first script saw only the keys written before", async ({
+		page,
+		testStorage,
+	}) => {
+		await testStorage.navigation.goto();
+		afterStorageCall(page, "setItem", { 3: () => page.reload({ waitUntil: "commit" }) });
+		expect(await outcomeOf(testStorage.sessionStorage.set(entries))).toBe(
+			`TestStorage.SessionStorage.set: the page navigated to ${A}/teststorage while set() was writing to ${A}; 2 of 6 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document`,
+		);
+		await page.waitForLoadState();
+		expect(await startup(page)).toEqual({ k0: "A", k1: "A", k2: "A" });
+		expect(await liveStorage(page)).toEqual({ k0: "A", k1: "A", k2: "A" });
+	});
+
+	test("between two storage calls stops a seed on the origin, clear with keys and get with keys", async ({
+		page,
+		testStorage,
+	}) => {
+		await testStorage.navigation.goto();
+		let restore = afterStorageCall(page, "setItem", { 2: () => page.reload({ waitUntil: "commit" }) });
+		expect(await outcomeOf(testStorage.sessionStorage.seed(entries))).toBe(
+			`TestStorage.SessionStorage.seed: the page navigated to ${A}/teststorage while seed() was writing to ${A}; 1 of 6 keys were written ("k0"); "k1" was being written and may have reached the new document`,
+		);
+		restore();
+		await page.waitForLoadState();
+		await testStorage.sessionStorage.set(entries);
+
+		restore = afterStorageCall(page, "removeItem", { 2: () => page.reload({ waitUntil: "commit" }) });
+		expect(await outcomeOf(testStorage.sessionStorage.clear(keys))).toBe(
+			`TestStorage.SessionStorage.clear: the page navigated to ${A}/teststorage while clear() was removing keys from ${A}; 1 of 6 keys were removed ("k0"); "k1" was being removed and may have reached the new document`,
+		);
+		restore();
+		await page.waitForLoadState();
+		expect(Object.keys(await liveStorage(page)).sort()).toEqual(["k2", "k3", "k4", "k5"]);
+
+		afterStorageCall(page, "getItem", { 1: () => page.reload({ waitUntil: "commit" }) });
+		expect(await outcomeOf(testStorage.sessionStorage.get(["k2", "k3", "k4"]))).toMatch(
+			/^TestStorage\.SessionStorage\.get: the page navigated to http:\/\/localhost:9000\/teststorage while get\(\) was reading "k[234]" from http:\/\/localhost:9000; it may have read the new document$/,
+		);
+	});
+
+	test("by the page's own timer during a call stops it", async ({ page, testStorage }) => {
+		const many = Object.fromEntries(Array.from({ length: 300 }, (_, index) => [`k${index}`, "A"]));
+		for (let round = 0; round < 2; round++) {
+			await testStorage.navigation.goto();
+			await page.evaluate(() => sessionStorage.clear());
+			await page.evaluate(() => setTimeout(() => location.reload(), 30));
+			expect(await outcomeOf(testStorage.sessionStorage.set(many))).toMatch(
+				/^TestStorage\.SessionStorage\.set: the page navigated to http:\/\/localhost:9000\/teststorage while set\(\) was writing to http:\/\/localhost:9000; \d+ of 300 keys were written/,
+			);
+			await page.waitForLoadState();
+		}
+	});
+
+	test("pushState and a hash change between two storage calls keep the document, and the call goes on", async ({
+		page,
+		testStorage,
+	}) => {
+		await testStorage.navigation.goto();
+		afterStorageCall(page, "setItem", {
+			2: () => page.evaluate(() => history.pushState({}, "", "/teststorage?pushed=1")),
+			4: () =>
+				page.evaluate(() => {
+					location.hash = "section";
+				}),
+		});
+		expect(await outcomeOf(testStorage.sessionStorage.set(entries))).toBe("resolved");
+		expect(page.url()).toBe(`${A}/teststorage?pushed=1#section`);
+		expect(await liveStorage(page)).toEqual(entries);
+	});
+
+	test("a call that waited for its turn through a reload runs in the new document", async ({ page, testStorage }) => {
+		await testStorage.navigation.goto();
+		const unbound = new SessionStorage(page, { label: "Unbound" });
+		afterStorageCall(page, "setItem", { 2: () => page.reload({ waitUntil: "commit" }) });
+		const [first, waiting] = await Promise.all([
+			outcomeOf(unbound.set({ k0: "A", k1: "A", k2: "A" })),
+			outcomeOf(unbound.set("late", "x")),
+		]);
+		expect(first).toBe(
+			`Unbound.SessionStorage.set: the page navigated to ${A}/teststorage while set() was writing to ${A}; 1 of 3 keys were written ("k0"); "k1" was being written and may have reached the new document`,
+		);
+		expect(waiting).toBe("resolved");
+		await page.waitForLoadState();
+		expect(await liveStorage(page)).toEqual({ k0: "A", k1: "A", late: "x" });
 	});
 });
 

@@ -124,9 +124,10 @@ Every call checks the page's origin before and after each storage call it makes,
 it: the call fails, naming where the page went, the keys done, which stay, and the one in flight. That one may have
 reached the new document, since a call already sent cannot be taken back; the check detects it, but cannot prevent it.
 A `get` the page left fails rather than return what it may have read there. A reload or a redirect within the origin
-that interrupts a call stops it too: the call was in flight in a document that went away, and the app's next document
-may read storage before a repeated key would land, so the call fails where the race is. Await the navigation first, or
-seed before it. The message names where the page went by its origin and path, without the query or fragment, which may
+stops a call too, whether it lands during one of the call's storage calls or between two: the call also checks after
+each that the page's document is the one it started in, since the app's next document may read storage before the
+rest of the keys land, so the call fails where the race is. A `pushState` or a hash change keeps the document, and
+the call goes on. Await the navigation first, or seed before it. The message names where the page went by its origin and path, without the query or fragment, which may
 hold a redirect's tokens:
 
 ```text

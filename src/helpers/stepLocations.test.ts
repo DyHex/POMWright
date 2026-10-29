@@ -26,6 +26,8 @@ const fakePage = (url: string) =>
 		mainFrame: () => ({ url: () => url }),
 		on: () => undefined,
 		off: () => undefined,
+		// a call's document, never replaced here
+		evaluateHandle: async () => ({ evaluate: async () => undefined, dispose: async () => undefined }),
 		sessionStorage: {
 			setItem: async (key: string, value: string) => {
 				store.set(key, value);

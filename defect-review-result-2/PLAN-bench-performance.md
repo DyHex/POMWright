@@ -1,6 +1,6 @@
 # Plan: the benchmarks and *Internal → Performance* (2G-4, and the maintainer's review of the benchmarks)
 
-- **Decision**: [107 (point 5)](DECISIONS.md) (2026-10-29)
+- **Decisions**: [107 (point 5), 115](DECISIONS.md) (2026-10-29)
 - **Findings**: [2G-4](G-ci-release-publishing/defect-2G-4-performance-scale-line-not-reproducible.md) (Low); the rest
   comes from this plan's own review
 - **Bump**: none (a script, a bench spec, a page)
@@ -14,7 +14,7 @@
 `scripts/benchmark.mjs` (`pnpm bench`: registering, resolving and verifying, in Node), `test/benchmarks/
 pageObjectFixture.spec.ts` with `test/playwright.bench.config.ts` (a page object set up as a fixture), and every number
 and claim of `website/src/content/docs/internal/performance.md` (*Basis for testing*, *Results*, *Conclusion*,
-*Limitations*).
+*Limitations*); and, by decision 115, a benchmark of the session storage calls, which phase 2 adds.
 
 ## Phase 1: review (no change)
 
@@ -39,11 +39,15 @@ Then **stop**: report the findings and the proposed fixes and improvements to th
 
 1. Fix what phase 1 found, and make the agreed improvements.
 2. Add the `count()` round trip to `scripts/benchmark.mjs` (2G-4), measured as the other rows are.
-3. Rerun `pnpm bench` several times on one machine, at rest, and keep every run's output.
-4. Rewrite *Internal → Performance* from that output, thoroughly: every number and claim traced to the output; ranges
+3. **The storage benchmark (decision 115)**: a bench spec for `set`, `get`, `clear` and `seed` by key count and value
+   size on three browsers, each against the fewest plain Playwright calls that do the same storage work, `seed` against
+   the two hand-written `addInitScript` baselines (the call and the arrival timed); the quota; decision 114's check
+   against a build of the commit before it; at rest and under the harness's parallel workers.
+4. Rerun `pnpm bench` several times on one machine, at rest, and keep every run's output.
+5. Rewrite *Internal → Performance* from that output, thoroughly: every number and claim traced to the output; ranges
    and the spread across runs where the machine's noise is larger than a fixed percentage can carry; the machine line;
-   the conclusion only as strong as the numbers; *Limitations* updated.
-5. `test/AGENTS.md`'s `pnpm bench` bullet, if the commands or what they print change.
+   the conclusion only as strong as the numbers; *Limitations* updated; a section for the storage benchmark.
+6. `test/AGENTS.md`'s `pnpm bench` bullet, if the commands or what they print change.
 
 ## Verification
 

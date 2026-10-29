@@ -178,8 +178,24 @@ check detects a navigation and cannot prevent one: a call already sent when the 
 on the new document, and the message names that key as the one in flight (see
 [the methods](/POMWright/docs/session-storage/#the-methods)).
 
+The URL cannot see a reload or a redirect within the origin, which replace the document and leave the origin as it
+was. So each call also takes a handle to the page's document before its first storage call
+(`page.evaluateHandle(() => document)`), evaluates it after each, and disposes of it when the call ends. Playwright
+disposes of a handle when its frame navigates to a new document ("JSHandles are auto-disposed when their origin frame
+gets navigated or the parent context gets destroyed"), and evaluating it then throws "Execution context was
+destroyed", which the call reads as a navigation: a reload that lands between two keys of a batch stops it as one that
+destroys a key in flight does. A same-document navigation (`pushState`, a hash change) and a navigation that commits no
+document (a 204) leave the handle alive. `test/tests/testApp/documentHandle.spec.ts` pins this for every kind of
+navigation on three browsers. The handle costs a round trip after each storage call and two per call, which roughly
+doubles a batch of short values.
+
 Rejected: **a guarded write in the page**, one `page.evaluate` that compares `location.origin` and writes. It would
 leave `page.sessionStorage`, which the helper mirrors, and run in the page's main world, among the app's own scripts.
+Rejected for the document: **`performance.timeOrigin`** as its marker, since WebKit computes it on every read from two
+clocks, rounded to a millisecond, so it can change within one document (it failed a call under load); and **looking
+only after `framenavigated`**, which costs almost nothing but relies on two more behaviors of Playwright: an event for
+every new document of the main frame, and that event delivered before the result of a call that ran in the new
+document, which Playwright does not promise.
 
 A call that fails for another reason is explained by one evaluation, `document.domain`, which the HTML standard makes
 `""` exactly when the document's origin is opaque. `""` on a URL without an origin is a page with no origin yet; `""`

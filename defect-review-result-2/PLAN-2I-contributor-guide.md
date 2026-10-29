@@ -1,7 +1,7 @@
 # Plan: the contributor guide and the CI pages
 
-- **Decisions**: [82, 107 (points 1 to 3), 108 (point 1), 109, 110, 111 (points 1 and 2), 112 (point 1)](DECISIONS.md)
-  (2026-10-29)
+- **Decisions**: [82, 107 (points 1 to 3), 108 (point 1), 109, 110, 111 (points 1 and 2), 112 (point 1), 113 (points 1
+  to 3)](DECISIONS.md) (2026-10-29)
 - **Findings**: [2I-2](I-contributor-guide/defect-2I-2-rules-their-trigger-does-not-reach.md) (Medium),
   [2I-1](I-contributor-guide/defect-2I-1-dev-dependency-rule-in-src.md),
   [2I-8](I-contributor-guide/defect-2I-8-subfolder-files-do-not-point-to-src.md),
@@ -59,7 +59,13 @@ otherwise delete; the CI pages describe the jobs as they run.
    approval; "no npm token is stored" becomes "the workflow uses no npm token" in `.github/AGENTS.md`, `publish.yaml`'s
    comment and `.changeset/trusted-publishing.md`; the after-merge issue's draft (decision 111) finalized from the first
    review's records for the maintainer to file.
-7. **The final pass (decision 108).** "misspelt" → "misspelled" on four pages and in `LocatorSchemaPathArgument`'s doc
+7. **The real thing over a stand-in (decision 113, points 1 to 3).** The principle in the root `AGENTS.md`, under
+   *How to work* beside *Verified claims only*, in the decision's words; the folder applications, each pointing back:
+   `test/AGENTS.md` *Probing*, `src/AGENTS.md` (unit tests' fakes and mocks), the benchmarks' bullet; then a pass over
+   the tests' stand-ins (`src/**/*.test.ts`, `test/`, the probes and benchmark specs): each gets a comment saying what it
+   replaces, why, what it could hide and which real test covers it, and a claim only a stand-in backs is listed in the
+   plan's execution notes as a gap, for the maintainer.
+8. **The final pass (decision 108).** "misspelt" → "misspelled" on four pages and in `LocatorSchemaPathArgument`'s doc
    comment; "initialiser" → "initializer" on *Internal → Page object lifecycle* and in `src/pageObject.test.ts`'s title;
    a sweep of the edited files for the British forms the review swept.
 
@@ -76,6 +82,7 @@ otherwise delete; the CI pages describe the jobs as they run.
 
 - [x] Decision 82: routing where it always loads; the gaps; the root keeps its Playwright floor
 - [x] Decision 107, points 1 to 3: the tip rule; the test-server job; Node 20 and 22; the checks per job
+- [x] Decision 113, points 1 to 3: the principle in the root; the folder applications; the pass over the stand-ins
 - [x] Decision 108, point 1: American spelling, last
 - [x] Decision 109: 2I-3, 2I-6, 2I-7, 2I-9, 2T-8, 2F-3 with the upgrade page's rule
 - [x] Decision 110: *From a review's findings*
@@ -84,5 +91,5 @@ otherwise delete; the CI pages describe the jobs as they run.
 
 ## Execution
 
-Seven commits, one per step, `docs: …` or `chore: …`, with `Plan: defect-review-result-2/PLAN-2I-contributor-guide.md`
+Eight commits, one per step, `docs: …` or `chore: …`, with `Plan: defect-review-result-2/PLAN-2I-contributor-guide.md`
 and the `Co-Authored-By:` trailer; a stop after step 3. The maintainer pushes.

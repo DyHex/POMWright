@@ -122,7 +122,8 @@ Shop.SessionStorage.clear: the page navigated to https://shop.example/home while
 Shop.SessionStorage.clear: the page left https://shop.example for https://login.example while clear() waited for its turn; the call did nothing
 ```
 
-When the page leaves the origin during the call: the keys it names as removed are gone, and the one in flight, or
+When the page leaves the origin, or its document is replaced, during the call: the keys it names as removed are gone,
+and the one in flight, or
 `clear()`'s, may have reached the new document. The third for a helper without an origin, when the call waited for its
 turn while the page left the origin the call was made on: it removes nothing.
 
@@ -163,7 +164,8 @@ Shop.SessionStorage.get: the page navigated to https://login.example/ while get(
 Shop.SessionStorage.get: the page left https://shop.example for https://login.example while get() waited for its turn; the call did nothing
 ```
 
-The codec's error is the `cause`. The second when the page leaves the origin during the read: it fails rather than
+The codec's error is the `cause`. The second when the page leaves the origin, or its document is replaced, during the
+read: it fails rather than
 return what it may have read from the new document. The third for a helper without an origin, when the call waited for
 its turn while the page left the origin the call was made on: it reads nothing.
 
@@ -211,7 +213,7 @@ await loginPage.navigation.goto(); // the app's first script already sees the to
 At the call, without an origin, for a value its key's codec cannot encode (or a value that is not a string, for a key
 without a codec), in a browser without the Navigation API, when the page commits a document on the
 origin while the seed is being registered, when the page closes before it is registered, and, on the origin already,
-when the document's origin is opaque or the page leaves it during the write, as for `set`; later, failing the test with this call's line in the stack, when the
+when the document's origin is opaque, or the page leaves it or its document is replaced during the write, as for `set`; later, failing the test with this call's line in the stack, when the
 browser refuses the write, when the document that arrives on the origin does not take the seed (a failed navigation
 there, or a sandboxed document), or when the page closes before the seed was applied:
 
@@ -237,9 +239,9 @@ Shop.SessionStorage.seed: the seed for https://pay.example (keys: "orderId") was
 
 Writes one entry, or several, each value through its key's codec, or as the string it must be. Every value is
 encoded when the call is made, before any is written, so a bad value writes nothing and a value changed after the call
-is not what is stored. The values are then written one key at a time, as
-Playwright's `setItem` takes one: a navigation to another origin stops it, the keys written before it stay, and the
-one in flight may have reached the new document.
+is not what is stored. The values are then written one key at a time, as Playwright's `setItem` takes one: a
+navigation stops it, to another origin or within the origin (a reload or a redirect, which replaces the document), the
+keys written before it stay, and the one in flight may have reached the new document.
 
 **Usage**
 
@@ -276,7 +278,8 @@ Shop.SessionStorage.set: the page left https://shop.example for https://login.ex
 The second when the key's codec throws, with its error as `cause`; the third when it returns something other than a
 string; the fourth on a document whose origin is opaque, a sandboxed one or the browser's error page after a failed
 navigation, as from `get`, `clear` and `seed` there; the fifth
-when the page leaves the origin during the batch, naming the keys already written and the one in flight; the sixth for
+when the page leaves the origin or its document is replaced during the batch, naming the keys already written and the
+one in flight; the sixth for
 a helper without an origin, when the call waited for its turn while the page left the origin the call was made on: it
 writes nothing. Any other error from Playwright gets the label in front of its message and is the `cause`.
 

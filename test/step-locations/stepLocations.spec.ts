@@ -74,6 +74,8 @@ const fakePage = (url = "https://shop.example/probe") =>
 		goto: async () => null,
 		url: () => url,
 		waitForURL: async () => undefined,
+		// the document a storage call checks after each storage call, never replaced here
+		evaluateHandle: async () => ({ evaluate: async () => undefined, dispose: async () => undefined }),
 		sessionStorage: { setItem: async () => undefined },
 	}) as never;
 

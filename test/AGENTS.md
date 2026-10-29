@@ -110,7 +110,9 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   legacy decorator calls as `tsc` emits them (`pnpm typecheck` writes them; the spec fails clearly without); it needs no browser and
   runs from `test/playwright.steps.config.ts`, which `pack-test.sh` runs after the harness, so no `--reporter` given to
   the harness can switch it off. `testApp/sessionStorageOverlay.spec.ts` runs with Playwright's step overlay
-  (`video: { show: { test } }`), which delays a step's body. One spec file per DSL method,
+  (`video: { show: { test } }`), which delays a step's body. `testApp/documentHandle.spec.ts` pins a behavior of
+  Playwright's that `SessionStorage` relies on, and imports nothing of POMWright: a handle to the page's document dies
+  with its document on every kind of navigation, and survives one that keeps the document. One spec file per DSL method,
   for example `add.getById.spec.ts` or `getLocatorSchema.update.spec.ts`; one DOM-level spec per fixture page under
   `testApp/`, for example `testIds.spec.ts`.
 - Every spec imports `pomwright`, the packed tarball, never `src/`: what a spec checks is what npm would publish. The
