@@ -1201,3 +1201,24 @@ landing during a storage call or between two.
 
 **Why**: these numbers decided 114, and a reader of the performance page should be able to reproduce them and see them
 against what they would write by hand.
+
+## 116. Playwright's own log when probing (2026-10-29)
+
+**Settles**: the maintainer's proposal after the WebKit `goto` finding (the session storage plan's execution note 4),
+whose `DEBUG=pw:api` log showed `page.goto` succeed before the reload's commit.
+
+**Decided**:
+
+1. **A bullet in `test/AGENTS.md`, *Probing***, in these words:
+
+   > - **Playwright's own log.** To understand what Playwright did (what a call waited for, which events came in what
+   >   order, how a browser was launched), rerun the one test or probe with
+   >   `DEBUG="pw:api,pw:browser,pw:client-certificates,pw:webserver"`, and `pw:protocol` when the browser protocol's
+   >   own messages are the question. Set it on the command, never in `test/.env`, which every run reads. Run one test
+   >   or a few (`-g`, a file, `--project`) with `--workers=1`, write the output to a file, and quote the lines that
+   >   decide the question where the result is reported.
+
+2. **In the contributor guide plan, step 7**, beside decision 113's application to *Probing*.
+
+**Why**: Playwright's log shows what it waited for and in what order, which no assertion of a test does; one test on one
+worker keeps it readable, and on the command it never switches on for every run.
