@@ -6,5 +6,7 @@ import { defineConfig } from "@playwright/test";
 // off.
 export default defineConfig({
 	testDir: "./step-locations",
+	// a test.only left in a spec would check that file alone and pass, as the harness forbids in CI too
+	forbidOnly: !!process.env.CI,
 	reporter: [["line"], ["./step-locations/locationReporter.ts"]],
 });
