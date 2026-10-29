@@ -184,7 +184,11 @@ describe("decodeValue", () => {
 });
 
 describe("a batch the page leaves", () => {
-	/** A page whose storage call fails with `failure` on call number `failAt`, after which the page is at `urlAfter`. */
+	/**
+	 * A page whose storage call fails with `failure` on call number `failAt`, after which the page is at `urlAfter`. A
+	 * stand-in for a navigation that destroys a call in flight, which the harness makes for real (`sessionStorage.spec.ts`,
+	 * "set fails with the label and the keys already written when the page navigates during it").
+	 */
 	const pageFailingAt = (failAt: number, failure: Error, urlAfter = "http://localhost:9000/") => {
 		let calls = 0;
 		let url = "http://localhost:9000/teststorage";
@@ -271,7 +275,9 @@ describe("a batch the page leaves", () => {
 describe("a call the page leaves while it succeeds", () => {
 	/**
 	 * A page whose storage calls all succeed; the page is at `urlAfter` once call number `moveAt` has run, its document the
-	 * same, as after `pushState` (a move to another origin is caught by the URL).
+	 * same, as after `pushState` (a move to another origin is caught by the URL). A stand-in for the URL Playwright's
+	 * client keeps; the harness commits real documents between two calls ("the page commits on the other origin between
+	 * two calls that both succeed").
 	 */
 	const pageMovingAt = (moveAt: number, urlAfter: string, urlBefore = "http://localhost:9000/teststorage") => {
 		let calls = 0;
@@ -393,7 +399,8 @@ describe("a call the page leaves while it succeeds", () => {
 describe("a call whose document is replaced", () => {
 	/**
 	 * A page whose storage calls all succeed and whose URL stays put; its document is replaced once call number
-	 * `replaceAt` has run, as by a reload.
+	 * `replaceAt` has run, as by a reload. A stand-in for a reload; the harness reloads for real ("a reload or a redirect
+	 * within the origin").
 	 */
 	const pageReloadingAt = (replaceAt: number) => {
 		const state: Documents & { calls: number; written: string[] } = {

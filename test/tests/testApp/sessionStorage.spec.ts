@@ -181,7 +181,12 @@ test.describe("a batch the page leaves", () => {
 	});
 
 	test.describe("the page commits on the other origin between two calls that both succeed", () => {
-		/** After the helper's call number `calls` to `method` returns, the page commits on B before the call resolves. */
+		/**
+		 * After the helper's call number `calls` to `method` returns, the page commits on B before the call resolves: a
+		 * navigation timed between two storage calls, by wrapping Playwright's call. It stands in for the moment alone (the
+		 * navigation, the documents and the storage are real), so it cannot show how often real timing lands there; "set
+		 * fails with the label and the keys already written when the page navigates during it" shows real timing.
+		 */
 		const commitOnBAfter = (page: Page, method: "setItem" | "removeItem" | "getItem" | "clear", calls: number) => {
 			const storage = page.sessionStorage as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>;
 			const original = storage[method]?.bind(storage);

@@ -194,9 +194,15 @@ decisions, finding statuses and ledger rows of items 2 to 8 go in with the first
   passed), `A/triage/domain.spec.ts` (3 passed). No name of the external consumer projects in the branch.
 - Unexpected, for the maintainer:
   1. **Decision 81 is not Chromium's alone.** With the fixture's own pages (nested `/teststorage/bounce`) instead of the
-     probe's `page.route` documents, all nine new harness cases (2, 3 and 5 redirects) failed before the change on
-     Firefox and WebKit too. The fix is the same; the changeset and *Internal → Seed registry* do not say "on
-     Chromium".
+     probe's `page.route` documents, the new harness cases (2, 3 and 5 redirects) failed before the change on all three
+     browsers: nine failures, three per browser. The fix is the same; the changeset and *Internal → Seed registry* do
+     not say "on Chromium". Corrected on 2026-10-29 with a probe of three redirects, 30 rounds per cell at 1, 6 and 16
+     workers, against the build before the fix: Chromium failed every round however the pages were served; with the
+     test server's pages Firefox failed 4, 10 and 12 rounds and WebKit 9, 7 and 10; through `page.route`, fulfilled or
+     only continued, 0 or 1. After the fix, 0 of 30 in all 27 cells. On Firefox and WebKit it is a race, which
+     `page.route` hid at every worker count and load made more likely on Firefox. The report to the maintainer first
+     said that one worker hid it almost as well as the route did; that came from 10 rounds and was wrong. Decision 113
+     came out of it.
   2. **Added beyond the plan**: a harness serial pair for the seed whose arrival is a sandboxed document (2A-5's test
      gap, which the finding named and the plan left out; it also gives the docs row its message from a run); a
      step-location probe for a codec error, made at the call and thrown in the step (decision 84's "the reported line

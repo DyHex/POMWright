@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PAGE_WIDE, takeTurn } from "./storageTurns";
 
 // test.step runs its body, a tick later when `steps.defer` is set, as Playwright's step overlay delays it, and records
-// the steps an error came out of; outside the runner test.info() throws, as the helper expects
+// the steps an error came out of; outside the runner test.info() throws, as the helper expects. A stand-in for
+// Playwright's runner, so overlapping calls can be made to overlap on demand: it cannot show that Playwright starts a
+// step's body late, or how long, which the harness checks for real (`sessionStorage.spec.ts`, "every call takes its
+// arguments when it is made", and `sessionStorageOverlay.spec.ts`, with the step overlay on)
 const steps = vi.hoisted(() => ({ defer: false, failed: [] as string[] }));
 vi.mock("@playwright/test", () => ({
 	test: {
@@ -28,7 +31,13 @@ const { json, SessionStorage } = await import("./sessionStorage");
 const A = "https://shop.example";
 const B = "https://help.example";
 
-/** A page whose storage answers each call a tick later, so overlapping calls would interleave without their turns. */
+/**
+ * A page whose storage answers each call a tick later, so overlapping calls would interleave without their turns. A
+ * stand-in for a browser, whose timing it cannot show; the harness runs overlapping calls on three browsers
+ * (`sessionStorage.spec.ts`: "overlapping calls from a bound and an unbound helper act in the order they were made", "the
+ * waiting calls of a helper without an origin fail, …", "a call that waited for its turn through a reload runs in the
+ * new document").
+ */
 const fakePage = (url: string) => {
 	const state = {
 		url,
