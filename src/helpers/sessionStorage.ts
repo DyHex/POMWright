@@ -319,7 +319,11 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 			return await call();
 		} catch (error) {
 			const url = this.page.url();
-			if (originOf(url) === undefined) {
+			// the browsers word the refusal differently, so the document tells it apart: document.domain is "" exactly when
+			// its origin is opaque, as on a new page's about:blank, and no global of the page replaces it, as a page's own
+			// `var origin` replaces self.origin; a closed page cannot answer, and its error is Playwright's
+			const domain = await this.page.evaluate(() => document.domain).catch(() => undefined);
+			if (originOf(url) === undefined && domain === "") {
 				const instead = method === "seed" ? "" : " or use seed()";
 				throw new Error(
 					`${this.title(method)}: the page has no origin yet (${url}); navigate to the origin first${instead}`,
@@ -328,9 +332,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 					},
 				);
 			}
-			// the browsers word the refusal differently, so the document's own origin tells it apart; an error page and a
-			// sandboxed document both have an opaque origin at the origin's URL, and nothing guaranteed tells them apart
-			if (await this.page.evaluate(() => self.origin === "null").catch(() => false)) {
+			// an error page and a sandboxed document both have an opaque origin at the origin's URL, and nothing guaranteed
+			// tells them apart
+			if (originOf(url) !== undefined && domain === "") {
 				throw new Error(
 					`${this.title(method)}: the document at ${url} cannot use sessionStorage: its origin is opaque (the ` +
 						"browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: " +

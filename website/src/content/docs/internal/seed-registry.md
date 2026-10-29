@@ -172,6 +172,14 @@ on the new document, and the message names that key as the one in flight (see
 Rejected: **a guarded write in the page**, one `page.evaluate` that compares `location.origin` and writes. It would
 leave `page.sessionStorage`, which the helper mirrors, and run in the page's main world, among the app's own scripts.
 
+A call that fails for another reason is explained by one evaluation, `document.domain`, which the HTML standard makes
+`""` exactly when the document's origin is opaque. `""` on a URL without an origin is a page with no origin yet; `""`
+on a URL with one is a document whose own origin is opaque, a sandboxed one or a browser's error page; anything else,
+an `about:blank` popup that inherited its opener's origin, or a closed page that cannot answer, is Playwright's error
+with the label. `self.origin` would tell the same apart, but an app's own `var origin` replaces it in its document,
+and nothing of the page replaces `document.domain`. Rejected: taking a missing or throwing `sessionStorage` for an
+opaque origin, which a browser with storage turned off also has.
+
 ## Failures
 
 Every failure carries the line of the `seed` call, captured when it was called (see

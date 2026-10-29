@@ -470,13 +470,16 @@ const renderStoragePage = (req, res) => {
 app.get("/teststorage", renderStoragePage);
 app.post("/teststorage", renderStoragePage);
 
-// A document sandboxed by its Content-Security-Policy: on the origin by URL, with an opaque origin of its own.
-app.get("/teststorage/sandboxed", (_req, res) => {
+// A document sandboxed by its Content-Security-Policy: on the origin by URL, with an opaque origin of its own. With
+// ?globals=1 its script declares the globals origin and domain, as an app's own variables would.
+app.get("/teststorage/sandboxed", (req, res) => {
 	res.set("Cache-Control", "no-store");
 	res.set("Content-Security-Policy", "sandbox allow-scripts");
+	const globals =
+		req.query.globals === "1" ? '<script>var origin = "http://localhost:9000"; var domain = "localhost";</script>' : "";
 	res.send(`<!doctype html>
     <html>
-      <head><meta charset="utf-8"><title>Sandboxed</title></head>
+      <head><meta charset="utf-8"><title>Sandboxed</title>${globals}</head>
       <body><p>sandboxed</p></body>
     </html>`);
 });

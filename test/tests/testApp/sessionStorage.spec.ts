@@ -74,6 +74,22 @@ test.describe("a popup on about:blank, which inherits its opener's origin", () =
 		expect(await startup(popup)).toEqual({ token: "seeded" });
 	});
 
+	test("a write the browser refuses gets the browser's error, labeled, not the no-origin message", async ({ page }) => {
+		const popup = await openPopup(page);
+		const error = await new SessionStorage(popup, { label: "Popup" })
+			.set("big", "x".repeat(6 * 1024 * 1024))
+			.catch((e: Error) => e);
+		expect((error as Error).message).toMatch(/^Popup\.SessionStorage\.set: webStorage\.setItem: .*quota/i);
+	});
+
+	test("a call after the popup closed gets Playwright's error, labeled", async ({ page }) => {
+		const popup = await openPopup(page);
+		const storage = new SessionStorage(popup, { label: "Popup" });
+		await popup.close();
+		const error = await storage.get("token").catch((e: Error) => e);
+		expect((error as Error).message).toMatch(/^Popup\.SessionStorage\.get: webStorage\.getItem: .*closed/);
+	});
+
 	test("a seed then a set for the inherited origin: the app starts with the set's value", async ({ page }) => {
 		const popup = await openPopup(page);
 		const storage = new SessionStorage(popup, { label: "Popup", origin: A });
@@ -122,6 +138,15 @@ test.describe("a document with an opaque origin", () => {
 		await expect(testStorage.sessionStorage.set("token", "x")).rejects.toThrow(opaque("set"));
 		await expect(testStorage.sessionStorage.get("token")).rejects.toThrow(opaque("get"));
 		await expect(testStorage.sessionStorage.seed({ token: "x" })).rejects.toThrow(opaque("seed"));
+	});
+
+	test("a sandboxed document whose script declares a global origin: still opaque", async ({ page, testStorage }) => {
+		await page.goto(`${A}/teststorage/sandboxed?globals=1`);
+		// the app's own variable replaces self.origin in its document
+		expect(await page.evaluate(() => self.origin)).toBe(A);
+		await expect(testStorage.sessionStorage.set("token", "x")).rejects.toThrow(
+			`TestStorage.SessionStorage.set: the document at ${A}/teststorage/sandboxed?globals=1 cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)`,
+		);
 	});
 });
 

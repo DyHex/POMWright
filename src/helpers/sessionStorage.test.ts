@@ -328,32 +328,59 @@ describe("a call the page leaves while it succeeds", () => {
 
 describe("a refused storage call", () => {
 	const refused = new Error("webStorage.setItem: SecurityError: The operation is insecure.");
-	const accessOn = (url: string, opaque: boolean) =>
-		new SessionStorage({ url: () => url, evaluate: async () => opaque } as unknown as Page, {
-			label: "Shop",
-		}) as unknown as { access(m: string, call: () => Promise<void>): Promise<void> };
+	const labeled = "webStorage.setItem: SecurityError: The operation is insecure.";
+	/** A page at `url` whose document answers `domain` for document.domain, or a closed one, whose evaluation fails. */
+	const accessOn = (url: string, domain: string | "closed") =>
+		new SessionStorage(
+			{
+				url: () => url,
+				evaluate: async () => {
+					if (domain === "closed") {
+						throw new Error("page.evaluate: Target page, context or browser has been closed");
+					}
+					return domain;
+				},
+			} as unknown as Page,
+			{ label: "Shop" },
+		) as unknown as { access(m: string, call: () => Promise<void>): Promise<void> };
 	const fail = async () => {
 		throw refused;
 	};
 
-	it("on a sandboxed document says its origin is opaque", async () => {
-		await expect(accessOn("http://localhost:9000/sandboxed", true).access("set", fail)).rejects.toThrow(
+	it("on a document whose origin is opaque says so, whatever its URL", async () => {
+		await expect(accessOn("http://localhost:9000/sandboxed", "").access("set", fail)).rejects.toThrow(
 			"Shop.SessionStorage.set: the document at http://localhost:9000/sandboxed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)",
 		);
 	});
 
 	it("on a page without an origin says so, without pointing seed at seed()", async () => {
-		await expect(accessOn("about:blank", true).access("get", fail)).rejects.toThrow(
+		await expect(accessOn("about:blank", "").access("get", fail)).rejects.toThrow(
 			"Shop.SessionStorage.get: the page has no origin yet (about:blank); navigate to the origin first or use seed()",
 		);
-		await expect(accessOn("about:blank", true).access("seed", fail)).rejects.toThrow(
+		await expect(accessOn("about:blank", "").access("seed", fail)).rejects.toThrow(
 			/^Shop\.SessionStorage\.seed: the page has no origin yet \(about:blank\); navigate to the origin first$/,
 		);
 	});
 
+	it("on an about:blank popup that inherited its opener's origin labels Playwright's error", async () => {
+		const error = await accessOn("about:blank", "localhost")
+			.access("set", fail)
+			.catch((e: Error) => e);
+		expect((error as Error).message).toBe(`Shop.SessionStorage.set: ${labeled}`);
+		expect((error as Error).cause).toBe(refused);
+	});
+
+	it("on a closed page labels Playwright's error, with or without a URL origin", async () => {
+		for (const url of ["about:blank", "http://localhost:9000/"]) {
+			await expect(accessOn(url, "closed").access("clear", fail), url).rejects.toThrow(
+				`Shop.SessionStorage.clear: ${labeled}`,
+			);
+		}
+	});
+
 	it("otherwise labels Playwright's error", async () => {
-		await expect(accessOn("http://localhost:9000/", false).access("clear", fail)).rejects.toThrow(
-			"Shop.SessionStorage.clear: webStorage.setItem: SecurityError: The operation is insecure.",
+		await expect(accessOn("http://localhost:9000/", "localhost").access("clear", fail)).rejects.toThrow(
+			`Shop.SessionStorage.clear: ${labeled}`,
 		);
 	});
 });

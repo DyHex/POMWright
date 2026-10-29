@@ -66,7 +66,8 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   POST, urlencoded, multipart or `text/plain`, with `/teststorage/frame` (`?nested=1` adds `srcdoc`, `about:blank` and
   `data:` frames), `/redirect`, `/chain`, `/login`, `/login307`, `/login308`, `/api`, `/race` (an app that writes and
   leaves at once), `/bounce`, `/204`, `/download`, `/sandboxed` (a document sandboxed by its Content-Security-Policy:
-  on the origin by its URL, with an opaque origin), `/shadowed-navigation` (an app whose global `navigation` shadows
+  on the origin by its URL, with an opaque origin; `?globals=1` adds a script declaring the globals `origin` and
+  `domain`), `/shadowed-navigation` (an app whose global `navigation` shadows
   `window.navigation`), `/sw.js` and `/sw-passthrough.js`: the session storage fixture,
   whose first script snapshots `sessionStorage` and which shows the navigation's type and `document.referrer`; hops to
   the second origin `http://127.0.0.1:9000`, the same server, by every kind of navigation; iframes, COOP and COEP

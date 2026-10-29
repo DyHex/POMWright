@@ -180,7 +180,9 @@ AccountPage.SessionStorage.set: the page (about:blank) is on https://login.examp
 
 A helper without an origin, `new SessionStorage(page)`, works on whatever origin the page is on. On a page without an
 origin, before the first navigation, every call fails at once: `Shop.SessionStorage.set: the page has no origin yet
-(about:blank); navigate to the origin first or use seed()`. A document whose own origin is opaque has no session
+(about:blank); navigate to the origin first or use seed()`. An `about:blank` popup from `window.open()` is not such a
+page: its document inherited its opener's origin, so a call there works on that origin's storage, and when the browser
+refuses one (its storage quota), the error is the browser's, labeled. A document whose own origin is opaque has no session
 storage at all, so every call there fails too, saying so: a document served with `Content-Security-Policy: sandbox`
 without `allow-same-origin`, or the error page Firefox shows at the origin's URL after a failed navigation. The message
 names both, since nothing a browser guarantees tells them apart.
