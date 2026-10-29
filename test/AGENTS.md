@@ -115,11 +115,17 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   with its document on every kind of navigation, and survives one that keeps the document. One spec file per DSL method,
   for example `add.getById.spec.ts` or `getLocatorSchema.update.spec.ts`; one DOM-level spec per fixture page under
   `testApp/`, for example `testIds.spec.ts`.
-- Every spec imports `pomwright`, the packed tarball, never `src/`: what a spec checks is what npm would publish. The
+- Every spec imports `pomwright`, the packed tarball: what a spec checks is what npm would publish. The
   `locatorRegistry/` specs observe a registration through the public API (`createRegistryWithAccessors`): on the DOM,
   in Playwright's rendering of the same call (`locator.describe("")`) and in `description()`. What is stored inside, the
   records, is the unit tests' (`src/locators/*.test.ts`), which read them directly; a check of a record belongs there,
   not in a spec.
+- Tests are not de-duplicated across levels: a spec and a unit test may check one claim, each at its own level (the
+  root's [*The real thing over a stand-in*](../AGENTS.md#how-to-work)). A spec imports the packed build, not `src/`: it
+  checks what npm publishes, and a `src/` module that imports `@playwright/test` cannot load in a spec (Playwright
+  refuses a second copy). It reaches an internal through the public API, timing a case with a disclosed stand-in when
+  it must; an internal is tested directly in its unit test in `src/`. When neither level can cover a claim, that is a
+  gap to raise, and an exception (a spec importing a pure `src/` module) is decided with its reason, not assumed.
 - `validation.locatorSchemaPath.typecheck.ts` and `packaging/publicTypes.typecheck.ts` are compile-only probes:
   Playwright does not match the file names, and `pnpm typecheck` (in `pack-test` and CI) enforces their
   `@ts-expect-error` directives. `publicTypes.typecheck.ts` holds the public types against the published declarations

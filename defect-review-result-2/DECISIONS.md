@@ -1222,3 +1222,35 @@ whose `DEBUG=pw:api` log showed `page.goto` succeed before the reload's commit.
 
 **Why**: Playwright's log shows what it waited for and in what order, which no assertion of a test does; one test on one
 worker keeps it readable, and on the command it never switches on for every run.
+
+## 117. Leave the code better than you found it, by this guide's measure (2026-10-29)
+
+**Settles**: the maintainer's sketch of a rule on strategic programming, reworded with Claude for POMWright, whose code
+is often shaped by Playwright and the browsers in ways that look odd and are deliberate.
+
+**Decided**:
+
+1. **A principle in the root `AGENTS.md`, *How to work***, after *Mirror Playwright*: work as the code's maintainer a
+   year from now; propose a refactor first, in the plan, with what it buys (behavior-preserving, commits of its own;
+   the public API a contract change); odd is not necessarily wrong here, so find the reason first (its comment, the
+   tests that pin it, the folder's AGENTS.md, the documentation pages, the changelog, a decision, or the commit that
+   introduced it); a reason makes code deliberate, not untouchable: propose a change with evidence when the reason no
+   longer holds or a better way serves it, and raise code without a reason rather than change it, writing the answer
+   down as the reason or a plan; no unexplained special case, duplicated runtime logic or skipped test; tests grow
+   where weakly tested code is touched; a deliberate shortcut is named with its follow-up; debt noticed and not fixed
+   goes at the end of the task and into the plan's execution notes.
+2. **`src/AGENTS.md`, *Conventions***: the kinds of code that look odd and recur (not a complete list): the public API
+   in Playwright's shape, depth for the internals; special cases that mirror a browser's or Playwright's behavior,
+   with a test; code shaped by how Playwright runs and reports it. Questioning is welcome with evidence; removing it
+   without its reason is not.
+3. **`test/AGENTS.md`**: tests are not de-duplicated across levels; a spec imports the packed build, not `src/` (a
+   `src/` module that imports `@playwright/test` cannot load in a spec: probed, "Requiring @playwright/test second
+   time"; a pure module can); an internal is reached through the public API or tested in its unit test; a claim neither
+   level covers is a gap, and a spec importing a pure `src/` module is an exception decided with its reason. The
+   harness bullet's "never `src/`" is dropped for this one.
+4. **Built at once**, with decision 113's root principle (point 1), which point 3 cites; the rest of 113 and decision
+   116 stay in the contributor guide plan's step 7.
+
+**Why**: the long-term health of the code matters as much as the task, and in POMWright that health is measured by its
+own rules: a generic cleanup would remove deliberate Playwright-shaped code and the special cases that are the product,
+while code frozen because it exists would never improve.

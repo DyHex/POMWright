@@ -3,8 +3,9 @@
 Persistent context and working rules for AI agents and humans contributing to POMWright. This file holds what every task
 needs; the rest of the contributor guide is in an `AGENTS.md` in six folders and in `docs/`, and *The index* below says
 which file to read before which work. Read this file fully, and each file the index names for your task, before changing
-anything. Repo-specific facts here override generic defaults. Last revised 2026-10-28, with the fixes from the 3.0.2
-defect review and the guide split by folder and by task.
+anything. Repo-specific facts here override generic defaults. Last revised 2026-10-29, with two principles of how to
+work (the real thing over a stand-in; leaving the code better than you found it), after the fixes from the 3.0.2 defect
+review and the guide split by folder and by task.
 
 ## What POMWright is
 
@@ -33,8 +34,28 @@ defect review and the guide split by folder and by task.
   ([src/AGENTS.md](src/AGENTS.md)); [docs/releases.md](docs/releases.md) says how plans, decisions and a release's working folder are kept.
 - **Verified claims only.** Every runtime or type claim in a plan, a page or a doc comment is backed by a probe or a
   test run ([test/AGENTS.md](test/AGENTS.md#probing)).
+- **The real thing over a stand-in.** Whatever establishes what is true (a probe, a test at any level, a reproduction,
+  a benchmark, exploratory testing, a review, a claim in a plan, page or doc comment) is based on what a user runs: the
+  packed build, Playwright's runner, real browsers and pages, and realistic conditions (all three browsers, parallel
+  workers, enough rounds to show a race). A stand-in (a mock, a fake page, `page.route`, a hand-built document, a
+  single worker, a small sample) is used only where the real thing cannot produce the case or costs far more than the
+  claim is worth. A stand-in's result holds for the stand-in, so a claim that something does not happen is never made
+  from one. Every stand-in MUST be disclosed where its result is reported (the plan, finding, report, reply, or the
+  test's own comment): what it replaced, why, and what it could hide. A claim that only a stand-in backs is a gap.
 - **Mirror Playwright**, in the code and in the docs: POMWright builds on Playwright's features and keeps their
   names, and links playwright.dev for what Playwright owns.
+- **Leave the code better than you found it, by this guide's measure.** Work as the maintainer of this code a year from
+  now, not only as the finisher of today's task. When a change would pile complexity onto a tangled area, say so and
+  propose a refactor first, in the plan, with what it buys: a refactor preserves behavior and goes in commits of its
+  own, and changing what `index.ts` exports is a contract change with its own decision and bump. Odd is not
+  necessarily wrong here: POMWright is shaped by Playwright and the browsers it drives, so before calling code a
+  problem, find its reason: its comment, the tests that pin it, the folder's AGENTS.md, the documentation pages (the
+  Internal ones included), the changelog, a decision, or the commit that introduced it (`git log`, `git blame`). A
+  reason makes code deliberate, not untouchable: when the reason no longer holds, or a better way would serve it,
+  propose the change with the evidence; when you find no reason, raise it rather than change it, and the answer is
+  written down, as the reason or as a plan. Add no unexplained special case, duplicated runtime logic or skipped test;
+  grow the tests where you touch weakly tested code; name a deliberate shortcut, why, and its follow-up. Debt you
+  notice and do not fix goes at the end of the task, with a suggested remedy, and into the plan's execution notes.
 - **Commits only when asked.** Never commit on your own. When the user asks for one commit per execution step,
   commit exactly those steps, name the plan and step in the message, and leave everything else uncommitted.
 - **A commit an AI wrote or helped write says so.** Its message ends with a `Co-Authored-By:` trailer naming the

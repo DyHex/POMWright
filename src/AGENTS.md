@@ -39,6 +39,12 @@ contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules app
   plan (see [docs/releases.md](../docs/releases.md)), never in silently. A fix enforces what the code already promises; it never adds a capability that
   keeps a failing test going (a navigation to a seeded origin that fails fails the test; no retry is made to apply the
   seed, since that would rest on browser behavior without a guarantee).
+- Some code looks odd and is deliberate; the kinds that recur (not a complete list), each with its reason in one of
+  the places the root [AGENTS.md](../AGENTS.md#how-to-work) names: the public API takes Playwright's shape, even where
+  that makes it wide, while depth is for the internals; a special case that mirrors a browser's or Playwright's
+  behavior, with a test; code shaped by how Playwright runs and reports it (steps, stacks, the published bundle,
+  compile errors a page quotes). Questioning such code is welcome, with evidence, by the root's rule; removing it
+  without its reason is not.
 - No new runtime dependencies. A new dev dependency is recorded, with its reason, in the plan or the commit that adds
   it, and in the working folder's decisions log while one exists (see [docs/releases.md](../docs/releases.md)).
 - Considered and not planned: a punctuation convention for error messages (each is punctuated as reads best for
