@@ -457,6 +457,13 @@ test.describe("set, get and clear", () => {
 		removed.push("s");
 		await clearing;
 		expect(await liveStorage(page)).toEqual({ s: "as passed" });
+
+		// a codec's value: the object as it was at the call
+		const account: User = { name: "Ada", age: 36 };
+		const settingUser = testStorage.sessionStorage.set("user", account);
+		account.name = "changed after the call";
+		await settingUser;
+		expect(await storedItem(page, "user")).toBe(JSON.stringify({ name: "Ada", age: 36 }));
 	});
 
 	test("set stores strings as given and declared keys through their codec; the app reads them raw", async ({
@@ -475,6 +482,36 @@ test.describe("set, get and clear", () => {
 
 		await page.reload();
 		expect(await current(page)).toEqual({ token: "abc", theme: "dark", user: userJson });
+	});
+
+	test("what clear removed stays removed after a reload, one key, several and every entry", async ({
+		page,
+		testStorage,
+	}) => {
+		await testStorage.navigation.goto();
+		await testStorage.sessionStorage.set({ token: "abc", theme: "dark", locale: "nb", extra: "x" });
+		await testStorage.sessionStorage.clear("token");
+		await testStorage.sessionStorage.clear(["theme", "locale"]);
+		await page.reload();
+		expect(await current(page)).toEqual({ extra: "x" });
+		await testStorage.sessionStorage.clear();
+		await page.reload();
+		expect(await current(page)).toEqual({});
+	});
+
+	test("the browser's quota: 5,242,880 characters per origin, keys and values together; past it the write is refused", async ({
+		page,
+		testStorage,
+	}) => {
+		await testStorage.navigation.goto();
+		// one key of one character and a value of the rest fill it exactly
+		await testStorage.sessionStorage.set("q", "x".repeat(5_242_879));
+		expect(await page.evaluate(() => sessionStorage.getItem("q")?.length)).toBe(5_242_879);
+		// one more character, a key with an empty value, is past it
+		const error = await testStorage.sessionStorage.set("r", "").catch((e: Error) => e);
+		expect((error as Error).message).toMatch(/^TestStorage\.SessionStorage\.set: webStorage\.setItem: .*quota/i);
+		expect(await page.evaluate(() => Object.keys(sessionStorage))).toEqual(["q"]);
+		await testStorage.sessionStorage.clear();
 	});
 
 	test("a JSON string for an undeclared key is stored verbatim and read back as a string", async ({
