@@ -73,7 +73,9 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   the app and listens only when started as a program (`pnpm start`), so a spec can load it. No page loads anything from
   outside the test server: a slow host once made the harness flaky. `test-server/externalRequests.spec.ts` reads every
   route from Express's router and runs one test per page (every `GET` route and `/`, in parallel, in chromium) that
-  checks every request, and scans `server.js` and `test-data/` for any other host (an XML namespace aside), through
+  checks every request and WebSocket, and scans `server.js` and `test-data/` for any other host in an `http(s)`,
+  `ws(s)` or protocol-relative `//host` URL (an XML namespace aside); every route goes on the app itself, since a router
+  mounted with `app.use()` keeps no mount path the spec could open its pages at, and a test fails on one; through
   `playwright.test-server.config.ts` and the root's `test-server-check.sh`, which `pack-test.sh` runs at its end
   outside CI and CI runs in a job of its own, once per run. A new route with a parameter needs a sample in the spec's
   `SAMPLES`; the spec fails until it has one.
