@@ -435,6 +435,49 @@ test.describe("a reload or a redirect within the origin", () => {
 	});
 });
 
+test.describe("an app that navigates by itself: the patterns of the session storage page", () => {
+	const entries = { k0: "A", k1: "A", k2: "A" };
+
+	test("wait for where it ends up: expectThisPage after the app's redirect within the origin", async ({
+		page,
+		testStorage,
+	}) => {
+		for (let round = 0; round < 3; round++) {
+			// the page object's own URL, which expectThisPage compares whole
+			await page.goto(`${A}/teststorage/bounce?to=${encodeURIComponent(`${A}/teststorage`)}`, { waitUntil: "commit" });
+			await testStorage.navigation.expectThisPage();
+			await testStorage.sessionStorage.set(entries);
+			expect(await liveStorage(page)).toEqual(entries);
+			await page.evaluate(() => sessionStorage.clear());
+		}
+	});
+
+	test("wait for the final state of an app that reloads itself as it loads, whose URL stays", async ({ browser }) => {
+		for (let round = 0; round < 3; round++) {
+			// a fresh page each round: the app reloads once per session
+			const context = await browser.newContext();
+			const page = await context.newPage();
+			await page.goto(`${A}/teststorage/race?mode=reload`);
+			await expect(page.locator("#startup")).toContainText('"raced":"1"');
+			await new SessionStorage(page, { label: "TestStorage", origin: A }).set(entries);
+			expect(await liveStorage(page)).toEqual({ ...entries, raced: "1", token: "app" });
+			await context.close();
+		}
+	});
+
+	test("seed before the navigation: the app's final document starts with the entries", async ({ browser }) => {
+		for (let round = 0; round < 3; round++) {
+			const context = await browser.newContext();
+			const page = await context.newPage();
+			await new SessionStorage(page, { label: "TestStorage", origin: A }).seed(entries);
+			await page.goto(`${A}/teststorage/race?mode=reload`);
+			await expect(page.locator("#startup")).toContainText('"raced":"1"');
+			expect(await startup(page)).toEqual({ ...entries, raced: "1", token: "app" });
+			await context.close();
+		}
+	});
+});
+
 test.describe("set, get and clear", () => {
 	test("every call takes its arguments when it is made, as Playwright's calls do", async ({ page, testStorage }) => {
 		await testStorage.navigation.goto();

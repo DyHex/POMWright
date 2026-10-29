@@ -126,9 +126,10 @@ reached the new document, since a call already sent cannot be taken back; the ch
 A `get` the page left fails rather than return what it may have read there. A reload or a redirect within the origin
 stops a call too, whether it lands during one of the call's storage calls or between two: the call also checks after
 each that the page's document is the one it started in, since the app's next document may read storage before the
-rest of the keys land, so the call fails where the race is. A `pushState` or a hash change keeps the document, and
-the call goes on. Await the navigation first, or seed before it. The message names where the page went by its origin and path, without the query or fragment, which may
-hold a redirect's tokens:
+rest of the keys land, so the call fails where the race is. A `pushState` or a hash change keeps the document, and the
+call goes on. Wait for the app to settle first, or seed before the navigation (see [when the app navigates by
+itself](#when-the-app-navigates-by-itself)). The message names where the page went by its origin and path, without the
+query or fragment, which may hold a redirect's tokens:
 
 ```text
 Shop.SessionStorage.set: the page navigated to https://shop.example/home while set() was writing to https://shop.example; 2 of 60 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document
@@ -213,6 +214,58 @@ export const test = base.extend<{ storage: SessionStorage<{ user: Codec<User> }>
   },
 });
 ```
+
+## When the app navigates by itself
+
+An app may reload or redirect itself as it loads (a login guard, a locale redirect, a reload after it writes a flag),
+or after an action, once a request or a timer is done. A storage call made while that is under way fails with the
+navigation message above. `page.goto()` waits for the first document's `load` event, not for what the app starts after
+it: with an app that reloads itself as its first script runs, `goto` returned after the reload in Chromium and Firefox,
+and before it in WebKit. So wait, in the test, for where the app ends up, then call:
+
+```ts
+import { expect, test } from "./fixtures";
+
+test("the app redirects to the account page as it loads", async ({ page, accountPage }) => {
+  await page.goto("https://shop.example/");
+  // the page object's URL and load state, then its actions after navigation
+  await accountPage.navigation.expectThisPage();
+  await accountPage.sessionStorage.set("theme", "dark");
+});
+
+test("the app reloads itself as it loads", async ({ accountPage }) => {
+  await accountPage.navigation.goto();
+  // the URL does not change: wait for what the app shows once it has settled
+  await expect(accountPage.getNestedLocator("main.heading")).toBeVisible();
+  await accountPage.sessionStorage.set("theme", "dark");
+});
+
+test("the app needs the value as it starts", async ({ accountPage }) => {
+  await accountPage.sessionStorage.seed("theme", "dark");
+  await accountPage.navigation.goto();
+});
+```
+
+A wait that every test of a page needs belongs in the page object's
+[actions after navigation](/POMWright/docs/page-objects/#actions-after-navigation), which `navigation.goto()` and
+`navigation.expectThisPage()` run. A retry around the storage call, such as `expect(…).toPass()`, does not help: the
+app may already have started without the values.
+
+## Size and cost
+
+Each key of a call is one storage call, a round trip to the browser, as Playwright's `setItem`, `getItem` and
+`removeItem` take one key. After each, the call checks its document, one more round trip, and it takes and releases
+its handle to the document, two more per call (see [Internal → Seed
+registry](/POMWright/internal/seed-registry/#the-origin-around-every-call)). A call has no timeout of its own, as
+Playwright's storage calls have none; the test's timeout applies.
+
+The browser's quota is 5,242,880 characters per origin, keys and values together, in each browser Playwright 1.64
+ships; one value may take nearly all of it. A write past it fails with the browser's error, labeled, and the keys
+written before it stay. Up to tens of thousands of characters, a value's size hardly changes a call's time; a value of a
+million characters takes noticeably longer to send.
+
+Neither the number of keys nor their size makes a call fail, apart from the quota: a navigation during the call does,
+and a longer call is a longer window for one. Wait for the app to settle first, as above.
 
 ## Errors
 
