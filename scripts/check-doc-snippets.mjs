@@ -12,8 +12,11 @@
 // has a block with the same title, so an example can import "./fixtures"; they are also compiled on their own, so the
 // check has inputs before any page exists.
 //
-// A TypeScript example the check could not compile fails it, with the fix: one in a ~~~ fence, one labeled tsx, mts
-// or cts, and nocheck on any other page. Blocks in other languages (js, sh, text, …) are not checked.
+// A block's language is the fence's first word, after any spaces, as CommonMark and the site read it. A TypeScript
+// example the check could not compile fails it, with the fix: one in a ~~~ fence, one labeled tsx, mts or cts, one whose
+// label is ts or typescript written otherwise (``` ts, ```TS), and nocheck on any other page. Blocks in other
+// languages (js, sh, text, …) are not checked. A tsc that fails without reporting a type error (a crash, a missing
+// install) fails the check with what it printed.
 
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -25,7 +28,7 @@ const outDir = path.join(root, "test/.doc-snippets");
 const sharedDir = path.join(root, "website/snippets");
 const shared = fs.existsSync(sharedDir) ? fs.readdirSync(sharedDir).filter((name) => name.endsWith(".ts")) : [];
 const readme = path.join(root, "README.md");
-const fence = /^(\s*)(`{3,}|~{3,})(\w*)(.*)$/;
+const fence = /^(\s*)(`{3,}|~{3,})(\s*)([^\s`]*)(.*)$/;
 const NOCHECK_PAGE = "docs/upgrading-from-2x";
 
 function pages(dir) {
@@ -43,15 +46,18 @@ function blocks(file) {
 	for (let i = 0; i < lines.length; i++) {
 		const open = fence.exec(lines[i]);
 		if (!open) continue;
-		const [, indent, ticks, lang, meta] = open;
+		const [, indent, ticks, space, lang, meta] = open;
 		const body = [];
 		let j = i + 1;
 		while (j < lines.length && !(lines[j].startsWith(indent + ticks) && lines[j].trim() === ticks)) {
 			body.push(lines[j].startsWith(indent) ? lines[j].slice(indent.length) : lines[j]);
 			j++;
 		}
-		if (["ts", "typescript", "tsx", "mts", "cts"].includes(lang)) {
-			found.push({ line: i + 2, lang, tilde: ticks.startsWith("~"), meta, body: body.join("\n") });
+		const label = lang.toLowerCase();
+		if (["ts", "typescript", "tsx", "mts", "cts"].includes(label)) {
+			// written exactly when nothing stands between the fence and a lower-case label
+			const exact = space === "" && lang === label;
+			found.push({ line: i + 2, lang: label, exact, tilde: ticks.startsWith("~"), meta, body: body.join("\n") });
 		}
 		i = j;
 	}
@@ -73,6 +79,10 @@ for (const page of [...pages(contentDir), readme]) {
 		const where = `${path.relative(root, page)}:${block.line - 1}`;
 		if (block.tilde) {
 			rejected.push(`${where}: a TypeScript block in a ~~~ fence is not compiled; write it as a \`\`\`ts block`);
+			continue;
+		}
+		if (!block.exact && (block.lang === "ts" || block.lang === "typescript")) {
+			rejected.push(`${where}: a TypeScript block's label is written otherwise than ts; write it as a \`\`\`ts block`);
 			continue;
 		}
 		if (block.lang !== "ts" && block.lang !== "typescript") {
@@ -124,13 +134,18 @@ try {
 		encoding: "utf8",
 	});
 } catch (error) {
-	typeErrors = String(error.stdout).replace(
-		/^(test\/\.doc-snippets\/[^(]+)\((\d+),(\d+)\)/gm,
-		(all, file, line, col) => {
-			const from = origin.get(file);
-			return from ? `${from.page}:${from.line + Number(line) - 1}:${col} (${file})` : all;
-		},
-	);
+	// tsc exits non-zero with its type errors on stdout; without any, it failed in another way, which fails the check too
+	const reported = typeof error.stdout === "string" ? error.stdout : "";
+	if (!/error TS\d+/.test(reported)) {
+		const said = [reported, typeof error.stderr === "string" ? error.stderr : ""].join("\n").trim();
+		const how = error.status != null ? `exit code ${error.status}` : (error.signal ?? "no exit code");
+		console.error(`doc snippets: tsc failed without a type error (${how}):\n${said || error.message}`);
+		process.exit(1);
+	}
+	typeErrors = reported.replace(/^(test\/\.doc-snippets\/[^(]+)\((\d+),(\d+)\)/gm, (all, file, line, col) => {
+		const from = origin.get(file);
+		return from ? `${from.page}:${from.line + Number(line) - 1}:${col} (${file})` : all;
+	});
 }
 if (typeErrors) {
 	console.error(typeErrors);
