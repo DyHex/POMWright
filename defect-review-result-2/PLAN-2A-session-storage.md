@@ -259,3 +259,28 @@ Agreed with the maintainer after the report of the unexpected points above.
 As for the plan: per step `pnpm lint`, `pnpm test:unit` and the storage specs on three browsers; each new test fails
 against a build without its step's change; at the end `pnpm typecheck`, `pnpm docs:build`, the full
 `pnpm pack-test --reporter=line`, and the grep for the external consumer projects' names.
+
+### Execution notes
+
+- 2026-10-29, four commits, one per step: `0764cda` (8, decision 114, with the records), `5f41d60` (9), `d8d36ee`
+  (10), `0b826a1` (11, decision 113 point 4, and note 1 corrected). The new unit tests failed against the code without
+  step 8's change (eight) and passed with it; the harness cases of a reload between two storage calls (`set`; a seed on
+  the origin, `clear` and `get` with keys) and of the call waiting through a reload failed on three browsers against a
+  build without it (nine) and passed with it; the cases of the page's own timer and of `pushState` and a hash change
+  pass either way, as guards; the pin of the document handle passes on three browsers.
+- Verification: the full harness on three browsers (1842 passed, 3 skipped; 33 step locations; 27 test-server tests;
+  227 page blocks and 96 doc examples compiled; API coverage 40 exports, 108 members; error messages 78 and 9); unit
+  952; `pnpm docs:build`; `pnpm lint:guide`. No name of the external consumer projects in the branch.
+- For the maintainer:
+  1. **The closed popup's error comes from the document handle now**: `page.evaluateHandle: Target page, context or
+     browser has been closed`, the call's first request to the page, where it was `webStorage.getItem: …`. It is still
+     Playwright's error with the label, as decision 83 has it; the harness assertion follows.
+  2. **The step-location check's fake page** (`test/step-locations/stepLocations.spec.ts`) needed a document handle,
+     as the unit tests' fakes did.
+  3. **`documentHandle.spec.ts` imports nothing of POMWright**, beside `test/AGENTS.md`'s "every spec imports
+     `pomwright`": it pins a behavior of Playwright's; `test/AGENTS.md` says so.
+  4. **WebKit's `goto` on *Session storage*** ("returned before it in WebKit") rests on the probe of 2026-10-29 (10 of
+     10 on WebKit, none on Chromium and Firefox), not on a harness test: a test of when `goto` returns against an app's
+     own reload would depend on timing. The three patterns the page teaches are harness cases.
+  5. **"Size and cost"** says that a value of a million characters takes noticeably longer to send, without numbers:
+     the numbers come with the benchmarks plan (decision 115).
