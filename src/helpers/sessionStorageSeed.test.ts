@@ -147,6 +147,8 @@ const fakePage = (options: { navigationApi?: boolean } = {}) => {
 		duringAdd: undefined as (() => void) | undefined,
 		/** Runs while the Navigation API check is pending, before it resolves. */
 		duringEvaluate: undefined as (() => void) | undefined,
+		/** The next evaluations reject with these, one each, oldest first. */
+		failEvaluations: [] as Error[],
 		/** Keeps every `addInitScript` pending until `release()`. */
 		hold: false,
 		/** The next `addInitScript` rejects with this, registering nothing. */
@@ -183,6 +185,10 @@ const fakePage = (options: { navigationApi?: boolean } = {}) => {
 		evaluate: async (_pageFunction: () => NavigationSupport): Promise<NavigationSupport> => {
 			page.evaluations++;
 			page.duringEvaluate?.();
+			const failure = page.failEvaluations.shift();
+			if (failure !== undefined) {
+				throw failure;
+			}
 			return { supported: options.navigationApi ?? true, userAgent: "FakeBrowser/1.0" };
 		},
 		on: (event: string, listener: unknown) => {
@@ -408,6 +414,58 @@ describe("SeedRegistry", () => {
 		expect(page.scripts).toEqual([]);
 		expect(registry.pendingOrigins).toEqual([]);
 		expect(page.listeners).toEqual([]);
+	});
+
+	describe("the Navigation API check while the page replaces its document", () => {
+		const destroyed = () =>
+			new Error("page.evaluate: Execution context was destroyed, most likely because of a navigation");
+
+		it("is repeated while a navigation destroys it, and registers once it answers", async () => {
+			const { page, registry } = setup();
+			page.failEvaluations = [destroyed(), destroyed(), destroyed()];
+			await registry.add(B, { token: "1" }, title, site);
+			expect(page.evaluations).toBe(4);
+			expect(registry.pendingOrigins).toEqual([B]);
+		});
+
+		it("takes up to 20 replacements", async () => {
+			const { page, registry } = setup();
+			page.failEvaluations = Array.from({ length: 20 }, destroyed);
+			await registry.add(B, { token: "1" }, title, site);
+			expect(page.evaluations).toBe(21);
+			expect(registry.pendingOrigins).toEqual([B]);
+		});
+
+		it("fails on the 21st with Playwright's error, labeled, registering nothing", async () => {
+			const { page, registry } = setup();
+			page.failEvaluations = Array.from({ length: 21 }, destroyed);
+			const error = await registry.add(B, { token: "1" }, title, site).catch((e: unknown) => e as Error);
+			expect(error?.message).toBe(
+				`${title}: page.evaluate: Execution context was destroyed, most likely because of a navigation`,
+			);
+			expect(error?.stack?.split("\n")[1]).toBe(siteFrame);
+			expect(page.evaluations).toBe(21);
+			expect(page.scripts).toEqual([]);
+		});
+
+		it("tries any other error once more, as before, and on a closed page a destroyed one too", async () => {
+			const once = setup();
+			once.page.failEvaluations = [new Error("page.evaluate: something else")];
+			await once.registry.add(B, { token: "1" }, title, site);
+			expect(once.page.evaluations).toBe(2);
+
+			const twice = setup();
+			twice.page.failEvaluations = [new Error("page.evaluate: first"), new Error("page.evaluate: something else")];
+			const error = await twice.registry.add(B, { token: "1" }, title, site).catch((e: unknown) => e as Error);
+			expect(error?.message).toBe(`${title}: page.evaluate: something else`);
+			expect(twice.page.evaluations).toBe(2);
+
+			const closed = setup();
+			closed.page.closed = true;
+			closed.page.failEvaluations = [destroyed(), destroyed(), destroyed()];
+			await closed.registry.add(B, { token: "1" }, title, site).catch(() => undefined);
+			expect(closed.page.evaluations).toBe(2);
+		});
 	});
 
 	describe("overlapping calls for one origin", () => {

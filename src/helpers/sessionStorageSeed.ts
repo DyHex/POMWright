@@ -70,6 +70,14 @@ export const originOf = (url: string): string | undefined => {
 	return origin === "null" ? undefined : origin;
 };
 
+/**
+ * How many times the Navigation API check is repeated while the page replaces its document, each failed evaluation
+ * being one replacement. 20 follows the default of Playwright's `maxRedirects` (an API request's own HTTP redirects): a
+ * convention rather than a limit, since browsers set none on script redirects, and an HTTP redirect chain commits one
+ * document, which never needed more than one retry.
+ */
+const MAX_REPLACEMENTS = 20;
+
 /** The start of the console message the init script logs when it skips a document on its origin or a write is refused. */
 export const FAILURE_PREFIX = "pomwright-seed-failure:";
 
@@ -353,6 +361,11 @@ export class SeedRegistry {
 	/**
 	 * Once per page: an evaluation in the current document, which works on `about:blank` too. It tests the interface,
 	 * not `navigation.activation`: an app's own global `navigation` (`var navigation = …`) shadows the latter.
+	 *
+	 * A navigation that replaces the document destroys the evaluation, and the next one runs in its successor; an app
+	 * that redirects itself on load replaces it several times. So the evaluation is repeated while that is its failure
+	 * and the page is open, up to `MAX_REPLACEMENTS` times, which bounds an app stuck in a redirect loop; past that,
+	 * Playwright's error goes through. Any other error is tried once more.
 	 */
 	private async assertNavigationApi(origin: string, title: string, site: Error): Promise<void> {
 		if (this.navigationApiChecked) {
@@ -363,12 +376,18 @@ export class SeedRegistry {
 				supported: typeof NavigationActivation === "function" && "from" in NavigationActivation.prototype,
 				userAgent: navigator.userAgent,
 			}));
-		let support: NavigationSupport;
-		try {
-			support = await probe();
-		} catch {
-			// a navigation replaced the document during the evaluation; the next one runs in its successor
-			support = await probe();
+		let support: NavigationSupport | undefined;
+		for (let tries = 1; support === undefined; tries++) {
+			try {
+				support = await probe();
+			} catch (error) {
+				// Playwright's text tells a replaced document apart, as `SessionStorage`'s navigation check reads it
+				const replaced =
+					error instanceof Error && /Execution context was destroyed/.test(error.message) && !this.page.isClosed();
+				if (replaced ? tries > MAX_REPLACEMENTS : tries > 1) {
+					throw error;
+				}
+			}
 		}
 		if (!support.supported) {
 			throw noNavigationApiError(title, origin, support.userAgent, site);

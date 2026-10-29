@@ -472,6 +472,33 @@ test.describe("set, get and clear", () => {
 });
 
 test.describe("seed", () => {
+	// a chain of script redirects within the first origin, as an app that sends / to /login to /login/start on load
+	const scriptChain = (hops: number, end: string) => {
+		let url = end;
+		for (let hop = 0; hop < hops; hop++) {
+			url = `${A}/teststorage/bounce?to=${encodeURIComponent(url)}`;
+		}
+		return url;
+	};
+
+	for (const hops of [2, 3, 5]) {
+		test(`a page's first seed while the page redirects itself ${hops} times by script registers, and the arrival has the entry`, async ({
+			browser,
+		}) => {
+			// a fresh page each round, so the Navigation API check is the page's first and runs during the chain
+			for (let round = 0; round < 3; round++) {
+				const context = await browser.newContext();
+				const page = await context.newPage();
+				await page.goto(scriptChain(hops, `${A}/testpath`), { waitUntil: "commit" });
+				await new SessionStorage(page, { label: "Second", origin: B }).seed({ token: `round ${round}` });
+				await page.waitForURL(`${A}/testpath`);
+				await page.goto(`${B}/teststorage`);
+				expect(await startup(page)).toEqual({ token: `round ${round}` });
+				await context.close();
+			}
+		});
+	}
+
 	test("seed then goto on a fresh page: nothing happens until the navigation, and the app's first script sees the entries", async ({
 		page,
 		testStorage,
