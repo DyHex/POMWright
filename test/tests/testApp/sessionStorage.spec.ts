@@ -3,7 +3,7 @@ import path from "node:path";
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { User } from "@page-object-models/testApp/pages/teststorage/teststorage.locatorSchema";
 import type TestStorage from "@page-object-models/testApp/pages/teststorage/teststorage.page";
-import type { Page, Route } from "@playwright/test";
+import type { Page, Route, TestInfo } from "@playwright/test";
 import { PageObject, SessionStorage } from "pomwright";
 
 const A = "http://localhost:9000";
@@ -737,28 +737,21 @@ test.describe("seed", () => {
 		});
 	}
 
-	test("a seed that is never applied fails the test when the page closes", async ({
-		testStorage,
-		testStorageSecond,
-	}) => {
-		test.fail(true, "the never-applied seed must fail this test at close");
-		await testStorage.navigation.goto();
-		await testStorageSecond.sessionStorage.seed({ token: "never" });
-	});
-
-	test("a hop that opens a new tab cannot be seeded: the popup has its own storage and the seed stays pending", async ({
+	test("a hop that opens a new tab cannot be seeded: the popup has its own storage, and the seed waits for the page", async ({
+		page,
 		context,
 		testStorage,
 		testStorageSecond,
 	}) => {
-		test.fail(true, "the seed stays pending on the original page and fails this test at close");
 		await testStorage.navigation.goto();
-		await testStorageSecond.sessionStorage.seed({ token: "never" });
+		await testStorageSecond.sessionStorage.seed({ token: "pending" });
 
 		const popupPromise = context.waitForEvent("page");
 		await testStorage.getLocator("body.link@popup").click();
 		const popup = await popupPromise;
 		expect(await startup(popup)).toEqual({});
+		await testStorageSecond.navigation.goto();
+		expect(await startup(page)).toEqual({ token: "pending" });
 	});
 
 	test("whole-page mocks are served whether registered before or after seed, a mock of the seeded origin is seeded, and API mocks are unaffected", async ({
@@ -814,6 +807,40 @@ test.describe("seed", () => {
 		await poc.sessionStorage.seed({ token: "x" }, { origin: B });
 		await poc.navigation.goto(`${B}/teststorage`);
 		expect(await startup(page)).toEqual({ token: "x" });
+	});
+});
+
+test.describe("a seed that is never applied, at the page's own close", () => {
+	test.describe.configure({ mode: "serial" });
+	// the fixtures close the page after every hook, and the failing test's worker is replaced: an auto fixture, set up
+	// before the page and so torn down after it, hands the failure to the next test through a file
+	const messageFile = (testInfo: TestInfo) =>
+		path.join(testInfo.project.outputDir, `own-close-${testInfo.project.name}-${testInfo.repeatEachIndex}.txt`);
+	const withHandOver = test.extend<{ handOver: undefined }>({
+		handOver: [
+			// biome-ignore lint/correctness/noEmptyPattern: Playwright does not support the use of _
+			async ({}, use, testInfo) => {
+				await use(undefined);
+				if (testInfo.expectedStatus === "failed") {
+					writeFileSync(messageFile(testInfo), testInfo.errors[0]?.message ?? "");
+				}
+			},
+			{ auto: true },
+		],
+	});
+
+	withHandOver("fails the test", async ({ testStorage, testStorageSecond }) => {
+		test.fail(true, "the never-applied seed must fail this test at close");
+		await testStorage.navigation.goto();
+		await testStorageSecond.sessionStorage.seed({ token: "never" });
+	});
+
+	withHandOver("and the message names the seed and its keys", () => {
+		const message = readFileSync(messageFile(test.info()), "utf8");
+		rmSync(messageFile(test.info()));
+		expect(message.split("\n")[0]).toBe(
+			`Error: TestStorageSecond.SessionStorage.seed: the seed for ${B} (keys: token) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends`,
+		);
 	});
 });
 
@@ -1336,12 +1363,28 @@ test.describe("seed and the app's own navigations", () => {
 		await testStorageSecond.navigation.goto();
 		expect(await startup(page)).toEqual({ token: "seeded" });
 	});
+});
 
-	test("a write the browser refuses fails the test", async ({ page, testStorage, testStorageSecond }) => {
+test.describe("a write the browser refuses", () => {
+	test.describe.configure({ mode: "serial" });
+	// the failing test's worker is replaced, so what the app's first script saw is handed to the next test through a file
+	const startupFile = () =>
+		path.join(
+			test.info().project.outputDir,
+			`refused-write-${test.info().project.name}-${test.info().repeatEachIndex}.json`,
+		);
+
+	test("fails the test", async ({ page, testStorage, testStorageSecond }) => {
 		test.fail(true, "the refused write must fail this test; callSite.spec.ts checks the message and the stack");
 		await testStorage.navigation.goto();
 		await testStorageSecond.sessionStorage.seed({ big: "x".repeat(12 * 1024 * 1024) });
 		await testStorageSecond.navigation.goto();
-		expect(await startup(page)).toEqual({});
+		writeFileSync(startupFile(), JSON.stringify(await startup(page)));
+	});
+
+	test("and the app started without the entries", () => {
+		const seen = JSON.parse(readFileSync(startupFile(), "utf8"));
+		rmSync(startupFile());
+		expect(seen).toEqual({});
 	});
 });
