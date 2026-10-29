@@ -2,16 +2,28 @@ import type { Page } from "@playwright/test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PAGE_WIDE, takeTurn } from "./storageTurns";
 
-// test.step runs its body; outside the runner test.info() throws, as the helper expects
+// test.step runs its body, a tick later when `steps.defer` is set, as Playwright's step overlay delays it, and records
+// the steps an error came out of; outside the runner test.info() throws, as the helper expects
+const steps = vi.hoisted(() => ({ defer: false, failed: [] as string[] }));
 vi.mock("@playwright/test", () => ({
 	test: {
-		step: async (_title: string, body: () => unknown) => body(),
+		step: async (title: string, body: () => unknown) => {
+			if (steps.defer) {
+				await new Promise((resolve) => setTimeout(resolve, 0));
+			}
+			try {
+				return await body();
+			} catch (error) {
+				steps.failed.push(title);
+				throw error;
+			}
+		},
 		info: () => {
 			throw new Error("outside a test");
 		},
 	},
 }));
-const { SessionStorage } = await import("./sessionStorage");
+const { json, SessionStorage } = await import("./sessionStorage");
 
 const A = "https://shop.example";
 const B = "https://help.example";
@@ -292,6 +304,69 @@ describe("SessionStorage calls for one origin take turns", () => {
 			await storage.set("b", "2");
 			expect(await storage.get("b")).toBe("2");
 			expect(fake.state.writes).toEqual(["a=1", "b=2"]);
+		});
+	});
+
+	describe("arguments, taken at the call", () => {
+		beforeEach(() => {
+			steps.defer = true;
+			steps.failed = [];
+			return () => {
+				steps.defer = false;
+			};
+		});
+
+		it("set stores the values as passed, a codec's object and the entries record changed after the call", async () => {
+			const storage = new SessionStorage(fake.page, { origin: A, schema: { user: json<{ name: string }>() } });
+			const user = { name: "Ada" };
+			const entries: Record<string, string> = { token: "abc" };
+			const setting = Promise.all([storage.set("user", user), storage.set(entries)]);
+			user.name = "Changed";
+			entries.token = "changed";
+			entries.extra = "added";
+			await setting;
+			expect(fake.state.writes).toEqual(['user={"name":"Ada"}', "token=abc"]);
+		});
+
+		it("get and clear act on the keys as passed, the lists changed after the call", async () => {
+			const storage = new SessionStorage(fake.page, { origin: A });
+			fake.state.store.set("k", "1");
+			fake.state.store.set("later", "2");
+			const read = ["k"];
+			const removed = ["k"];
+			const calls = Promise.all([storage.get(read), storage.clear(removed)]);
+			read.push("later");
+			removed.push("later");
+			const [value] = await calls;
+			expect(value).toEqual({ k: "1" });
+			expect([...fake.state.store.keys()]).toEqual(["later"]);
+		});
+
+		it("seed stores the entries as passed, on the origin passed, both changed after the call", async () => {
+			const storage = new SessionStorage(fake.page);
+			const entries: Record<string, string> = { token: "abc" };
+			const options = { origin: A };
+			const seeding = storage.seed(entries, options);
+			entries.token = "changed";
+			options.origin = B;
+			await seeding;
+			expect(fake.state.writes).toEqual(["token=abc"]);
+		});
+
+		it("a value that cannot be encoded still fails inside the step, after the origin check", async () => {
+			const storage = new SessionStorage(fake.page, { label: "Account", origin: A });
+			await expect(storage.set("user", { name: "Ada" } as never)).rejects.toThrow(
+				`Account.SessionStorage.set: value for "user" is not a string and no codec is declared for it`,
+			);
+			await expect(storage.seed({ user: { name: "Ada" } } as never)).rejects.toThrow(
+				`Account.SessionStorage.seed: value for "user" is not a string and no codec is declared for it`,
+			);
+			expect(steps.failed).toEqual(["Account.SessionStorage.set:", "Account.SessionStorage.seed:"]);
+			fake.state.url = `${B}/faq`;
+			await expect(storage.set("user", { name: "Ada" } as never)).rejects.toThrow(
+				`Account.SessionStorage.set: the page is on ${B}, not on this page object's origin ${A}`,
+			);
+			expect(fake.state.writes).toEqual([]);
 		});
 	});
 });

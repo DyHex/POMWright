@@ -498,6 +498,22 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		);
 	}
 
+	/**
+	 * Encodes `entries` at the call, as Playwright takes its arguments when a call is made, so a value changed while the
+	 * call waits for its step's body or its turn is not what it stores. A codec's error is held, and thrown by the
+	 * returned function inside the step after the origin check, where it has always been thrown.
+	 */
+	private encodeAtCall(method: string, entries: Record<string, unknown>): () => Record<string, string> {
+		try {
+			const encoded = encodeEntries(this.schema, entries, this.title(method));
+			return () => encoded;
+		} catch (error) {
+			return () => {
+				throw error;
+			};
+		}
+	}
+
 	private async write(method: string, encoded: Record<string, string>): Promise<void> {
 		await this.eachKey(method, Object.keys(encoded), ["writing to", "written"], (key) =>
 			this.page.sessionStorage.setItem(key, encoded[key] as string),
@@ -506,8 +522,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 
 	/**
 	 * Writes one entry, or several, to the session storage of the origin the page is on: each value through its key's
-	 * codec, or as the string it must be. Every value is encoded before any is written, so a bad value writes nothing.
-	 * Calls for one origin act in the order they were made, also when they overlap, across every helper on the page.
+	 * codec, or as the string it must be. Every value is encoded when the call is made, before any is written, so a bad
+	 * value writes nothing and a value changed after the call is not what is stored. Calls for one origin act in the order
+	 * they were made, also when they overlap, across every helper on the page.
 	 *
 	 * @param key The key.
 	 * @param value The value: a string, or the type of the key's codec.
@@ -540,10 +557,13 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	set<E extends Record<string, unknown>>(entries: EntriesFor<S, E>): Promise<void>;
 	async set(keyOrEntries: string | Record<string, unknown>, value?: unknown): Promise<void> {
 		const location = callerLocation(SessionStorage.prototype.set);
-		const entries = typeof keyOrEntries === "string" ? { [keyOrEntries]: value } : keyOrEntries;
+		const encoding = this.encodeAtCall(
+			"set",
+			typeof keyOrEntries === "string" ? { [keyOrEntries]: value } : keyOrEntries,
+		);
 		await this.step("set", location, async () => {
 			this.assertOnOrigin("set");
-			const encoded = encodeEntries(this.schema, entries, this.title("set"));
+			const encoded = encoding();
 			await this.inTurn("set", () => this.write("set", encoded));
 		});
 	}
@@ -579,10 +599,12 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	get<K extends string>(keys: NonEmpty<K>): Promise<{ [P in K]: Decoded<S, P> | null }>;
 	async get(keyOrKeys?: string | readonly string[]): Promise<unknown> {
 		const location = callerLocation(SessionStorage.prototype.get);
+		// the list as it is at the call, as Playwright takes its arguments
+		const keys = typeof keyOrKeys === "object" ? [...keyOrKeys] : keyOrKeys;
 		// awaited, not returned: see step()
 		return await this.step("get", location, async () => {
 			this.assertOnOrigin("get");
-			return await this.inTurn("get", () => this.read(keyOrKeys));
+			return await this.inTurn("get", () => this.read(keys));
 		});
 	}
 
@@ -643,10 +665,12 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	clear<K extends string>(keys: NonEmpty<K>): Promise<void>;
 	async clear(keyOrKeys?: string | readonly string[]): Promise<void> {
 		const location = callerLocation(SessionStorage.prototype.clear);
+		// the list as it is at the call, as Playwright takes its arguments
+		const keys = typeof keyOrKeys === "object" ? [...keyOrKeys] : keyOrKeys;
 		await this.step("clear", location, async () => {
 			this.assertOnOrigin("clear");
 			await this.inTurn("clear", async () => {
-				if (keyOrKeys === undefined) {
+				if (keys === undefined) {
 					await this.guarded(
 						"clear",
 						() => this.page.sessionStorage.clear(),
@@ -656,7 +680,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 				}
 				await this.eachKey(
 					"clear",
-					typeof keyOrKeys === "string" ? [keyOrKeys] : keyOrKeys,
+					typeof keys === "string" ? [keys] : keys,
 					["removing keys from", "removed"],
 					(key) => this.page.sessionStorage.removeItem(key),
 				);
@@ -710,18 +734,20 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 			typeof keyOrEntries === "string"
 				? [{ [keyOrEntries]: valueOrOptions }, maybeOptions]
 				: [keyOrEntries, valueOrOptions as SeedOptions | undefined];
-		// the page as the call finds it, before the step: Playwright may await work of its own before the body runs
+		// the arguments and the page as the call finds them, before the step: Playwright may await work of its own before
+		// the body runs, and takes its own arguments at the call
+		const encoding = this.encodeAtCall("seed", entries);
+		const requested = options?.origin;
 		const registry = registryFor(this.page, readTestOutcome);
 		const atCall = registry.snapshot();
 		try {
 			await this.step("seed", siteLocation(site), async () => {
 				const title = this.title("seed");
-				const requested = options?.origin;
 				const origin = requested === undefined ? this.origin : normaliseOrigin(requested, title);
 				if (origin === undefined) {
 					throw new Error(`${title}: an origin is required; pass { origin } or construct the helper with one`);
 				}
-				const encoded = encodeEntries(this.schema, entries, title);
+				const encoded = encoding();
 				if (Object.keys(encoded).length === 0) {
 					// nothing to store, as get([]) and clear([]) read and remove nothing; a seed without keys would only wait
 					return;

@@ -20,4 +20,6 @@ that waited checks the origin again when its turn comes. A helper with an origin
 page has left it; a helper without one fails, and does nothing, if the page has left the origin the call was made on,
 rather than act on an origin it was not called on:
 `Shop.SessionStorage.set: the page left https://shop.example for https://login.example while set() waited for its turn; the call did nothing`.
-Awaited calls behave as before.
+A call takes its arguments when it is made, as Playwright's calls do: before, `set` and `seed` encoded their values in
+their step, and `get` and `clear` read their key lists in their turn, so a value or a list changed after the call, while
+it waited, changed what it did. Awaited calls behave as before.

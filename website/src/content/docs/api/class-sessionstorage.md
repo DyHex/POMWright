@@ -236,7 +236,8 @@ Shop.SessionStorage.seed: the seed for https://pay.example (keys: "orderId") was
 ### set()
 
 Writes one entry, or several, each value through its key's codec, or as the string it must be. Every value is
-encoded before any is written, so a bad value writes nothing. The values are then written one key at a time, as
+encoded when the call is made, before any is written, so a bad value writes nothing and a value changed after the call
+is not what is stored. The values are then written one key at a time, as
 Playwright's `setItem` takes one: a navigation to another origin stops it, the keys written before it stay, and the
 one in flight may have reached the new document.
 

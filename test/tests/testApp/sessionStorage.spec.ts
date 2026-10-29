@@ -313,6 +313,29 @@ test.describe("a batch the page leaves", () => {
 });
 
 test.describe("set, get and clear", () => {
+	test("every call takes its arguments when it is made, as Playwright's calls do", async ({ page, testStorage }) => {
+		await testStorage.navigation.goto();
+		const entries: Record<string, string> = { k: "as passed" };
+		const setting = testStorage.sessionStorage.set(entries);
+		entries.k = "changed after the call";
+		await setting;
+		const seedEntries: Record<string, string> = { s: "as passed" };
+		const seeding = testStorage.sessionStorage.seed(seedEntries);
+		seedEntries.s = "changed after the call";
+		await seeding;
+		expect(await liveStorage(page)).toEqual({ k: "as passed", s: "as passed" });
+
+		const read = ["k"];
+		const getting = testStorage.sessionStorage.get(read);
+		read.push("s");
+		expect(await getting).toEqual({ k: "as passed" });
+		const removed = ["k"];
+		const clearing = testStorage.sessionStorage.clear(removed);
+		removed.push("s");
+		await clearing;
+		expect(await liveStorage(page)).toEqual({ s: "as passed" });
+	});
+
 	test("set stores strings as given and declared keys through their codec; the app reads them raw", async ({
 		page,
 		testStorage,

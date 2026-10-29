@@ -109,6 +109,13 @@ test("the navigation and session storage helpers' steps are reported where they 
 	await storage.set("token", "abc"); // LOCATION set
 });
 
+test("a session storage call whose value cannot be encoded: the step and the error at the line that called it", async () => {
+	test.fail();
+	const storage = new SessionStorage(fakePage(), { label: "LOCATION set-throws", origin: "https://shop.example" });
+	// encoded at the call and thrown inside the step, after the origin check
+	await storage.set("user", { name: "Ada" } as never); // LOCATION set-throws
+});
+
 test("a boxed @step inside a boxed @step is reported where it was called", async () => {
 	await new Widget().nestedOuter(); // LOCATION nested-outer
 });

@@ -115,9 +115,10 @@ await storage.clear(["token", "locale"]);
 await storage.clear(); // everything
 ```
 
-`set` encodes every value before it writes any, so a bad value writes nothing. It then writes one key at a time, as
-Playwright's `setItem` takes one. A literal `[]` is a compile error for `get` and `clear`; a list that turns out empty at
-runtime reads or removes nothing.
+Every call takes its arguments when it is made, as Playwright's calls do: a value or a key list changed after the call,
+while it waits for its turn, does not change what it does. `set` encodes every value then, before it writes any, so a
+bad value writes nothing. It then writes one key at a time, as Playwright's `setItem` takes one. A literal `[]` is a
+compile error for `get` and `clear`; a list that turns out empty at runtime reads or removes nothing.
 
 Every call checks the page's origin before and after each storage call it makes, so a navigation to another origin stops
 it: the call fails, naming where the page went, the keys done, which stay, and the one in flight. That one may have
