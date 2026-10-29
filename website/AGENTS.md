@@ -85,8 +85,11 @@ page).
   error is shown with `// @ts-expect-error`, which the check enforces. A block's language is the fence's first word,
   after any spaces, as CommonMark reads it; a TypeScript block the check would not compile, in a `~~~` fence, labeled
   `tsx`, `mts` or `cts`, or with `ts` written otherwise (a space before it, upper case), fails it with the fix, and so
-  does a `tsc` that fails without reporting a type error. It runs in `pnpm typecheck` (so in every harness job) and in
-  CI's `site` job.
+  does a `tsc` that fails without reporting a type error. It also compiles the doc comments' `@example` blocks, in a
+  project of their own (`test/.doc-examples/`): each as a fragment of a consumer's file, with an import of the exports
+  and Playwright types it names and the instances it assumes declared once in the script (a new one goes there); an
+  error points at the source line, and `nocheck` after the fence skips an example that cannot stand alone and lists
+  it. It runs in `pnpm typecheck` (so in every harness job) and in CI's `site` job.
 - `scripts/check-api-coverage.mjs` reads the installed declarations (`.pack/pomwright/dist/index.d.ts`, the extracted
   tarball in CI; a path argument overrides it) and fails on an export without an API page (its `title`) or a `## Name`
   section, a public or protected member without a `### member` heading in its own section (under the `## Name` of the

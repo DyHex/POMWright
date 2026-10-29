@@ -22,7 +22,9 @@ import {
  * @example
  * ```ts
  * const orderStorage = { cart: json<{ items: string[] }>() };
- * class OrderPage extends PageObject<Paths, { urlPathType: RegExp; storage: typeof orderStorage }> {}
+ * class OrderPage extends PageObject<Paths, { urlPathType: RegExp; storage: typeof orderStorage }> {
+ *   protected defineLocators(): void {}
+ * }
  * ```
  *
  * @see https://dyhex.github.io/POMWright/api/types/#pageobjecttypeoptions

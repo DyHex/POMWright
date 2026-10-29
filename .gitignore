@@ -50,8 +50,9 @@ test/test-results/
 test/blob-report/
 test/playwright/.cache/
 
-# The documentation's TypeScript examples, extracted and compiled by scripts/check-doc-snippets.mjs
+# The documentation's TypeScript examples, and the doc comments', extracted and compiled by scripts/check-doc-snippets.mjs
 test/.doc-snippets/
+test/.doc-examples/
 
 # @step's legacy decorators as tsc emits them (test/tsconfig.legacyDecorators.emit.json), run by test/step-locations
 test/.legacy-decorators/
