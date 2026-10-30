@@ -144,8 +144,10 @@ it before working there. Read it before running these commands, probing a claim,
   `playwright.bench.config.ts`, never by `pack-test`. `testApp/urlForms.spec.ts` sweeps the printable ASCII
   characters through the URL each browser reports (but `# ? / % \`), with the known differences listed: Chromium's `|`
   in a path, and, on Node 20 and 22, whose `new URL` keeps a `^`, every browser's `%5E`. `testApp/urlHosts.spec.ts`
-  takes each host form `new URL` normalizes (case, default ports, IDN, IPv6, IPv4 shorthands, credentials) through a page
-  object, every request fulfilled by `page.route`; with credentials, `toHaveURL` sees the document's URL, which has none.
+  takes each host form `new URL` normalizes (case, ports, IDN, IPv6, IPv4 shorthands, credentials) through a page
+  object, on the test server under every name that reaches it (IDN under `*.localhost`, which every browser sends to the
+  machine itself), and on `page.route` only for the forms that need port 80 or 443, or TLS; with credentials,
+  `toHaveURL` compares the page's `location.href`, which has none, where `page.url()` and `document.URL` keep them.
   `test/step-locations/` is the step-location check: its specs mark each probed call with `// LOCATION <id>` (a step
   titled by its class and method is marked with that title), and its reporter fails the run when a step or an error
   with that id is reported on another line, or a marked line is never reported; `legacyDecorators.spec.ts` runs `@step`'s

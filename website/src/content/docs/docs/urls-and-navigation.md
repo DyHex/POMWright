@@ -43,8 +43,8 @@ AccountPage: expected to have left "http://user:secret@shop.example/account"; fo
 ```
 
 And Playwright's `expect(page).toHaveURL(fullUrl)` fails with them on every browser, which POMWright cannot change: it
-compares the document's URL, which browsers give without credentials, where `page.url()`, `page.waitForURL()` and
-POMWright's navigation methods keep them.
+compares the page's `location.href`, which browsers give without credentials, where `page.url()`, `page.waitForURL()`
+and POMWright's navigation methods keep them.
 
 Give them to Playwright instead, with the `httpCredentials` option
 ([HTTP authentication](https://playwright.dev/docs/network#http-authentication)), and keep the base an origin without

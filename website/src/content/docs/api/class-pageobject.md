@@ -261,8 +261,8 @@ The page object's URL: for two strings, `new URL(urlPath, baseUrl).href` with a 
 form every browser reports, but for Chromium's `%7C` for a `|`; a
 [`UrlMatcher`](/POMWright/api/class-navigation/#urlmatcher) when either part is a RegExp. Playwright's
 `toHaveURL(fullUrl)` fails in two cases POMWright cannot change: on Chromium for a path with `|`, which Chromium reports
-as `%7C`, and on every browser for a base with credentials, since `toHaveURL` compares the document's URL, which
-browsers give without them. `expectThisPage()` matches in both. See
+as `%7C`, and on every browser for a base with credentials, since `toHaveURL` compares the page's `location.href`,
+which browsers give without them. `expectThisPage()` matches in both. See
 [fullUrl](/POMWright/docs/urls-and-navigation/#fullurl).
 
 **Usage**
