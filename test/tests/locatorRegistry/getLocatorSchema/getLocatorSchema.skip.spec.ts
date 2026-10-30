@@ -22,6 +22,23 @@ test("the terminal path cannot be skipped", async ({ page }) => {
 	expect(`${query.getNestedLocator().describe("")}`).toEqual("locator('div.root').locator('.child')");
 });
 
+test("unskip takes an ancestor too: not the query's own path, and not without a sub-path", async ({ page }) => {
+	type Paths = "root" | "root.target";
+
+	const { add, getLocatorSchema } = createRegistry<Paths>(page);
+
+	add("root").locator("div.root");
+	add("root.target").locator(".child");
+
+	const query = getLocatorSchema("root.target");
+	// @ts-expect-error unskip accepts the ancestors only
+	expect(() => query.unskip("root.target")).toThrowError(
+		'unskip() cannot unskip "root.target": it is not skipped in this query.',
+	);
+	// @ts-expect-error unskip has no form without a sub-path
+	expect(() => query.unskip()).toThrowError('"undefined" is not a valid sub-path of "root.target".');
+});
+
 test("skip on an ancestor leaves it out of the chain", async ({ page }) => {
 	type Paths = "root" | "root.child";
 
