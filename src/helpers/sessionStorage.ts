@@ -362,12 +362,19 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 
 	/**
 	 * One call into `page.sessionStorage`, its failure labeled; a page without an origin and a document with an opaque
-	 * origin are explained.
+	 * origin are explained. A replaced document is not: `guarded` reports it as a navigation, with its own message.
 	 */
 	private async access<T>(method: string, call: () => Promise<T>): Promise<T> {
 		try {
 			return await call();
 		} catch (error) {
+			const labeled = () =>
+				new Error(`${this.title(method)}: ${error instanceof Error ? error.message : String(error)}`, {
+					cause: error,
+				});
+			if (replacedByNavigation(error)) {
+				throw labeled();
+			}
 			const url = this.page.url();
 			// the browsers word the refusal differently, so the document tells it apart: document.domain is "" exactly when
 			// its origin is opaque, as on a new page's about:blank, and no global of the page replaces it, as a page's own
@@ -392,9 +399,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 					{ cause: error },
 				);
 			}
-			throw new Error(`${this.title(method)}: ${error instanceof Error ? error.message : String(error)}`, {
-				cause: error,
-			});
+			throw labeled();
 		}
 	}
 

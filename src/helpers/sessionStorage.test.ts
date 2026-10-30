@@ -644,6 +644,96 @@ describe("a call whose document is replaced", () => {
 	});
 });
 
+describe("the questions a failed call asks the page", () => {
+	const here = "http://localhost:9000";
+	const destroyed = (call: string) =>
+		new Error(`${call}: Execution context was destroyed, most likely because of a navigation`);
+	/**
+	 * A page that counts what a failed call asks it: `document.domain`, which explains a refused call, and `location.href`,
+	 * which names where a replaced document went. The call fails `at` its storage call, the handle check after it, or
+	 * while the handle is taken, with `error`; the page is at `urlAfter` from then on. A stand-in for the real failures,
+	 * which the harness makes on three browsers ("a batch the page leaves", "a call whose document is replaced", "a
+	 * document with an opaque origin").
+	 */
+	const countingPage = (at: "storage" | "check" | "take", error: Error, urlAfter = `${here}/teststorage`) => {
+		let url = `${here}/teststorage`;
+		const asked = { domain: 0, href: 0 };
+		const fail = (): never => {
+			url = urlAfter;
+			throw error;
+		};
+		const page = {
+			url: () => url,
+			isClosed: () => false,
+			evaluate: async (question: () => unknown) => {
+				if (String(question).includes("location.href")) {
+					asked.href++;
+					return url;
+				}
+				asked.domain++;
+				return "localhost";
+			},
+			evaluateHandle: async () => {
+				if (at === "take") {
+					fail();
+				}
+				return {
+					evaluate: async () => {
+						if (at === "check") {
+							fail();
+						}
+					},
+					dispose: async () => undefined,
+				};
+			},
+			sessionStorage: {
+				setItem: async () => {
+					if (at === "storage") {
+						fail();
+					}
+				},
+			},
+		} as unknown as Page;
+		const set = () =>
+			(
+				new SessionStorage(page, { label: "Shop" }) as unknown as {
+					write(m: string, e: Record<string, string>): Promise<void>;
+				}
+			)
+				.write("set", { a: "1" })
+				.then(
+					() => undefined,
+					(failure: Error) => failure,
+				);
+		return { set, asked };
+	};
+	const navigatedTo = (url: string) =>
+		`Shop.SessionStorage.set: the page navigated to ${url} while set() was writing to ${here}; 0 of 1 key was written; "a" was being written and may have reached the new document`;
+
+	it("does not ask document.domain when the document was replaced, during the call, at its check or as it began", async () => {
+		for (const [at, call] of [
+			["storage", "webStorage.setItem"],
+			["check", "elementHandle.evaluate"],
+			["take", "page.evaluateHandle"],
+		] as const) {
+			const { set, asked } = countingPage(at, destroyed(call));
+			expect((await set())?.message, at).toBe(navigatedTo(`${here}/teststorage`));
+			expect(asked, at).toEqual({ domain: 0, href: 1 });
+		}
+	});
+
+	it("asks it once for a refused call, and once for another error while the URL's origin moved", async () => {
+		const refused = countingPage("storage", new Error("webStorage.setItem: SecurityError: The operation is insecure."));
+		expect((await refused.set())?.message).toBe(
+			"Shop.SessionStorage.set: webStorage.setItem: SecurityError: The operation is insecure.",
+		);
+		expect(refused.asked).toEqual({ domain: 1, href: 0 });
+		const moved = countingPage("storage", new Error("gone"), "http://127.0.0.1:9000/x");
+		expect((await moved.set())?.message).toBe(navigatedTo("http://127.0.0.1:9000/x"));
+		expect(moved.asked).toEqual({ domain: 1, href: 0 });
+	});
+});
+
 describe("a refused storage call", () => {
 	const refused = new Error("webStorage.setItem: SecurityError: The operation is insecure.");
 	const labeled = "webStorage.setItem: SecurityError: The operation is insecure.";

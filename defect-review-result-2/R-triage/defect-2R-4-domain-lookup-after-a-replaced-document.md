@@ -1,7 +1,8 @@
 # 2R-4: a call whose document was replaced still asks `document.domain`, and throws the answer away
 
 - **Kind**: debt (a refactor: no message changes)
-- **Status**: planned 2026-10-30 in [PLAN-2R-4-domain-lookup.md](../PLAN-2R-4-domain-lookup.md), agreed 2026-10-30
+- **Status**: decided 2026-10-30, decision 120 in [DECISIONS.md](../DECISIONS.md); planned in
+  [PLAN-2R-4-domain-lookup.md](../PLAN-2R-4-domain-lookup.md)
 - **Area**: `access` and `guarded` in `src/helpers/sessionStorage.ts`
 - **Severity**: Low (one round trip on a call that already failed, and one more of POMWright's own evaluations in the
   user's trace; no message is wrong)

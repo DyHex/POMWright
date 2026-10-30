@@ -1331,3 +1331,30 @@ shape.
 **Why**: races in POMWright's navigation checks show on a machine as small as CI's runner that a 32-thread laptop hides
 (2R-2 passed 900 of 900 runs there with 6 workers, and failed about a third of the time on 4 CPUs with 2); running the
 suite in that shape before a release finds them before CI or a user does.
+
+## 120. No `document.domain` question after a replaced document (2026-10-30)
+
+**Settles**: [2R-4](R-triage/defect-2R-4-domain-lookup-after-a-replaced-document.md) (debt), noticed building decision
+118.
+
+**The case**: `access` asks the page for `document.domain` after every failed storage call, to explain a refused one.
+When the document was replaced, `guarded` throws the navigation message and discards the answer. The question costs a
+round trip on a call that already failed, and adds one of POMWright's own evaluations to the user's trace. When it
+reaches the document being replaced, it adds a failed one, which has nothing to do with the user's code.
+
+**Decided**:
+
+1. **`access` throws a replaced document with its label, without the question.** Every message stays the same, since
+   `guarded`, its one caller, replaces it with the navigation message. After a replaced document, `currentUrl`'s
+   `location.href` question is the first evaluation. It may meet Playwright's lag, which spends one of its 20
+   replacements.
+2. **The case of another error while the URL's origin moved keeps the question** (the maintainer chose this over the
+   larger change). `guarded` infers that navigation from `page.url()`, read after the question's round trip, and
+   whether that round trip lets `page.url()` catch up (2R-2's lag) has not been probed.
+3. **A unit test counts the questions**: none after a replaced document, during the storage call, at the handle check
+   or while the handle is taken; one for a refused call and one for the moved origin.
+4. ***Internal → Seed registry*** says so, with the larger change rejected and why.
+5. **No changeset**: no message changes.
+
+**Why**: `access` explains refused calls and `guarded` reports navigations; asking a question whose answer is never
+used costs the user a line in the trace, and costs the next reader the time to find that it is unused.

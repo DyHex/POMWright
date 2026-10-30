@@ -219,6 +219,11 @@ with the label. `self.origin` would tell the same apart, but an app's own `var o
 and nothing of the page replaces `document.domain`. Rejected: taking a missing or throwing `sessionStorage` for an
 opaque origin, which a browser with storage turned off also has.
 
+A call whose document was replaced is not asked: that is a navigation, which the call reports with its own message.
+Rejected: deciding the navigation before anything is explained, which would also spare the question when another error
+comes back while the URL's origin moved. The call reads that move from `page.url()` after the question's round trip,
+and whether the round trip is what lets `page.url()` catch up with the browser has not been probed.
+
 ## Failures
 
 Every failure carries the line of the `seed` call, captured when it was called (see
