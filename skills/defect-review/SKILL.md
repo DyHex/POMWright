@@ -54,7 +54,7 @@ at `<commit>`".
     them (for example: awaited and overlapping calls, with the state already reached and not yet reached), including the
     paths the change did not touch, and probe each through the public API. A probe of the changed internal function
     shows that the new code works; it says nothing about the promise on the paths that bypass it.
-  - **What did it break?** Run the same probe on the change's base and on its head; behaviour that differed and was not
+  - **What did it break?** Run the same probe on the change's base and on its head; behavior that differed and was not
     meant to is a regression.
   - **Did the docs, the types, the tests and the changelog keep up?**
 
@@ -92,11 +92,11 @@ Give your probes a scratch folder of your own too, outside the repository and no
   Keep every probe whose result the report relies on, so a reader can run it again.
 - **A defect breaks a contract.** Each confirmed defect names the contract it breaks, or says plainly that it is a hole
   where a contract should exist (silent data loss, a crash). A test that is missing is not a defect: it goes under the
-  coverage section's test gaps. Behaviour you would design differently is a design question. A long list of weak
+  coverage section's test gaps. Behavior you would design differently is a design question. A long list of weak
   findings hides the strong ones.
 - **Decided design is not a defect.** When the code does what the project's guide, its docs and its doc comments
   decided, a disagreement is a *design question*, reported separately with its argument and cost. A defect is a gap
-  between a stated contract and the behaviour, a contract that contradicts itself, behaviour no reasonable contract
+  between a stated contract and the behavior, a contract that contradicts itself, behavior no reasonable contract
   would choose (silent data loss, a crash, a message that contradicts itself), or a hole where a contract should exist.
 - **Cite.** Every claim names the file and line, the page, or the command and its output.
 - **Judge a run by its exit code, not by reading its output.** A summary line can hide a failure printed above it, and
@@ -109,13 +109,13 @@ Find out how the project wants to be worked on before forming opinions about it.
 
 1. Read the contributor guide, whatever it is called (`AGENTS.md`, `CONTRIBUTING.md`, `CLAUDE.md`, a docs page for
    contributors), all of it. Note four things from it: the commands; the **contract sources** (what counts as
-   documented behaviour: the public API's entry point, the docs site, the doc comments, a list of decided rules); the
+   documented behavior: the public API's entry point, the docs site, the doc comments, a list of decided rules); the
    **decided design** (anything it says is deliberate, rejected, or not planned); and any **probing pitfalls** (how to
    run code in isolation, what breaks when you try).
 2. Read the README and the package or build manifest: the public entry points, the supported runtimes and versions,
    what is published.
 3. Read the known issues: the open issues or backlog, and any list of known limitations. A finding that matches one is
-   *known*. It goes in the coverage section with its link, not among the findings, unless the behaviour is worse than
+   *known*. It goes in the coverage section with its link, not among the findings, unless the behavior is worse than
    the issue says. If the user chose calibration, skip this step until the report is done.
 4. Run the baseline: install, the unit tests, the integration or end-to-end tests at the cheapest useful scope, the
    type check, the linter. Record each command and its exit code. A red baseline is a finding in itself; it also tells
@@ -137,7 +137,7 @@ where it is documented. Cover:
 - every public export and every public member, option and configuration key;
 - every feature and every stated contract (a promise in the docs, a rule in the guide, an invariant in a doc comment);
 - errors and messages the user can meet, and where each is documented;
-- lifecycles and ordering: initialisation, async work, concurrency, cleanup;
+- lifecycles and ordering: initialization, async work, concurrency, cleanup;
 - inputs at the boundary: what the API accepts, and what it validates;
 - types, if the language has them: do they accept what the runtime accepts, and reject what it rejects;
 - packaging and distribution: entry points, module formats, declarations, the published file list, supported versions;
@@ -248,17 +248,17 @@ caps). Its header documents the state file.
 For every item in the segment, ask at least:
 
 - **Contract.** Where is it stated: docs, doc comments, the guide? Do these agree with each other and with the README?
-- **Behaviour at the boundaries.** Does the code do what the contract says, at the edges too? Try what applies:
+- **Behavior at the boundaries.** Does the code do what the contract says, at the edges too? Try what applies:
   - empty, null and undefined values; zero, negative and non-integer numbers; NaN;
   - special strings: `__proto__` and other prototype names as keys, unicode, whitespace and control characters,
     very long values;
-  - values that normalise: URLs (backslashes, tabs and newlines, empty `?` or `#`, credentials), paths, case, encoding;
+  - values that normalize: URLs (backslashes, tabs and newlines, empty `?` or `#`, credentials), paths, case, encoding;
   - regular expressions with flags and state (`g`, `y`, `lastIndex`);
   - overlapping or un-awaited async calls, and calls in a `Promise.all`; calls made after the state changed underneath
     (a navigation, a close, a dispose, a timeout);
   - objects the API returned, used again after later calls; inputs the caller mutates after passing them; objects
     passed as class instances or with prototypes rather than plain literals;
-  - a constructor or initialiser that fails partway; a method called detached from its object;
+  - a constructor or initializer that fails partway; a method called detached from its object;
   - errors: thrown at the right time, with the documented message, and a message that names the actual cause and fix.
 - **Types.** Do the public types accept what the runtime accepts and reject what it rejects? Do overloads and their
   implementation agree? Do documented forms (different config modes, decorator forms, module resolutions) compile?
@@ -275,7 +275,7 @@ For every item in the segment, ask at least:
 
 Probing:
 
-- Make each reproduction minimal, and run it where the behaviour lives: a real browser for browser behaviour, the
+- Make each reproduction minimal, and run it where the behavior lives: a real browser for browser behavior, the
   compiler for types, and for packaging the packed artifact installed into a scratch project as a consumer installs it.
   A build folder can hold files the published package leaves out, and the reverse. Import every entry point under each
   module system and resolution the package claims.
@@ -301,13 +301,13 @@ Write findings to the segment's file as you go, in the report's format below.
 
 - **High**: wrong results or data loss in normal use.
 - **Medium**: wrong in a plausible edge case, or a documented feature that does not work as documented.
-- **Low**: a rare input, a misleading message, an inconsistency without wrong behaviour.
+- **Low**: a rare input, a misleading message, an inconsistency without wrong behavior.
 
 ### Semver impact of the fix
 
 Use the project's own rules if its guide has them. Otherwise:
 
-- **patch**: brings behaviour in line with a stated contract, or rejects input that never worked;
+- **patch**: brings behavior in line with a stated contract, or rejects input that never worked;
 - **minor**: adds a member, an option or an accepted input without breaking existing code;
 - **major**: code written against the current docs stops compiling, or behaves differently in a way it could rely on.
 
@@ -341,10 +341,10 @@ for example with `date`, rather than from memory). Then these sections:
      design question: report it as one;
    - **Semver**, with a reason.
 5. **Documentation findings**: wrong, contradictory, missing or unclear; the same fields, with *Reproduction* replaced
-   by the page and its text, plus the probe and its output where the page shows behaviour. A fix that only changes the
+   by the page and its text, plus the probe and its output where the page shows behavior. A fix that only changes the
    docs has the semver impact *none*; say so.
 6. **Suspected**: what you could not confirm, and what you tried.
-7. **Design questions**: decided behaviour you would argue against, with the argument and its cost.
+7. **Design questions**: decided behavior you would argue against, with the argument and its cost.
 8. **What is sound**: areas checked and found correct, one line each, so they need no second look. Name the path you
    probed; an area is sound only as far as the probes reached.
 9. **Outside the scope** (a change set or an area only): defects met on the way that the scope did not cause or
