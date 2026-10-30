@@ -47,8 +47,11 @@ the same facts as the API pages.
 - **Links resolve.** Links within the site are root-absolute with the base, `/POMWright/docs/<page>/`, and the site
   build fails on a link or an anchor that does not exist.
 
-CI's site job runs all three checks and builds the site on every change that touches code or the pages, and the
-harness's type check runs the first two as well.
+Every CI run runs these checks, whatever changed. The `site` job compiles the examples (`check-doc-snippets.mjs`),
+checks the API reference (`check-api-coverage.mjs`) and builds the site, which checks the links. Each harness job runs
+`pack-test.sh`: the chains spec, and in its type check all three scripts, `check-doc-snippets.mjs`,
+`check-api-coverage.mjs` and `check-error-messages.mjs`. So *Error messages* is checked in the harness jobs, not in
+the `site` job.
 
 ## Building and publishing
 
@@ -65,11 +68,13 @@ without an SVG, Mermaid's error diagram, or an error the page logs. `pnpm docs:d
 `site` job of CI runs it after the build. How a diagram looks is still checked by eye.
 
 `.github/workflows/pages.yaml` builds the site the same way and deploys it to GitHub Pages, after `CI` succeeds on a
-push to `main`, from the commit that run tested, so the site follows `main` and never shows a commit whose checks
-failed. `CI` runs one push to `main` at a time, in order, so the deployments come in the order of the commits too; a
-re-run of an older `CI` run keeps its commit, so Pages deploys only `main`'s tip and skips a commit `main` has moved
-past, whose changes the newer commit's site already holds. It is guarded as the publish workflow is, and can also be
-started by hand.
+push to `main`, from the commit that run tested, and only while that commit is `main`'s tip. So the site follows
+`main`'s tip whenever that tip's checks pass. `CI` runs one push to `main` at a time, but GitHub does not promise to
+run them in push order, and a re-run of an older run keeps its commit; deploying only the tip keeps an older site from
+replacing a newer one either way. A green commit `main` has moved past is not deployed: its changes reach the site
+with the next newer commit whose checks pass, and while the newer commit's checks fail, the site stays where it was.
+It is guarded as the publish workflow is, and can also be started by hand, which deploys the commit it was started on
+whatever its checks said.
 
 ## How pages are written
 

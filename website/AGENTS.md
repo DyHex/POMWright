@@ -117,7 +117,8 @@ page).
   check the API pages' **Throws** or the doc comments' `@throws`, which list each member's messages by hand.
 - Deployment: `pages.yaml` builds `website/` exactly as the `site` job does and deploys `website/dist` to GitHub Pages
   (the `github-pages` environment, which allows `main`; Pages' source is "GitHub Actions"), after `CI` succeeds on a
-  push to `main`, from the commit that run tested.
+  push to `main`, from the commit that run tested while it is `main`'s tip
+  ([.github/AGENTS.md](../.github/AGENTS.md#publish-and-pages)).
 
 ## The site's scripts
 

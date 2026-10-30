@@ -96,6 +96,10 @@ untested merge.
 - **harness**: that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs
   chromium, `main` all three, on Node 24; one more job per older LTS Node line, from the `engines` floor (20 and 22),
   runs chromium at the pinned Playwright, on pull requests and `main` alike.
+- **test-server**: once per run, on chromium: every page of the test server opened, every request and WebSocket
+  checked, and the server's source and test data scanned, so no page loads anything from another host (a slow host
+  once stalled a page's load and made two tests flaky). `test-server-check.sh` runs it, and `pnpm pack-test` runs that
+  script at its end outside CI.
 - **consumer**: that tarball installed with npm into projects of their own, as consumers install it
   (`scripts/consumer-check.sh`): TypeScript under each module resolution (`node10`, `node16` and `nodenext` from
   CommonJS and ESM, `bundler`), attw, Playwright's runner in a CommonJS and a `"type": "module"` project, and TypeScript
@@ -108,7 +112,8 @@ untested merge.
 - **build**: the gate job, the check `main` requires.
 
 Publishing waits for `CI` on `main`, so nothing is published past a red run, and `pages.yaml` deploys the site after
-the same green run (see [documentation](/POMWright/internal/documentation/#building-and-publishing)).
+the same green run, while its commit is `main`'s tip (see
+[documentation](/POMWright/internal/documentation/#building-and-publishing)).
 
 A version on `main` that npm does not have while changesets are pending is never published: the changesets action
 publishes only when no changeset is pending, and its next Version Packages pull request bumps past that version. Between

@@ -1,7 +1,8 @@
 name: PR
 
-# Every pull request, draft or not, from this repository or a fork. The harness runs on chromium only, also on Node 20,
-# the engines floor; main.yaml runs all three browsers after the merge. Publish never listens to this workflow.
+# Every pull request, draft or not, from this repository or a fork. The harness runs on chromium only, also on Node 20
+# and 22, the older LTS lines from the engines floor; main.yaml runs all three browsers after the merge. Publish never
+# listens to this workflow.
 
 on:
   pull_request:

@@ -3,7 +3,9 @@ name: Pages
 # Builds the documentation site in website/ and deploys it to GitHub Pages, https://dyhex.github.io/POMWright/. The
 # build is the site job's of checks.yaml: it fails on a link or an anchor that does not exist. It runs after CI succeeds
 # on a push to main, guarded as publish.yaml is, and builds the commit CI tested, but only while that commit is main's
-# tip; or by hand, building the commit it was started on.
+# tip, so the site follows main's tip whenever its CI passes: a green commit main has moved past is not deployed, and
+# waits for the next green run of a newer commit (or a manual run). By hand, it builds the commit it was started on,
+# whatever its CI said.
 
 on:
   workflow_run:
@@ -37,8 +39,9 @@ jobs:
         with:
           # the commit CI tested; a manual run builds the commit it was started on
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-      # A re-run of an older CI run keeps its commit, and deploying it would put an older site over a newer one. The newer
-      # commit's own run deploys a site that already holds this commit's changes, so only main's tip is deployed.
+      # A re-run of an older CI run keeps its commit, as does a run that finishes after a newer push's, and deploying
+      # it would put an older site over a newer one. So only main's tip is deployed: the newer commit's own run deploys
+      # a site that holds this commit's changes once its CI passes; while that CI fails, the site stays where it was.
       - name: Deploy only main's tip
         id: tip
         shell: bash # -eo pipefail: a failed git ls-remote fails the step instead of reading as a moved main
@@ -54,7 +57,7 @@ jobs:
           if [ "$tip" = "$TESTED_SHA" ]; then
             echo "deploy=true" >> "$GITHUB_OUTPUT"
           else
-            echo "main has moved past $TESTED_SHA to $tip; that commit's own run deploys a site that already holds this one"
+            echo "main has moved past $TESTED_SHA to $tip; its run deploys a site holding this one once its CI passes"
             echo "deploy=false" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.tip.outputs.deploy == 'true'

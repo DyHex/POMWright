@@ -29,10 +29,10 @@ Node 20 `import` and `require` sharing one copy; `site`: the tarball installed i
 checks, the site's frozen install and build on Node 24, and every diagram rendered (`scripts/check-diagrams.mjs`).
 `pr.yaml` (`PR`) runs it for every pull request, draft or not, with the harness on chromium only, and for a pull request
 into `main` the job `release` (*Release window*, `scripts/release-check.sh pull-request`, see *The rulesets on `main`*);
-`main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit, one run at a time in push order (a
-`concurrency` group without `cancel-in-progress`, so Publish and Pages follow the order of the commits and an older run
-never deploys over a newer site; a waiting run gives way to a newer push); both end with the gate job `build`, `main`'s
-required status check. `publish.yaml` runs `changesets/action` v2 (`@changesets/cli` 3, `@changesets/changelog-github`
+`main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit, one run at a time (a `concurrency` group
+without `cancel-in-progress`: a waiting run gives way to a newer push, and GitHub takes waiting runs in the order they
+began waiting, which two pushes seconds apart can reverse; Publish and Pages act only on `main`'s tip, so an older run
+never deploys over a newer site); both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs `changesets/action` v2 (`@changesets/cli` 3, `@changesets/changelog-github`
 1) after `CI` succeeds on a push to `main`, guarded by its job condition and by a step (`scripts/release-check.sh
 publish`) that fails while `main`'s tip, read from GitHub, has a version npm does not have and changesets are pending
 (that version would never be published), saying to revert the Version Packages pull request that set it, and otherwise
@@ -43,7 +43,7 @@ workflow's OIDC token and records provenance) from the `npm` environment, which 
 Trusted Publisher names, and after publishing warns when a version has no provenance attestation. `pages.yaml` builds
 `website/` and deploys it to GitHub Pages (`https://dyhex.github.io/POMWright/`) after `CI` succeeds on a push to
 `main`, guarded as `publish.yaml` is and building the commit that run tested, only while that commit is `main`'s tip (a
-re-run of an older run deploys nothing), or by `workflow_dispatch`.
+re-run of an older run deploys nothing), or by `workflow_dispatch`, which builds the commit it was started on.
 
 ## Publish and Pages
 
@@ -62,10 +62,12 @@ re-run of an older run deploys nothing), or by `workflow_dispatch`.
   the checkout; when `main` has moved on, the newer commit's own run continues the release (and publishes the version
   when no changeset is pending), so deployments follow commit order, re-runs included.
 - `pages.yaml` deploys the documentation site after `CI` succeeds on a push to `main`, guarded as `publish.yaml` is,
-  from the commit that run tested and only while it is `main`'s tip, so every merge updates the site once its checks
-  have passed and deployments follow commit order, re-runs included; since nothing reaches
-  `main` before it is ready to release, the site is ahead of npm only until the Version Packages pull request is
-  merged.
+  from the commit that run tested and only while it is `main`'s tip, so the site follows `main`'s tip whenever that
+  tip's `CI` passes and deployments follow commit order, re-runs included. A green commit `main` has moved past is not
+  deployed: its changes reach the site with the next newer commit whose `CI` passes, and while the newer commit's `CI`
+  fails, the site stays where it was (a manual run deploys sooner). A manual run (`workflow_dispatch`) builds the
+  commit it was started on, whatever its `CI` said. Since nothing reaches `main` before it is ready to release, the site
+  is ahead of npm only until the Version Packages pull request is merged.
 - A release itself (the merge rule, the Trusted Publisher, the attestation check): [docs/releases.md](../docs/releases.md).
 
 ## The rulesets on `main`
