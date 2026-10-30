@@ -51,7 +51,7 @@ export type LocatorUpdateMode = "update" | "replace";
 
 /**
  * The arguments of a strategy method in each mode: in `replace` mode Playwright's own parameter list
- * (the first argument required, Playwright's option types), in `update` mode the patch shapes.
+ * (the first argument required but `frameLocator`'s, Playwright's option types), in `update` mode the patch shapes.
  */
 type ArgsFor<
 	Mode extends LocatorUpdateMode,
@@ -122,7 +122,7 @@ const buildReplacementDefinition = (updates: LocatorUpdate, path: string): Locat
  *   deletes one, a lone `null` deletes them all, and an omitted value keeps what is registered. Another strategy's
  *   method throws and names `replace`.
  * - `replace` (`Mode` `"replace"`) installs a locator of any strategy, with the arguments of Playwright's own method:
- *   the first argument required, Playwright's options.
+ *   the first argument required (but `frameLocator`'s, whose absence installs the any-frame form), Playwright's options.
  *
  * @example
  * ```ts

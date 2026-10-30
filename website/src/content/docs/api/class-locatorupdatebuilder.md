@@ -13,7 +13,7 @@ changes, and the segment keeps its steps and description.
   the options merge key by key, a `null` key deletes one, a lone `null` deletes them all, and an omitted or `undefined`
   value, the first argument included, keeps what is registered. Another strategy's method throws and names `replace`.
 - **`replace`** installs a locator of any strategy, with the arguments of Playwright's own method: the first argument
-  required, Playwright's options.
+  required (but `frameLocator`'s, whose absence installs the any-frame form), Playwright's options.
 
 See [patching a definition](/POMWright/docs/queries/#patching-a-definition-update) and
 [a new definition](/POMWright/docs/queries/#a-new-definition-replace).
@@ -61,7 +61,7 @@ Guide: [queries](/POMWright/docs/queries/).
 
 Every method returns the [query](/POMWright/api/class-locatorquerybuilder/), to chain more changes or resolve it.
 Every method throws, in `update` mode, for a segment registered with another strategy, and in `replace` mode, from
-JavaScript, when the first argument is missing:
+JavaScript, when the first argument is missing (but `frameLocator`, whose absence installs the any-frame form):
 
 ```text
 update("main.button@pay") cannot change the strategy from "role" to "text"; use replace("main.button@pay").getByText(…) instead.

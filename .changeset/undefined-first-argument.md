@@ -11,4 +11,5 @@ declare const role: "button" | "link" | undefined;
 getLocatorSchema("main.button@save").update().getByRole(role, { name: "Cancel" }); // compiles; undefined keeps the role
 ```
 
-A registration and `replace()` still require the first argument, as Playwright's methods do.
+A registration and `replace()` still require the first argument, as Playwright's methods do, but `frameLocator()`'s,
+whose absence is Playwright's any-frame form.

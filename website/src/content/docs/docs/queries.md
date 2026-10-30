@@ -133,7 +133,8 @@ update("main.button@save") cannot change the strategy from "role" to "locator"; 
 ## A new definition: `replace`
 
 `replace(subPath?)` installs a definition of any strategy, with Playwright's own arguments: the first argument is
-required and the options are Playwright's, without `null`:
+required (but `frameLocator`'s, whose absence installs [the any-frame form](#the-any-frame-form-in-a-query)) and the
+options are Playwright's, without `null`:
 
 ```ts
 import type { LocatorRegistry } from "pomwright";
@@ -178,7 +179,8 @@ The any-frame form has no element of its own, so:
 
 - an ancestor left registered fails the resolution:
   `frameLocator() without a selector must be the first segment of the chain; "main.frame@payment" has the ancestor "main".`
-- the query's own path cannot take it:
+- the query's own path cannot take it. TypeScript does not catch this, unlike `skip` of the query's own path; the
+  call throws at once:
   `replace() cannot apply to "main.frame@payment": it is the path this query resolves, and frameLocator() without a selector has no element to resolve to; replace an ancestor instead.`
 - a segment with steps in the query needs `clearSteps(subPath)` first:
   `replace() cannot apply to "main.frame@payment": it has filter or nth steps, and frameLocator() without a selector takes none; call clearSteps("main.frame@payment") first.`

@@ -301,7 +301,8 @@ error:
 Argument of type '"main"' is not assignable to parameter of type '"createRegistryWithAccessors needs its paths as a type argument: createRegistryWithAccessors<Paths>(page)"'.
 ```
 
-`<string>` is accepted, and gives up every compile-time check of the paths, which the runtime still makes.
+`<string>` is accepted, and gives up completions, the check that a path is in the union and sub-paths, which the
+runtime still makes; a literal path is still checked for the rules of a path at compile time.
 
 **Usage**
 

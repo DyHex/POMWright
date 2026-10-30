@@ -45,7 +45,8 @@ Argument of type '"main"' is not assignable to parameter of type '"createRegistr
 ```
 
 A compile error, on every path of a registry created without its paths. Pass them as the type argument:
-`createRegistryWithAccessors<Paths>(page)`; `<string>` takes any path, unchecked at compile time.
+`createRegistryWithAccessors<Paths>(page)`; `<string>` takes any path, a literal still checked for the rules of a
+path.
 
 ---
 
@@ -175,7 +176,8 @@ wrong type, or empty where Playwright cannot use one, as the locator methods che
 
 ## Resolving and verifying
 
-Thrown by `getNestedLocator`, `getLocator`, a query's resolving methods, and `verify()`, which collects every one of
+Thrown by `getNestedLocator`, `getLocator`, `getLocatorSchema`, a query's resolving methods, and `verify()`, which
+collects every one of
 them for every path:
 
 ```text

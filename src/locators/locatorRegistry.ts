@@ -41,7 +41,8 @@ import {
 
 /**
  * The default of `createRegistryWithAccessors`' type parameter: a registry created without its paths takes no path, and
- * the compile error at its first path says what is missing. `<string>` keeps paths unchecked at compile time.
+ * the compile error at its first path says what is missing. `<string>` takes any path: a literal is still checked for
+ * the rules of a path, a `string` variable at run time.
  */
 type NeedsPaths =
 	"createRegistryWithAccessors needs its paths as a type argument: createRegistryWithAccessors<Paths>(page)";
@@ -803,8 +804,9 @@ export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
  * Creates a locator registry on a page, without a page object, and returns it with its `add`, `getLocator`,
  * `getNestedLocator` and `getLocatorSchema` as functions of their own. The path union is a required type argument:
  * without it, the first path is a compile error (`createRegistryWithAccessors needs its paths as a type argument`).
- * `<string>` is accepted for paths known only at run time, or while migrating untyped code: it gives up every compile
- * time check of the paths (suggestions, the format, undeclared paths, sub-paths), which the runtime still makes. Call
+ * `<string>` is accepted for paths known only at run time, or while migrating untyped code: it gives up suggestions,
+ * the check against the union and sub-paths, which the runtime still makes; a literal path is still checked for the
+ * rules of a path at compile time. Call
  * `registry.verify()` once the locators are registered; a page object does that itself.
  *
  * @param page The Playwright page the locators resolve on.

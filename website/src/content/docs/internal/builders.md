@@ -86,8 +86,8 @@ the type instantiations.
 
 `update(subPath?)` and `replace(subPath?)` return a `LocatorUpdateBuilderInternal`
 (`src/locators/locatorUpdateBuilder.ts`) with a type parameter `Mode`, `"update"` or `"replace"`. The same ten methods
-take different argument lists per mode: in `replace` mode Playwright's own (the first argument required, Playwright's
-option types), in `update` mode the patch shapes (the first argument optional, `null` deleting options). The builder
+take different argument lists per mode: in `replace` mode Playwright's own (the first argument required but
+`frameLocator`'s, whose absence is the any-frame form, and Playwright's option types), in `update` mode the patch shapes (the first argument optional, `null` deleting options). The builder
 applies the call to the query through a callback and returns the query: `update` merges into the segment's definition
 and requires its strategy, `replace` builds a complete definition of any strategy.
 

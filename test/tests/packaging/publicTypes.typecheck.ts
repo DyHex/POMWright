@@ -88,6 +88,7 @@ const afterReplace: LocatorQueryBuilder<Paths, "list.item"> = replacement.locato
 // replace takes Playwright's arguments
 getLocatorSchema("list.item").replace().getByRole("listitem");
 getLocatorSchema("list.item").replace().getByRole("listitem", undefined);
+// compiles, and throws at run time: the query's own path cannot take the any-frame form (an ancestor can)
 getLocatorSchema("list").replace().frameLocator();
 // @ts-expect-error the role is required
 getLocatorSchema("list.item").replace().getByRole();

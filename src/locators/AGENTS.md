@@ -68,7 +68,8 @@ validation with `LOCATOR_SCHEMA_PATH_WHITESPACE`, `assertStrategyPrimary` over `
   every builder; with two arguments the first is the primary, and a lone `null` where options may stand is the
   options. A throwing DSL call changes nothing. `update` keeps the registered strategy and follows JSON Merge Patch
   (`null` deletes); a seeded override parses and merges exactly as `update` does; `replace` changes the strategy and
-  takes Playwright's argument lists (the first argument required, Playwright's option types); none touches steps.
+  takes Playwright's argument lists (the first argument required but `frameLocator`'s, whose absence is the any-frame
+  form; Playwright's option types); none touches steps.
   Roles are Playwright's compile-time type; there is no runtime role list.
 - A seed never changes: `filter`, `nth` and `describe` return a new seed, `definition` and `steps` are copies. Reuse
   by path copies the record (strategy, steps, an explicit description) and returns `filter`, `nth` and `describe`;

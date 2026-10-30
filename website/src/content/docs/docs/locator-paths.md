@@ -124,7 +124,9 @@ them.
 
 A member with an open part, `` `main.list.item@${string}` ``, accepts any value. Only its prefix is offered as a
 completion, any id compiles, an id that was never registered fails when it is resolved, and it has the same search
-cost.
+cost. A value with a dot adds segments: with `` `files.link@${string}` ``, `files.link@report.pdf` is the path
+`files` → `link@report` → `pdf`, so when `files.link@report` is registered too, its chain runs through that locator
+and finds nothing, and `verify()` does not notice. Fill an open part with values without dots, or replace the dots.
 
 ## Segments without a locator
 
@@ -329,9 +331,11 @@ A registry created without it takes no path, and its first path says what is mis
 Argument of type '"main"' is not assignable to parameter of type '"createRegistryWithAccessors needs its paths as a type argument: createRegistryWithAccessors<Paths>(page)"'.
 ```
 
-`<string>` is accepted, and best avoided: it gives up every check TypeScript makes on paths (completions, the rules of a
-path, paths not in the union, sub-paths), which POMWright then makes at run time only. It suits paths known only at run
-time, such as locators loaded from JSON, and a gradual move from untyped code, such as 2.x.
+`<string>` is accepted, and best avoided: it gives up completions, the check that a path is in the union, and
+sub-paths, which POMWright then checks at run time only. A path written as a literal is still checked for
+[the rules of a path](#the-rules-of-a-path) at compile time (`add("main..list")` does not compile), and a path in a
+`string` variable at run time. It suits paths known only at run time, such as locators loaded from JSON, and a gradual
+move from untyped code, such as 2.x.
 
 ## From `add` to a locator
 

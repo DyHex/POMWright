@@ -10,4 +10,5 @@ Argument of type '"main"' is not assignable to parameter of type '"createRegistr
 ```
 
 Before, the paths were inferred as `string`, so no path was checked and no sub-path compiled. Pass the path union,
-`createRegistryWithAccessors<Paths>(page)`, or `<string>` to keep paths unchecked at compile time.
+`createRegistryWithAccessors<Paths>(page)`, or `<string>` for paths known only at run time, which gives up completions,
+the union check and sub-paths (a literal path is still checked for the rules of a path).

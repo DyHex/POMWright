@@ -116,6 +116,8 @@ declare const anySource: string;
 untypedReuse.add(anyTarget, { reuse: anySource });
 // @ts-expect-error a literal path that reuses itself, on a registry typed <string> too
 untypedReuse.add("main.heading", { reuse: "main.heading" });
+// @ts-expect-error a literal path that breaks a rule of a path, on a registry typed <string> too
+untypedReuse.add("main..list").locator("ul");
 const listRegistry = createRegistryWithAccessors<"list" | "list.item@first" | `list.item@${string}`>(page).registry;
 declare const itemId: string;
 listRegistry.add(`list.item@${itemId}`, { reuse: "list.item@first" });
