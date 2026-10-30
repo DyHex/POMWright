@@ -57,12 +57,15 @@ export class Checkout {
 
 - `title` string *(optional)*
 
-  The step's title. Defaults to `ClassName.methodName`.
+  The step's title. Defaults to `ClassName.methodName`, the class of the object the method runs on: an inherited method
+  shows the subclass.
 
 - `options` Object *(optional)*
 
   `test.step()`'s options, such as `box` (an error inside the method points at the line that called it, not at the line
-  inside the method; the step is reported at the calling line either way) and `timeout`.
+  inside the method; a call awaited where it is made is reported at its line either way, and other forms where
+  Playwright places a `test.step`: see [where a step is reported](/POMWright/docs/test-steps/#where-a-step-is-reported))
+  and `timeout`.
 
 `@step` also works without parentheses, and then takes neither.
 

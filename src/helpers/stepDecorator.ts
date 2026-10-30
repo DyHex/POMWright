@@ -160,14 +160,16 @@ const createStepDecorator =
 
 // no @example block: TypeScript reads a decorator at the start of a comment line as a JSDoc tag
 /**
- * A decorator that runs a method as Playwright's `test.step`, titled `ClassName.methodName` (for a static method too,
- * by its class) unless given a title. Works with TypeScript's standard decorators and with `experimentalDecorators`.
+ * A decorator that runs a method as Playwright's `test.step`, titled `ClassName.methodName` (the class of the object it
+ * runs on, so an inherited method shows the subclass; for a static method, its class) unless given a title. A call
+ * awaited where it is made is reported at its line; other forms are where Playwright places a `test.step`. Works with
+ * TypeScript's standard decorators and with `experimentalDecorators`.
  * The method must return a Promise, as an `async` method does: `test.step` always returns one, so a decorated method
  * that returns a plain value is a compile error, `@step decorates methods that return a Promise: make the method
  * async`. Write it above an `async` method as `@step()`, `@step("Pay with the test card")`, `@step({ box: true })` or
  * `@step("Pay", { timeout: 10_000 })`.
  *
- * @param title The step's title. Defaults to `ClassName.methodName`.
+ * @param title The step's title. Defaults to `ClassName.methodName`, the class of the object the method runs on.
  * @param options `test.step`'s options, such as `box` and `timeout`.
  * @param value The method, when `@step` is written without parentheses.
  * @param context The decorator context, when `@step` is written without parentheses.

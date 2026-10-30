@@ -76,7 +76,11 @@ const fakePage = (url = "https://shop.example/probe") =>
 		waitForURL: async () => undefined,
 		// the document a storage call checks after each storage call, never replaced here
 		evaluateHandle: async () => ({ evaluate: async () => undefined, dispose: async () => undefined }),
-		sessionStorage: { setItem: async () => undefined },
+		sessionStorage: { setItem: async () => undefined, getItem: async () => null, removeItem: async () => undefined },
+		// what seed's registry watches; the page never navigates here, so seed writes at once
+		mainFrame: () => ({ url: () => url }),
+		on: () => undefined,
+		off: () => undefined,
 	}) as never;
 
 class ProbePage extends PageObject<"body"> {
@@ -109,6 +113,12 @@ test("the navigation and session storage helpers' steps are reported where they 
 	await leftPage.navigation.expectAnotherPage(); // LOCATION expect-another
 	const storage = new SessionStorage(fakePage(), { label: "LOCATION set", origin: "https://shop.example" });
 	await storage.set("token", "abc"); // LOCATION set
+	const reader = new SessionStorage(fakePage(), { label: "LOCATION get", origin: "https://shop.example" });
+	await reader.get("token"); // LOCATION get
+	const clearer = new SessionStorage(fakePage(), { label: "LOCATION clear", origin: "https://shop.example" });
+	await clearer.clear("token"); // LOCATION clear
+	const seeder = new SessionStorage(fakePage(), { label: "LOCATION seed", origin: "https://shop.example" });
+	await seeder.seed({ token: "abc" }); // LOCATION seed
 });
 
 test("a session storage call whose value cannot be encoded: the step and the error at the line that called it", async () => {

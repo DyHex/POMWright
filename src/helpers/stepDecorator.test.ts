@@ -39,6 +39,30 @@ describe("@step, stage-3 decorators", () => {
 		expect(recorded.map((entry) => entry.title)).toEqual(["Account.create"]);
 	});
 
+	it("titles a method by the class of the object it runs on: an inherited method shows the subclass", async () => {
+		class Base {}
+		class Derived extends Base {}
+		const inherited = stage3(step(), async () => undefined, context("open", false));
+		await inherited.call(new Derived());
+		await inherited.call(new Base());
+		expect(recorded.map((entry) => entry.title)).toEqual(["Derived.open", "Base.open"]);
+	});
+
+	it("gives an override that calls super two steps with one title", async () => {
+		class Base {}
+		class Derived extends Base {}
+		const baseOpen = stage3(step(), async () => "base", context("open", false));
+		const derivedOpen = stage3(
+			step(),
+			async function (this: unknown) {
+				return baseOpen.call(this); // super.open(), as the compiler calls it
+			},
+			context("open", false),
+		);
+		await expect(derivedOpen.call(new Derived())).resolves.toBe("base");
+		expect(recorded.map((entry) => entry.title)).toEqual(["Derived.open", "Derived.open"]);
+	});
+
 	it("passes an explicit title and the options through, a boxed step with its caller's line", async () => {
 		const wrapped = stage3(step("Open settings", { box: true }), async () => undefined, context("open", false));
 		await wrapped.call(new Account());
