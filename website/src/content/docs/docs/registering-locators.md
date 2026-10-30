@@ -116,6 +116,18 @@ its code (`/don\x27t save/iu`) or leave out `u`. Playwright declined to change t
 its code itself (see [Locating by id](/POMWright/docs/locating-by-id/#flags)).
 :::
 
+### A RegExp outside unicode mode
+
+:::note
+Outside unicode mode, Playwright puts a backslash before each quote, apostrophe and backtick of the pattern, as its
+selector syntax needs, but misses the second of two in a row, and puts one before a named group's closing `>` when
+another `>` follows it. In Playwright alone, `page.getByRole("button", { name: /don["']t save/i })` works and its
+`.first()` does not parse, so such a registration fails whenever it is resolved, as in unicode mode above; and
+`page.getByText(/^(?<g>>?)x$/)` does not parse even alone. Write that character by its code
+(`/don["\x27]t save/i`, `/^(?<g>\x3e?)x$/`). `getById` reads the pattern whole and needs neither (see
+[Locating by id](/POMWright/docs/locating-by-id/#flags)).
+:::
+
 ## One registration per path
 
 A path holds one locator. Registering it again throws at the second locator method, or, with `{ reuse }`, at `add`

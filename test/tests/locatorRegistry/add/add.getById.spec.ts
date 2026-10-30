@@ -86,6 +86,40 @@ test("getById with a unicode-mode RegExp writes a quote, a backtick and >> by th
 	expect(`${registry.getLocator("main.chain").describe("")}`).toEqual("locator('internal:attr=[id=/^a>\\\\x3eb$/u]')");
 });
 
+test("getById reads a RegExp's escapes, quotes and >> whole, and finds the element", async ({ page }) => {
+	type LocatorSchemaPaths = "main" | "main.backtick" | "main.quotes" | "main.escapedGt" | "main.group";
+
+	const { registry } = createRegistryWithAccessors<LocatorSchemaPaths>(page);
+
+	registry.add("main").locator("main");
+	// biome-ignore lint/complexity/useRegexLiterals: tsc over test/ targets below es2024, which rejects the v flag in a literal
+	registry.add("main.backtick").getById(new RegExp("^a[\\`]b$", "v"));
+	registry.add("main.quotes").getById(/^say["']hi$/);
+	// biome-ignore lint/complexity/useRegexLiterals: biome's fix for the literal deletes the escape this case is about
+	registry.add("main.escapedGt").getById(new RegExp("^a\\>>b$"));
+	registry.add("main.group").getById(/^a(?<gt>>)>b$/);
+
+	await page.setContent(
+		"<main><div id='a`b'>backtick</div><div id='say\"hi'>quote</div><div id='a>>b'>chain</div>" +
+			"<div id='axb'>decoy</div></main>",
+	);
+	for (const [path, text] of [
+		["main.backtick", "backtick"],
+		["main.quotes", "quote"],
+		["main.escapedGt", "chain"],
+		["main.group", "chain"],
+	] as const) {
+		await expect(registry.getNestedLocator(path), path).toHaveText(text);
+		await expect(registry.getLocator(path), path).toHaveText(text);
+	}
+	expect(`${registry.getLocator("main.backtick").describe("")}`).toEqual(
+		`locator('internal:attr=[id=/^a[\\\\x60]b$/v]')`,
+	);
+	expect(`${registry.getLocator("main.quotes").describe("")}`).toEqual(
+		`locator('internal:attr=[id=/^say[\\\\"\\\\\\']hi$/]')`,
+	);
+});
+
 test("getById rejects an empty id at registration and passes every RegExp flag through", async ({ page }) => {
 	type LocatorSchemaPaths = "main.form@user" | "flags" | "sticky";
 

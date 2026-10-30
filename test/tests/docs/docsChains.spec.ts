@@ -557,12 +557,14 @@ test("docs/frames.md", async ({ page }) => {
 });
 
 test("docs/locating-by-id.md", async ({ page }) => {
-	const { registry } = createRegistryWithAccessors<"panel" | "greeting" | "unicode">(page);
+	const { registry } = createRegistryWithAccessors<"panel" | "greeting" | "quotes" | "unicode">(page);
 	registry.add("panel").getById("settings.panel");
 	registry.add("greeting").getById('say "hi"');
+	registry.add("quotes").getById(/^say["']hi$/);
 	registry.add("unicode").getById(/^say"hi$/u);
 	shows(chain(registry.getLocator("panel"))).toBe(selector(page, '[id="settings.panel"]'));
 	shows(chain(registry.getLocator("greeting"))).toBe(selector(page, '[id="say \\"hi\\""]'));
+	shows(chain(registry.getLocator("quotes"))).toBe(selector(page, "internal:attr=[id=/^say[\\\"\\']hi$/]"));
 	shows(chain(registry.getLocator("unicode"))).toBe(selector(page, "internal:attr=[id=/^say\\x22hi$/u]"));
 });
 

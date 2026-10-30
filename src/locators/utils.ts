@@ -123,23 +123,42 @@ export const escapeCssString = (value: string): string =>
 
 /**
  * Serializes a RegExp for Playwright's selector syntax (`internal:attr=[id=/source/flags]`).
- * Based on Playwright's `escapeRegexForSelector` (playwright-core, Apache-2.0): unescaped quotes
- * and backticks are backslash-escaped, and `>>` is escaped so the selector parser does not split
- * the chain. Unicode mode (`u`, `v`) rejects those identity escapes, and Playwright passes such a
- * RegExp through as it is, which its own parser then fails on; here a quote or a backtick is
- * written by its code (`\x22`, `\x27`, `\x60`) and the second `>` of each `>>` as `\x3e`, so a
- * named group's closing `>` stays. Only the selector text changes, never the RegExp it describes.
- * All flags are kept; POMWright adds no regex semantics of its own.
+ * Playwright's chain parser skips the character after a backslash, takes a quote or a backtick as
+ * the start of a quoted string, and splits the chain at `>>`, so the selector text may hold none of
+ * them unescaped. One pass over the source, escape pairs read whole: outside unicode mode a quote
+ * or a backtick gets a backslash, as in Playwright's `escapeRegexForSelector` (playwright-core,
+ * Apache-2.0); unicode mode (`u`, `v`) rejects that identity escape, so there it is written by its
+ * code (`\x22`, `\x27`, `\x60`), the backslash of a `\`` in a `v` class included. The second `>` of
+ * each unescaped `>>` is escaped (`\>`, or `\x3e` in unicode mode), so a named group's closing `>`
+ * stays. Playwright's own helper uses string replacements, which miss the second of two quotes in a
+ * row, double the backslash of a `\>` before a `>`, and escape a named group's closing `>`; a pass
+ * that reads escape pairs whole avoids all three. Only the selector text changes, never the RegExp
+ * it describes. All flags are kept; POMWright adds no regex semantics of its own.
  */
 export const escapeRegExpForSelector = (re: RegExp): string => {
-	if (re.flags.includes("u") || re.flags.includes("v")) {
-		return String(re)
-			.replace(/["'`]/g, (quote) => `\\x${quote.charCodeAt(0).toString(16)}`)
-			.replace(/>>/g, ">\\x3e");
+	const unicode = re.flags.includes("u") || re.flags.includes("v");
+	const quote = (char: string) => (unicode ? `\\x${char.charCodeAt(0).toString(16)}` : `\\${char}`);
+	const isQuote = (char: string) => char === '"' || char === "'" || char === "`";
+	let text = "";
+	let afterGt = false;
+	for (let index = 0; index < re.source.length; index++) {
+		const char = re.source.charAt(index);
+		if (char === "\\") {
+			const escaped = re.source.charAt(++index);
+			text += unicode && isQuote(escaped) ? quote(escaped) : `\\${escaped}`;
+			afterGt = false;
+		} else if (isQuote(char)) {
+			text += quote(char);
+			afterGt = false;
+		} else if (char === ">") {
+			text += afterGt ? (unicode ? "\\x3e" : "\\>") : ">";
+			afterGt = !afterGt;
+		} else {
+			text += char;
+			afterGt = false;
+		}
 	}
-	return String(re)
-		.replace(/(^|[^\\])(\\\\)*(["'`])/g, "$1$2\\$3")
-		.replace(/>>/g, "\\>\\>");
+	return `/${text}/${re.flags}`;
 };
 
 /**

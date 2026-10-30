@@ -75,53 +75,57 @@ describe("escapeRegExpForSelector", () => {
 		expect(escapeRegExpForSelector(/^panel-\d+$/i)).toBe("/^panel-\\d+$/i");
 	});
 
-	it("escapes unescaped quotes and backticks", () => {
-		expect(escapeRegExpForSelector(/say"hi/)).toBe('/say\\"hi/');
-		expect(escapeRegExpForSelector(/it's/)).toBe("/it\\'s/");
-		expect(escapeRegExpForSelector(/a`b/)).toBe("/a\\`b/");
-	});
+	/** The RegExp a serialized form describes, compiled again from its source and flags. */
+	const reparsed = (serialized: string) => {
+		const end = serialized.lastIndexOf("/");
+		return new RegExp(serialized.slice(1, end), serialized.slice(end + 1));
+	};
+	/** What Playwright's chain parser reads as unescaped: it skips the character after a backslash. */
+	const unescaped = (serialized: string) => serialized.replace(/\\[\s\S]/g, "__");
 
-	it("leaves an already escaped quote alone", () => {
-		// source is  say\"hi  (one backslash before the quote); no second backslash is added
-		expect(escapeRegExpForSelector(/say"hi/)).toBe('/say\\"hi/');
-	});
+	// [the RegExp, its selector text, strings it matches, strings it does not]
+	const cases: [RegExp, string, string[], string[]][] = [
+		// outside unicode mode, a quote or a backtick gets a backslash, as in Playwright's helper
+		[/say"hi/, '/say\\"hi/', ['say"hi'], ["sayhi"]],
+		[/it's/, "/it\\'s/", ["it's"], ["its"]],
+		[/a`b/, "/a\\`b/", ["a`b"], ["ab"]],
+		// biome-ignore lint/complexity/useRegexLiterals: biome's fix for the literal deletes the escape this case is about
+		[new RegExp('say\\"hi'), '/say\\"hi/', ['say"hi'], ['say\\"hi']],
+		[/say["']hi/, "/say[\\\"\\']hi/", ['say"hi', "say'hi"], ["sayhi"]],
+		[/a""b/, '/a\\"\\"b/', ['a""b'], ['a"b']],
+		[/x\\"/, '/x\\\\\\"/', ['x\\"'], ['x"']],
+		[/a>>b/, "/a>\\>b/", ["a>>b"], ["a>b"]],
+		[/a>>>b/, "/a>\\>>b/", ["a>>>b"], ["a>>b"]],
+		// biome-ignore lint/complexity/useRegexLiterals: biome's fix for the literal deletes the escape this case is about
+		[new RegExp("a\\>>b"), "/a\\>>b/", ["a>>b"], ["a\\>>b"]],
+		[/(?<g>>b)/, "/(?<g>\\>b)/", [">b"], ["b"]],
+		// unicode mode rejects that identity escape, so the character is written by its code
+		[/say"hi/u, "/say\\x22hi/u", ['say"hi'], ["sayhi"]],
+		[/it's/v, "/it\\x27s/v", ["it's"], ["its"]],
+		[/a`b/u, "/a\\x60b/u", ["a`b"], ["ab"]],
+		[/a>>b/u, "/a>\\x3eb/u", ["a>>b"], ["a>b"]],
+		[/a>>>b/u, "/a>\\x3e>b/u", ["a>>>b"], ["a>>b"]],
+		[/["'`]/u, "/[\\x22\\x27\\x60]/u", ['"', "'", "`"], ["a"]],
+		[/[\q{a"b|c}]/v, "/[\\q{a\\x22b|c}]/v", ['a"b', "c"], ["ab"]],
+		[/(?<g>>b)/u, "/(?<g>\\x3eb)/u", [">b"], ["b"]],
+		[/x\\"/u, "/x\\\\\\x22/u", ['x\\"'], ['x"']],
+		[/[\`]/v, "/[\\x60]/v", ["`"], ["x", "\\"]],
+		[/[\\`]/v, "/[\\\\\\x60]/v", ["`", "\\"], ["x"]],
+		[/[\>>]/v, "/[\\>>]/v", [">"], ["x"]],
+	];
 
-	it("escapes Playwright's chain separator", () => {
-		expect(escapeRegExpForSelector(/a>>b/)).toBe("/a\\>\\>b/");
-	});
-
-	describe("in unicode mode, which rejects identity escapes", () => {
-		/** The RegExp a serialized form describes, compiled again from its source and flags. */
-		const reparsed = (serialized: string) => {
-			const end = serialized.lastIndexOf("/");
-			return new RegExp(serialized.slice(1, end), serialized.slice(end + 1));
-		};
-		const cases: [RegExp, string, string[], string[]][] = [
-			// [the RegExp, its selector text, strings it matches, strings it does not]
-			[/say"hi/u, "/say\\x22hi/u", ['say"hi'], ["sayhi"]],
-			[/it's/v, "/it\\x27s/v", ["it's"], ["its"]],
-			[/a`b/u, "/a\\x60b/u", ["a`b"], ["ab"]],
-			[/a>>b/u, "/a>\\x3eb/u", ["a>>b"], ["a>b"]],
-			[/a>>>b/u, "/a>\\x3e>b/u", ["a>>>b"], ["a>>b"]],
-			[/["'`]/u, "/[\\x22\\x27\\x60]/u", ['"', "'", "`"], ["a"]],
-			[/[\q{a"b|c}]/v, "/[\\q{a\\x22b|c}]/v", ['a"b', "c"], ["ab"]],
-			[/(?<g>>b)/u, "/(?<g>\\x3eb)/u", [">b"], ["b"]],
-			[/x\\"/u, "/x\\\\\\x22/u", ['x\\"'], ['x"']],
-		];
-
-		it.each(cases)(
-			"%s is written without a quote, a backtick or >>, and stays the same RegExp",
-			(re, text, yes, no) => {
-				const serialized = escapeRegExpForSelector(re);
-				expect(serialized).toBe(text);
-				expect(serialized).not.toMatch(/["'`]|>>/);
-				const again = reparsed(serialized);
-				expect(again.flags).toBe(re.flags);
-				for (const value of yes) expect(again.test(value), value).toBe(true);
-				for (const value of no) expect(again.test(value), value).toBe(false);
-			},
-		);
-	});
+	it.each(cases)(
+		"%s is written without an unescaped quote, backtick or >>, and stays the same RegExp",
+		(re, text, yes, no) => {
+			const serialized = escapeRegExpForSelector(re);
+			expect(serialized).toBe(text);
+			expect(unescaped(serialized)).not.toMatch(/["'`]|>>/);
+			const again = reparsed(serialized);
+			expect(again.flags).toBe(re.flags);
+			for (const value of yes) expect(again.test(value), value).toBe(true);
+			for (const value of no) expect(again.test(value), value).toBe(false);
+		},
+	);
 
 	it("keeps every flag, including sticky", () => {
 		expect(escapeRegExpForSelector(/x/gimsy)).toBe("/x/gimsy");
@@ -142,7 +146,7 @@ describe("buildIdSelector", () => {
 			"internal:attr=[id=/^button\\.submit\\.[a-z0-9]{4}$/]",
 		);
 		expect(buildIdSelector(/settings/i)).toBe("internal:attr=[id=/settings/i]");
-		expect(buildIdSelector(/a>>b/)).toBe("internal:attr=[id=/a\\>\\>b/]");
+		expect(buildIdSelector(/a>>b/)).toBe("internal:attr=[id=/a>\\>b/]");
 		expect(buildIdSelector(/\/slash/)).toBe("internal:attr=[id=/\\/slash/]");
 		expect(buildIdSelector(/x/u)).toBe("internal:attr=[id=/x/u]");
 	});

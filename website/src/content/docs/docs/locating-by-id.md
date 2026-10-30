@@ -67,10 +67,12 @@ Every flag goes to Playwright unchanged, as with Playwright's locators. `g` chan
 anchors at the start, because Playwright tests each id from its first character: `/foo/y` behaves as `/^foo/`, and `^`
 says so more plainly.
 
-Unicode mode (`u` or `v`) works with any character. It does not allow a backslash before a quote, which Playwright's
-selector syntax needs, so `getById` writes a quote, an apostrophe or a backtick by its code (`\x22`, `\x27`, `\x60`)
-and the second `>` of `>>` as `\x3e`: `getById(/^say"hi$/u)` becomes `internal:attr=[id=/^say\x22hi$/u]`, the same
-pattern. The locators Playwright builds itself do not do this (see
+Playwright's selector syntax needs a backslash before each quote, apostrophe and backtick of the pattern, and before
+the second `>` of `>>`. `getById` adds them, reading the pattern's own escapes whole: `getById(/^say["']hi$/)` becomes
+`internal:attr=[id=/^say[\"\']hi$/]`, the same pattern. Unicode mode (`u` or `v`) works with any character and does not
+allow that backslash, so there `getById` writes a quote, an apostrophe or a backtick by its code (`\x22`, `\x27`,
+`\x60`) and the second `>` of `>>` as `\x3e`: `getById(/^say"hi$/u)` becomes `internal:attr=[id=/^say\x22hi$/u]`, the
+same pattern. The locators Playwright builds itself miss some of these (see
 [Registering locators](/POMWright/docs/registering-locators/#a-regexp-in-unicode-mode)).
 
 ## Validation

@@ -67,6 +67,20 @@ test("RegExp ids in unicode mode find an id with a quote, an apostrophe, a backt
 	}
 });
 
+test("RegExp ids with an escaped backtick, two quotes in a row, \\> before > or a group closed before > find their id", async ({
+	testIds,
+}) => {
+	for (const [path, text] of [
+		["body.p@backtickEscapedUnicodeSets", "backtick"],
+		["body.p@quotePair", "quote"],
+		["body.p@chainEscapedGt", "chain chars"],
+		["body.p@chainNamedGroup", "chain chars"],
+	] as const) {
+		await expect(testIds.getNestedLocator(path), path).toHaveText(text);
+		await expect(testIds.getLocator(path), path).toHaveText(text);
+	}
+});
+
 test("update and replace accept ids verbatim and RegExp ids as patterns", async ({ testIds }) => {
 	const second = testIds
 		.getLocatorSchema("body.item@first")

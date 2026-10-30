@@ -25,6 +25,10 @@ export type Paths =
 	| "body.p@apostropheUnicodeSets"
 	| "body.p@backtickUnicode"
 	| "body.p@chainUnicode"
+	| "body.p@backtickEscapedUnicodeSets"
+	| "body.p@quotePair"
+	| "body.p@chainEscapedGt"
+	| "body.p@chainNamedGroup"
 	| "body.generated"
 	| "body.generated.button@anchored"
 	| "body.generated.button@prefix"
@@ -74,6 +78,13 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 	registry.add("body.p@apostropheUnicodeSets").getById(new RegExp("^it's$", "v")); // tsc over test/ targets below es2024, which has the literal
 	registry.add("body.p@backtickUnicode").getById(/^a`b$/u);
 	registry.add("body.p@chainUnicode").getById(/^a>>b$/u);
+	// an escape pair, two quotes in a row, and a named group's closing > before a >: each read whole, the pattern unchanged
+	// biome-ignore lint/complexity/useRegexLiterals: tsc over test/ targets below es2024, which rejects the v flag in a literal
+	registry.add("body.p@backtickEscapedUnicodeSets").getById(new RegExp("^a[\\`]b$", "v"));
+	registry.add("body.p@quotePair").getById(/^say["']hi$/);
+	// biome-ignore lint/complexity/useRegexLiterals: biome's fix for the literal deletes the escape this case is about
+	registry.add("body.p@chainEscapedGt").getById(new RegExp("^a\\>>b$"));
+	registry.add("body.p@chainNamedGroup").getById(/^a(?<gt>>)>b$/);
 
 	// a filter reference to a path whose terminal is a RegExp id
 	registry.add("body.div@containsFour").locator("div").filter({ has: "body.generated.span@unanchored" });
