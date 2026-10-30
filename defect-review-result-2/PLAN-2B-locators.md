@@ -143,6 +143,9 @@ defect-review-result-2/PLAN-2B-locators.md` and the `Co-Authored-By:` trailer. T
      - Debt, not fixed: a stale local test server silently serves old routes. Suggested remedy: the server answers
        a route with a hash of its own source, and the harness compares it with `server.js` before running; or
        `reuseExistingServer: false` locally, which fails loudly on a server already running.
+     - The maintainer chose `reuseExistingServer: false` locally (2026-10-30), built in `a399897`. Both configs that
+       start the server have it; a server started by hand made a run fail at once with Playwright's "already used";
+       the full harness passed after it.
   3. **The limitation decision 87 documents is narrower than its wording.** A probe of every strategy Playwright
      builds:
      - Playwright's own `getByRole("button", { name: /don't save/iu })` works bare and under a parent locator, and
