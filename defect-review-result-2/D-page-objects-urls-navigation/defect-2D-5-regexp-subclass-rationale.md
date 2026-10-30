@@ -1,7 +1,7 @@
 # 2D-5: Internal → URL matching says Playwright never runs a RegExp subclass's own matching; page.waitForURL does
 
 - **Kind**: documentation
-- **Status**: decided 2026-10-29, decision 104 in [DECISIONS.md](../DECISIONS.md); planned in the page objects and URLs plan (docs)
+- **Status**: decided 2026-10-29, decision 104 in [DECISIONS.md](../DECISIONS.md); planned in the page objects and URLs plan (docs); done 2026-10-30 in `f3234ea`
 - **Area**: `internal/url-matching.md`, *Alternatives weighed* (why `fullUrl` is a `UrlMatcher`, not a `RegExp` subclass)
 - **Severity**: Low (a contributor-facing rationale states a runtime fact that is half wrong; its conclusion stands)
 - **Semver of the fix**: none (docs only)

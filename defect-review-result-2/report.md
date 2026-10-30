@@ -1325,8 +1325,8 @@ or none: the release stays 3.0.2.
 | [2A-4](A-session-storage/defect-2A-4-keys-unquoted-in-messages.md) | | defect | Low | patch | this branch: quote keys; pages, four changesets and a new one | done (#85: e37a039) |
 | [2A-10](A-session-storage/defect-2A-10-opaque-check-reads-shadowable-origin.md) | | defect | Low | patch | this branch: `document.domain`, which a page cannot shadow; with 2A-2 | done (#83: 277adc6) |
 | [2B-1](B-registration-and-resolution/defect-2B-1-unicode-regexp-quote.md) | | defect | Low | patch (`getById`); none (others) | this branch: hex escapes in `getById`; document the rest, link #40446 | done (#87: 4e3a361, 935de09) |
-| [2D-1](D-page-objects-urls-navigation/defect-2D-1-load-state-timeout-message.md) | | defect | Low | patch | this branch: the load-state message ("reached …"); listed; a changeset | decided (#89) |
-| [2D-2](D-page-objects-urls-navigation/defect-2D-2-absolute-url-type.md) | | defect | Low | patch | this branch: `AbsoluteUrl` starts with a letter; docs exact; a changeset | decided (#90) |
+| [2D-1](D-page-objects-urls-navigation/defect-2D-1-load-state-timeout-message.md) | | defect | Low | patch | this branch: the load-state message ("reached …"); listed; a changeset | done (#89: aa70821) |
+| [2D-2](D-page-objects-urls-navigation/defect-2D-2-absolute-url-type.md) | | defect | Low | patch | this branch: `AbsoluteUrl` starts with a letter; docs exact; a changeset | done (#90: 088f46c) |
 | [2E-1](E-logging-step-fixture/defect-2E-1-locale-hint-names-rejected-tag.md) | | defect | Low | patch | this branch: the codeset dropped, no hint for a modifier; changeset corrected | decided (#94) |
 | [2G-2](G-ci-release-publishing/defect-2G-2-publish-rerun-goes-on-after-main-moved.md) | | defect | Low | none | this branch: the guard reads `main`'s tip from GitHub; with 2G-1 | done (#79: 5c3930e, ae297fa) |
 | [2T-1](T-tests-and-checks/defect-2T-1-docs-checks-compare-copies.md) | | defect | Low | none | this branch: both specs read their pages (checks plan) | done (#95: da019d6) |
@@ -1343,8 +1343,8 @@ or none: the release stays 3.0.2.
 | [2B-3](B-registration-and-resolution/defect-2B-3-template-value-with-dot.md) | | documentation | Low | none | this branch: locators plan (docs) | done (#103: a05f533) |
 | [2C-1](C-queries/defect-2C-1-replace-first-argument-required.md) | | documentation | Low | none | this branch: locators plan (docs) | done (#103: a05f533) |
 | [2C-2](C-queries/defect-2C-2-errors-page-getlocatorschema.md) | | documentation | Low | none | this branch: locators plan (docs) | done (#103: a05f533) |
-| [2D-3](D-page-objects-urls-navigation/defect-2D-3-outcomes-table-test-body.md) | | documentation | Low | none | this branch: page objects and URLs plan (docs) | decided (#104) |
-| [2D-5](D-page-objects-urls-navigation/defect-2D-5-regexp-subclass-rationale.md) | | documentation | Low | none | this branch: page objects and URLs plan (docs) | decided (#104) |
+| [2D-3](D-page-objects-urls-navigation/defect-2D-3-outcomes-table-test-body.md) | | documentation | Low | none | this branch: page objects and URLs plan (docs) | done (#104: f3234ea) |
+| [2D-5](D-page-objects-urls-navigation/defect-2D-5-regexp-subclass-rationale.md) | | documentation | Low | none | this branch: page objects and URLs plan (docs) | done (#104: f3234ea) |
 | [2E-2](E-logging-step-fixture/defect-2E-2-where-a-step-is-reported.md) | | documentation | Low | none | this branch: steps and logging plan (docs) | decided (#105) |
 | [2E-3](E-logging-step-fixture/defect-2E-3-step-title-names-the-receivers-class.md) | | documentation | Low | none | this branch: steps and logging plan (docs) | decided (#105) |
 | [2E-4](E-logging-step-fixture/defect-2E-4-upgrade-page-omits-locale-check.md) | 2H-8 | documentation | Low | none | this branch: the upgrade guide's docs plan, after the code areas | decided (#101) |

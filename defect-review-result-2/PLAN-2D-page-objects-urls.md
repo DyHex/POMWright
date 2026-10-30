@@ -81,3 +81,35 @@ Per step: `pnpm lint`, `pnpm test:unit`, the page object and navigation specs on
 
 Three commits, one per step, `fix(navigation): …` or `docs: …`, each with `Plan:
 defect-review-result-2/PLAN-2D-page-objects-urls.md` and the `Co-Authored-By:` trailer. The maintainer pushes.
+
+## Execution notes
+
+- 2026-10-30. The commits, one per step:
+  - `aa70821` (1, decision 89);
+  - `088f46c` (2, decision 90);
+  - `f3234ea` (3, decision 104, points 1 and 2);
+  - and this record.
+- **Verification:**
+  - the full `pnpm pack-test --reporter=line`: 1863 passed and 3 skipped on three browsers;
+  - `pnpm test:constrained`, which `test/AGENTS.md` asks for after a navigation change: 1863 passed and 3 skipped in
+    279 s;
+  - 1000 unit tests; `pnpm typecheck`, `pnpm docs:build` and `pnpm lint` pass; no name of the external consumer
+    projects on the branch.
+- **Each new test against the code before its step:**
+  - Step 1: the harness case failed on all three browsers with the old, self-contradicting message ("expected URL
+    …/item/7; found …/item/7"). The unit case for the reached URL failed; the case for today's messages passes both
+    ways, as intended.
+  - Step 2: all six new `@ts-expect-error` lines were unused against the old type (TS2578).
+  - Step 3: the outcomes spec failed with the two test-body cases before the page had their row.
+- How the steps were built, within the plan:
+  - **Step 1's unit test calls the private `waitForUrl` with a stub page.** `navigation.test.ts` does not mock
+    `test.step`, which the two public methods run in. The harness case checks the two methods' wording on real pages;
+    the image is held by `page.route`, as in the test beside it, a stand-in its comment names.
+  - **Step 2's `Letter` is `Characters<"abcdefghijklmnopqrstuvwxyz">`**, a small recursive type, with
+    `Uppercase<Letter>` for the other case. Biome writes a union of the letters as 26 lines.
+  - **Step 3's cases await a timer, not a navigation.** The outcome was then the same in 30 runs per browser. A
+    Playwright call in flight when the runner ends the test can add a second error, as the review saw; *Internal → Page
+    object lifecycle* says so, and the table's row does not depend on it.
+  - **The review's `RegExp` subclass probe was re-run** on three browsers, copied into `test/tests/` and deleted
+    afterwards. Its result was the same as the review's.
+- Nothing unexpected.
