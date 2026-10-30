@@ -37,7 +37,7 @@ review and the guide split by folder and by task.
 - **The real thing over a stand-in.** Whatever establishes what is true (a probe, a test at any level, a reproduction,
   a benchmark, exploratory testing, a review, a claim in a plan, page or doc comment) is based on what a user runs: the
   packed build, Playwright's runner, real browsers and pages, and realistic conditions (all three browsers, parallel
-  workers, enough rounds to show a race). A stand-in (a mock, a fake page, `page.route`, a hand-built document, a
+  workers, enough rounds to show a race, a machine about as small as CI's runner: `pnpm test:constrained`). A stand-in (a mock, a fake page, `page.route`, a hand-built document, a
   single worker, a small sample) is used only where the real thing cannot produce the case or costs far more than the
   claim is worth. A stand-in's result holds for the stand-in, so a claim that something does not happen is never made
   from one. Every stand-in MUST be disclosed where its result is reported (the plan, finding, report, reply, or the

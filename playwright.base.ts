@@ -4,7 +4,8 @@
 import type { PlaywrightTestConfig } from "@playwright/test";
 
 export const baseConfig: PlaywrightTestConfig = {
-	globalTimeout: 60_000 * 5,
+	// a cap for a run that hangs, with room for a slow machine: at 5 minutes, a run on one worker stopped two thirds in
+	globalTimeout: 60_000 * 15,
 	timeout: 60_000,
 	expect: {
 		timeout: 5_000,
@@ -14,7 +15,9 @@ export const baseConfig: PlaywrightTestConfig = {
 	// CI retries a failure once to record a trace and a video, then fails the run anyway (failOnFlakyTests).
 	retries: process.env.CI ? 1 : 0,
 	failOnFlakyTests: !!process.env.CI,
-	workers: "50%",
+	// two branches on purpose: CI's is half its runner's 4 threads, 2 workers; the local one is to be tuned to the
+	// maintainer's machine, so the branches stay apart even while they are equal
+	workers: process.env.CI ? "50%" : "50%",
 	reporter: process.env.CI
 		? [
 				["html", { open: "never" }],

@@ -53,6 +53,7 @@
 		"test:unit": "vitest run",
 		"bench": "node --expose-gc --max-old-space-size=8192 scripts/benchmark.mjs",
 		"test": "pnpm test:unit && pnpm pack-test",
+		"test:constrained": "taskset -c 0-3 pnpm test --workers=8",
 		"docs:dev": "pnpm -C website install --frozen-lockfile && pnpm -C website dev",
 		"docs:build": "pnpm -C website install --frozen-lockfile && pnpm -C website build",
 		"docs:preview": "pnpm docs:build && pnpm -C website preview",

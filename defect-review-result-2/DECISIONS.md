@@ -1328,6 +1328,6 @@ shape.
    `page.waitForURL`, which rejects when a navigation it waits through ends in an error, as the test's own failed
    `goto` does under load (1 of 60 in CI's shape). POMWright's code does not change.
 
-**Why**: races in POMWright's navigation checks show on a machine as small as CI's runner and not on a 32-thread
-laptop (the `get(keys)` case: 14 of 300 on 4 CPUs, none on the whole machine); running the suite in that shape before a
-release finds them before CI or a user does.
+**Why**: races in POMWright's navigation checks show on a machine as small as CI's runner that a 32-thread laptop hides
+(2R-2 passed 900 of 900 runs there with 6 workers, and failed about a third of the time on 4 CPUs with 2); running the
+suite in that shape before a release finds them before CI or a user does.

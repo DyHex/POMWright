@@ -32,6 +32,15 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   `test/benchmarks/pageObjectFixture.spec.ts` with `test/playwright.bench.config.ts`, a page object set up as a fixture
   beside one written with Playwright alone, in time and heap; printed as the tables of *Internal → Performance*. It is not part of CI, where timings vary too much to gate on; rerun it and update
   the page, its machine line included, when a change touches the registry or resolution.
+- `pnpm test:constrained` (`taskset -c 0-3 pnpm test --workers=8`) runs `pnpm test` with 8 workers on 4 CPUs: a
+  machine about as small as CI's runner (2 cores, 4 threads, where the harness runs 2 workers), under more load. Races
+  in POMWright's navigation checks show there that a large machine hides: one that CI's runner showed passed 900 of 900
+  runs on the maintainer's 32 threads with 6 workers, and failed about a third of the time on 4 CPUs with 2. It is Linux
+  only (`taskset`, from util-linux), run locally and not in CI. CPUs 0 to 3 are two
+  performance cores with two threads each on the maintainer's hybrid Intel CPU; on another machine, `lscpu --extended`
+  shows which threads belong to its fastest cores. Run it before a release and after a change to session storage,
+  navigation or steps. A failure under it is a POMWright bug that shows only under load, or a test that relies on
+  timing; each is fixed at its cause, never by a retry.
 - CI switches of `pack-test.sh`: `POMWRIGHT_TARBALL=<path>` tests that tarball instead of building (it installs the
   root for `tsc` only); `PLAYWRIGHT_VERSION=<version>` swaps `@playwright/test` at the root and in `test/` together
   (one version for `tsc`; it rewrites both manifests and lockfiles, so restore them after a local try);
