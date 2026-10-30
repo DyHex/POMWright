@@ -1,7 +1,7 @@
 # 2F-2: The declaration emit check is said to return every public member on its own; it returns 35 expressions, and about a hundred public members are never returned
 
 - **Kind**: documentation
-- **Status**: decided 2026-10-29, decision 106 in [DECISIONS.md](../DECISIONS.md)
+- **Status**: decided 2026-10-29, decision 106 in [DECISIONS.md](../DECISIONS.md); done 2026-10-30 in `d672c5b`
 - **Area**: Harness: `test/tests/packaging/publicTypes.emit.ts`, `test/tsconfig.declarations.json`; Docs:
   `internal/packaging.md` *Checked on the packed package*; guide: `test/AGENTS.md` *The harness*
 - **Severity**: Low (the package is sound: every public member emits, probed below; the claim overstates what the

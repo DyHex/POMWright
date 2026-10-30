@@ -56,3 +56,34 @@ with the new version, the full `pnpm pack-test --reporter=line`, the grep for th
 
 Two commits, `docs: …`/`chore(checks): …` and `test: …`, with `Plan: defect-review-result-2/PLAN-2F-packaging.md` and
 the `Co-Authored-By:` trailer. The maintainer pushes; the pull request's run checks the consumer job.
+
+## Execution notes
+
+- 2026-10-30. The commits, one per step: `a0102ac` (1), `d672c5b` (2), and this record.
+- **Verification:**
+  - the full `pnpm pack-test --reporter=line`, with the generator in it: 1863 passed and 3 skipped on three browsers;
+  - `pnpm typecheck`, 1006 unit tests, `pnpm docs:build`, `pnpm lint`, `pnpm lint:workflows` and `pnpm lint:guide`;
+    no name of the external consumer projects on the branch.
+- **Step 1:** the review's floor probe (`F/floor/run.sh`) was re-run against this build's tarball and consumer file,
+  with the same results as the review's:
+
+  | `@types/node` | TypeScript 5.0 | TypeScript 5.1 | TypeScript 5.2 |
+  | --- | --- | --- | --- |
+  | 20 | nothing | nothing | nothing |
+  | 22 | Node's declarations fail | nothing | nothing |
+  | 24 | Playwright's and Node's fail | Playwright's and Node's fail | nothing |
+
+  POMWright's declarations never fail. *Installation* now gives that, which is more exact than "5.0 needs it".
+  `bash scripts/consumer-check.sh pomwright-test-build.tgz` passed locally with 5.1.6 added; CI's `consumer` job runs
+  it on the pull request.
+- **Step 2:**
+  - Exports are covered by a hand-written seeds file (`emitSeeds.ts`, 39 seeds and 11 memberless), members by
+    generation, since a generic export cannot be given type arguments automatically. The generator fails until a new
+    export has a seed: shown by dropping `UrlMatcher`'s.
+  - A planted public member of an unexported type failed the emit with TS4023, and was reverted.
+  - The generated module, with its seeds, emitted on TypeScript 5.0.4, 5.4.5, 5.9.3, 6.0.3 and 7.0.2 with npm, and
+    6.0.3 with pnpm. Each ran in a scratch project with the tarball and `--emitDeclarationOnly`, so the declaration
+    errors are reported on every version.
+  - `publicTypes.emit.ts` keeps the chains and call results; its member-by-member list went to the generated module.
+  - The generated folder is git-ignored and excluded from Biome, as `test/.doc-snippets/` is.
+- Nothing unexpected.

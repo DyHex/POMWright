@@ -1348,8 +1348,8 @@ or none: the release stays 3.0.2.
 | [2E-2](E-logging-step-fixture/defect-2E-2-where-a-step-is-reported.md) | | documentation | Low | none | this branch: steps and logging plan (docs) | done (#105: 98afe68) |
 | [2E-3](E-logging-step-fixture/defect-2E-3-step-title-names-the-receivers-class.md) | | documentation | Low | none | this branch: steps and logging plan (docs) | done (#105: 98afe68) |
 | [2E-4](E-logging-step-fixture/defect-2E-4-upgrade-page-omits-locale-check.md) | 2H-8 | documentation | Low | none | this branch: the upgrade guide's docs plan, after the code areas | decided (#101) |
-| [2F-1](F-packaging-types-changesets/defect-2F-1-skiplibcheck-floor-sentence.md) | | documentation | Low | none | this branch: packaging plan | decided (#106) |
-| [2F-2](F-packaging-types-changesets/defect-2F-2-emit-check-not-every-member.md) | | documentation | Low | none | this branch: packaging plan | decided (#106) |
+| [2F-1](F-packaging-types-changesets/defect-2F-1-skiplibcheck-floor-sentence.md) | | documentation | Low | none | this branch: packaging plan | done (#106: a0102ac) |
+| [2F-2](F-packaging-types-changesets/defect-2F-2-emit-check-not-every-member.md) | | documentation | Low | none | this branch: packaging plan | done (#106: d672c5b) |
 | [2F-3](F-packaging-types-changesets/defect-2F-3-migration-hint-rule-names-2x.md) | | documentation | Low | none | this branch: contributor guide plan | decided (#109) |
 | [2F-4](F-packaging-types-changesets/defect-2F-4-schema-migration-misses-base-class.md) | | documentation | Low | none | this branch: session storage plan | done (#106: e551ead) |
 | [2G-3](G-ci-release-publishing/defect-2G-3-pages-every-merge-claim.md) | | documentation | Low | none | this branch: contributor guide plan | decided (#107) |
