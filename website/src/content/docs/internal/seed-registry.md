@@ -204,7 +204,8 @@ document's commit, and Chromium reports the old document's destruction first. So
 document for its `location.href`, after the failure. Playwright runs an evaluation in the frame's next document once it
 exists, and the first one after the failure can still reach the old document, so the question is asked again while a
 navigation destroys it, up to 20 times after the same pauses as `seed`'s Navigation API check; past that, or on a
-closed page, the message names `page.url()` as it is. The storage call itself is never repeated. `location.href` agreed with
+closed page, the message names `page.url()` as it is. The storage call itself is never repeated: a repeat would hide
+the test's race, which the failure is there to show. `location.href` agreed with
 `page.url()` on every page probed on three browsers, each browser's error page included, and a page cannot redefine
 it; `document.URL` would not do, being `about:neterror?…` on Firefox's error page, whose `location.href` is the URL
 that failed.

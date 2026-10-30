@@ -89,6 +89,10 @@ validation with `LOCATOR_SCHEMA_PATH_WHITESPACE`, `assertStrategyPrimary` over `
   [test/AGENTS.md](../../test/AGENTS.md#commands) says.
 - Considered and not planned: validating `nth`'s index, which Playwright's `locator.nth` takes as given (rejecting
   `nth(undefined)`, documented as matching nothing, would be breaking).
+- Considered and not planned: a type that rejects `replace().frameLocator()` without a selector on the query's own
+  path, which compiles and throws at the call with the fix in its message. A conditional parameter list could stop
+  `replace(ancestor).frameLocator()` from compiling where a generic base class adds paths and the condition stays
+  deferred, it would add to an intricate type layer, and a template or union path would keep the runtime check anyway.
 
 ## Do not
 

@@ -76,7 +76,10 @@ its own so that no `--reporter` given to the harness can switch it off.
    [the seed registry](/POMWright/internal/seed-registry/)) against those the installed Playwright makes before it
    retries one of its own actions, read from `playwright-core`'s source, since no export, type or option reaches them.
    It also fails when it cannot find Playwright's method, so a release that moves the code is never passed over.
-   Through the harness jobs it runs at the Playwright pin and at the latest 1.x, where a change shows first.
+   Through the harness jobs it runs at the Playwright pin and at the latest 1.x, where a change shows first. Not
+   chosen: a unit test, which runs at the root's pin only; measuring the pauses in a browser, which is timing-based and
+   would be flaky on a loaded machine if checked tightly enough to catch a change; a warning in place of the failure,
+   which would leave "as Playwright's actions do" untrue unnoticed.
 
 ## CI
 

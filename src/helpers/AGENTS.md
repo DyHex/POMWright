@@ -97,6 +97,10 @@ Promise checks of `@step` and `defineLocators()`).
   a `|` as `%7C`; every browser reports a `^` as `%5E`, which `new URL` keeps as `^` before Node 24); a RegExp in either part makes `fullUrl` a `UrlMatcher` (base against the origin, path against the
   rest, each regex as written). `goto` takes a URL string or options, as `page.goto` does. `goto()` without a target is the this-page navigation; `expectThisPage` and
   `expectAnotherPage` are one `page.waitForURL` each. POMWright sets no timeout or `waitUntil` default of its own.
+- Considered and not planned: binding the navigation methods, so that one taken off the helper
+  (`const { goto } = loginPage.navigation`) still works. Taken off, it fails at once with JavaScript's own `TypeError`;
+  Playwright's methods are not bound either; and it would be a new way of calling them that nothing promises, a minor
+  by [docs/versioning.md](../../docs/versioning.md). It is reconsidered if someone asks for it.
 
 ## Rules held elsewhere
 

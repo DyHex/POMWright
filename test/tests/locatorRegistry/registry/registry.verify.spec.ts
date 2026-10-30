@@ -200,7 +200,7 @@ test("an array or a filter-only object in has is an unsupported reference, as a 
 test("an add(path) that never got a locator method fails, where every chain below it would leave the segment out", async ({
 	page,
 }) => {
-	// the review's probe: an add(path) written as a statement between the paths around it
+	// an add(path) written as a statement between the paths around it
 	type FormPaths = "main" | "main.form@login" | "main.form@login.button@login";
 	const { registry } = createRegistryWithAccessors<FormPaths>(page);
 	registry.add("main").locator("main");
