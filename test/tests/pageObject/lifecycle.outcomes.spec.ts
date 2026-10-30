@@ -127,6 +127,9 @@ const tableOnPage = () => {
 test("a broken page object fails the run as the docs' table says for each place it is built", async ({
 	browserName,
 }, testInfo) => {
+	// a whole Playwright run of its own: 12.5 s at rest, and up to about 57 s with 8 copies on 4 CPUs, where 60 s did not
+	// always suffice; test.slow() triples the timeout, whatever it is
+	test.slow();
 	const { stdout, stderr } = await runOutcomes(browserName, testInfo.outputPath("run"));
 	let report: ReportSuite;
 	try {
