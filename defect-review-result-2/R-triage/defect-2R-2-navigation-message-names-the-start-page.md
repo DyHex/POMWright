@@ -1,8 +1,8 @@
 # 2R-2: a navigation message can name the page the call started on instead of where the page went
 
 - **Kind**: defect
-- **Status**: planned 2026-10-29 in [PLAN-2R-2-2R-3-destination-and-load.md](../PLAN-2R-2-2R-3-destination-and-load.md),
-  agreed 2026-10-30
+- **Status**: decided 2026-10-30, decision 118 in [DECISIONS.md](../DECISIONS.md) (the destination from the new
+  document's `location.href`); planned in [PLAN-2R-2-2R-3-destination-and-load.md](../PLAN-2R-2-2R-3-destination-and-load.md)
 - **Area**: `guarded` in `src/helpers/sessionStorage.ts`
 - **Severity**: Low (the call fails as it should, with the right keys; the destination it names is wrong, which sends
   the tester looking for a reload that never happened and at the wrong origin's storage)

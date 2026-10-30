@@ -374,7 +374,8 @@ is the same, so the review asked whether the interrupted key should be repeated 
    redirect's tokens do not reach the report: `… the page navigated to https://shop.example/home while set() was
    writing to https://shop.example; …`, for `set`, `get`, `clear` and the on-origin writes of `seed`; a destination
    without an origin prints the whole URL, as `guarded` compares it; the destination is the page's URL when the message
-   is made.
+   is made. Amended by decision 118 (2026-10-30): once the call's document went away, it is the URL the page's current
+   document reports, since `page.url()` can still name the start page then.
 3. **The docs say it**: *Session storage*, *The methods*: a navigation within the origin stops a call too, since the
    call was in flight in a document that went away; await the navigation first, or seed before it.
 4. **In the session storage plan, no new changeset**: these messages are new in 3.0.2 (`e8831b8`); the examples in
@@ -1254,3 +1255,79 @@ is often shaped by Playwright and the browsers in ways that look odd and are del
 **Why**: the long-term health of the code matters as much as the task, and in POMWright that health is measured by its
 own rules: a generic cleanup would remove deliberate Playwright-shaped code and the special cases that are the product,
 while code frozen because it exists would never improve.
+
+## 118. The navigation message names the URL the new document reports (2026-10-30)
+
+**Settles**: [2R-2](R-triage/defect-2R-2-navigation-message-names-the-start-page.md) (defect), found in CI run
+40905139313 after the session storage plan; amends decision 86's point 2.
+
+**The case**: a call whose document went away named the page it started on as where the page went (`the page navigated
+to http://localhost:9000/teststorage while set() was writing to http://localhost:9000`). `guarded` read `page.url()`
+at once, and Chromium reports the old document's destruction before Playwright's client hears of the new one's
+commit (Playwright's channel log, `DEBUG=pw:channel`). At rest on one worker, the harness's `set` test failed 125 of
+300 times on Chromium (0 of 300 before decision 114's handle moved the first write); with `taskset -c 0-3` and 2
+workers, `get(keys)` failed 14 of 300.
+
+**Decided**:
+
+1. **Option B: the new document's `location.href`**, asked after the failure, again while a navigation destroys the
+   question and the page is open, through up to `MAX_REPLACEMENTS` (20, decision 81's bound); past that, or on any
+   other error (a closed page), `page.url()` as it is. `page.url()` stays the destination when only the URL moved. The
+   storage call is never repeated, and a call that succeeds costs nothing more.
+   - `location.href` agreed with `page.url()` on three browsers on a new page, a `data:` URL and each browser's page
+     after a failed navigation (Chromium `chrome-error://chromewebdata/`, Firefox the failed URL, WebKit the page it
+     stayed on), and a page cannot redefine it (redefining `location`, its `href` or `document.location` throws).
+   - Not `document.URL`, which is `about:neterror?…` on Firefox's error page.
+   - A closed or crashed page is never read as replaced: Playwright words an evaluation's protocol failure as "Execution
+     context was destroyed" only when the evaluated code did not throw and the session is not closed or crashed; the
+     question rejects at once on both.
+2. **The principles page says which retries POMWright makes**: it retries nothing a test asked it to do; a question of
+   its own that a navigation cut off is asked again in the next document, up to 20 times, as Playwright's own waits
+   do. The page's "retry anything" had not held since decision 81.
+3. **The replaced-document test is shared**: `replacedByNavigation` and `MAX_REPLACEMENTS` are exported from
+   `sessionStorageSeed.ts`, beside `originOf` (decision 117).
+4. **No new changeset**: the messages are new in 3.0.2, and `.changeset/batch-navigation-message.md` already says the
+   message names where the page went.
+5. **Tests**: unit, with a fake page standing in for the moment Chromium reports the destruction first (the new URL
+   after one destroyed question; a closed page and another error; 20 replacements and past them). No harness case
+   reproduces it every time: a call made right after the page starts a navigation named the right page 50 of 50 times
+   for `set` and for `get(keys)` without the fix; the existing `set` test named the start page 34 of 50 times. That
+   test and `get(keys)`'s parallel reads stay the real-timing checks.
+6. **Docs**: *Principles*, *Internal → Seed registry* (*The origin around every call*), the doc comments of `guarded`
+   and `currentUrl`, and `src/helpers/AGENTS.md`.
+
+Rejected: **waiting for the new document, then reading `page.url()`** (option A), which passed the same probes but
+relies on Playwright's client hearing of the commit before the new document answers, which Playwright does not
+promise; **waiting for `framenavigated`**, for the same reason (decision 114's A2); **loosening the tests**, which would
+accept a wrong message; **leaving the destination out until it is known**, which changes the message and loses the
+reload case.
+
+**Why**: the destination is POMWright's addition to Playwright's error, so making it true is POMWright's job, and the
+document that answered is the one source that does not depend on the order of Playwright's events.
+
+## 119. The harness under load (2026-10-30)
+
+**Settles**: the maintainer's three items after 2R-2, and
+[2R-3](R-triage/defect-2R-3-opaque-origin-test-wait-under-load.md) (test defect), found probing 2R-2's fix under CI's
+shape.
+
+**Decided**:
+
+1. **`globalTimeout` 15 minutes** in `playwright.base.ts`: at 5, a run on one worker stopped after 1,235 of 1,845
+   tests; the cap is for a run that hangs, and 15 minutes still stops one long before a CI job's own limit.
+2. **`workers: process.env.CI ? "50%" : "50%"`**, with a comment saying CI's is half the runner's threads and the local
+   value is to be tuned, so the identical branches are not simplified away.
+3. **`pnpm test:constrained`** runs `taskset -c 0-3 pnpm test --workers=8`: `pnpm test` with 8 workers on 4 CPUs, more
+   load than CI's 2 workers on its 4 threads. Linux only, run locally, not in CI. On the maintainer's hybrid Intel CPU,
+   CPUs 0-3 are two performance cores with two threads each: the runner's shape (2 cores, 4 threads), on faster cores.
+4. **`test/AGENTS.md` says when to run it** (before a release, and after a change to storage, navigation or steps) and
+   what a failure under it means (a POMWright bug that shows only under load, or a test that relies on timing, each
+   fixed at its cause, never by a retry).
+5. **Decision 113's realistic conditions** in the root `AGENTS.md` gain a machine about as small as CI's runner.
+6. **2R-3**: the Firefox opaque-origin test waits for the error page with `expect.poll` on `page.url()` instead of
+   `page.waitForURL`, which rejects when a navigation it waits through ends in an error, as the test's own failed
+   `goto` does under load (1 of 60 in CI's shape). POMWright's code does not change.
+
+**Why**: races in POMWright's navigation checks show on a machine as small as CI's runner and not on a 32-thread
+laptop (the `get(keys)` case: 14 of 300 on 4 CPUs, none on the whole machine); running the suite in that shape before a
+release finds them before CI or a user does.

@@ -67,7 +67,9 @@ const fakePage = (url: string) => {
 	const page = {
 		url: () => state.url,
 		mainFrame: () => ({ url: () => state.url }),
-		evaluate: async () => state.documentOrigin,
+		// the document's own URL for `location.href`, which a call asks once its document went away; its origin otherwise
+		evaluate: async (question: () => unknown) =>
+			String(question).includes("location.href") ? state.url : state.documentOrigin,
 		evaluateHandle: async () => {
 			const document = state.document;
 			return {

@@ -79,12 +79,13 @@ export const replacedByNavigation = (error: unknown): boolean =>
 	error instanceof Error && /Execution context was destroyed/.test(error.message);
 
 /**
- * How many times the Navigation API check is repeated while the page replaces its document, each failed evaluation
- * being one replacement. 20 follows the default of Playwright's `maxRedirects` (an API request's own HTTP redirects): a
+ * How many replacements of the page's document a question POMWright asks the page waits through, each failed
+ * evaluation being one: the Navigation API check of `seed`, and the URL a navigation message names
+ * (`SessionStorage`). 20 follows the default of Playwright's `maxRedirects` (an API request's own HTTP redirects): a
  * convention rather than a limit, since browsers set none on script redirects, and an HTTP redirect chain commits one
  * document, which never needed more than one retry.
  */
-const MAX_REPLACEMENTS = 20;
+export const MAX_REPLACEMENTS = 20;
 
 /** The start of the console message the init script logs when it skips a document on its origin or a write is refused. */
 export const FAILURE_PREFIX = "pomwright-seed-failure:";

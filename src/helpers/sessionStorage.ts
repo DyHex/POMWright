@@ -11,7 +11,14 @@
  */
 import { type JSHandle, type Page, test } from "@playwright/test";
 import { callerLocation, captureCallSite, type StepLocation, siteLocation } from "./callSite";
-import { describeKeys, originOf, type ReadTestOutcome, registryFor, replacedByNavigation } from "./sessionStorageSeed";
+import {
+	describeKeys,
+	MAX_REPLACEMENTS,
+	originOf,
+	type ReadTestOutcome,
+	registryFor,
+	replacedByNavigation,
+} from "./sessionStorageSeed";
 import { PAGE_WIDE, takeTurn } from "./storageTurns";
 
 /**
@@ -395,8 +402,9 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * One storage call, checked against a navigation: the page's URL is read before and after it (a field Playwright's
 	 * client keeps current, so no round trip), and the call's document after it (`CallDocument`, one round trip); when
 	 * the URL's origin moved, or the document went away during the call or since the call's previous storage call, the
-	 * call fails with `navigated(from, to)`, whether or not it threw; `to` is where the page is when the message is made
-	 * (`destinationOf`). A call in flight when the page leaves may have acted on the new document: it is detected, not
+	 * call fails with `navigated(from, to)`, whether or not it threw; `to` is the URL the page's current document reports
+	 * when its document went away (`currentUrl`), and `page.url()` when only the URL moved, either through
+	 * `destinationOf`. A call in flight when the page leaves may have acted on the new document: it is detected, not
 	 * prevented. A URL without an origin (an `about:blank` popup) is compared whole.
 	 */
 	private async guarded<T>(
@@ -422,7 +430,10 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 			});
 		} catch (error) {
 			const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
-			if (replacedByNavigation(cause) || moved()) {
+			if (replacedByNavigation(cause)) {
+				throw navigated(from ?? before, destinationOf(await this.currentUrl()), cause);
+			}
+			if (moved()) {
 				throw navigated(from ?? before, destinationOf(this.page.url()), cause);
 			}
 			throw error;
@@ -431,6 +442,28 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 			throw navigated(from ?? before, destinationOf(this.page.url()), undefined);
 		}
 		return result;
+	}
+
+	/**
+	 * Where the page is once a call's document went away: the `location.href` of its current document, asked after the
+	 * failure. `page.url()` changes only when Playwright's client hears of the new document's commit, which Chromium
+	 * reports after the old document's destruction, so read at once it can still name the page the call started on.
+	 * Playwright evaluates in the frame's next document once it exists, and the question is asked again while a
+	 * navigation destroys it and the page is open, through up to `MAX_REPLACEMENTS` replacements; past that, or on any
+	 * other error (a closed page), `page.url()` as it is. The storage call itself is never repeated. `location.href`, which
+	 * a page cannot redefine, rather than `document.URL`, which is `about:neterror?…` on Firefox's error page, where
+	 * `location.href` and `page.url()` are the URL that failed.
+	 */
+	private async currentUrl(): Promise<string> {
+		for (let replacements = 0; ; replacements++) {
+			try {
+				return await this.page.evaluate(() => location.href);
+			} catch (error) {
+				if (!replacedByNavigation(error) || this.page.isClosed() || replacements === MAX_REPLACEMENTS) {
+					return this.page.url();
+				}
+			}
+		}
 	}
 
 	/** Runs `work` with the call's document, disposed when the call ends. */

@@ -189,6 +189,20 @@ document (a 204) leave the handle alive. `test/tests/testApp/documentHandle.spec
 navigation on three browsers. The handle costs a round trip after each storage call and two per call, which roughly
 doubles a batch of short values.
 
+The message names where the page went. When only the URL moved, that is `page.url()`. When the call's document went
+away, `page.url()` can still name the page the call started on: it changes when Playwright's client hears of the new
+document's commit, and Chromium reports the old document's destruction first. So the call then asks the page's current
+document for its `location.href`, after the failure. Playwright runs an evaluation in the frame's next document once it
+exists, and the first one after the failure can still reach the old document, so the question is asked again while a
+navigation destroys it, through up to 20 replacements, as `seed`'s Navigation API check is; past that, or on a closed
+page, the message names `page.url()` as it is. The storage call itself is never repeated. `location.href` agreed with
+`page.url()` on every page probed on three browsers, each browser's error page included, and a page cannot redefine it; `document.URL`
+would not do, being `about:neterror?…` on Firefox's error page, whose `location.href` is the URL that failed.
+
+Rejected for the destination: **waiting for the new document, then reading `page.url()`**, which passed the same probes
+but relies on Playwright's client hearing of the commit before the new document answers an evaluation, which Playwright
+does not promise.
+
 Rejected: **a guarded write in the page**, one `page.evaluate` that compares `location.origin` and writes. It would
 leave `page.sessionStorage`, which the helper mirrors, and run in the page's main world, among the app's own scripts.
 Rejected for the document: **`performance.timeOrigin`** as its marker, since WebKit computes it on every read from two

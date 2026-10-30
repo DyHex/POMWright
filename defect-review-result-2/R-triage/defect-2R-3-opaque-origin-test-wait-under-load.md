@@ -1,8 +1,8 @@
 # 2R-3: the Firefox case of "a document with an opaque origin" fails under load in its own wait
 
 - **Kind**: test defect (flaky under load)
-- **Status**: planned 2026-10-29 in [PLAN-2R-2-2R-3-destination-and-load.md](../PLAN-2R-2-2R-3-destination-and-load.md),
-  agreed 2026-10-30
+- **Status**: decided 2026-10-30, decision 119 in [DECISIONS.md](../DECISIONS.md) (the test waits with
+  `expect.poll`); planned in [PLAN-2R-2-2R-3-destination-and-load.md](../PLAN-2R-2-2R-3-destination-and-load.md)
 - **Area**: `test/tests/testApp/sessionStorage.spec.ts`, *a document with an opaque origin*
 - **Severity**: Low (the test, not POMWright; the shape CI's runner has can hit it, on `main`, where Firefox runs)
 - **Semver of the fix**: none (a test)

@@ -44,6 +44,15 @@ const documentHandles = (state: Documents) => ({
 });
 const oneDocument = () => documentHandles({ document: 0, taken: 0, disposed: 0 });
 
+/**
+ * The fakes' `page.evaluate`, told apart by the question's text: `href()` for `location.href`, which a call asks once its
+ * document went away, and `other` for the rest (`document.domain`, `self.origin`).
+ */
+const evaluations =
+	(href: () => string, other: unknown) =>
+	async (question: () => unknown): Promise<unknown> =>
+		String(question).includes("location.href") ? href() : other;
+
 /** A codec that is not JSON: numbers stored as decimal text. */
 const number = (): Codec<number> => ({
 	parse: (raw) => {
@@ -201,7 +210,7 @@ describe("a batch the page leaves", () => {
 		};
 		return {
 			url: () => url,
-			evaluate: async () => false,
+			evaluate: evaluations(() => url, false),
 			...oneDocument(),
 			sessionStorage: { setItem: fail, removeItem: fail },
 		} as unknown as Page;
@@ -419,7 +428,7 @@ describe("a call whose document is replaced", () => {
 		};
 		const page = {
 			url: () => "http://localhost:9000/teststorage",
-			evaluate: async () => "localhost",
+			evaluate: evaluations(() => "http://localhost:9000/teststorage", "localhost"),
 			...documentHandles(state),
 			sessionStorage: {
 				setItem: (key: string) => {
@@ -557,6 +566,81 @@ describe("a call whose document is replaced", () => {
 		expect(error?.message).toBe(
 			"Shop.SessionStorage.set: elementHandle.evaluate: Target page, context or browser has been closed",
 		);
+	});
+
+	describe("where the page went, when its document is gone before Playwright's client hears of the new one", () => {
+		const there = "http://127.0.0.1:9000";
+		const replaced = (call: string) =>
+			new Error(`${call}: Execution context was destroyed, most likely because of a navigation`);
+		/**
+		 * A page whose storage call fails as destroyed while `url()` still reads the page the call started on, as on
+		 * Chromium, which reports the old document's destruction before the new one's commit; asked for `location.href`,
+		 * it fails with each of `hrefFailures` in turn, then answers the new document's URL. A stand-in for that moment,
+		 * which the harness meets with real timing on some runs only ("set fails with the label and the keys already
+		 * written when the page navigates during it", and the parallel reads of "get(keys) fails instead of returning what
+		 * it read").
+		 */
+		const stalePage = (hrefFailures: Error[], closed = false) => {
+			const asked = { href: 0 };
+			const page = {
+				url: () => `${here}/teststorage`,
+				isClosed: () => closed,
+				evaluate: async (question: () => unknown) => {
+					if (!String(question).includes("location.href")) {
+						return "localhost";
+					}
+					asked.href++;
+					const failing = hrefFailures.shift();
+					if (failing) {
+						throw failing;
+					}
+					return `${there}/teststorage?token=t#top`;
+				},
+				...oneDocument(),
+				sessionStorage: {
+					setItem: async () => {
+						throw replaced("webStorage.setItem");
+					},
+				},
+			} as unknown as Page;
+			return { page, asked };
+		};
+		const navigatedTo = (url: string) =>
+			`Shop.SessionStorage.set: the page navigated to ${url} while set() was writing to ${here}; 0 of 1 key was written; "a" was being written and may have reached the new document`;
+
+		it("names the URL the new document reports, asking again while a navigation destroys the question", async () => {
+			const { page, asked } = stalePage([replaced("page.evaluate")]);
+			const error = await failure(internals(page).write("set", { a: "1" }));
+			expect(error?.message).toBe(navigatedTo(`${there}/teststorage`));
+			expect(error?.cause).toEqual(expect.objectContaining({ message: expect.stringMatching(/^webStorage\.setItem/) }));
+			expect(asked.href).toBe(2);
+		});
+
+		it("names page.url() as it is when the question fails otherwise, or the page is closed", async () => {
+			const closing = stalePage([new Error("page.evaluate: Target page, context or browser has been closed")]);
+			expect((await failure(internals(closing.page).write("set", { a: "1" })))?.message).toBe(
+				navigatedTo(`${here}/teststorage`),
+			);
+			expect(closing.asked.href).toBe(1);
+			const closed = stalePage([replaced("page.evaluate"), replaced("page.evaluate")], true);
+			expect((await failure(internals(closed.page).write("set", { a: "1" })))?.message).toBe(
+				navigatedTo(`${here}/teststorage`),
+			);
+			expect(closed.asked.href).toBe(1);
+		});
+
+		it("asks through up to 20 replacements, and past them names page.url() as it is", async () => {
+			const twenty = stalePage(Array.from({ length: 20 }, () => replaced("page.evaluate")));
+			expect((await failure(internals(twenty.page).write("set", { a: "1" })))?.message).toBe(
+				navigatedTo(`${there}/teststorage`),
+			);
+			expect(twenty.asked.href).toBe(21);
+			const more = stalePage(Array.from({ length: 21 }, () => replaced("page.evaluate")));
+			expect((await failure(internals(more.page).write("set", { a: "1" })))?.message).toBe(
+				navigatedTo(`${here}/teststorage`),
+			);
+			expect(more.asked.href).toBe(21);
+		});
 	});
 });
 
