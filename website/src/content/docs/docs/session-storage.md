@@ -263,7 +263,8 @@ Playwright's storage calls have none; the test's timeout applies.
 For the sizes tests use, a few to a few dozen keys, a call takes milliseconds. Its time grows with the number of keys
 far more than with the size of the values: a long value takes a little longer to send, with Playwright's calls alone as
 through POMWright, while every key adds round trips. Only thousands of keys add up to a second or more, about twice
-what the same Playwright calls take alone.
+what the same Playwright calls take alone. [Internal → Performance](/POMWright/internal/performance/#session-storage)
+measures each call on three browsers, beside Playwright's calls and `seed` beside init scripts written by hand.
 
 The browser's quota is 5,242,880 characters per origin, keys and values together, in each browser Playwright 1.64
 ships; one value may take nearly all of it. A write past it fails with the browser's error, labeled, and the keys
