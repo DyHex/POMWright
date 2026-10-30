@@ -1508,3 +1508,23 @@ forms (each a stand-in of its own, with code of its own).
 
 **Why**: a claim only a stand-in backs is a gap (decision 113), and each of these could be checked for real at little
 cost; the one that cannot, a browser without the Navigation API, keeps its disclosed stand-in.
+
+## 126. The benchmarks' method and page, from the review of phase 1 (2026-10-30)
+
+**Settles**: phase 1 of [PLAN-bench-performance.md](PLAN-bench-performance.md), its findings P1 to P6 and M1 to M8
+(the plan's *Phase 1: the findings*), and 2G-4.
+
+**Decided** (the maintainer agreed with every recommendation):
+
+1. **Every fix of P1 to P6 and M3 to M8**: the round trip printed by `pnpm bench` and the page's comparisons worded from
+   it; the claims that no script backs (the 19% comparison, the 30 to 90 ns) dropped; ratios as ranges; each kind
+   warmed before any is measured; inputs prepared outside the timer and the registry's creation timed on its own; a
+   collection before each sample and every result kept; the heap as a median; a longer warm-up for the round trip; the
+   fixture run's output shown on failure.
+2. **Five fresh processes per run** (M1), each cell printed as the median and the range; the page states ranges.
+3. **The machine line prints the CPU affinity and the load average at the start** (M2), and `test/AGENTS.md` names
+   `taskset -c 0-3` as the reference run on the maintainer's machine, not a CPU list hard-coded in the script.
+4. **The storage benchmark (decision 115) stays in 3.0.2.**
+
+**Why**: the tables were right in size, but the page claimed more precision than one run gives, and two of its figures
+came from no script; a reader rerunning `pnpm bench` must get every figure the page states.

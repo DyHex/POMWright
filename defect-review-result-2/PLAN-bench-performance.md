@@ -35,6 +35,50 @@ review's findings were (what, evidence, fix):
 
 Then **stop**: report the findings and the proposed fixes and improvements to the maintainer.
 
+## Phase 1: the findings (2026-10-30, at `a49e6f4`)
+
+Three runs of `pnpm bench`, three under `taskset -c 0-3`, and two runs each of three scratch variants of the per-call
+section: the kinds in reverse order; and a "fixed" variant with each kind warmed first, a garbage collection before each
+sample, every result kept, and the inputs prepared outside the timer. The variants are copies of the script's section,
+not the script fixed, on one machine, two or three runs each. Agreed with the maintainer on 2026-10-30 (decision 126):
+all fixes, five processes per run, the affinity and load printed, the storage benchmark kept.
+
+**The page against the output:**
+
+- P1 (2G-4): the `count()` round trip comes from no script: 326 to 862 µs over two runs of the variant, against the
+  page's 370 to 710; at the low end the longest chain is 5.1% of one, not "under 5%". Fix: `pnpm bench` prints it.
+- P2: the introduction's "a round trip takes about a millisecond" contradicts the conclusion's 370 to 710 µs.
+- P3: "no column moved more than 19%" since 2026-10-22: two 108-path cells moved +24% and −49% (2G-4). Fix: drop it.
+- P4: "30 to 90 ns per path" for the path check comes from a probe of the first review, not from `pnpm bench`. Fix: drop
+  it.
+- P5: "five to six times" (resolving against the Playwright chain) is 4.4 to 6.8 in the three runs; "four to six times"
+  (the fixture) is 3.6 to 6.0. Fix: ranges from the kept runs.
+- P6: "within about 12%" between two runs: the median spread of three runs is 6%, but the 108-path heap (83%), the
+  108-path page object (33%) and the 1,008-path Playwright fixture (27%) are outside it, the last not among the page's
+  exceptions. Fix: every cell's range from several runs.
+
+**The method:**
+
+- M1: one process per run, and the page shows one run; between processes the median spread is 6% and the largest 83%.
+  Fix: five fresh processes, each cell's median and range.
+- M2: not pinned on a hybrid CPU (8 cores at 5.4 GHz, 16 at 4.0 GHz). Under `taskset -c 0-3` the median spread fell from
+  6.1% to 4.2% and the largest from 83% to 32% (three runs each). The first run started at a load average of 14 and
+  the script did not say so. Fix: the machine line prints the CPU affinity and the load average at the start;
+  `test/AGENTS.md` names `taskset -c 0-3` as the reference run on the maintainer's machine.
+- M3: the kind measured first meets other compiled code: the shortest chain's registration was 0.97 to 1.10 µs measured
+  first and 0.77 to 0.81 µs measured last; other cells moved within the noise. Fix: every kind warmed before any is
+  measured.
+- M4: the timed registration also builds the chain's segments and a fresh registry (0.06 to 0.09 µs). Fix: inputs
+  prepared outside the timer; the registry's creation timed on its own.
+- M5: no garbage collection between samples, and results unused; no effect beyond the noise. Fix: a collection before
+  each sample, every result kept.
+- M6: the scaling heap is the last run's, not a median; the 108-path heap varies threefold. Fix: the median of runs.
+- M7: in 2G-4's `count()` method the first of five runs is the highest (862, 714 against about 400): 50 warm-up calls
+  are too few. Fix: a longer warm-up.
+- M8: a failing fixture run says only "Command failed": its output is discarded. Fix: show it on failure.
+- The comparisons are like with like; the Playwright chain is built through dynamic calls with spread arguments, a
+  little slower than code written out, which the page says.
+
 ## Phase 2: fix, rerun, rewrite (after the maintainer's go)
 
 1. Fix what phase 1 found, and make the agreed improvements.
