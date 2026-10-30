@@ -54,8 +54,11 @@ validation with `LOCATOR_SCHEMA_PATH_WHITESPACE`, `assertStrategyPrimary` over `
   `LocatorSchemaPathFormat` family in `types.ts` must stay in agreement; the whitespace both reject comes from one
   list, `LOCATOR_SCHEMA_PATH_WHITESPACE` in `utils.ts`.
 - `getById` stores values verbatim: strings resolve as `[id="…"]` (exact, case-sensitive, no prefix handling),
-  RegExps as `internal:attr=[id=/source/flags]` with every flag passed through. POMWright adds no regex semantics of
-  its own.
+  RegExps as `internal:attr=[id=/source/flags]` with every flag passed through; in unicode mode (`u`, `v`) the selector
+  writes a quote, an apostrophe, a backtick and the second `>` of `>>` by their code (`\x22` and the like), since
+  unicode mode rejects the backslash escapes Playwright's parser needs, and the pattern stays the same. POMWright adds
+  no regex semantics of its own. The strategies Playwright builds keep Playwright's limitation (#40446), documented on
+  *Registering locators*.
 - Per-strategy rules live in one place, the `STRATEGIES` table in `utils.ts`; a new strategy is a row plus its method
   on each builder, and the type tests fail until both exist. No per-strategy `switch` elsewhere.
 - Every builder requires the strategy's first argument through `assertStrategyPrimary`; an empty string is rejected

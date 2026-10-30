@@ -67,6 +67,12 @@ Every flag goes to Playwright unchanged, as with Playwright's locators. `g` chan
 anchors at the start, because Playwright tests each id from its first character: `/foo/y` behaves as `/^foo/`, and `^`
 says so more plainly.
 
+Unicode mode (`u` or `v`) works with any character. It does not allow a backslash before a quote, which Playwright's
+selector syntax needs, so `getById` writes a quote, an apostrophe or a backtick by its code (`\x22`, `\x27`, `\x60`)
+and the second `>` of `>>` as `\x3e`: `getById(/^say"hi$/u)` becomes `internal:attr=[id=/^say\x22hi$/u]`, the same
+pattern. The locators Playwright builds itself do not do this (see
+[Registering locators](/POMWright/docs/registering-locators/#a-regexp-in-unicode-mode)).
+
 ## Validation
 
 An empty id throws when it is registered: an `id` attribute must have at least one character, and browsers disagree
@@ -76,8 +82,8 @@ about what `[id=""]` matches.
 getById requires a non-empty id for "main.form@user".
 ```
 
-On a seed the message names the factory: `createReusable.getById requires a non-empty id.` A RegExp is never rejected
-or rewritten.
+On a seed the message names the factory: `createReusable.getById requires a non-empty id.` A RegExp is never rejected,
+and the pattern it describes never changes.
 
 ## Several matches, shadow DOM, frames
 

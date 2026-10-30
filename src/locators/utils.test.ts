@@ -90,9 +90,37 @@ describe("escapeRegExpForSelector", () => {
 		expect(escapeRegExpForSelector(/a>>b/)).toBe("/a\\>\\>b/");
 	});
 
-	it("passes unicode-mode regexes through untouched", () => {
-		expect(escapeRegExpForSelector(/say"hi/u)).toBe('/say"hi/u');
-		expect(escapeRegExpForSelector(/say"hi/v)).toBe('/say"hi/v');
+	describe("in unicode mode, which rejects identity escapes", () => {
+		/** The RegExp a serialized form describes, compiled again from its source and flags. */
+		const reparsed = (serialized: string) => {
+			const end = serialized.lastIndexOf("/");
+			return new RegExp(serialized.slice(1, end), serialized.slice(end + 1));
+		};
+		const cases: [RegExp, string, string[], string[]][] = [
+			// [the RegExp, its selector text, strings it matches, strings it does not]
+			[/say"hi/u, "/say\\x22hi/u", ['say"hi'], ["sayhi"]],
+			[/it's/v, "/it\\x27s/v", ["it's"], ["its"]],
+			[/a`b/u, "/a\\x60b/u", ["a`b"], ["ab"]],
+			[/a>>b/u, "/a>\\x3eb/u", ["a>>b"], ["a>b"]],
+			[/a>>>b/u, "/a>\\x3e>b/u", ["a>>>b"], ["a>>b"]],
+			[/["'`]/u, "/[\\x22\\x27\\x60]/u", ['"', "'", "`"], ["a"]],
+			[/[\q{a"b|c}]/v, "/[\\q{a\\x22b|c}]/v", ['a"b', "c"], ["ab"]],
+			[/(?<g>>b)/u, "/(?<g>\\x3eb)/u", [">b"], ["b"]],
+			[/x\\"/u, "/x\\\\\\x22/u", ['x\\"'], ['x"']],
+		];
+
+		it.each(cases)(
+			"%s is written without a quote, a backtick or >>, and stays the same RegExp",
+			(re, text, yes, no) => {
+				const serialized = escapeRegExpForSelector(re);
+				expect(serialized).toBe(text);
+				expect(serialized).not.toMatch(/["'`]|>>/);
+				const again = reparsed(serialized);
+				expect(again.flags).toBe(re.flags);
+				for (const value of yes) expect(again.test(value), value).toBe(true);
+				for (const value of no) expect(again.test(value), value).toBe(false);
+			},
+		);
 	});
 
 	it("keeps every flag, including sticky", () => {

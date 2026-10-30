@@ -50,6 +50,38 @@ test("getById stores ids verbatim and renders attribute selectors", async ({ pag
 	expect(`${registry.getLocator("pattern").describe("")}`).toEqual(`locator('internal:attr=[id=/^a\\\\.b$/i]')`);
 });
 
+test("getById with a unicode-mode RegExp writes a quote, a backtick and >> by their code, and finds the element", async ({
+	page,
+}) => {
+	type LocatorSchemaPaths = "main" | "main.quote" | "main.apostrophe" | "main.backtick" | "main.chain";
+
+	const { registry } = createRegistryWithAccessors<LocatorSchemaPaths>(page);
+
+	registry.add("main").locator("main");
+	registry.add("main.quote").getById(/^say"hi$/u);
+	registry.add("main.apostrophe").getById(/^it's$/v);
+	registry.add("main.backtick").getById(/^a`b$/u);
+	registry.add("main.chain").getById(/^a>>b$/u);
+
+	await page.setContent(
+		"<main><div id='say\"hi'>quote</div><div id=\"it's\">apostrophe</div><div id='a`b'>backtick</div>" +
+			"<div id='a>>b'>chain</div></main>",
+	);
+	for (const [path, text] of [
+		["main.quote", "quote"],
+		["main.apostrophe", "apostrophe"],
+		["main.backtick", "backtick"],
+		["main.chain", "chain"],
+	] as const) {
+		await expect(registry.getNestedLocator(path), path).toHaveText(text);
+		await expect(registry.getLocator(path), path).toHaveText(text);
+	}
+	expect(`${registry.getLocator("main.quote").describe("")}`).toEqual(
+		"locator('internal:attr=[id=/^say\\\\x22hi$/u]')",
+	);
+	expect(`${registry.getLocator("main.chain").describe("")}`).toEqual("locator('internal:attr=[id=/^a>\\\\x3eb$/u]')");
+});
+
 test("getById rejects an empty id at registration and passes every RegExp flag through", async ({ page }) => {
 	type LocatorSchemaPaths = "main.form@user" | "flags" | "sticky";
 

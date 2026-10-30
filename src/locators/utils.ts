@@ -123,14 +123,19 @@ export const escapeCssString = (value: string): string =>
 
 /**
  * Serializes a RegExp for Playwright's selector syntax (`internal:attr=[id=/source/flags]`).
- * Port of Playwright's `escapeRegexForSelector` (playwright-core, Apache-2.0): unescaped quotes
- * and backticks are backslash-escaped, `>>` is escaped so the selector parser does not split the
- * chain, and unicode-mode regexes (`u`, `v`) are passed through as-is because unicode mode rejects
- * identity escapes. All flags are kept; POMWright adds no regex semantics of its own.
+ * Based on Playwright's `escapeRegexForSelector` (playwright-core, Apache-2.0): unescaped quotes
+ * and backticks are backslash-escaped, and `>>` is escaped so the selector parser does not split
+ * the chain. Unicode mode (`u`, `v`) rejects those identity escapes, and Playwright passes such a
+ * RegExp through as it is, which its own parser then fails on; here a quote or a backtick is
+ * written by its code (`\x22`, `\x27`, `\x60`) and the second `>` of each `>>` as `\x3e`, so a
+ * named group's closing `>` stays. Only the selector text changes, never the RegExp it describes.
+ * All flags are kept; POMWright adds no regex semantics of its own.
  */
 export const escapeRegExpForSelector = (re: RegExp): string => {
 	if (re.flags.includes("u") || re.flags.includes("v")) {
-		return String(re);
+		return String(re)
+			.replace(/["'`]/g, (quote) => `\\x${quote.charCodeAt(0).toString(16)}`)
+			.replace(/>>/g, ">\\x3e");
 	}
 	return String(re)
 		.replace(/(^|[^\\])(\\\\)*(["'`])/g, "$1$2\\$3")

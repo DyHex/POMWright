@@ -238,6 +238,8 @@ app.get("/testids", (_req, res) => {
         <p id="#literal-hash">hash</p>
         <p id="id=weird">id-eq prefix</p>
         <p id="say&quot;hi">quote</p>
+        <p id="it&#39;s">apostrophe</p>
+        <p id="a&#96;b">backtick</p>
         <p id="back\\slash">backslash</p>
         <p id="a>>b">chain chars</p>
         <p id="résumé">unicode</p>

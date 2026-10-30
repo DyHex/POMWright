@@ -103,6 +103,19 @@ object where a string belongs, gets the missing-value message: `locator requires
 The only call without a first argument is `frameLocator()`, which registers Playwright's any-frame locator (see
 [Frames](/POMWright/docs/frames/#any-frame-framelocator-without-a-selector)).
 
+### A RegExp in unicode mode
+
+:::note
+A RegExp with the `u` or `v` flag that holds a quote, an apostrophe or a backtick breaks the locators Playwright builds
+from it once anything follows them: `getByRole`'s `name`, `getByText`, `getByLabel`, `getByPlaceholder`,
+`getByAltText`, `getByTitle`, `getByTestId` and `filter`'s `hasText`. In Playwright alone,
+`page.getByRole("button", { name: /don't save/iu })` works and its `.first()` does not parse. POMWright always follows
+a resolved locator with its description, so such a registration fails whenever it is resolved. Write the character by
+its code (`/don\x27t save/iu`) or leave out `u`. Playwright declined to change this
+([microsoft/playwright#40446](https://github.com/microsoft/playwright/issues/40446)). `getById` writes the character by
+its code itself (see [Locating by id](/POMWright/docs/locating-by-id/#flags)).
+:::
+
 ## One registration per path
 
 A path holds one locator. Registering it again throws at the second locator method, or, with `{ reuse }`, at `add`

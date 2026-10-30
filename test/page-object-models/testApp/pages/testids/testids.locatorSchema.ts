@@ -21,6 +21,10 @@ export type Paths =
 	| "body.p@backslash"
 	| "body.p@chain"
 	| "body.p@unicode"
+	| "body.p@quoteUnicode"
+	| "body.p@apostropheUnicodeSets"
+	| "body.p@backtickUnicode"
+	| "body.p@chainUnicode"
 	| "body.generated"
 	| "body.generated.button@anchored"
 	| "body.generated.button@prefix"
@@ -64,6 +68,11 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 	registry.add("body.generated.span@unanchored").getById(/btn-submit-form/);
 	registry.add("body.any@settingsInsensitive").getById(/settings/i);
 	registry.add("body.any@prefixGlobal").getById(/^button\.submit\./g);
+	// unicode mode (u, v) rejects a backslash before a quote, a backtick or >, which Playwright's selector needs
+	registry.add("body.p@quoteUnicode").getById(/^say"hi$/u);
+	registry.add("body.p@apostropheUnicodeSets").getById(/^it's$/v);
+	registry.add("body.p@backtickUnicode").getById(/^a`b$/u);
+	registry.add("body.p@chainUnicode").getById(/^a>>b$/u);
 
 	// a filter reference to a path whose terminal is a RegExp id
 	registry.add("body.div@containsFour").locator("div").filter({ has: "body.generated.span@unanchored" });
