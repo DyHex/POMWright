@@ -249,15 +249,20 @@ Built 2026-10-30, one commit per step: the plan and decision 125 in `5a76e19`, t
 1. **Unexpected, corrected during the build: `route.abort()` is a documented case of its own.** The failure table of
    *Seeding session storage* names "a refused connection, offline, `route.abort()`", and the old test was its only
    coverage. Replacing it with the real refused connection would have left that row untested, so step 3 keeps it as a
-   third case, where the abort is a project's own mock that the test checks as such, not a stand-in. Firefox stays
-   skipped there, with the rate measured: without the skip, 30 rounds on 8 workers showed its error page in 27 and
-   none in 3, where the poll for the error page timed out. On a real refused connection Firefox showed it in 30 of 30
+   third case, where the abort is a project's own mock that the test checks as such, not a stand-in. Firefox was
+   skipped there at first, with the rate measured: without the skip, 30 rounds on 8 workers showed its error page in
+   27 and none in 3, where the poll for the error page timed out (see 2). On a real refused connection Firefox showed it in 30 of 30
    (and in every round since), so the refused case runs on all three browsers.
-2. **Debt found, not fixed: the table row's Firefox claim under `route.abort()`.** The row says the test fails on
-   Chromium and Firefox. On Firefox, after `route.abort()`, in about 1 run in 10 no error page shows, and what the seed
-   does then (applies on the next arrival, as on WebKit, or fails) was not probed: the poll stops the test first.
-   Remedy: probe those runs (the retry without the poll), then either the row says "on Firefox, after `route.abort()`,
-   usually", or the test branches on whether the error page showed and asserts each outcome.
+2. **The table row's Firefox claim under `route.abort()`, probed and fixed after the report** (the maintainer's go,
+   2026-10-30). A temporary spec, deleted after the run, retried without the poll on Firefox, 60 rounds on 8 workers:
+   57 showed the error page (within 0.1 s) and failed naming the reason, as the row said; 3 showed none in 10 s and the
+   next arrival received the seed, as on WebKit, which the row did not say. On 4 CPUs (`taskset -c 0-3`): 49 and 11,
+   the error page within 0.33 s. So the row now says Firefox, in the runs where it shows no error page after
+   `route.abort()`, behaves as WebKit, more of them on a loaded machine. The test no longer skips Firefox there: it
+   waits up to 5 s for the error page, and skips only the runs without one, at run time, since the page's failure can
+   end the test as the error page arrives, before a later `test.fail()` could mark it. The pair's second test skips
+   when the first left no outcome. Firefox's case alone, 60 rounds: 116 passed, 4 skipped; the whole pair, 30 rounds
+   on 8 workers: 534 passed, 6 skipped; on 4 CPUs: 514 passed, 26 skipped.
 3. **Step 1.** The helper compares element identity (each registry match against Playwright's own, by handle). A
    mismatch made on purpose, a copy of the spec comparing "Welcome" with Playwright's "Goodbye", failed with
    "Expected: true, Received: false", and the copy was deleted. The test-server check opened `/testgetby` (27 to 28
@@ -279,3 +284,6 @@ Built 2026-10-30, one commit per step: the plan and decision 125 in `5a76e19`, t
    `pnpm test:constrained --reporter=line`, exit 0 in 281 s, the same counts. The 21 more than PLAN-2I's run: 12 of
    `testGetBy.spec.ts`, 4 of the `route.abort()` pair on Chromium and WebKit, Firefox's 2 of the refused pair, 3 of the
    new host form. The 3 skipped are still 3: Firefox's refused pair runs now, its `route.abort()` pair is skipped.
+9. **After the report**: the fix of 2 in `5b725e7`; the full `pnpm pack-test --reporter=line` on it, exit 0 in 146 s,
+   1886 passed and 1 skipped (Firefox showed its error page after `route.abort()` in that run, so its pair ran), 36
+   step locations, the test server's 29.
