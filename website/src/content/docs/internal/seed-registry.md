@@ -108,12 +108,18 @@ sequenceDiagram
   navigation that replaces the document destroys the evaluation, and the next one runs in the new document; an app
   that redirects itself on load (`/` to `/login` to `/login/start`) replaces it several times, and `seed` is called
   while it does. So the evaluation is repeated while Playwright's error says the context was destroyed and the page is
-  open, up to 20 times; past that, Playwright's error goes through, labeled, so an app stuck in a redirect loop fails
-  the call instead of keeping it until the test's timeout. 20 follows the default of Playwright's `maxRedirects`, the
-  HTTP redirects an API request follows: a convention rather than a limit, since browsers set none on script
-  redirects. An HTTP redirect chain commits one document, and so needed one retry at most. Any other error is tried
-  once more. Rejected: a document of POMWright's own for the check (`seed` has none), and deciding from the browser's
-  name and version, which would need a table of versions instead of asking the browser.
+  open, up to 20 times, each after the pause Playwright makes before a retry of its own actions: 20, 50, 100 and 100
+  ms, then 500 ms (`retryWithProgressAndBackoff`, which locator actions use, and which no option changes). Past that,
+  Playwright's error goes through, labeled. The retries span at most 8,270 ms, so an app stuck in a redirect loop
+  fails the call well within the test's timeout. 20 follows the default of Playwright's `maxRedirects`, the HTTP
+  redirects an API request follows: a convention rather than a limit, since browsers set none on script redirects.
+  The bound counts retries, not replacements: right after a replacement, Playwright's server can still send an
+  evaluation to the old document, which fails at once, so one replacement can fail several tries. Retried at once,
+  such tries used up the bound during five redirects under load; the pauses outlast that moment. Any other error is
+  tried once more, after the first pause. Rejected: a document of POMWright's own for the check (`seed` has none), and deciding from the browser's
+  name and version, which would need a table of versions instead of asking the browser; for the bound, waiting for
+  Playwright's next commit after a failed try, which would wait until the test's timeout when no commit follows, and
+  the intervals of `expect.poll` or `toPass`, which pace a test's own retries of its code.
 - **A commit during registration.** A temporary `framenavigated` listener watches the main frame from the moment
   `seed` is called until its turn ends, so the wait for earlier calls and the Navigation API check are covered too.
   `seed` also reads whether the page is on the origin at that moment. Both happen before its report step's body runs,
@@ -194,10 +200,11 @@ away, `page.url()` can still name the page the call started on: it changes when 
 document's commit, and Chromium reports the old document's destruction first. So the call then asks the page's current
 document for its `location.href`, after the failure. Playwright runs an evaluation in the frame's next document once it
 exists, and the first one after the failure can still reach the old document, so the question is asked again while a
-navigation destroys it, through up to 20 replacements, as `seed`'s Navigation API check is; past that, or on a closed
-page, the message names `page.url()` as it is. The storage call itself is never repeated. `location.href` agreed with
-`page.url()` on every page probed on three browsers, each browser's error page included, and a page cannot redefine it; `document.URL`
-would not do, being `about:neterror?…` on Firefox's error page, whose `location.href` is the URL that failed.
+navigation destroys it, up to 20 times after the same pauses as `seed`'s Navigation API check; past that, or on a
+closed page, the message names `page.url()` as it is. The storage call itself is never repeated. `location.href` agreed with
+`page.url()` on every page probed on three browsers, each browser's error page included, and a page cannot redefine
+it; `document.URL` would not do, being `about:neterror?…` on Firefox's error page, whose `location.href` is the URL
+that failed.
 
 Rejected for the destination: **waiting for the new document, then reading `page.url()`**, which passed the same probes
 but relies on Playwright's client hearing of the commit before the new document answers an evaluation, which Playwright

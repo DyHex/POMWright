@@ -15,8 +15,9 @@ seed registry, one per page: in the call's turn, a write at once on the origin, 
 that writes only in the main frame, on the origin, on the first arrival, disposed at the main frame's commit there, with
 its entries as `[key, value]` pairs; the Navigation API check, the commit-during-registration check, the refused-write,
 not-applied and never-applied failures; and what `sessionStorage.ts` shares with it: `originOf`,
-`replacedByNavigation`, the one reading of Playwright's error for a replaced document, and `MAX_REPLACEMENTS`, how many
-replacements a question of POMWright's own waits through), `storageTurns.ts` (`takeTurn`: per page and origin, every `SessionStorage` call
+`replacedByNavigation`, the one reading of Playwright's error for a replaced document, `MAX_RETRIES`, how many times
+a question of POMWright's own is asked again, and `pauseBeforeRetry`, Playwright's pauses before its actions' retries),
+`storageTurns.ts` (`takeTurn`: per page and origin, every `SessionStorage` call
 in the order it was made; on a page whose URL has no origin, a page-wide turn after every earlier call), `callSite.ts`
 (`captureCallSite(boundary)` and `atCallSite`: a later error pointed at the consumer's call, for `seed` and the
 page-object check, which cuts at `new.target`; `callerLocation(boundary)`: a boxed step's `location`, the caller's
@@ -52,8 +53,8 @@ Promise checks of `@step` and `defineLocators()`).
   replaced, so a reload or a redirect within the origin stops a call too, between two of its storage calls as well
   (`test/tests/testApp/documentHandle.spec.ts` pins the handle). The message names where the page went: `page.url()`
   when only the URL moved; once the call's document went away, the `location.href` of the page's current document,
-  asked after the failure and again while a navigation destroys the question, through up to `MAX_REPLACEMENTS`
-  (`page.url()` past that or on a closed page), since `page.url()` can still name the start page then (Chromium reports
+  asked after the failure and again while a navigation destroys the question, up to `MAX_RETRIES` times after
+  `pauseBeforeRetry`'s pauses (`page.url()` past that or on a closed page), since `page.url()` can still name the start page then (Chromium reports
   the old document's destruction before the new one's commit); never `document.URL`, which is `about:neterror?…` on
   Firefox's error page. The storage call is never repeated. `seed` decides in its turn whether to write at once (the page was on the origin at the call
   and still is, or its URL has no origin and its document inherited the seeded one) or to register; it reads the page and starts its commit watch at the call, before its step's body,

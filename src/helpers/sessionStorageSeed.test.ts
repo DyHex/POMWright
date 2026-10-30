@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { ConsoleMessage, Frame } from "@playwright/test";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	FAILURE_PREFIX,
 	inFlightError,
@@ -434,29 +434,73 @@ describe("SeedRegistry", () => {
 	});
 
 	describe("the Navigation API check while the page replaces its document", () => {
+		// vitest's fake timers stand in for time, so the pauses before the retries (8,270 ms for the bound's) pass at
+		// once; the harness's redirect tests make the real pauses on three browsers ("a page's first seed while the page
+		// redirects itself 5 times by script registers")
+		beforeEach(() => {
+			vi.useFakeTimers();
+		});
+		afterEach(() => {
+			vi.useRealTimers();
+		});
 		const destroyed = () =>
 			new Error("page.evaluate: Execution context was destroyed, most likely because of a navigation");
+		/** Adds a seed for B with every pause elapsed; the error it fails with, if any. */
+		const add = async (registry: SeedRegistry) => {
+			const added = registry.add(B, { token: "1" }, title, site).then(
+				() => undefined,
+				(error: unknown) => error as Error,
+			);
+			await vi.runAllTimersAsync();
+			return added;
+		};
 
 		it("is repeated while a navigation destroys it, and registers once it answers", async () => {
 			const { page, registry } = setup();
 			page.failEvaluations = [destroyed(), destroyed(), destroyed()];
-			await registry.add(B, { token: "1" }, title, site);
+			expect(await add(registry)).toBeUndefined();
 			expect(page.evaluations).toBe(4);
 			expect(registry.pendingOrigins).toEqual([B]);
 		});
 
-		it("takes up to 20 replacements", async () => {
+		it("pauses before each retry as Playwright does before its actions' retries: 20, 50, 100, 100, then 500 ms", async () => {
+			const { page, registry } = setup();
+			page.failEvaluations = Array.from({ length: 7 }, destroyed);
+			const at: number[] = [];
+			page.duringEvaluate = () => at.push(Date.now());
+			expect(await add(registry)).toBeUndefined();
+			expect(at.slice(1).map((time, i) => time - (at[i] ?? 0))).toEqual([20, 50, 100, 100, 500, 500, 500]);
+		});
+
+		it("does not retry before its pause has passed", async () => {
+			const { page, registry } = setup();
+			page.failEvaluations = [destroyed()];
+			const added = registry.add(B, { token: "1" }, title, site);
+			await vi.advanceTimersByTimeAsync(19);
+			expect(page.evaluations).toBe(1);
+			await vi.advanceTimersByTimeAsync(1);
+			expect(page.evaluations).toBe(2);
+			await added;
+		});
+
+		it("takes up to 20 retries, their pauses 8,270 ms in all", async () => {
 			const { page, registry } = setup();
 			page.failEvaluations = Array.from({ length: 20 }, destroyed);
-			await registry.add(B, { token: "1" }, title, site);
+			const start = Date.now();
+			let last = start;
+			page.duringEvaluate = () => {
+				last = Date.now();
+			};
+			expect(await add(registry)).toBeUndefined();
 			expect(page.evaluations).toBe(21);
+			expect(last - start).toBe(8_270);
 			expect(registry.pendingOrigins).toEqual([B]);
 		});
 
 		it("fails on the 21st with Playwright's error, labeled, registering nothing", async () => {
 			const { page, registry } = setup();
 			page.failEvaluations = Array.from({ length: 21 }, destroyed);
-			const error = await registry.add(B, { token: "1" }, title, site).catch((e: unknown) => e as Error);
+			const error = await add(registry);
 			expect(error?.message).toBe(
 				`${title}: page.evaluate: Execution context was destroyed, most likely because of a navigation`,
 			);
@@ -465,22 +509,22 @@ describe("SeedRegistry", () => {
 			expect(page.scripts).toEqual([]);
 		});
 
-		it("tries any other error once more, as before, and on a closed page a destroyed one too", async () => {
+		it("tries any other error once more, after the first pause, and on a closed page a destroyed one too", async () => {
 			const once = setup();
 			once.page.failEvaluations = [new Error("page.evaluate: something else")];
-			await once.registry.add(B, { token: "1" }, title, site);
+			expect(await add(once.registry)).toBeUndefined();
 			expect(once.page.evaluations).toBe(2);
 
 			const twice = setup();
 			twice.page.failEvaluations = [new Error("page.evaluate: first"), new Error("page.evaluate: something else")];
-			const error = await twice.registry.add(B, { token: "1" }, title, site).catch((e: unknown) => e as Error);
+			const error = await add(twice.registry);
 			expect(error?.message).toBe(`${title}: page.evaluate: something else`);
 			expect(twice.page.evaluations).toBe(2);
 
 			const closed = setup();
 			closed.page.closed = true;
 			closed.page.failEvaluations = [destroyed(), destroyed(), destroyed()];
-			await closed.registry.add(B, { token: "1" }, title, site).catch(() => undefined);
+			await add(closed.registry);
 			expect(closed.page.evaluations).toBe(2);
 		});
 	});

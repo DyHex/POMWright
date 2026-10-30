@@ -79,13 +79,27 @@ export const replacedByNavigation = (error: unknown): boolean =>
 	error instanceof Error && /Execution context was destroyed/.test(error.message);
 
 /**
- * How many replacements of the page's document a question POMWright asks the page waits through, each failed
- * evaluation being one: the Navigation API check of `seed`, and the URL a navigation message names
- * (`SessionStorage`). 20 follows the default of Playwright's `maxRedirects` (an API request's own HTTP redirects): a
- * convention rather than a limit, since browsers set none on script redirects, and an HTTP redirect chain commits one
- * document, which never needed more than one retry.
+ * How many times a question POMWright asks the page is asked again while a navigation replaces the page's document:
+ * the Navigation API check of `seed`, and the URL a navigation message names (`SessionStorage`). It counts retries, not
+ * replacements: right after a replacement, Playwright's server can still send an evaluation to the old document, which
+ * fails at once, so one replacement can fail several tries. 20 follows the default of Playwright's `maxRedirects` (an
+ * API request's own HTTP redirects): a convention rather than a limit, since browsers set none on script redirects.
+ * With the pauses of `pauseBeforeRetry`, the retries span at most 8,270 ms, so an app stuck in a redirect loop fails
+ * the call well within a test's timeout.
  */
-export const MAX_REPLACEMENTS = 20;
+export const MAX_RETRIES = 20;
+
+/**
+ * The pauses before each retry, in ms, the last one repeated: those Playwright makes before each retry of its own
+ * actions (`retryWithProgressAndBackoff` in playwright-core 1.64.0, which locator actions and `waitForSelector` use),
+ * which no option changes. They outlast the moment after a replacement when an evaluation can still reach the old
+ * document.
+ */
+const RETRY_PAUSES = [20, 50, 100, 100, 500];
+
+/** Waits before retry number `retry`, 0 for the first, as Playwright waits before its actions' retries. */
+export const pauseBeforeRetry = (retry: number): Promise<void> =>
+	new Promise((resolve) => setTimeout(resolve, RETRY_PAUSES[Math.min(retry, RETRY_PAUSES.length - 1)]));
 
 /** The start of the console message the init script logs when it skips a document on its origin or a write is refused. */
 export const FAILURE_PREFIX = "pomwright-seed-failure:";
@@ -373,8 +387,9 @@ export class SeedRegistry {
 	 *
 	 * A navigation that replaces the document destroys the evaluation, and the next one runs in its successor; an app
 	 * that redirects itself on load replaces it several times. So the evaluation is repeated while that is its failure
-	 * and the page is open, up to `MAX_REPLACEMENTS` times, which bounds an app stuck in a redirect loop; past that,
-	 * Playwright's error goes through. Any other error is tried once more.
+	 * and the page is open, up to `MAX_RETRIES` times, each after Playwright's pause before an action's retry
+	 * (`pauseBeforeRetry`), which bounds an app stuck in a redirect loop; past that, Playwright's error goes through. Any
+	 * other error is tried once more, after the first pause.
 	 */
 	private async assertNavigationApi(origin: string, title: string, site: Error): Promise<void> {
 		if (this.navigationApiChecked) {
@@ -387,11 +402,14 @@ export class SeedRegistry {
 			}));
 		let support: NavigationSupport | undefined;
 		for (let tries = 1; support === undefined; tries++) {
+			if (tries > 1) {
+				await pauseBeforeRetry(tries - 2);
+			}
 			try {
 				support = await probe();
 			} catch (error) {
 				const replaced = replacedByNavigation(error) && !this.page.isClosed();
-				if (replaced ? tries > MAX_REPLACEMENTS : tries > 1) {
+				if (replaced ? tries > MAX_RETRIES : tries > 1) {
 					throw error;
 				}
 			}

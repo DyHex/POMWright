@@ -205,7 +205,9 @@ v3.0.1 (`7ad64e2`).
    follows the default of Playwright's `maxRedirects` (20, API requests' own HTTP redirects), a convention rather than
    a limit: browsers set none on script redirects, and HTTP redirects commit one document, which never needed more than
    the one retry. The code's comment says so. Without the bound, as the review's sketch had it, an app stuck in a
-   redirect loop would keep `seed` retrying until the test's timeout.
+   redirect loop would keep `seed` retrying until the test's timeout. Amended by decision 121 (2026-10-30): one
+   replacement can fail several tries, so the bound counts retries, and each retry follows Playwright's pause before
+   its actions' retries.
 2. **No new message**: past the bound, Playwright's error goes through with the label, which *Error messages* covers
    ("Any other error from Playwright gets the label in front of its message and is the `cause`").
 3. **A patch changeset**: `seed` no longer fails on Chromium when the page replaces its document more than once during
@@ -1273,7 +1275,8 @@ workers, `get(keys)` failed 14 of 300.
 1. **Option B: the new document's `location.href`**, asked after the failure, again while a navigation destroys the
    question and the page is open, through up to `MAX_REPLACEMENTS` (20, decision 81's bound); past that, or on any
    other error (a closed page), `page.url()` as it is. `page.url()` stays the destination when only the URL moved. The
-   storage call is never repeated, and a call that succeeds costs nothing more.
+   storage call is never repeated, and a call that succeeds costs nothing more. Amended by decision 121 (2026-10-30):
+   up to `MAX_RETRIES` retries, each after Playwright's pause before its actions' retries.
    - `location.href` agreed with `page.url()` on three browsers on a new page, a `data:` URL and each browser's page
      after a failed navigation (Chromium `chrome-error://chromewebdata/`, Firefox the failed URL, WebKit the page it
      stayed on), and a page cannot redefine it (redefining `location`, its `href` or `document.location` throws).
@@ -1358,3 +1361,52 @@ reaches the document being replaced, it adds a failed one, which has nothing to 
 
 **Why**: `access` explains refused calls and `guarded` reports navigations; asking a question whose answer is never
 used costs the user a line in the trace, and costs the next reader the time to find that it is unused.
+
+## 121. POMWright's own questions retry as Playwright's actions do (2026-10-30)
+
+**Settles**: [2R-5](R-triage/defect-2R-5-seed-check-counts-the-lag-as-replacements.md) (defect), found by the first
+`pnpm test:constrained` after decision 120; amends decisions 81 and 118, point 1 of each.
+
+**The case**: `seed`'s Navigation API check gave up during a chain of 5 script redirects under load: 4 of 100 runs on
+Chromium with `taskset -c 0-3` and 8 workers, 5 of 100 at `9a437a3`. Playwright's log showed 21 failed tries against 2
+to 5 commits. Right after a replacement, Playwright's server can still send an evaluation to the old document, which
+fails at once, and the loop retried at once and counted each failure as a replacement. `currentUrl` (decision 118)
+counts the same way.
+
+**Decided**:
+
+1. **Option A: Playwright's pauses before each retry, the bound kept at 20.** Both loops wait before each retry as
+   Playwright waits before each retry of its own actions: 20, 50, 100 and 100 ms, then 500 ms
+   (`retryWithProgressAndBackoff` in `playwright-core` 1.64.0, which locator actions and `waitForSelector` use). The
+   20 retries span at most 8,270 ms.
+   - Probed with a prototype: the 5-redirect test passed 300 of 300 in the failing shape; the 2, 3 and 5 redirect
+     tests 450 of 450 on three browsers; the two navigation tests 300 of 300.
+   - The cost: a first `seed` during 5 redirects took a median of 234 ms on Firefox (65 today), 31 on Chromium (27) and
+     32 on WebKit (19). An app reloading every document at once failed the check on Chromium after 8.3 s instead of
+     74 to 88 ms.
+2. **`MAX_REPLACEMENTS` is renamed `MAX_RETRIES`**, and the reasoning that each failed try is one replacement is removed
+   wherever it was written.
+3. **The pauses are fixed, as Playwright's are**; not the intervals of `expect.poll` or `toPass`, which pace a test's
+   own retries of its code (the maintainer's question).
+4. **Tests**: unit tests with vitest's fake timers (the pauses, no retry before its pause ends, the bound's 8,270 ms),
+   in both loops. No harness case for a redirect loop, since the browsers differ there (Firefox and WebKit answered
+   between two reloads in the probe); the probe's numbers are in the plan.
+5. **Docs**: the pending changeset `seed-redirect-chain.md`, *Internal → Seed registry*, *Principles*, the doc
+   comments, `src/helpers/AGENTS.md`. No new changeset: the bounded retry is unreleased.
+
+Rejected: **waiting for Playwright's next commit after a failed try**, which would wait until the test's timeout when
+no commit follows a "destroyed", and relies on an event per document (decision 114); **a larger bound, retrying at
+once**, a guess at how many failures the lag makes, in a loop that competes for the CPU the navigation needs.
+
+**Why**: POMWright retries no faster than Playwright retries its own actions, and its bound then holds under load.
+
+## 122. The lifecycle outcomes spec gets the time a nested run needs (2026-10-30)
+
+**Settles**: [2R-6](R-triage/defect-2R-6-outcomes-spec-timeout-under-load.md) (test defect), found by the same run.
+
+**Decided**: its one test calls `test.slow()`, which triples the harness's 60-second timeout, with a comment: it starts
+a whole Playwright run of its own, 12.5 s at rest and up to about 57 s with 8 copies on 4 CPUs. With 12 copies on 4
+CPUs, 12 of 12 timed out before and 12 of 12 passed with it. Rejected: a number of the harness's own
+(`test.setTimeout`), and a larger timeout for every test.
+
+**Why**: the test's time is set by the run it starts, which Playwright's own marker for a slow test follows.

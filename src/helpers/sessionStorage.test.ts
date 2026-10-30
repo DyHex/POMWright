@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { PageObject, type StorageTypeFromOptions } from "../pageObject";
 import {
 	type AllEntries,
@@ -572,6 +572,20 @@ describe("a call whose document is replaced", () => {
 		const there = "http://127.0.0.1:9000";
 		const replaced = (call: string) =>
 			new Error(`${call}: Execution context was destroyed, most likely because of a navigation`);
+		// vitest's fake timers stand in for time, so the pauses before the retries (8,270 ms for the bound's) pass at once;
+		// the harness's navigation tests make the real ones
+		beforeEach(() => {
+			vi.useFakeTimers();
+		});
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+		/** The call's failure, with every pause elapsed. */
+		const failed = async (page: Page) => {
+			const error = failure(internals(page).write("set", { a: "1" }));
+			await vi.runAllTimersAsync();
+			return error;
+		};
 		/**
 		 * A page whose storage call fails as destroyed while `url()` still reads the page the call started on, as on
 		 * Chromium, which reports the old document's destruction before the new one's commit; asked for `location.href`,
@@ -581,7 +595,7 @@ describe("a call whose document is replaced", () => {
 		 * it read").
 		 */
 		const stalePage = (hrefFailures: Error[], closed = false) => {
-			const asked = { href: 0 };
+			const asked = { href: 0, at: [] as number[] };
 			const page = {
 				url: () => `${here}/teststorage`,
 				isClosed: () => closed,
@@ -590,6 +604,7 @@ describe("a call whose document is replaced", () => {
 						return "localhost";
 					}
 					asked.href++;
+					asked.at.push(Date.now());
 					const failing = hrefFailures.shift();
 					if (failing) {
 						throw failing;
@@ -610,7 +625,7 @@ describe("a call whose document is replaced", () => {
 
 		it("names the URL the new document reports, asking again while a navigation destroys the question", async () => {
 			const { page, asked } = stalePage([replaced("page.evaluate")]);
-			const error = await failure(internals(page).write("set", { a: "1" }));
+			const error = await failed(page);
 			expect(error?.message).toBe(navigatedTo(`${there}/teststorage`));
 			expect(error?.cause).toEqual(expect.objectContaining({ message: expect.stringMatching(/^webStorage\.setItem/) }));
 			expect(asked.href).toBe(2);
@@ -618,27 +633,25 @@ describe("a call whose document is replaced", () => {
 
 		it("names page.url() as it is when the question fails otherwise, or the page is closed", async () => {
 			const closing = stalePage([new Error("page.evaluate: Target page, context or browser has been closed")]);
-			expect((await failure(internals(closing.page).write("set", { a: "1" })))?.message).toBe(
-				navigatedTo(`${here}/teststorage`),
-			);
+			expect((await failed(closing.page))?.message).toBe(navigatedTo(`${here}/teststorage`));
 			expect(closing.asked.href).toBe(1);
 			const closed = stalePage([replaced("page.evaluate"), replaced("page.evaluate")], true);
-			expect((await failure(internals(closed.page).write("set", { a: "1" })))?.message).toBe(
-				navigatedTo(`${here}/teststorage`),
-			);
+			expect((await failed(closed.page))?.message).toBe(navigatedTo(`${here}/teststorage`));
 			expect(closed.asked.href).toBe(1);
 		});
 
-		it("asks through up to 20 replacements, and past them names page.url() as it is", async () => {
+		it("pauses before each retry as seed's check does: 20, 50, 100, 100, then 500 ms", async () => {
+			const { page, asked } = stalePage(Array.from({ length: 7 }, () => replaced("page.evaluate")));
+			expect((await failed(page))?.message).toBe(navigatedTo(`${there}/teststorage`));
+			expect(asked.at.slice(1).map((time, i) => time - (asked.at[i] ?? 0))).toEqual([20, 50, 100, 100, 500, 500, 500]);
+		});
+
+		it("asks up to 20 times more, and past that names page.url() as it is", async () => {
 			const twenty = stalePage(Array.from({ length: 20 }, () => replaced("page.evaluate")));
-			expect((await failure(internals(twenty.page).write("set", { a: "1" })))?.message).toBe(
-				navigatedTo(`${there}/teststorage`),
-			);
+			expect((await failed(twenty.page))?.message).toBe(navigatedTo(`${there}/teststorage`));
 			expect(twenty.asked.href).toBe(21);
 			const more = stalePage(Array.from({ length: 21 }, () => replaced("page.evaluate")));
-			expect((await failure(internals(more.page).write("set", { a: "1" })))?.message).toBe(
-				navigatedTo(`${here}/teststorage`),
-			);
+			expect((await failed(more.page))?.message).toBe(navigatedTo(`${here}/teststorage`));
 			expect(more.asked.href).toBe(21);
 		});
 	});

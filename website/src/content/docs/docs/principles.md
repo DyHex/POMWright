@@ -60,6 +60,6 @@ given", as in Playwright. POMWright sets no timeout or wait of its own: an unset
 It has no runner, no reporter and no assertions: tests use `@playwright/test`. It does not wait for anything Playwright
 would not wait for, retry anything a test asked it to do, or catch errors to hide them. When a navigation replaces the
 document while POMWright asks the page a question of its own, such as whether the browser has the Navigation API before
-a `seed`, or where the page went for a navigation message, it asks again in the next document, as Playwright's own
-waits do, up to 20 times. It does not decide how you structure a suite beyond
-the page object and the registry; [Organizing a project](/POMWright/docs/organizing-a-project/) shows one way.
+a `seed`, or where the page went for a navigation message, it asks again in the next document, up to 20 times, after
+the same pauses Playwright makes before it retries one of its own actions. It does not decide how you structure a suite
+beyond the page object and the registry; [Organizing a project](/POMWright/docs/organizing-a-project/) shows one way.

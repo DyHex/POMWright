@@ -13,8 +13,9 @@ import { type JSHandle, type Page, test } from "@playwright/test";
 import { callerLocation, captureCallSite, type StepLocation, siteLocation } from "./callSite";
 import {
 	describeKeys,
-	MAX_REPLACEMENTS,
+	MAX_RETRIES,
 	originOf,
+	pauseBeforeRetry,
 	type ReadTestOutcome,
 	registryFor,
 	replacedByNavigation,
@@ -454,17 +455,21 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	 * failure. `page.url()` changes only when Playwright's client hears of the new document's commit, which Chromium
 	 * reports after the old document's destruction, so read at once it can still name the page the call started on.
 	 * Playwright evaluates in the frame's next document once it exists, and the question is asked again while a
-	 * navigation destroys it and the page is open, through up to `MAX_REPLACEMENTS` replacements; past that, or on any
-	 * other error (a closed page), `page.url()` as it is. The storage call itself is never repeated. `location.href`, which
+	 * navigation destroys it and the page is open, up to `MAX_RETRIES` times, each after Playwright's pause before an
+	 * action's retry (`pauseBeforeRetry`); past that, or on any other error (a closed page), `page.url()` as it is. The
+	 * storage call itself is never repeated. `location.href`, which
 	 * a page cannot redefine, rather than `document.URL`, which is `about:neterror?…` on Firefox's error page, where
 	 * `location.href` and `page.url()` are the URL that failed.
 	 */
 	private async currentUrl(): Promise<string> {
-		for (let replacements = 0; ; replacements++) {
+		for (let retries = 0; ; retries++) {
+			if (retries > 0) {
+				await pauseBeforeRetry(retries - 1);
+			}
 			try {
 				return await this.page.evaluate(() => location.href);
 			} catch (error) {
-				if (!replacedByNavigation(error) || this.page.isClosed() || replacements === MAX_REPLACEMENTS) {
+				if (!replacedByNavigation(error) || this.page.isClosed() || retries === MAX_RETRIES) {
 					return this.page.url();
 				}
 			}
