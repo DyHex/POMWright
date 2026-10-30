@@ -47,7 +47,7 @@
 		"lint:guide": "node scripts/check-guide-links.mjs",
 		"format": "biome format --write .",
 		"harness:install": "bash pack-build.sh && pnpm -C test install --frozen-lockfile",
-		"typecheck": "tsc --noEmit -p test && tsc -p test/tsconfig.declarations.json && tsc -p test/tsconfig.legacyDecorators.json && tsc -p test/tsconfig.legacyDecorators.emit.json && node scripts/check-doc-snippets.mjs && node scripts/check-api-coverage.mjs && node scripts/check-error-messages.mjs && node scripts/check-playwright-retries.mjs",
+		"typecheck": "tsc --noEmit -p test && node scripts/generate-emit-members.mjs && tsc -p test/tsconfig.declarations.json && tsc -p test/tsconfig.legacyDecorators.json && tsc -p test/tsconfig.legacyDecorators.emit.json && node scripts/check-doc-snippets.mjs && node scripts/check-api-coverage.mjs && node scripts/check-error-messages.mjs && node scripts/check-playwright-retries.mjs",
 		"pack-test": "bash pack-test.sh",
 		"pack:version": "bash scripts/pack-version.sh",
 		"test:unit": "vitest run",

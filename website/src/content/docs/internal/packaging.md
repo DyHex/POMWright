@@ -63,10 +63,16 @@ The harness installs the tarball `pnpm pack` produced, extracted, so it tests wh
 - `packageFiles.spec.ts` checks the installed package's exact file list: in `dist/`, `index.js` and `index.d.ts` from
   tsup and `index.mjs` and `index.d.mts` from `scripts/write-esm-entry.mjs`, and nothing else, so a stale file from an
   earlier build cannot ship.
-- Three compile-only files check the published types: `publicTypes.typecheck.ts`, every export and the types that must
-  and must not compile; `publicTypes.emit.ts`, which a project with `declaration: true` must be able to emit without
-  annotations, every public member returned on its own, so a type that is not exported fails it; and
-  `stepLegacyDecorators.typecheck.ts`, `@step` under `experimentalDecorators` as well as under the standard decorators.
+- Compile-only files check the published types: `publicTypes.typecheck.ts`, every export and the types that must and
+  must not compile; the declaration emit, which a project with `declaration: true` must be able to do without
+  annotations, so a type that is not exported fails it; and `stepLegacyDecorators.typecheck.ts`, `@step` under
+  `experimentalDecorators` as well as under the standard decorators. The emit compiles two modules:
+  `publicTypes.emit.ts`, by hand, the chains, seeds and forms a project writes; and one that
+  `scripts/generate-emit-members.mjs` writes from `emitSeeds.ts`, a value of every export, and the installed
+  declarations: every public member of every export returned on its own, and the page objects' protected members
+  through a subclass. Members are read, not listed, so one added to the API is covered at once; an export is listed,
+  and the generator fails until a new one has a seed or a place among those with no members to walk. Generated, it
+  emitted on TypeScript 5.0, 5.4, 5.9, 6.0 and 7.0, and with pnpm's layout.
 - `@step`'s legacy decorator calls are emitted by `tsc` and run against the package by the step-location check (see
   [tests and checks](/POMWright/internal/tests-and-checks/#type-checks)).
 

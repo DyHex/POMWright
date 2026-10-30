@@ -58,6 +58,7 @@
 			"!**/test/.doc-snippets",
 			"!**/test/.doc-examples",
 			"!**/test/.legacy-decorators",
+			"!**/test/.emit-members",
 			"!**/website/.astro",
 			"!**/.pack",
 			"!**/.pnpm-store"

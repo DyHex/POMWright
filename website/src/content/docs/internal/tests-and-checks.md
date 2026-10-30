@@ -50,7 +50,9 @@ its own so that no `--reporter` given to the harness can switch it off.
 `pnpm typecheck`, part of `pack-test`, runs after the install:
 
 1. `tsc` over the harness: specs, page objects and the compile-only probes, whose `@ts-expect-error` lines must hold.
-2. The declaration emit of `publicTypes.emit.ts` with `declaration: true`.
+2. The declaration emit with `declaration: true`, of `publicTypes.emit.ts` and of the module
+   `scripts/generate-emit-members.mjs` writes just before it: every public member of every export, read from the
+   installed declarations (see [packaging](/POMWright/internal/packaging/)).
 3. `@step` under `experimentalDecorators` (`tsconfig.legacyDecorators.json`): the same probe compiles under the
    standard decorators in step 1.
 4. `@step`'s legacy decorator calls as `tsc` writes them (`tsconfig.legacyDecorators.emit.json`): a small decorated

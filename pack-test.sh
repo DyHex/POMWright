@@ -37,6 +37,8 @@ if [[ -n "${PLAYWRIGHT_VERSION:-}" ]]; then
 fi
 
 pnpm -C "$SCRIPT_DIR" exec tsc --noEmit -p test
+# every public member of the installed package, for the declaration emit below
+node "$SCRIPT_DIR/scripts/generate-emit-members.mjs"
 pnpm -C "$SCRIPT_DIR" exec tsc -p test/tsconfig.declarations.json
 pnpm -C "$SCRIPT_DIR" exec tsc -p test/tsconfig.legacyDecorators.json
 # emits @step's legacy decorator calls as tsc writes them, for the step-location run below

@@ -11,9 +11,12 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   extraction and `test/pnpm-lock.yaml` does not change with builds. `pnpm harness:install` packs and installs without
   running anything, for `pnpm typecheck` or a quick `pnpm -C test exec playwright test …` of one spec.
 - `pnpm typecheck` runs `tsc --noEmit -p test` against the installed package: specs, page objects, fixtures,
-  `playwright.base.ts`, and the compile-only probes; then
-  `tsc -p test/tsconfig.declarations.json` (`declaration: true`, `noEmit`), the declaration emit of
-  `tests/packaging/publicTypes.emit.ts`; then `tsc -p test/tsconfig.legacyDecorators.json`, `@step` under
+  `playwright.base.ts`, and the compile-only probes; then `scripts/generate-emit-members.mjs`, which writes
+  `test/.emit-members/members.ts` (git-ignored) from `tests/packaging/emitSeeds.ts` and the installed declarations:
+  every public member of every export returned on its own, and the page objects' protected ones through a subclass; it
+  fails when an export has neither a seed nor a place in `memberless`, so a new export needs one; then
+  `tsc -p test/tsconfig.declarations.json` (`declaration: true`, `noEmit`), the declaration emit of that module and of
+  `tests/packaging/publicTypes.emit.ts`, the chains and call results; then `tsc -p test/tsconfig.legacyDecorators.json`, `@step` under
   `experimentalDecorators` (`tests/packaging/stepLegacyDecorators.typecheck.ts`, also compiled under the standard
   decorators by the first `tsc`); then `tsc -p test/tsconfig.legacyDecorators.emit.json`, which emits
   `step-locations/legacy/legacyWidget.ts` with `experimentalDecorators`, as CommonJS, into `test/.legacy-decorators/` for
@@ -24,7 +27,7 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   [website/AGENTS.md](../website/AGENTS.md)); and `scripts/check-playwright-retries.mjs`, `RETRY_PAUSES` against the
   pauses the installed Playwright makes before its actions' retries, read from its source, since no export reaches
   them (a failure there means Playwright changed them or moved the code: read its source and update the constant or
-  the check). `pack-test.sh` runs all eight, and after the harness
+  the check). `pack-test.sh` runs all nine, and after the harness
   `playwright test -c playwright.steps.config.ts` (see *The harness* below), then, outside CI, `test-server-check.sh`.
 - `pnpm pack:version <version>` (`scripts/pack-version.sh`, run by hand only) builds and packs the package with the
   given semver version in the packed `package.json` only, as `pomwright-<version>.tgz` at the root (gitignored), for
@@ -113,7 +116,8 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   checks that its page shows every chain, selector and message it compares), `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
   published entries, one shared copy, closed deep imports, the manifest; `packageFiles.spec.ts`, the installed
   package's exact file list; `publicTypes.typecheck.ts`, `publicTypes.emit.ts` and `stepLegacyDecorators.typecheck.ts`,
-  compile-only, the last also under `experimentalDecorators`; the emit check returns every public member on its own). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through
+  compile-only, the last also under `experimentalDecorators`; `emitSeeds.ts`, a value of every export, from which the
+  emit check's module of every public member is generated). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through
   `playwright.bench.config.ts`, never by `pack-test`. `testApp/urlForms.spec.ts` sweeps the printable ASCII
   characters through the URL each browser reports (but `# ? / % \`), with the known differences listed: Chromium's `|`
   in a path, and, on Node 20 and 22, whose `new URL` keeps a `^`, every browser's `%5E`. `testApp/urlHosts.spec.ts`
@@ -145,7 +149,8 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   Playwright does not match the file names, and `pnpm typecheck` (in `pack-test` and CI) enforces their
   `@ts-expect-error` directives. `publicTypes.typecheck.ts` holds the public types against the published declarations
   (every export, replace's arguments, the private internals, seeds, path forwarding); `publicTypes.emit.ts` must emit
-  declarations without annotations. A change to the public types adds to both.
+  declarations without annotations. A change to the public types adds to both; a new export also gets a seed in
+  `emitSeeds.ts`, which the generator asks for.
 - The harness runs on chromium, firefox and webkit (`pnpm pack-test` and CI on `main`; pull requests run chromium
   only, so a firefox- or webkit-only failure shows in `CI` after the merge and blocks Publish until fixed), in CI at
   the Playwright pin and at the latest 1.x in the peer range. A real behavior difference between browsers on one Playwright version uses the `browserName` fixture (as

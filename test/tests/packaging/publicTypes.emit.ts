@@ -1,6 +1,8 @@
 // Compile-only, through tsconfig.declarations.json (declaration: true): exported functions that return pomwright's
-// builders, seeds, registries, page objects and decorators without annotations, and every public member on its own
-// (`members`). It emits only if each type can be named from "pomwright". Playwright does not match the file name.
+// builders, seeds, registries, page objects and decorators without annotations, as a project writes them, and the
+// chains and call results no member access gives (`members`). It emits only if each type can be named from "pomwright".
+// Every public member on its own is in the module scripts/generate-emit-members.mjs writes from emitSeeds.ts.
+// Playwright does not match the file name.
 import type { Page } from "@playwright/test";
 import {
 	type Codec,
@@ -79,7 +81,7 @@ const accountStorage = { user: json<{ name: string }>() };
 export const readUser = (storage: SessionStorage<typeof accountStorage>) => storage.get("user");
 export const readEverything = (storage: SessionStorage<typeof accountStorage>) => storage.get();
 
-// every public member, returned without annotations: a member whose type a consumer cannot name fails here
+// chains and call results, returned without annotations; every member on its own is the generated module's
 type Cart = { cart: Codec<{ items: number }> };
 class ListPage extends PageObject<Paths, { baseUrlType: string; urlPathType: string; storage: Cart }> {
 	constructor(page: Page) {
@@ -95,15 +97,6 @@ declare const listPage: ListPage;
 declare const logger: PlaywrightReportLogger;
 
 export const members = {
-	registry: () => registry,
-	verify: () => registry.verify,
-	getLocator: () => registry.getLocator,
-	getNestedLocator: () => registry.getNestedLocator,
-	getLocatorSchema: () => registry.getLocatorSchema,
-	add: () => registry.add,
-	createReusable: () => registry.createReusable,
-	factory: () => createRegistryWithAccessors<Paths>(page),
-	factoryAdd: () => createRegistryWithAccessors<Paths>(page).add,
 	query: () => registry.getLocatorSchema("list.item"),
 	queryChain: () =>
 		registry
@@ -120,22 +113,10 @@ export const members = {
 	afterReplace: () => registry.getLocatorSchema("list.item").replace().getByRole("listitem"),
 	seed: () => registry.createReusable.getByRole("button"),
 	seedChain: () => registry.createReusable.getByRole("button").filter({ hasText: "x" }).nth(0).describe("d"),
-	seedDefinition: () => registry.createReusable.getByRole("button").definition,
-	seedSteps: () => registry.createReusable.getByRole("button").steps,
-	pageAdd: () => listPage.add,
-	pageGetLocator: () => listPage.getLocator,
-	pageGetNestedLocator: () => listPage.getNestedLocator,
-	pageGetLocatorSchema: () => listPage.getLocatorSchema,
-	navigation: () => listPage.navigation,
-	navigationGoto: () => listPage.navigation.goto,
-	pageSessionStorage: () => listPage.sessionStorage,
+	factory: () => createRegistryWithAccessors<Paths>(page),
 	pageSessionStorageGet: () => listPage.sessionStorage.get(["cart"]),
-	fullUrl: () => listPage.fullUrl,
-	baseUrl: () => listPage.baseUrl,
-	label: () => listPage.label,
 	sessionStorage: () => new SessionStorage(page, { label: "S", schema: { cart: json<{ items: number }>() } }),
 	childLogger: () => logger.getNewChildLogger("child"),
 	codec: () => json<{ items: number }>(),
-	step: () => step,
 	stepWithOptions: () => step({ box: true }),
 };
