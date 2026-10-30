@@ -217,6 +217,72 @@ describe("a registered locator cannot change after registration", () => {
 	});
 });
 
+describe("verify() and an add(path) that never got a locator method", () => {
+	// a fresh registry, without createRegistry's two paths
+	const empty = () => new LocatorRegistryInternal<Paths>(createFakePage());
+	const reason = (path: string, call: string) =>
+		`"${path}": add("${path}") ended without a locator method (at ${call}); give it one or remove it`;
+
+	it("reports a stray ancestor, which every chain below it would leave out", () => {
+		const registry = empty();
+		registry.add("list");
+		registry.add("list.item").locator("li");
+		expect(() => registry.verify()).toThrowError(
+			`Locator registry verification failed for 1 of 2 paths:\n  ${reason("list", 'add("list.item")')}`,
+		);
+	});
+
+	it("reports a stray leaf, and one that verify() itself ends", () => {
+		const leaf = empty();
+		leaf.add("list").locator("ul");
+		leaf.add("list.item");
+		leaf.add("btn").getByRole("button");
+		expect(() => leaf.verify()).toThrowError(
+			`Locator registry verification failed for 1 of 3 paths:\n  ${reason("list.item", 'add("btn")')}`,
+		);
+
+		const last = empty();
+		last.add("list").locator("ul");
+		last.add("list.item");
+		expect(() => last.verify()).toThrowError(
+			`Locator registry verification failed for 1 of 2 paths:\n  ${reason("list.item", "verify()")}`,
+		);
+	});
+
+	it("names the call that ended it, a resolution or a query included, beside the other failures", () => {
+		const registry = empty();
+		registry.add("x").locator("x");
+		registry.add("list");
+		registry.getLocatorSchema("x").describe("query");
+		registry.add("btn").getByRole("button").filter({ has: "row" });
+		registry.add("row");
+		let message = "";
+		try {
+			registry.verify();
+		} catch (error) {
+			message = (error as Error).message;
+		}
+		expect(message).toContain("Locator registry verification failed for 3 of 4 paths:");
+		expect(message).toContain(reason("list", 'getLocatorSchema("x")'));
+		expect(message).toContain(reason("row", "verify()"));
+		expect(message).toContain('"btn": No locator schema registered for path "row".');
+	});
+
+	it("does not report one whose path is registered later, or a duplicate of a registered path", () => {
+		const later = empty();
+		later.add("list");
+		later.add("list").locator("ul");
+		expect(() => later.verify()).not.toThrow();
+
+		const duplicate = createRegistry();
+		expect(() => duplicate.add("list").locator("ol")).toThrowError(
+			'A locator schema with the path "list" already exists.',
+		);
+		duplicate.add("btn").getByRole("button");
+		expect(() => duplicate.verify()).not.toThrow();
+	});
+});
+
 describe("filter references", () => {
 	it("reports an array or a filter-only object in has as an unsupported reference", () => {
 		for (const has of [[], [new FakeLocator("locator('b')")], { filter: () => undefined }]) {

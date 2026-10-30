@@ -124,6 +124,11 @@ export class LocatorRegistrationBuilder<
 		this.endedBy = by;
 	}
 
+	/** Whether the registration stored its locator: not for an `add(path)` that never got a locator method. */
+	get stored(): boolean {
+		return this.registered;
+	}
+
 	/**
 	 * Checked first by every method, so a registration kept in a variable cannot change its path once it has ended. The
 	 * message names the call that ended it. `filter()` and `locator()` take arguments that can hold a `Locator`, and a

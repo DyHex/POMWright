@@ -195,3 +195,21 @@ test("an array or a filter-only object in has is an unsupported reference, as a 
 		expect(() => registry.verify()).toThrowError(unsupported);
 	}
 });
+
+test("an add(path) that never got a locator method fails, where every chain below it would leave the segment out", async ({
+	page,
+}) => {
+	// the review's probe: an add(path) written as a statement between the paths around it
+	type FormPaths = "main" | "main.form@login" | "main.form@login.button@login";
+	const { registry } = createRegistryWithAccessors<FormPaths>(page);
+	registry.add("main").locator("main");
+	registry.add("main.form@login");
+	registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
+	expect(() => registry.verify()).toThrowError(
+		'Locator registry verification failed for 1 of 3 paths:\n  "main.form@login": add("main.form@login") ended without a locator method (at add("main.form@login.button@login")); give it one or remove it',
+	);
+	// what the check prevents: the chain leaves the form out
+	expect(`${registry.getNestedLocator("main.form@login.button@login").describe("")}`).toBe(
+		"locator('main').getByRole('button', { name: 'Log in' })",
+	);
+});

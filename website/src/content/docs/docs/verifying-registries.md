@@ -41,6 +41,14 @@ and a reference to an any-frame segment all fail, each reported at the path that
 `frameLocator()` is checked against its first-segment rule (see [Frames](/POMWright/docs/frames/)). Registration
 mistakes, a duplicate path or an empty selector, throw earlier, at the call that makes them.
 
+An `add(path)` that never gets a locator method, such as `add("main.form@login");` written as a statement, registers
+nothing, and every chain below the path would leave the segment out. TypeScript accepts the statement, so `verify()`
+reports it, naming the call that ended the registration:
+
+```text
+"main.form@login": add("main.form@login") ended without a locator method (at add("main.form@login.button@login")); give it one or remove it
+```
+
 What it does not check: whether a selector parses (Playwright parses it at the first action), whether an element
 exists, whether a locator is unique, a query's changes, and a path in the union that is never registered and never
 resolved, such as a slot no page object fills (see [Locator modules](/POMWright/docs/locator-modules/#shared-slots)).

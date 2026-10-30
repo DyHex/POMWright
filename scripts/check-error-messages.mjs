@@ -89,7 +89,10 @@ const INTERNAL = [
 ];
 
 /** Helpers whose message is reported inside another one: verify() lists it for its path. */
-const PARTS = [{ file: "src/locators/locatorRegistry.ts", name: "strictChainsMessage" }];
+const PARTS = [
+	{ file: "src/locators/locatorRegistry.ts", name: "strictChainsMessage" },
+	{ file: "src/locators/locatorRegistry.ts", name: "unfinishedMessage" },
+];
 
 /** Messages that pass another error's message on behind a prefix; that message is checked where it is thrown. */
 const PASS_THROUGH = [

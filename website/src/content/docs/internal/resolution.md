@@ -91,8 +91,12 @@ calls it itself. How to use it is on [Verifying a registry](/POMWright/docs/veri
    resolves each `has` and `hasNot` path it names, terminal-only too, with the set of paths being resolved, so a cycle
    is found as it closes.
 
+Then every `add(path)` that ended without a locator method gets a line of its own. The registry remembers each when
+the next call ends it (`endOpenRegistration` knows the call), forgets one whose path is registered later, and
+`verify()` ends the open registration first, so the last one is covered too.
+
 Every problem of a path goes on that path's line, and every failing path into one error, headed with how many of the
-registered paths failed:
+registered paths, and of the stray `add` calls, failed:
 
 ```text
 Locator registry verification failed for 1 of 1 paths:
@@ -113,6 +117,7 @@ descendants, and would find nothing more: a `has` path resolves terminal-only an
 | a `has` or `hasNot` path that names an any-frame path | `frameLocator() without a selector does not point to a particular iframe; …` |
 | an any-frame path below a registered ancestor | `frameLocator() without a selector must be the first segment of the chain; …` |
 | with `strictChains`, an ancestor without a record | `strictChains requires every ancestor to be registered; …` |
+| an `add(path)` that never got a locator method | `add("…") ended without a locator method (at …); give it one or remove it` |
 
 ### What it does not check
 

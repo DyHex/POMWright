@@ -121,6 +121,10 @@ export type LocatorRegistryOptions = {
 	strictChains?: boolean;
 };
 
+/** `verify()`'s reason for an `add(path)` that ended without a locator method, with the call that ended it. */
+const unfinishedMessage = (path: string, call: string) =>
+	`add("${path}") ended without a locator method (at ${call}); give it one or remove it`;
+
 const strictChainsMessage = (missing: readonly string[]) => {
 	const names = missing.map((part) => `"${part}"`);
 	const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
@@ -150,8 +154,16 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 
 	private readonly strictChains: boolean;
 
-	/** The registration the latest `add(path)` started; the next call on the registry ends it. */
-	private openRegistration: { end(by: RegistrationEnd): void } | undefined;
+	/** The registration the latest `add(path)` started, with its path; the next call on the registry ends it. */
+	private openRegistration:
+		| { path: string; registration: { end(by: RegistrationEnd): void; readonly stored: boolean } }
+		| undefined;
+
+	/**
+	 * Each `add(path)` that ended without a locator method, with the call that ended it, until its path is registered:
+	 * it registered nothing, so every chain below the path leaves the segment out, and `verify()` reports it.
+	 */
+	private readonly unfinished = new Map<string, string>();
 
 	/**
 	 * Ends the open registration, so a registration kept in a variable can no longer change its path. The call that ends
@@ -170,7 +182,12 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 						resolvedPath: resolves ? path : undefined,
 						...(method === "getLocatorSchema" ? { query: true as const } : {}),
 					};
-		this.openRegistration.end(by);
+		const { path: openPath, registration } = this.openRegistration;
+		registration.end(by);
+		// a duplicate add(path) already threw at its locator method; its path stays registered
+		if (!registration.stored && !this.schemas.has(openPath as RegistryPath<LocatorSchemaPathType>)) {
+			this.unfinished.set(openPath, by.call);
+		}
 		this.openRegistration = undefined;
 	}
 
@@ -246,7 +263,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				this,
 				path,
 			);
-			this.openRegistration = builder;
+			this.openRegistration = { path: String(path), registration: builder };
 			return builder as never;
 		}
 
@@ -258,7 +275,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			const sourceRecord = this.get(reuse as RegistryPath<LocatorSchemaPathType>);
 			// a registered record is a seed: its strategy, steps and description, then filter, nth and describe
 			const builder = this.seededBuilder(targetPath, this.cloneRecordForReuse(sourceRecord, targetPath));
-			this.openRegistration = builder;
+			this.openRegistration = { path: String(path), registration: builder };
 			return builder.viewAfterReuse() as never;
 		}
 
@@ -291,7 +308,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 		);
 
 		const builder = this.seededBuilder(path, reusedRecord);
-		this.openRegistration = builder;
+		this.openRegistration = { path: String(path), registration: builder };
 		return builder as never;
 	}
 
@@ -324,6 +341,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 			);
 		}
 		this.schemas.set(path, this.normalizeRecord(record));
+		this.unfinished.delete(path);
 	}
 
 	replace(
@@ -495,6 +513,8 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * @throws When a path fails, every failing path with its reason:
 	 * `Locator registry verification failed for 1 of 2 paths:` followed by
 	 * `"list.items": No locator schema registered for path "list.items.title".`
+	 * @throws When an `add(path)` never got a locator method, which registers nothing:
+	 * `"main.form@login": add("main.form@login") ended without a locator method (at add("main.form@login.button@login")); give it one or remove it`
 	 *
 	 * @example
 	 * ```ts
@@ -535,9 +555,12 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 				failures.push(`"${path}": ${problems.join(" ")}`);
 			}
 		}
+		for (const [path, call] of this.unfinished) {
+			failures.push(`"${path}": ${unfinishedMessage(path, call)}`);
+		}
 		if (failures.length > 0) {
 			throw new Error(
-				`Locator registry verification failed for ${failures.length} of ${this.schemas.size} paths:\n  ${failures.join("\n  ")}`,
+				`Locator registry verification failed for ${failures.length} of ${this.schemas.size + this.unfinished.size} paths:\n  ${failures.join("\n  ")}`,
 			);
 		}
 	}

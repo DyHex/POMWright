@@ -197,6 +197,16 @@ path that is not registered is left out of the chain and is not an error; with
 "main.form.button.save": strictChains requires every ancestor to be registered; "main.form" and "main.form.button" are not.
 ```
 
+### An `add(path)` without a locator method
+
+```text
+"main.form@login": add("main.form@login") ended without a locator method (at add("main.form@login.button@login")); give it one or remove it
+```
+
+Reported by `verify()`. An `add(path)` that is never followed by a locator method registers nothing, so every chain
+below its path leaves the segment out. The message names the call that ended the registration. Give the `add` its
+locator method, or remove it.
+
 ### A cycle of filter paths
 
 ```text

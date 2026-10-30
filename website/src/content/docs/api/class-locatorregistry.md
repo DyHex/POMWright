@@ -254,6 +254,12 @@ Locator registry verification failed for 1 of 2 paths:
   "list.items": No locator schema registered for path "list.items.title".
 ```
 
+An `add(path)` that never got a locator method, which registers nothing:
+
+```text
+"main.form@login": add("main.form@login") ended without a locator method (at add("main.form@login.button@login")); give it one or remove it
+```
+
 ---
 
 ## Properties
