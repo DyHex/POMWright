@@ -1336,7 +1336,7 @@ or none: the release stays 3.0.2.
 | [2T-5](T-tests-and-checks/defect-2T-5-api-coverage-skips-members.md) | | defect | Low | none | this branch: statics walked; an unresolved import fails (checks plan) | done (#99: ac614fe) |
 | [2T-7](T-tests-and-checks/defect-2T-7-test-server-check-blind-spots.md) | | defect | Low | none | this branch: WebSockets, `wss`, `//host`, routers' routes (checks plan) | done (#100: dfbc812) |
 | [2T-9](T-tests-and-checks/defect-2T-9-snippet-check-ignores-tsc-exit-code.md) | | defect | Low | none | this branch: `tsc` judged by its exit code (checks plan) | done (#96: b6f141d) |
-| [2I-2](I-contributor-guide/defect-2I-2-rules-their-trigger-does-not-reach.md) | | documentation | Medium | none | this branch: pointers and index rows from the triggers, `.github/` included | decided (#82) |
+| [2I-2](I-contributor-guide/defect-2I-2-rules-their-trigger-does-not-reach.md) | | documentation | Medium | none | this branch: pointers and index rows from the triggers, `.github/` included | done (#82: 9e7777b, 3f25a75) |
 | [2A-5](A-session-storage/defect-2A-5-sandboxed-arrival-not-listed.md) | | documentation | Low | none | this branch: session storage plan (docs) | done (#102: 1817e47) |
 | [2A-6](A-session-storage/defect-2A-6-schema-extra-codec-compiles.md) | | documentation | Low | none | this branch: session storage plan (docs) | done (#102: 1817e47) |
 | [2B-2](B-registration-and-resolution/defect-2B-2-string-registry-format-check.md) | | documentation | Low | none | this branch: locators plan (docs) | done (#103: a05f533) |
@@ -1350,29 +1350,29 @@ or none: the release stays 3.0.2.
 | [2E-4](E-logging-step-fixture/defect-2E-4-upgrade-page-omits-locale-check.md) | 2H-8 | documentation | Low | none | this branch: the upgrade guide's docs plan, after the code areas | done (#101: 89a2fe7) |
 | [2F-1](F-packaging-types-changesets/defect-2F-1-skiplibcheck-floor-sentence.md) | | documentation | Low | none | this branch: packaging plan | done (#106: a0102ac) |
 | [2F-2](F-packaging-types-changesets/defect-2F-2-emit-check-not-every-member.md) | | documentation | Low | none | this branch: packaging plan | done (#106: d672c5b) |
-| [2F-3](F-packaging-types-changesets/defect-2F-3-migration-hint-rule-names-2x.md) | | documentation | Low | none | this branch: contributor guide plan | decided (#109) |
+| [2F-3](F-packaging-types-changesets/defect-2F-3-migration-hint-rule-names-2x.md) | | documentation | Low | none | this branch: contributor guide plan | done (#109: 3587221) |
 | [2F-4](F-packaging-types-changesets/defect-2F-4-schema-migration-misses-base-class.md) | | documentation | Low | none | this branch: session storage plan | done (#106: e551ead) |
-| [2G-3](G-ci-release-publishing/defect-2G-3-pages-every-merge-claim.md) | | documentation | Low | none | this branch: contributor guide plan | decided (#107) |
+| [2G-3](G-ci-release-publishing/defect-2G-3-pages-every-merge-claim.md) | | documentation | Low | none | this branch: contributor guide plan | done (#107: 0c8f1bf) |
 | [2G-4](G-ci-release-publishing/defect-2G-4-performance-scale-line-not-reproducible.md) | | documentation | Low | none | this branch: benchmarks plan, at the end | decided (#107) |
-| [2G-5](G-ci-release-publishing/defect-2G-5-ci-descriptions-lag-the-jobs.md) | (2I's `pr.yaml` note) | documentation | Low | none | this branch: contributor guide plan | decided (#107) |
-| [2H-1](H-docs-site-readme/defect-2H-1-documentation-page-ci-sentence.md) | 2T-6, 2I-4 | documentation | Low | none | this branch: contributor guide plan | decided (#107) |
-| [2H-2](H-docs-site-readme/defect-2H-2-misspelt-british-spelling.md) | (2I's "initialiser" note) | documentation | Low | none | this branch: contributor guide plan, final pass | decided (#108) |
+| [2G-5](G-ci-release-publishing/defect-2G-5-ci-descriptions-lag-the-jobs.md) | (2I's `pr.yaml` note) | documentation | Low | none | this branch: contributor guide plan | done (#107: 0c8f1bf) |
+| [2H-1](H-docs-site-readme/defect-2H-1-documentation-page-ci-sentence.md) | 2T-6, 2I-4 | documentation | Low | none | this branch: contributor guide plan | done (#107: 0c8f1bf) |
+| [2H-2](H-docs-site-readme/defect-2H-2-misspelt-british-spelling.md) | (2I's "initialiser" note) | documentation | Low | none | this branch: contributor guide plan, final pass | done (#108: 17db243) |
 | [2H-3](H-docs-site-readme/defect-2H-3-readme-log-info-not-attached.md) | | documentation | Low | none | not adopted (maintainer); the README stays; #62's list at the cleanup | decided (#108) |
 | [2H-4](H-docs-site-readme/defect-2H-4-upgrade-guide-stale-ts2339.md) | 2A-7 | documentation | Low | none | this branch: the upgrade guide's docs plan, after the code areas | done (#101: 89a2fe7) |
 | [2H-5](H-docs-site-readme/defect-2H-5-upgrade-guide-two-compile-errors.md) | (2F's note) | documentation | Low | none | this branch: the upgrade guide's docs plan, after the code areas | done (#101: 89a2fe7) |
 | [2H-6](H-docs-site-readme/defect-2H-6-installation-storage-values-runtime-claim.md) | | documentation | Low | none | this branch: session storage plan (docs) | done (#102: 1817e47) |
 | [2H-7](H-docs-site-readme/defect-2H-7-upgrade-javascript-item-no-search.md) | | documentation | Low | none | this branch: the upgrade guide's docs plan, after the code areas | done (#101: 89a2fe7) |
-| [2I-1](I-contributor-guide/defect-2I-1-dev-dependency-rule-in-src.md) | | documentation | Low | none | this branch: `docs/repository.md` *Toolchain* | decided (#82) |
-| [2I-3](I-contributor-guide/defect-2I-3-claude-code-loading-claim.md) | | documentation | Low | none | this branch: contributor guide plan | decided (#109) |
-| [2I-5](I-contributor-guide/defect-2I-5-working-folder-rules-vs-practice.md) | | documentation | Low | none | this branch: contributor guide plan | decided (#110) |
-| [2I-6](I-contributor-guide/defect-2I-6-plan-reference-left-in-a-spec.md) | | documentation | Low | none | this branch: contributor guide plan | decided (#109) |
-| [2I-7](I-contributor-guide/defect-2I-7-guide-statements-that-do-not-match.md) | | documentation | Low | none | this branch: contributor guide plan | decided (#109) |
-| [2I-8](I-contributor-guide/defect-2I-8-subfolder-files-do-not-point-to-src.md) | | documentation | Low | none | this branch: the fallback and the subfolder intros | decided (#82) |
-| [2I-9](I-contributor-guide/defect-2I-9-editorconfig-mdx.md) | | documentation | Low | none | this branch: contributor guide plan | decided (#109) |
-| [2T-8](T-tests-and-checks/defect-2T-8-base-config-comment-stale-again.md) | | documentation | Low | none | this branch: contributor guide plan | decided (#109) |
+| [2I-1](I-contributor-guide/defect-2I-1-dev-dependency-rule-in-src.md) | | documentation | Low | none | this branch: `docs/repository.md` *Toolchain* | done (#82: 3f25a75) |
+| [2I-3](I-contributor-guide/defect-2I-3-claude-code-loading-claim.md) | | documentation | Low | none | this branch: contributor guide plan | done (#109: 3587221) |
+| [2I-5](I-contributor-guide/defect-2I-5-working-folder-rules-vs-practice.md) | | documentation | Low | none | this branch: contributor guide plan | done (#110: 20f7e98) |
+| [2I-6](I-contributor-guide/defect-2I-6-plan-reference-left-in-a-spec.md) | | documentation | Low | none | this branch: contributor guide plan | done (#109: 3587221) |
+| [2I-7](I-contributor-guide/defect-2I-7-guide-statements-that-do-not-match.md) | | documentation | Low | none | this branch: contributor guide plan | done (#109: 3587221) |
+| [2I-8](I-contributor-guide/defect-2I-8-subfolder-files-do-not-point-to-src.md) | | documentation | Low | none | this branch: the fallback and the subfolder intros | done (#82: 3f25a75) |
+| [2I-9](I-contributor-guide/defect-2I-9-editorconfig-mdx.md) | | documentation | Low | none | this branch: contributor guide plan | done (#109: 3587221) |
+| [2T-8](T-tests-and-checks/defect-2T-8-base-config-comment-stale-again.md) | | documentation | Low | none | this branch: contributor guide plan | done (#109: 3587221) |
 | 2Z-1 (section 5) | | documentation | Low | none | this branch: the example fixed with a check of the doc examples (checks plan) | done (#104: 9557f58) |
 | 2Z-2 (section 5) | | documentation | Low | none | this branch: session storage plan (docs) | done (#102: 1817e47) |
-| 2Z-3 (section 5) | | documentation | Low | none | this branch: the rule in the guide; wording; an issue filed by the maintainer | decided (#111) |
+| 2Z-3 (section 5) | | documentation | Low | none | this branch: the rule in the guide; wording; an issue filed by the maintainer | done (#111: 39fb880; the issue drafted, filed by the maintainer) |
 | [2A-8](A-session-storage/defect-2A-8-same-origin-navigation-stops-a-batch.md) | | design question | Low | none (behavior kept) | this branch: keep failing; the messages name the destination; docs | done (#86: e37a039) |
 | [2B-4](B-registration-and-resolution/defect-2B-4-add-without-locator-method.md) | | design question | Low | patch | this branch: `verify()` reports it; a changeset | done (#88: 1dc488f) |
 | [2C-3](C-queries/defect-2C-3-replace-any-frame-terminal-compiles.md) | | design question | Low | none | this branch: docs clause (item 24) and a probe comment; no type change | done (#92: a05f533) |

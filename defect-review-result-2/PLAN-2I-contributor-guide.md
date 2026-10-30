@@ -99,7 +99,9 @@ and the `Co-Authored-By:` trailer; a stop after step 3. The maintainer pushes.
 ## Execution notes
 
 Built 2026-10-30, one commit per step: 9e7777b (1), 3f25a75 (2), 0c8f1bf (3, then the stop; the maintainer pushed and
-the run was green), 3587221 (4), 20f7e98 (5), 39fb880 (6), then steps 7 and 8.
+the run was green), 3587221 (4), 20f7e98 (5), 39fb880 (6), a1b7d05 (7), 17db243 (8). The full
+`pnpm pack-test --reporter=line` on step 8's code (its guide pointer came after the run): exit 0 in 143 s, 1863 passed and 3 skipped, 36 step locations
+where they were called, the test server's 27 passed.
 
 1. **Beyond the step lists, same decisions.** Step 2: `website/AGENTS.md`'s site-dependency sentence became a pointer to
    the moved rule. Step 3: `website/AGENTS.md`'s *Deployment* names the tip rule; `.github/AGENTS.md`'s CI pointer also
@@ -129,3 +131,21 @@ the run was green), 3587221 (4), 20f7e98 (5), 39fb880 (6), then steps 7 and 8.
      the only way; the gap cannot be closed.
    - `urlHosts.spec.ts`: IDN, IPv6 and credentials forms reach no real host. Remedy for IPv6 only: the test server
      listening on `::1`.
+4. **Step 8 swept past the decision's list**, for "American spelling throughout": besides the four pages, the doc
+   comment and `src/pageObject.test.ts`'s title, the test titles and comments with British forms (`labelled`,
+   `initialiser`, `initialisation`, `recognised`, `recognises`, `normalises`, `licence`, `misspelt`, the
+   `MisspeltPage` class and its `SITE` marker) and `main.yaml`'s "cancelled". Left: the runtime identifier
+   `normaliseOrigin` in `src/helpers/sessionStorage.ts` (a rename is a refactor of its own, of no reader's concern),
+   the `defect-review` skill (written in British English throughout, and not a page), the README's `"Cancelled"` status
+   string (decision 108) and `CHANGELOG.md`.
+5. **The tracing check** (five tasks, as Claude Code and as a client that loads only the root): a mechanism change in
+   `src/helpers/` reaches the pages through `src/AGENTS.md` and the index's widened row, and the root's fallback names
+   `src/AGENTS.md` for the other client; moving the Node floor reaches `docs/versioning.md`'s bullet through the index;
+   a workflow change reaches the Internal pages through `.github/AGENTS.md`, or, for the other client, the index's row
+   and the fallback; a new dev dependency in `website/` reaches `docs/repository.md` *Toolchain* through the index and
+   `website/AGENTS.md`; planning a release from a review reaches *From a review's findings* through the index. One rule
+   was not reached: `test/AGENTS.md`'s `pnpm test:constrained` after a change to session storage, navigation or steps,
+   whose trigger is in `src/helpers/`; step 8 adds the pointer there (*Rules held elsewhere*).
+6. **The `git grep` of step 4** over the repository outside the review folders finds only the guide's own description
+   of how release work is kept (`docs/releases.md` *Planning*, rule 7 and *From a review's findings*) and the root's
+   "the plan's execution notes", which name no plan.
