@@ -11,7 +11,7 @@
  */
 import { type JSHandle, type Page, test } from "@playwright/test";
 import { callerLocation, captureCallSite, type StepLocation, siteLocation } from "./callSite";
-import { describeKeys, originOf, type ReadTestOutcome, registryFor } from "./sessionStorageSeed";
+import { describeKeys, originOf, type ReadTestOutcome, registryFor, replacedByNavigation } from "./sessionStorageSeed";
 import { PAGE_WIDE, takeTurn } from "./storageTurns";
 
 /**
@@ -422,8 +422,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 			});
 		} catch (error) {
 			const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
-			const destroyed = cause instanceof Error && /Execution context was destroyed/.test(cause.message);
-			if (destroyed || moved()) {
+			if (replacedByNavigation(cause) || moved()) {
 				throw navigated(from ?? before, destinationOf(this.page.url()), cause);
 			}
 			throw error;

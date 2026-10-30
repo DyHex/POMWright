@@ -14,7 +14,8 @@ batches, step titles, origin checks and per-key codecs; `set`, `get`, `clear`, `
 seed registry, one per page: in the call's turn, a write at once on the origin, or an init script per pending origin
 that writes only in the main frame, on the origin, on the first arrival, disposed at the main frame's commit there, with
 its entries as `[key, value]` pairs; the Navigation API check, the commit-during-registration check, the refused-write,
-not-applied and never-applied failures), `storageTurns.ts` (`takeTurn`: per page and origin, every `SessionStorage` call
+not-applied and never-applied failures; and what `sessionStorage.ts` shares with it: `originOf`, and
+`replacedByNavigation`, the one reading of Playwright's error for a replaced document), `storageTurns.ts` (`takeTurn`: per page and origin, every `SessionStorage` call
 in the order it was made; on a page whose URL has no origin, a page-wide turn after every earlier call), `callSite.ts`
 (`captureCallSite(boundary)` and `atCallSite`: a later error pointed at the consumer's call, for `seed` and the
 page-object check, which cuts at `new.target`; `callerLocation(boundary)`: a boxed step's `location`, the caller's

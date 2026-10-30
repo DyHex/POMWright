@@ -11,6 +11,7 @@ import {
 	originOf,
 	type PendingSeed,
 	registryFor,
+	replacedByNavigation,
 	type SeedPage,
 	SeedRegistry,
 	type SeedScriptArg,
@@ -32,6 +33,22 @@ describe("originOf", () => {
 		expect(originOf("")).toBeUndefined();
 		expect(originOf("not a url")).toBeUndefined();
 		expect(originOf("data:text/html,hi")).toBeUndefined();
+	});
+});
+
+describe("replacedByNavigation", () => {
+	it("reads Playwright's error for a replaced document, and nothing else, as a navigation", () => {
+		expect(
+			replacedByNavigation(
+				new Error("page.evaluate: Execution context was destroyed, most likely because of a navigation"),
+			),
+		).toBe(true);
+		expect(replacedByNavigation(new Error("page.evaluate: Target page, context or browser has been closed"))).toBe(
+			false,
+		);
+		expect(replacedByNavigation(new Error("page.evaluate: Target crashed"))).toBe(false);
+		expect(replacedByNavigation("Execution context was destroyed")).toBe(false);
+		expect(replacedByNavigation(undefined)).toBe(false);
 	});
 });
 

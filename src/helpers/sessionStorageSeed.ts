@@ -71,6 +71,14 @@ export const originOf = (url: string): string | undefined => {
 };
 
 /**
+ * Whether Playwright's error says that the document an evaluation ran in was replaced: "Execution context was
+ * destroyed, most likely because of a navigation". Playwright words every failure of an evaluation that way unless the
+ * evaluated code threw or the page is closed or crashed, so a closed page is never read as a navigation.
+ */
+export const replacedByNavigation = (error: unknown): boolean =>
+	error instanceof Error && /Execution context was destroyed/.test(error.message);
+
+/**
  * How many times the Navigation API check is repeated while the page replaces its document, each failed evaluation
  * being one replacement. 20 follows the default of Playwright's `maxRedirects` (an API request's own HTTP redirects): a
  * convention rather than a limit, since browsers set none on script redirects, and an HTTP redirect chain commits one
@@ -381,9 +389,7 @@ export class SeedRegistry {
 			try {
 				support = await probe();
 			} catch (error) {
-				// Playwright's text tells a replaced document apart, as `SessionStorage`'s navigation check reads it
-				const replaced =
-					error instanceof Error && /Execution context was destroyed/.test(error.message) && !this.page.isClosed();
+				const replaced = replacedByNavigation(error) && !this.page.isClosed();
 				if (replaced ? tries > MAX_REPLACEMENTS : tries > 1) {
 					throw error;
 				}
