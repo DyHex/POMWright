@@ -185,7 +185,7 @@ const destinationOf = (url: string): string => {
 };
 
 /** Throws unless `value` is an origin; returns it normalized. */
-const normaliseOrigin = (value: string, title: string): string => {
+const normalizeOrigin = (value: string, title: string): string => {
 	const origin = describeOrigin(value);
 	if (origin === undefined) {
 		let why = "";
@@ -358,7 +358,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	) {
 		this.label = options.label;
 		this.schema = options.schema ?? {};
-		this.origin = options.origin === undefined ? undefined : normaliseOrigin(options.origin, this.title("constructor"));
+		this.origin = options.origin === undefined ? undefined : normalizeOrigin(options.origin, this.title("constructor"));
 	}
 
 	private title(method: string): string {
@@ -867,7 +867,7 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		try {
 			await this.step("seed", siteLocation(site), async () => {
 				const title = this.title("seed");
-				const origin = requested === undefined ? this.origin : normaliseOrigin(requested, title);
+				const origin = requested === undefined ? this.origin : normalizeOrigin(requested, title);
 				if (origin === undefined) {
 					throw new Error(`${title}: an origin is required; pass { origin } or construct the helper with one`);
 				}
