@@ -102,6 +102,8 @@ Promise checks of `@step` and `defineLocators()`).
 
 - A change to session storage, navigation or steps runs `pnpm test:constrained` too, where races show that a large
   machine hides ([test/AGENTS.md](../../test/AGENTS.md#commands)).
+- A change to the session storage calls reruns `pnpm bench storage` and updates *Internal → Performance* from its output
+  ([test/AGENTS.md](../../test/AGENTS.md#commands)).
 
 ## Do not
 

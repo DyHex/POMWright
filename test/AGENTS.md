@@ -34,13 +34,23 @@ it before working there. Read it before running these commands, probing a claim,
   given semver version in the packed `package.json` only, as `pomwright-<version>.tgz` at the root (gitignored), for
   trying a build in another project before it is released; the repository's version stays what changesets set, and
   the harness's tarball and `.pack/` are untouched.
-- `pnpm bench` runs `scripts/benchmark.mjs` against the installed package (after `pnpm harness:install`): registering,
-  resolving and verifying locators beside the same chains built with Playwright's locator methods, and, through
-  `test/benchmarks/pageObjectFixture.spec.ts` with `test/playwright.bench.config.ts`, a page object set up as a fixture
-  beside one written with Playwright alone, in time and heap; printed as the tables of *Internal → Performance*. It is not part of CI, where timings vary too much to gate on; rerun it and update
-  the page, its machine line included, when a change touches the registry or resolution. It runs at rest, one worker
-  and nothing else running: a declared condition, not what a loaded test run sees, which the page states with its
-  machine line (the root's rule on stand-ins, [AGENTS.md](../AGENTS.md#how-to-work)).
+- `pnpm bench` runs `scripts/benchmark.mjs` against the installed package (after `pnpm harness:install`), in three
+  sections, all by default or those named (`pnpm bench registry fixture`): `registry`, registering, resolving and
+  verifying locators beside the same chains built with Playwright's locator methods, and one `count()` round trip for
+  scale; `fixture`, a page object set up as a fixture beside one written with Playwright alone
+  (`test/benchmarks/pageObjectFixture.spec.ts`); `storage`, the session storage calls beside the fewest
+  `page.sessionStorage` calls that do the same work, `seed` beside two init scripts written by hand, and the quota, on
+  three browsers, at rest and under the harness's parallel workers (`test/benchmarks/sessionStorage.spec.ts`; both
+  through `test/playwright.bench.config.ts`, which starts the test server for the storage section only). Each section
+  runs five times in fresh processes, and every cell prints the median and the range; the first lines print the
+  machine, the CPUs the process may use and the load average at the start. `POMWRIGHT_BENCH_RUNS=1` runs once, to try a
+  change; `POMWRIGHT_BENCH_BASELINE=<dir>` adds `set`, `get` and `clear` of another build (an extracted package) to
+  the storage section. It is not part of CI, where timings vary too much to gate on; rerun it and update *Internal →
+  Performance*, its machine line included, when a change touches the registry, resolution or the storage calls. It runs
+  at rest, one worker and nothing else running: a declared condition, not what a loaded test run sees, which the page
+  states with its machine line (the root's rule on stand-ins, [AGENTS.md](../AGENTS.md#how-to-work)). On the
+  maintainer's hybrid CPU the reference run is `taskset -c 0-3 pnpm bench`, the fastest cores only: unpinned, a
+  process that moves between fast and slow cores spreads the numbers (the storage calls' medians by up to 1.8 times).
 - `pnpm test:constrained` (`taskset -c 0-3 pnpm test --workers=8`) runs `pnpm test` with 8 workers on 4 CPUs: a
   machine about as small as CI's runner (2 cores, 4 threads, where the harness runs 2 workers), under more load. Races
   in POMWright's navigation checks show there that a large machine hides: one that CI's runner showed passed 900 of 900
@@ -140,8 +150,8 @@ it before working there. Read it before running these commands, probing a claim,
   published entries, one shared copy, closed deep imports, the manifest; `packageFiles.spec.ts`, the installed
   package's exact file list; `publicTypes.typecheck.ts`, `publicTypes.emit.ts` and `stepLegacyDecorators.typecheck.ts`,
   compile-only, the last also under `experimentalDecorators`; `emitSeeds.ts`, a value of every export, from which the
-  emit check's module of every public member is generated). `benchmarks/` holds the fixture benchmark of `pnpm bench`, run only through
-  `playwright.bench.config.ts`, never by `pack-test`. `testApp/urlForms.spec.ts` sweeps the printable ASCII
+  emit check's module of every public member is generated). `benchmarks/` holds the fixture and storage benchmarks of `pnpm bench`, run only
+  through `playwright.bench.config.ts`, never by `pack-test`. `testApp/urlForms.spec.ts` sweeps the printable ASCII
   characters through the URL each browser reports (but `# ? / % \`), with the known differences listed: Chromium's `|`
   in a path, and, on Node 20 and 22, whose `new URL` keeps a `^`, every browser's `%5E`. `testApp/urlHosts.spec.ts`
   takes each host form `new URL` normalizes (case, ports, IDN, IPv6, IPv4 shorthands, credentials) through a page
