@@ -32,7 +32,7 @@ pages themselves; the guide decisions 82, 109 to 111, 113, 116 and 117 are the g
 benchmarks, the specs and *Internal → Performance*. Decision 112's three additions exist (`get`, `clear` and `seed` in
 `test/step-locations/`, `pnpm lint:guide`, `pnpm lint:workflows`).
 
-## To move (proposed)
+## To move (agreed 2026-10-30 with all seven; done in `6054bfb` (1 to 5), `afeb715` (6), `d9177dc` (7))
 
 1. Decision 91, the navigation methods stay unbound: nowhere outside the folder, though a review raised it (2D-4).
    `src/helpers/AGENTS.md`, *Considered and not planned*.
@@ -50,9 +50,10 @@ benchmarks, the specs and *Internal → Performance*. Decision 112's three addit
 ## Issues for the maintainer to file
 
 - **`3.0.2 release: after the merge`**: `ISSUE-after-merge.md`, less what the maintainer has already done on GitHub.
-- **`Test coverage beyond 3.0.2`** (`backlog`): decision 112's draft, plus one line from PLAN-2R-2-2R-3's notes: a call
-  made while the page is mid-navigation names the page the new document reports, which no harness case reproduces
-  every time (the `set` test's shape did 34 of 50 without the fix); unit tests cover the logic with a stand-in.
+- **`Test coverage beyond 3.0.2`** (`backlog`): `ISSUE-test-coverage.md`, decision 112's draft, each item re-checked.
+  PLAN-2R-2-2R-3's note that no harness case reproduces 2R-2 every time is not added: decision 118 settled its tests
+  (unit tests with a stand-in for the moment, the harness's `set` test and `get(keys)`'s parallel reads as the
+  real-timing checks), as the maintainer pointed out.
 
 ## The reference search
 
