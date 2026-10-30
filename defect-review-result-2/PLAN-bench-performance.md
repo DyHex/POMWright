@@ -133,15 +133,14 @@ this record follows. The runs' output is kept in [bench-runs/](bench-runs/).
    pinned to CPUs 0 to 3, 28 to 40 ms with ranges of 24 to 60 (one run per browser). Across the kept runs, the median
    range of a cell: pinned to 0 to 3, locator tables 13%, storage at rest 9%; unpinned, 5% and 54%. Pinned, the
    locator tables' widest cells are the registries of 10,000 paths and more. A fourth run, pinned to all eight
-   performance cores (`taskset -c 0-15`), spread 13% and 24%, but a docs build ran during part of it, so the
-   maintainer had it run again, alone (load average 0.14 at the start): 6% and 23%, and 23% under its 8 workers. So
+   performance cores (`taskset -c 0-15`), alone (load average 0.14 at the start), spread 6% and 23%, and 23% under its
+   8 workers; a first attempt at it had a docs build beside it and was discarded, at the maintainer's word. So
    the locator tables spread least unpinned (5%) or on all eight fast cores (6%), and the storage calls least on CPUs 0
    to 3 (9% and 11% in two runs). A process that VS Code's Playwright extension started at 20:50 (`playwright
    test-server`) was alive, at 0% CPU when checked, during runs 2 to 4; no test file changed during the runs, which is
    what would have made it work.
 5. **The kept runs**: `run1-pinned.out` (the page's), `run2-pinned.out`, both `taskset -c 0-3` at `649d903`, with the
-   baseline build; `run3-unpinned.out`; `run4-pinned-0-15.out` (run alone) and `run4-pinned-0-15-disturbed.out` (the
-   one with the docs build beside it); `runs.log` with each run's time (about 11.5 minutes
+   baseline build; `run3-unpinned.out`; `run4-pinned-0-15.out`; `runs.log` with each run's time (about 11.5 minutes
    pinned). Run 2 differs from run 1 by 1.8% in the median cell of the locator tables (12% at most) and by 3.0% in the
    storage tables' (82% at most, WebKit's arrival under load).
 6. **The page against the output**: every one of its 231 cells with a range is in `run1-pinned.out` verbatim (checked
