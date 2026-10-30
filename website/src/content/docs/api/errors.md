@@ -333,7 +333,8 @@ LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.exam
 LoginPage: goto() takes a URL string or options; received a URL object; pass its href.
 ```
 
-Thrown by `goto()`: from JavaScript on a page object whose URL is a RegExp; for a target that cannot be resolved
+Thrown by `goto()`: on a page object whose URL is a RegExp, from JavaScript, or for a relative path the type cannot
+tell apart (one that starts with a letter and holds a colon, `a/b:c`); for a target that cannot be resolved
 against `baseUrl`, such as a scheme with nothing after it, with the URL parser's error as `cause`; and from JavaScript
 for a first argument that is neither a URL string nor options (`received null`, `received a number`), a `URL` object
 included: pass its `href`.

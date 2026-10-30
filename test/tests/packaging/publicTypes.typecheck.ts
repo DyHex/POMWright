@@ -745,4 +745,23 @@ export const navigationCalls = async () => {
 	await regExpPathPage.navigation.goto();
 	// @ts-expect-error a RegExp base takes only an absolute URL
 	await regExpBasePage.navigation.goto("/orders");
+	// a relative target holding a colon is no URL with a scheme, which starts with a letter
+	// @ts-expect-error a path with a colon in its query
+	await regExpBasePage.navigation.goto("/orders?at=12:00");
+	// @ts-expect-error a query alone
+	await regExpBasePage.navigation.goto("?at=12:00");
+	// @ts-expect-error a digit before the colon
+	await regExpBasePage.navigation.goto("1:2");
+	const anyPageNavigation: NavigationFor<RegExp, UrlMatcher> = regExpBasePage.navigation;
+	// @ts-expect-error a path with a colon in its query, through NavigationFor
+	await anyPageNavigation.goto("/orders?at=12:00");
+	// @ts-expect-error a query alone, through NavigationFor
+	await anyPageNavigation.goto("?at=12:00");
+	// @ts-expect-error a digit before the colon, through NavigationFor
+	await anyPageNavigation.goto("1:2");
+	// a scheme in either case, and a template with one
+	await regExpBasePage.navigation.goto("HTTPS://shop.example/x");
+	await regExpBasePage.navigation.goto(`https://${host}/x`);
+	await anyPageNavigation.goto(`https://${host}/x`);
 };
+declare const host: string;

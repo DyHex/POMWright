@@ -203,7 +203,8 @@ So `^` and `$` on a base refer to the origin, a path prefix belongs in `urlPath`
 
 Such a page has no single URL to go to, so `goto()` without a target is not available (a compile error, and from
 JavaScript: `AccountPage: goto() without a URL needs a string fullUrl; this page object has a RegExp URL. Pass an
-absolute URL instead.`). `goto(target)` still works; on a RegExp `baseUrl` the target must be absolute.
+absolute URL instead.`). `goto(target)` still works; on a RegExp `baseUrl` the target must be absolute, and its type
+requires a scheme: a `string` that holds a URL narrows with a cast, `` goto(url as `https://${string}`) ``.
 
 A page whose query varies, `/orders?tab=2` and `/orders?tab=3` alike, is such a page too:
 `urlPath: /^\/orders\?tab=\d+$/`. A page with one fixed query is a string: `urlPath: "/orders?tab=2"`.

@@ -19,8 +19,19 @@ const passes = (predicate: (url: URL) => boolean, url: string): boolean => {
 	}
 };
 
-/** A URL with a scheme; the only `goto` target accepted when the page object's `baseUrl` is a RegExp. */
-export type AbsoluteUrl = `${string}:${string}`;
+/** Each character of `S`, as a union. */
+type Characters<S extends string> = S extends `${infer First}${infer Rest}` ? First | Characters<Rest> : never;
+
+/** The letters a URL scheme starts with. */
+type Letter = Characters<"abcdefghijklmnopqrstuvwxyz">;
+
+/**
+ * A URL with a scheme, which starts with a letter: the only `goto` target accepted when the page object's `baseUrl` is
+ * a RegExp. A relative target that starts with `/`, `?`, `#`, `.` or a digit does not compile; one that starts with a
+ * letter and holds a colon (`a/b:c`) does, since no template type can tell it from a scheme, and is rejected at run
+ * time. A `string` holding a URL narrows with a cast: ``url as `https://${string}` ``.
+ */
+export type AbsoluteUrl = `${Letter | Uppercase<Letter>}${string}:${string}`;
 
 /**
  * The options of every navigation method, and of a page object's `navOptions`. Each option comes from the call, then
@@ -107,7 +118,8 @@ type NavigationBase<Target extends string> = {
 	 * `runPostNavigationActions`, which defaults to `true`).
 	 * @throws What `page.goto` throws; for a target that cannot be resolved against a string `baseUrl`:
 	 * `LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.example"`; on a RegExp `baseUrl`, for
-	 * a relative target (from JavaScript):
+	 * a relative target (from JavaScript, or a relative path the type cannot tell apart: one that starts with a letter
+	 * and holds a colon, `a/b:c`):
 	 * `AccountPage: goto("/account") needs an absolute URL because baseUrl is a RegExp.`; for a first argument that is
 	 * neither a string nor options, a `URL` object included (from JavaScript):
 	 * `LoginPage: goto() takes a URL string or options; received a URL object; pass its href.`

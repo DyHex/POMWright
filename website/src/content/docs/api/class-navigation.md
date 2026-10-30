@@ -161,8 +161,9 @@ await loginPage.navigation.goto("https://help.shop.example/");
 **Throws**
 
 What `page.goto()` throws. For a target that cannot be resolved against a string `baseUrl`, before `page.goto()` runs,
-with the URL parser's error as `cause`; from JavaScript, on a page object whose URL is a RegExp, and for a first
-argument that is neither a URL string nor options, which `page.goto()` rejects too:
+with the URL parser's error as `cause`; on a page object whose URL is a RegExp, from JavaScript, or for a relative
+path the type cannot tell apart (one that starts with a letter and holds a colon, `a/b:c`); and from JavaScript for a
+first argument that is neither a URL string nor options, which `page.goto()` rejects too:
 
 ```text
 LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.example"
