@@ -8,25 +8,17 @@ export default defineConfig({
 	...baseConfig,
 	testDir: "./tests",
 
-	webServer: process.env.CI
-		? [
-				{
-					command: "pnpm start",
-					url: "http://localhost:9000/",
-					timeout: 5 * 60_000,
-					reuseExistingServer: false,
-					ignoreHTTPSErrors: false,
-				},
-			]
-		: [
-				{
-					command: "pnpm start",
-					url: "http://localhost:9000/",
-					timeout: 5 * 60_000,
-					reuseExistingServer: true,
-					ignoreHTTPSErrors: false,
-				},
-			],
+	// never reused, locally too: a server left running by a run that ended without stopping it serves the server.js
+	// it started with; a run then fails at once, saying port 9000 is taken
+	webServer: [
+		{
+			command: "pnpm start",
+			url: "http://localhost:9000/",
+			timeout: 5 * 60_000,
+			reuseExistingServer: false,
+			ignoreHTTPSErrors: false,
+		},
+	],
 
 	projects: [
 		{

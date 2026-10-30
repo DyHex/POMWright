@@ -18,7 +18,8 @@ export default defineConfig({
 		command: "pnpm start",
 		url: "http://localhost:9000/",
 		timeout: 5 * 60_000,
-		reuseExistingServer: !process.env.CI,
+		// never reused, as in the harness's config: a leftover server would serve an old server.js
+		reuseExistingServer: false,
 	},
 	projects: [
 		{

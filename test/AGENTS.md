@@ -85,7 +85,10 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   the second origin `http://127.0.0.1:9000`, the same server, by every kind of navigation; iframes, COOP and COEP
   flags, and two service workers). New fixture pages go in as new routes, not into the static page. `server.js` exports
   the app and listens only when started as a program (`pnpm start`), so a spec can load it. No page loads anything from
-  outside the test server: a slow host once made the harness flaky. `test-server/externalRequests.spec.ts` reads every
+  outside the test server: a slow host once made the harness flaky. Every run starts its own server and never reuses
+  one already on port 9000 (`reuseExistingServer: false`, locally too): a server left by a run that ended without
+  stopping it served the `server.js` it started with, so a run fails at once when the port is taken; stop that
+  process. `test-server/externalRequests.spec.ts` reads every
   route from Express's router and runs one test per page (every `GET` route and `/`, in parallel, in chromium) that
   checks every request and WebSocket, and scans `server.js` and `test-data/` for any other host in an `http(s)`,
   `ws(s)` or protocol-relative `//host` URL (an XML namespace aside); every route goes on the app itself, since a router
