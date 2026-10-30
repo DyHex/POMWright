@@ -86,4 +86,23 @@ Step 1, then step 2, each verified and committed with the trailer. Then a report
 
 ## Execution notes
 
-None yet.
+- 2026-10-30. The plan was committed in `06635aa`, step 1 in `9f5e95b`, and this record is step 2.
+- **Unexpected, corrected during the build:** the plan said that `pack-test.sh` runs `pnpm typecheck`. It runs the same
+  steps one by one (lines 39-46), so the check was added there too, after `check-error-messages.mjs`. Otherwise the
+  harness jobs, and CI's latest row with them, would never have run it. The plan's text was corrected before the
+  commit.
+- **The check:**
+  - It passes at 1.64.0: "Playwright 1.64.0 pauses 20, 50, 100, 100, 500 ms before its actions' retries, as POMWright
+    does".
+  - It fails, exit 1, with a message saying what to update, in both ways it should:
+    - `RETRY_PAUSES` changed to end in 1000, in the working tree and then restored;
+    - the method not found, shown with a scratch copy of the script looking for another name. That copy is a stand-in
+      for a Playwright release without the method: editing the installed `playwright-core` would change pnpm's shared
+      store.
+  - npm's latest `playwright-core` is 1.64.1, which CI's latest row will run. Its tarball, extracted in the scratchpad
+    and not installed, has `lib/coreBundle.js` defining the same pauses, which the check's pattern finds.
+- **Verification:**
+  - `pnpm typecheck` and the full `pnpm pack-test --reporter=line` (1845 passed, 3 skipped) both run the check, and it
+    passes.
+  - `pnpm lint`, `pnpm lint:workflows` (ShellCheck over `pack-test.sh`'s change), `pnpm docs:build` and
+    `pnpm lint:guide` pass.
