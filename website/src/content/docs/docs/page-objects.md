@@ -165,6 +165,7 @@ second time. Where the page object is built decides what the test run shows:
 | a test-scoped or worker-scoped fixture | the test fails before its body runs |
 | `beforeEach` | each test fails; its body runs until its first use of the page object |
 | `beforeAll` | every test of the group fails, each body running until its first use; in a `serial` group the first test fails and the others do not run |
+| the test body, or a `test.step` in it | the test fails, the error at the `new` line; the body runs on past it until its next use of the page object |
 
 `new` itself does not throw for such a mistake. A test that asserts one uses the page object right after creating it,
 with no `await` in between:

@@ -69,8 +69,10 @@ other encoded unreserved character, far more than the browsers differ on, and Pl
 
 - **One composed RegExp** with a filler between the parts. The base would have to match up to the exact character
   where the path begins, so a base such as `/identity-provider/` would never match.
-- **A `RegExp` subclass** as `fullUrl`. Playwright sends a RegExp to the browser as its source and flags, so the
-  subclass's own matching would never run.
+- **A `RegExp` subclass** as `fullUrl`. Its own matching would run in only one of the calls `fullUrl` is documented
+  for: `page.waitForURL()` matches in the test's process and calls the subclass's `test()`, while `page.route()` and
+  `expect(page).toHaveURL()` match by the RegExp's source and flags, so a subclass whose source differs from its
+  `test()` would route nothing and fail the assertion (probed on three browsers).
 - **An option to ignore the query.** One rule, identical to Playwright's `toHaveURL`, keeps `expectThisPage` and
   `expectAnotherPage` exact opposites; a page whose query varies has a RegExp path instead.
 - **Literal types for the URL parts.** They catch only a malformed literal, which the constructor check catches at the

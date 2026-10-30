@@ -73,7 +73,10 @@ too, and fails the test with a second error. *Page objects* says to check the ar
 
 A page object built in a fixture therefore fails the fixture before the test body runs. One built in `beforeEach` or
 `beforeAll` fails the tests the hook runs for, but the hook itself does not fail: each test body runs until its first
-use of the page object, which throws the kept error again.
+use of the page object, which throws the kept error again. One built in the test body, or in a `test.step` in it, fails
+the test when the check's microtask throws, as Playwright fails a test on an uncaught error, but the body is not
+stopped there: it runs on past the `await` that let the check run, until its next use of the page object throws the
+kept error, or until the runner ends the test, which may add an error of its own to a Playwright call in flight.
 
 ## No shared definition between instances
 

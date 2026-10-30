@@ -106,3 +106,24 @@ test.describe("beforeAll in a serial group", () => {
 		reached("after the first use");
 	});
 });
+
+test.describe("the test body", () => {
+	test("built there, used after an await", async ({ page }) => {
+		const typo = new TypoPage(page);
+		reached("body");
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		reached("after the await");
+		typo.getLocator("body");
+		reached("after the first use");
+	});
+	test("built in a test.step", async ({ page }) => {
+		await base.step("a step", async () => {
+			const typo = new TypoPage(page);
+			reached("in the step");
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			reached("after the await");
+			typo.getLocator("body");
+			reached("after the first use");
+		});
+	});
+});

@@ -99,6 +99,23 @@ const TABLE: { builtIn: string; result: string; outcomes: Record<string, Outcome
 			"beforeAll in a serial group › second": { status: "skipped", reached: [], errors: [] },
 		},
 	},
+	{
+		builtIn: "the test body, or a `test.step` in it",
+		result:
+			"the test fails, the error at the `new` line; the body runs on past it until its next use of the page object",
+		outcomes: {
+			"the test body › built there, used after an await": {
+				status: "failed",
+				reached: ["body", "after the await"],
+				errors: ["labeled"],
+			},
+			"the test body › built in a test.step": {
+				status: "failed",
+				reached: ["in the step", "after the await"],
+				errors: ["labeled"],
+			},
+		},
+	},
 ];
 
 /** The rows of the table under "| built in | result |" on *Page objects*, each as its two cells. */
