@@ -1410,3 +1410,36 @@ CPUs, 12 of 12 timed out before and 12 of 12 passed with it. Rejected: a number 
 (`test.setTimeout`), and a larger timeout for every test.
 
 **Why**: the test's time is set by the run it starts, which Playwright's own marker for a slow test follows.
+
+## 123. A seed on `about:blank` writes only into the document that inherited the origin (2026-10-30)
+
+**Settles**: [2R-7](R-triage/defect-2R-7-seed-writes-into-an-arrived-document.md) (defect), found by the full harness
+after decision 121.
+
+**The case**: on a page whose URL has no origin, `seed` asked `self.origin` of whichever document was current and wrote
+into whichever was current next. With the step overlay's delay, the document that arrived on the seeded origin during
+the call answered, and the seed wrote into it after its first script had run: the call resolved without its entries
+reaching the app (Firefox, 5 of 200 runs). A deterministic case, which commits the page right before the seed's first
+evaluation, failed 30 of 30 on three browsers.
+
+**Decided**:
+
+1. **Option A: the call asks through its document handle and decides by the answering document's own URL.** It
+   writes through the same handle: an inherited document (a URL without an origin, `self.origin` the seeded origin)
+   gets every key. A document that answers from the seeded origin arrived during the call, and the call fails with the
+   existing in-flight message. Any other answer registers the seed, as before. A document replaced while asked:
+   `currentUrl` says where the page went, the in-flight message on the seeded origin, else it registers. Another error
+   of the question registers, as before. A replacement during the write fails with the navigation message.
+2. **No new message, no new changeset**: the inherited write is unreleased (`52f2d4c`), and *Internal → Seed registry*
+   already promised that a page that arrives while the call waits fails the call.
+3. **Tests**: unit (`storageTurns.test.ts`, its fake page answering the question through the handle); a deterministic
+   harness case that wraps `page.evaluate` and `page.evaluateHandle`, its stand-in named in its comment; the overlay
+   test, which meets the timing for real.
+4. **Docs**: *Internal → Seed registry*, the comment of the write-at-once path.
+
+Rejected: **consulting the registry's commit watch** or **reading `page.url()` again**, which rely on Playwright's client
+hearing the commit before the new document answers and leave a commit between the question and the write unseen;
+**always registering on such a page**, which reverts `52f2d4c`.
+
+**Why**: as with decision 118, the document that answers is the source that does not depend on the order of
+Playwright's events, and the handle pins the write to it (decision 114).

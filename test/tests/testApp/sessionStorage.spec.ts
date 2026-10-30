@@ -1041,6 +1041,34 @@ test.describe("seed", () => {
 		}
 	});
 
+	test("a seed on about:blank whose page commits on the origin before the seed asks the document fails at the call", async ({
+		page,
+	}) => {
+		// the page commits on B right before the seed's first evaluation, by wrapping Playwright's page.evaluate and
+		// page.evaluateHandle: a stand-in for the moment alone (the page, the commit and the storage are real), so it cannot
+		// show how often real timing lands there; sessionStorageOverlay.spec.ts meets it with the step overlay's delay
+		const methods = page as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>;
+		let committed = false;
+		for (const method of ["evaluate", "evaluateHandle"]) {
+			const original = methods[method]?.bind(page);
+			methods[method] = async (...args: unknown[]) => {
+				if (!committed) {
+					committed = true;
+					await page.goto(`${B}/teststorage`, { waitUntil: "commit" });
+				}
+				return original?.(...args);
+			};
+		}
+		const outcome = await new SessionStorage(page, { label: "Blank", origin: B }).seed({ token: "t" }).then(
+			() => "resolved",
+			(error: Error) => error.message,
+		);
+		expect(outcome).toBe(
+			`Blank.SessionStorage.seed: the page committed a document on ${B} while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it`,
+		);
+		expect(await liveStorage(page)).toEqual({});
+	});
+
 	test("seeding both origins first: each first script sees only its own entries, and the first origin keeps its state on return", async ({
 		page,
 		testStorage,

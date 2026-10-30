@@ -53,6 +53,15 @@ const fakePage = (url: string) => {
 		 * after a reload); the harness pins the real handle (`test/tests/testApp/documentHandle.spec.ts`).
 		 */
 		document: 0,
+		/** How many handles to the document were taken. */
+		handles: 0,
+		/** The document's own URL when it differs from the one the client last heard, as when it arrived unheard. */
+		documentHref: undefined as string | undefined,
+		/** Around seed's question to the document: before it is answered (a replacement, an error), and after. */
+		beforeAsk: undefined as (() => void) | undefined,
+		afterAsk: undefined as (() => void) | undefined,
+		/** The init scripts the seed registry added. */
+		scripts: 0,
 	};
 	const later = <T>(effect: () => T) =>
 		new Promise<T>((resolve, reject) =>
@@ -67,21 +76,45 @@ const fakePage = (url: string) => {
 	const page = {
 		url: () => state.url,
 		mainFrame: () => ({ url: () => state.url }),
-		// the document's own URL for `location.href`, which a call asks once its document went away; its origin otherwise
-		evaluate: async (question: () => unknown) =>
-			String(question).includes("location.href") ? state.url : state.documentOrigin,
+		// the document's own URL for `location.href`, which a call asks once its document went away; the seed registry's
+		// Navigation API check; its origin otherwise
+		evaluate: async (question: () => unknown) => {
+			const text = String(question);
+			if (text.includes("location.href")) {
+				return state.url;
+			}
+			return text.includes("NavigationActivation")
+				? { supported: true, userAgent: "FakeBrowser/1.0" }
+				: state.documentOrigin;
+		},
 		evaluateHandle: async () => {
+			state.handles++;
 			const document = state.document;
 			return {
-				evaluate: async () => {
+				// the check after each storage call, and seed's question on a page whose URL has no origin
+				evaluate: async (question?: () => unknown) => {
+					const asking = String(question).includes("location.href");
+					if (asking) {
+						state.beforeAsk?.();
+					}
 					if (state.document !== document) {
 						throw new Error(
 							"elementHandle.evaluate: Execution context was destroyed, most likely because of a navigation",
 						);
 					}
+					if (!asking) {
+						return undefined;
+					}
+					const answer = { origin: state.documentOrigin, href: state.documentHref ?? state.url };
+					state.afterAsk?.();
+					return answer;
 				},
 				dispose: async () => undefined,
 			};
+		},
+		addInitScript: async () => {
+			state.scripts++;
+			return { dispose: async () => undefined };
 		},
 		on: () => undefined,
 		off: () => undefined,
@@ -270,6 +303,75 @@ describe("SessionStorage calls for one origin take turns", () => {
 		await Promise.all([storage.seed({ token: "seeded" }), storage.set("token", "set")]);
 		expect(popup.state.writes).toEqual(["token=seeded", "token=set"]);
 		expect(popup.state.store.get("token")).toBe("set");
+	});
+
+	describe("a seed on a page whose URL has no origin decides from the document that answers", () => {
+		const inFlight = `Blank.SessionStorage.seed: the page committed a document on ${A} while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it`;
+		const blank = () => {
+			const popup = fakePage("about:blank");
+			popup.state.documentOrigin = A;
+			const seed = () =>
+				new SessionStorage(popup.page, { label: "Blank", origin: A }).seed({ token: "seeded" }).then(
+					() => "resolved",
+					(error: Error) => error.message,
+				);
+			return { state: popup.state, seed };
+		};
+
+		it("an inherited document gets every key through the one handle", async () => {
+			const { state, seed } = blank();
+			expect(await seed()).toBe("resolved");
+			expect(state.writes).toEqual(["token=seeded"]);
+			expect(state.handles).toBe(1);
+			expect(state.scripts).toBe(0);
+		});
+
+		it("a document that answers from the seeded origin arrived during the call: the in-flight message, nothing written", async () => {
+			const { state, seed } = blank();
+			state.documentHref = `${A}/app`;
+			expect(await seed()).toBe(inFlight);
+			expect(state.writes).toEqual([]);
+			expect(state.scripts).toBe(0);
+		});
+
+		it("a document replaced while asked: the in-flight message when the page is now on the origin, else it registers", async () => {
+			const onOrigin = blank();
+			onOrigin.state.beforeAsk = () => {
+				onOrigin.state.document++;
+				onOrigin.state.url = `${A}/app`;
+			};
+			expect(await onOrigin.seed()).toBe(inFlight);
+			expect(onOrigin.state.writes).toEqual([]);
+
+			const elsewhere = blank();
+			elsewhere.state.beforeAsk = () => {
+				elsewhere.state.document++;
+				elsewhere.state.url = `${B}/faq`;
+			};
+			expect(await elsewhere.seed()).toBe("resolved");
+			expect(elsewhere.state.writes).toEqual([]);
+			expect(elsewhere.state.scripts).toBe(1);
+		});
+
+		it("another error of the question registers the seed", async () => {
+			const { state, seed } = blank();
+			state.beforeAsk = () => {
+				throw new Error("elementHandle.evaluate: something else");
+			};
+			expect(await seed()).toBe("resolved");
+			expect(state.writes).toEqual([]);
+			expect(state.scripts).toBe(1);
+		});
+
+		it("a document replaced between the question and the write fails the call with the navigation message", async () => {
+			const { state, seed } = blank();
+			state.afterAsk = () => {
+				state.document++;
+			};
+			expect(await seed()).toMatch(
+				/^Blank\.SessionStorage\.seed: the page navigated to about:blank while seed\(\) was writing to about:blank; 0 of 1 key was written; "token" was being written/,
+			);
+		});
 	});
 
 	it("a call whose turn comes after the page left the helper's origin fails with the origin message", async () => {

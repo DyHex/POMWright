@@ -151,7 +151,10 @@ chain would interleave and an earlier value could win. The registry therefore de
 call, whether to write at once or register: if the page was on the origin at the call and still is, it writes; if it has
 left, it registers. On a page whose URL has no origin, at the call and in the turn, the helper asks the document, which
 may have inherited the origin, as an `about:blank` popup does: it writes when it has, as `set` does there, and registers
-otherwise. Registering there would let the earlier `seed` overwrite a later `set` on arrival, and Firefox counts that
+otherwise. It asks through a handle to the document, which tells its own URL too, and writes through the same handle.
+A document that answers from the origin arrived during the call, whatever URL Playwright's client last heard, and
+fails the call as a commit does; and the keys go to the document that answered, or the call fails when it is
+replaced. Registering there would let the earlier `seed` overwrite a later `set` on arrival, and Firefox counts that
 arrival as a return. A navigation within the origin while the call waits is not an arrival. A call made away from the
 origin keeps its commit watch from the call on, so a page that arrives while the call waits fails the call, as before.
 

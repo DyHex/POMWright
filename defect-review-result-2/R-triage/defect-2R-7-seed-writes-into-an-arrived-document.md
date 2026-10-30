@@ -2,7 +2,7 @@
 
 - **Kind**: defect
 - **Status**: found 2026-10-30; planned in
-  [PLAN-2R-7-seed-inherited-arrival.md](../PLAN-2R-7-seed-inherited-arrival.md), agreed 2026-10-30
+  [PLAN-2R-7-seed-inherited-arrival.md](../PLAN-2R-7-seed-inherited-arrival.md), agreed 2026-10-30; decision 123
 - **Area**: `seed`'s write-at-once path for a page whose URL has no origin (`writeOnOrigin` in
   `src/helpers/sessionStorage.ts`, the `mayHaveInherited` branch of `SeedRegistry.add` in
   `src/helpers/sessionStorageSeed.ts`)

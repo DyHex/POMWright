@@ -13,6 +13,7 @@ import { type JSHandle, type Page, test } from "@playwright/test";
 import { callerLocation, captureCallSite, type StepLocation, siteLocation } from "./callSite";
 import {
 	describeKeys,
+	inFlightError,
 	MAX_RETRIES,
 	originOf,
 	pauseBeforeRetry,
@@ -285,8 +286,20 @@ class CallDocument {
 
 	/** Before a storage call: the handle, taken by the call's first, which the parallel reads of `get` share. */
 	async enter(): Promise<void> {
+		await this.taken();
+	}
+
+	/**
+	 * A question to the document the call works in, taking the handle first if the call has not: Playwright's error when
+	 * that document is gone. `seed` asks it on a page whose URL has no origin, and then writes into the same document.
+	 */
+	async ask<T>(question: () => T): Promise<T> {
+		return (await this.taken()).evaluate(question);
+	}
+
+	private taken(): Promise<JSHandle> {
 		this.handle ??= this.page.evaluateHandle(() => document);
-		await this.handle;
+		return this.handle;
 	}
 
 	/** After a storage call: Playwright's error when the document is gone. */
@@ -498,15 +511,16 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 	/**
 	 * One storage call per key, in order, all in one document: Playwright has no batch call, so a navigation can stop the
 	 * batch partway. The failure then says so, names the keys already done, which stay, and the key in flight, which may
-	 * have reached the new document.
+	 * have reached the new document. The document is the call's own, or `held` when the caller already asked it something.
 	 */
 	private async eachKey(
 		method: string,
 		keys: readonly string[],
 		[doing, done]: readonly [doing: string, done: string],
 		call: (key: string) => Promise<void>,
+		held?: CallDocument,
 	): Promise<void> {
-		await this.inDocument(async (doc) => {
+		const each = async (doc: CallDocument) => {
 			for (const [index, key] of keys.entries()) {
 				await this.guarded(
 					method,
@@ -524,7 +538,8 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 					doc,
 				);
 			}
-		});
+		};
+		await (held === undefined ? this.inDocument(each) : each(held));
 	}
 
 	/**
@@ -608,9 +623,13 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 		}
 	}
 
-	private async write(method: string, encoded: Record<string, string>): Promise<void> {
-		await this.eachKey(method, Object.keys(encoded), ["writing to", "written"], (key) =>
-			this.page.sessionStorage.setItem(key, encoded[key] as string),
+	private async write(method: string, encoded: Record<string, string>, held?: CallDocument): Promise<void> {
+		await this.eachKey(
+			method,
+			Object.keys(encoded),
+			["writing to", "written"],
+			(key) => this.page.sessionStorage.setItem(key, encoded[key] as string),
+			held,
 		);
 	}
 
@@ -860,14 +879,33 @@ export class SessionStorage<S extends SessionStorageSchema = Record<never, never
 				// on the origin, the registry writes at once in the call's turn; on a page whose URL has none, it writes when
 				// the document inherited the origin, as set() does there; elsewhere it registers the seed
 				const writeOnOrigin = async () => {
-					if (atCall.origin === undefined) {
-						const inherited = await this.page.evaluate(() => self.origin).catch(() => "null");
-						if (inherited !== origin) {
+					if (atCall.origin !== undefined) {
+						await this.write("seed", encoded);
+						return true;
+					}
+					// the document that answers decides, by its own URL rather than the one Playwright's client last heard,
+					// and the write goes into that same document; one that answers from the seeded origin arrived during the
+					// call, which fails as registration fails on a commit; replaced while asked, the page's current document
+					// says where it went
+					return this.inDocument(async (doc) => {
+						let answer: { origin: string; href: string };
+						try {
+							answer = await doc.ask(() => ({ origin: self.origin, href: location.href }));
+						} catch (error) {
+							if (replacedByNavigation(error) && originOf(await this.currentUrl()) === origin) {
+								throw inFlightError(title, origin, site);
+							}
 							return false;
 						}
-					}
-					await this.write("seed", encoded);
-					return true;
+						if (originOf(answer.href) === origin) {
+							throw inFlightError(title, origin, site);
+						}
+						if (originOf(answer.href) !== undefined || answer.origin !== origin) {
+							return false;
+						}
+						await this.write("seed", encoded, doc);
+						return true;
+					});
 				};
 				await registry.add(origin, encoded, title, site, writeOnOrigin, atCall);
 			});

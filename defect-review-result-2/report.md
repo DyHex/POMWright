@@ -1382,7 +1382,7 @@ or none: the release stays 3.0.2.
 | [2R-4](R-triage/defect-2R-4-domain-lookup-after-a-replaced-document.md) | | debt | Low | none | this branch: `access` skips `document.domain` after a replaced document; found building 2R-2 | done (#120: 908c816) |
 | [2R-5](R-triage/defect-2R-5-seed-check-counts-the-lag-as-replacements.md) | | defect | Medium | patch (unreleased) | this branch: found by the first `test:constrained` after 2R-4; pre-existing (fails at `9a437a3` too) | done (#121: 2b9a7d8) |
 | [2R-6](R-triage/defect-2R-6-outcomes-spec-timeout-under-load.md) | | test defect | Low | none | this branch: found by the same run | done (#122: f4f4fe0) |
-| [2R-7](R-triage/defect-2R-7-seed-writes-into-an-arrived-document.md) | | defect | Medium | patch | this branch: found by the full harness after 2R-5; pre-existing (fails at `908c816` too); Firefox, with the step overlay | planned |
+| [2R-7](R-triage/defect-2R-7-seed-writes-into-an-arrived-document.md) | | defect | Medium | patch | this branch: found by the full harness after 2R-5; pre-existing (fails at `908c816` too); Firefox, with the step overlay | decided (#123) |
 | [2D-4](D-page-objects-urls-navigation/defect-2D-4-detached-navigation-methods.md) | | design question | Low | none | not adopted (unbound, as Playwright's); reconsidered on request | decided (#91) |
 
 The merged files keep their own reproductions: [2A-7](A-session-storage/defect-2A-7-upgrading-ts2339-text-stale.md),
