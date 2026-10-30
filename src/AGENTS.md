@@ -1,9 +1,9 @@
 # The runtime
 
 The conventions for every change to the runtime in `src/` and its entry `index.ts`, and the `PageObject` lifecycle.
-`src/locators/` and `src/helpers/` have an AGENTS.md of their own. Claude Code loads this file when it reads a file
-under `src/`; with another client, read it before working there. Read it before changing `index.ts` too. Part of the
-contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules apply here too.
+`src/locators/` and `src/helpers/` have an AGENTS.md of their own. Claude Code loads this file when its Read tool opens
+a file under `src/`; otherwise (the shell, another client), read it before working there. Read it before changing
+`index.ts` too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules apply here too.
 
 ## Files
 

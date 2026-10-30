@@ -36,10 +36,12 @@ Rules:
    collapses into one changelog entry; the changesets, not the release notes, are what consumers read.
 7. **Nothing of the folder is kept.** Before the merge, an audit reads every file of the folder and moves what a later
    reader needs into the code, its tests, the doc comments, the site (the reasons behind a design on the Internal
-   pages), the changesets or the contributor guide, and work left for later into a GitHub issue (*Backlog* below); no reference to the
-   folder, a plan, a finding or a decision number stays outside it. Then the folder is deleted.
+   pages), the changesets or the contributor guide, and work left for later into a GitHub issue (*Backlog* below); no
+   reference to the folder, a plan, a finding or a decision number stays outside it, which a `git grep` over the
+   repository outside the folder checks (for the folder's name, `PLAN-`, `DECISIONS`, "decision" with a number, "the
+   plan's" and "plan" with a number, reading each hit). Then the folder is deleted.
 
-Rules 8 and 9, on commits, are in the root AGENTS.md (*How to work*): they hold for every commit.
+The rules on commits are in the root AGENTS.md (*How to work*): they hold for every commit.
 
 ## Carrying out a release
 

@@ -1,9 +1,10 @@
 # Testing
 
 The test commands beyond the everyday ones in the root AGENTS.md, how to probe a claim, and the harness in `test/`.
-Claude Code loads this file when it reads a file under `test/`; with another client, read it before working there. Read
-it before running these commands, probing a claim, or changing `pack-*.sh`, `playwright.base.ts` or `vitest.config.ts`
-too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules apply here too.
+Claude Code loads this file when its Read tool opens a file under `test/`; otherwise (the shell, another client), read
+it before working there. Read it before running these commands, probing a claim, or changing `pack-*.sh`,
+`test-server-check.sh` or `playwright.base.ts` too. Part of the contributor guide that the root
+[AGENTS.md](../AGENTS.md) indexes; its rules apply here too.
 
 ## Commands
 
@@ -99,9 +100,11 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   `playwright.test-server.config.ts` and the root's `test-server-check.sh`, which `pack-test.sh` runs at its end
   outside CI and CI runs in a job of its own, once per run. A new route with a parameter needs a sample in the spec's
   `SAMPLES`; the spec fails until it has one.
-- Page objects live under `page-object-models/testApp/pages/<name>/` as `<name>.locatorSchema.ts` plus
-  `<name>.page.ts`, all extending `testApp.base.ts` (which carries a storage schema through its options type);
-  `teststorage/` also has `teststorage-second.page.ts`, a `PageObject` on the second origin. `fixtures/testApp.fixtures.ts`
+- Page objects live under `page-object-models/testApp/pages/`, one folder per page area (`testPage` sits in `pages/`
+  itself), each page as `<name>.locatorSchema.ts` plus `<name>.page.ts`, all extending `testApp.base.ts` (which
+  carries a storage schema through its options type); `testnav/` also has `testnav-item.*`, `testPath/` the
+  `[color]/` page of its parameter route, and `teststorage/` `teststorage-second.page.ts`, a `PageObject` on the second
+  origin. `fixtures/testApp.fixtures.ts`
   exposes them to specs.
 - Specs live under `tests/`: `locatorRegistry/` (`add`, `getLocator`, `getLocatorSchema`, `getNestedLocator`,
   `registry`, `validation`), `pageObject/` (construction-time URL validation, registry verification, the lifecycle,
@@ -145,12 +148,12 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
   refuses a second copy). It reaches an internal through the public API, timing a case with a disclosed stand-in when
   it must; an internal is tested directly in its unit test in `src/`. When neither level can cover a claim, that is a
   gap to raise, and an exception (a spec importing a pure `src/` module) is decided with its reason, not assumed.
-- `validation.locatorSchemaPath.typecheck.ts` and `packaging/publicTypes.typecheck.ts` are compile-only probes:
-  Playwright does not match the file names, and `pnpm typecheck` (in `pack-test` and CI) enforces their
-  `@ts-expect-error` directives. `publicTypes.typecheck.ts` holds the public types against the published declarations
-  (every export, replace's arguments, the private internals, seeds, path forwarding); `publicTypes.emit.ts` must emit
-  declarations without annotations. A change to the public types adds to both; a new export also gets a seed in
-  `emitSeeds.ts`, which the generator asks for.
+- Every `*.typecheck.ts` file is a compile-only probe (`validation.locatorSchemaPath`, `packaging/publicTypes` and
+  `packaging/stepLegacyDecorators` now): Playwright does not match the file names, and `pnpm typecheck` (in `pack-test`
+  and CI) enforces their `@ts-expect-error` directives. `publicTypes.typecheck.ts` holds the public types against the
+  published declarations (every export, replace's arguments, the private internals, seeds, path forwarding);
+  `publicTypes.emit.ts` must emit declarations without annotations. A change to the public types adds to both; a new
+  export also gets a seed in `emitSeeds.ts`, which the generator asks for.
 - The harness runs on chromium, firefox and webkit (`pnpm pack-test` and CI on `main`; pull requests run chromium
   only, so a firefox- or webkit-only failure shows in `CI` after the merge and blocks Publish until fixed), in CI at
   the Playwright pin and at the latest 1.x in the peer range. A real behavior difference between browsers on one Playwright version uses the `browserName` fixture (as

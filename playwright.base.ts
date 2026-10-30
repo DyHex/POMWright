@@ -1,6 +1,7 @@
-// The shared options of test/playwright.config.ts, as plain data it spreads in. The file sits at the root, outside
-// test/, so its one import of @playwright/test is a type import, erased at run time: a value import would load the
-// root's copy of Playwright beside test/'s, which Playwright refuses ("Requiring @playwright/test second time").
+// The shared options of test/playwright.config.ts and test/playwright.test-server.config.ts, as plain data they spread
+// in; the steps, lifecycle-outcomes and bench configs do not build on it and set their own. The file sits at the root,
+// outside test/, so its one import of @playwright/test is a type import, erased at run time: a value import would load
+// the root's copy of Playwright beside test/'s, which Playwright refuses ("Requiring @playwright/test second time").
 import type { PlaywrightTestConfig } from "@playwright/test";
 
 export const baseConfig: PlaywrightTestConfig = {

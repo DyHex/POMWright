@@ -1,10 +1,10 @@
 # Documentation
 
-How the site, the README and the doc comments in `src/` are written and checked. Claude Code loads this file when it
-reads a file under `website/`; with another client, read it before working there. Read it before changing the README or
-a doc comment, adding an export or a public member, changing a message, a chain or a rendering a page shows, or changing
-`scripts/check-*.mjs` too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules
-apply here too.
+How the site, the README and the doc comments in `src/` are written and checked. Claude Code loads this file when its
+Read tool opens a file under `website/`; otherwise (the shell, another client), read it before working there. Read it
+before changing the README or a doc comment, adding an export or a public member, changing anything a page or doc
+comment describes (behavior, a message, chain or rendering, a mechanism or a design), or changing `scripts/check-*.mjs`
+too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules apply here too.
 
 ## Files
 

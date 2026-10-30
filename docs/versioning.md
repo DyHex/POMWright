@@ -29,8 +29,9 @@ change, which needs a changeset, and before a supported version moves. Part of t
   how release work is organized.
 - Changesets: `pnpm changeset` creates `.changeset/<name>.md`. The `publish.yaml` workflow opens a "Version
   Packages" PR and publishes when it merges. Do not edit `package.json#version` or `CHANGELOG.md` by hand.
-- Call out consumer-facing API or behavior changes in the changeset body, with a migration hint whenever something
-  a 2.x user wrote stops working.
+- Call out consumer-facing API or behavior changes in the changeset body, with a migration hint whenever code
+  written against the previous release stops working. *Upgrading from 2.x* always describes the upgrade from 2.x to
+  the latest 3.x: a change that alters what a 2.x project must do updates that page in the same plan.
 - Bumps: behavior brought in line with what the docs, the doc comments or the contributor guide already promise is a patch; so
   is a type corrected to what the docs promise and the runtime does, even when code that relied on the wrong type stops
   compiling (its changeset gives the migration). Providing what a released version's docs or doc comments promise but

@@ -4,7 +4,8 @@ import { createRegistryWithAccessors, type FilterDefinition } from "pomwright";
 
 // verify() resolves every selector-bearing path once, terminal-only, so every has/hasNot path
 // reference goes through the normal resolution, and checks every any-frame path against its
-// first-segment rule. The table in the plan's section 1.9 is the contract.
+// first-segment rule. The contract is on Verifying registries (website/src/content/docs/docs/verifying-registries.md)
+// and Internal → Resolution, under verify() (website/src/content/docs/internal/resolution.md).
 
 type Paths =
 	| "list"

@@ -178,8 +178,8 @@ If you run into issues or have questions, please use the
 ## Contributing
 
 Pull requests are welcome. [AGENTS.md](./AGENTS.md) is the contributor guide: the commands, the rules every change
-keeps, and an index of the files that cover each part of the repository (an `AGENTS.md` in `src/`, `test/`,
-`website/` and `.github/`, and the files in [`docs/`](./docs/)).
+keeps, and an index of the files that cover each part of the repository (an `AGENTS.md` in `src/` and its
+`locators/` and `helpers/`, `test/`, `website/` and `.github/`, and the files in [`docs/`](./docs/)).
 
 ## License
 

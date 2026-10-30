@@ -1,10 +1,11 @@
 # Helpers
 
 What the helpers promise: session storage and its seed registry; `@step`, where steps are reported, the logger and the
-`log` fixture (`src/fixture/`); URLs and navigation. Claude Code loads this file when it reads a file under
-`src/helpers/`; with another client, read it before working there. Read it before changing `src/fixture/`, the storage,
-navigation or URL specs, `test/step-locations/` or their pages too. Part of the contributor guide that the root
-[AGENTS.md](../../AGENTS.md) indexes; its rules and those of [src/AGENTS.md](../AGENTS.md) apply here too.
+`log` fixture (`src/fixture/`); URLs and navigation. Claude Code loads this file when its Read tool opens a file under
+`src/helpers/`; otherwise (the shell, another client), read it before working there. Read it before changing
+`src/fixture/`, the storage, navigation or URL specs, `test/step-locations/` or their pages too. Part of the contributor
+guide that the root [AGENTS.md](../../AGENTS.md) indexes; its rules and those of [src/AGENTS.md](../AGENTS.md) apply
+here too.
 
 ## Files
 

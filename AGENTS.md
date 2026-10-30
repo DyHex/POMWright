@@ -26,7 +26,8 @@ review and the guide split by folder and by task.
   `SessionStorageOptions`, `SeedOptions`, `Decoded` and `AllEntries` types, `PlaywrightReportLogger` with `LogEntry` and `LogLevel`, `step` with `StepDecorator`, `NavigationFor`, `NavigationOptions`,
   `ThisPageOptions` and `UrlMatcher`. Everything else under `src/` is internal even when it carries an `export`
   keyword, so renaming or deleting it is not by itself a breaking change.
-- How it is built and packaged: [docs/repository.md](docs/repository.md); its versions and releases: [docs/versioning.md](docs/versioning.md).
+- How it is built and packaged: [docs/repository.md](docs/repository.md); its versions:
+  [docs/versioning.md](docs/versioning.md); its releases: [docs/releases.md](docs/releases.md).
 
 ## How to work
 
@@ -92,26 +93,28 @@ review and the guide split by folder and by task.
 - Change the Playwright peer range or the `test/` pin without a decision.
 - Treat `dist/` or `.pack/` as source when counting, grepping, or reasoning about behavior.
 - Commit without being asked, or commit what an AI wrote or helped write without its `Co-Authored-By:` trailer.
-- The other *Do not* items close each file the index names: read them with the file.
+- The other *Do not* items close each folder's `AGENTS.md`: read them with the file.
 
 ## The index
 
 | File | What it holds | Loads by itself | Read it first when |
 | --- | --- | --- | --- |
-| [src/AGENTS.md](src/AGENTS.md) | the runtime's conventions, the `PageObject` lifecycle, pointers to rules held elsewhere | in Claude Code, when a file under `src/` is read | changing `index.ts` |
-| [src/locators/AGENTS.md](src/locators/AGENTS.md) | registration, queries, reuse, paths, frames, `getById`, the `STRATEGIES` table | in Claude Code, when a file under `src/locators/` is read | changing locator behavior, a locator spec or a locator page |
-| [src/helpers/AGENTS.md](src/helpers/AGENTS.md) | session storage, `@step` and where steps are reported, the logger and the `log` fixture, URLs and navigation | in Claude Code, when a file under `src/helpers/` is read | changing `src/fixture/`, the storage, navigation or URL specs, `test/step-locations/` or their pages |
-| [test/AGENTS.md](test/AGENTS.md) | the test commands, probing, the harness | in Claude Code, when a file under `test/` is read | running a test command beyond the ones below; probing a claim; changing `pack-*.sh`, `playwright.base.ts` or `vitest.config.ts` |
-| [website/AGENTS.md](website/AGENTS.md) | the site, the README, doc comments, the docs checks, the site's scripts | in Claude Code, when a file under `website/` is read | changing the README or a doc comment; adding an export or a public member; changing anything a page or doc comment describes: behavior, a message, chain or rendering, a mechanism or a design (most changes under `src/` and `.github/`); changing `scripts/check-*.mjs` |
-| [.github/AGENTS.md](.github/AGENTS.md) | the workflows, Dependabot, how Publish and Pages run, the packaging probes | in Claude Code, when a file under `.github/` is read | changing a script only CI runs or the packaging probes |
-| [docs/repository.md](docs/repository.md) | the repository map, packaging, the toolchain, how this guide is laid out and loads | no | adding a top-level file or folder; changing the toolchain, a dependency or this guide |
+| [src/AGENTS.md](src/AGENTS.md) | the runtime's conventions, the `PageObject` lifecycle, pointers to rules held elsewhere | in Claude Code, when its Read tool opens a file under `src/` | changing `index.ts` |
+| [src/locators/AGENTS.md](src/locators/AGENTS.md) | registration, queries, reuse, paths, frames, `getById`, the `STRATEGIES` table | in Claude Code, when its Read tool opens a file under `src/locators/` | changing locator behavior, a locator spec or a locator page |
+| [src/helpers/AGENTS.md](src/helpers/AGENTS.md) | session storage, `@step` and where steps are reported, the logger and the `log` fixture, URLs and navigation | in Claude Code, when its Read tool opens a file under `src/helpers/` | changing `src/fixture/`, the storage, navigation or URL specs, `test/step-locations/` or their pages |
+| [test/AGENTS.md](test/AGENTS.md) | the test commands, probing, the harness | in Claude Code, when its Read tool opens a file under `test/` | running a test command beyond the ones above; probing a claim; changing `pack-*.sh`, `test-server-check.sh` or `playwright.base.ts` |
+| [website/AGENTS.md](website/AGENTS.md) | the site, the README, doc comments, the docs checks, the site's scripts | in Claude Code, when its Read tool opens a file under `website/` | changing the README or a doc comment; adding an export or a public member; changing anything a page or doc comment describes: behavior, a message, chain or rendering, a mechanism or a design (most changes under `src/` and `.github/`); changing `scripts/check-*.mjs` |
+| [.github/AGENTS.md](.github/AGENTS.md) | the workflows, Dependabot, how Publish and Pages run, the packaging probes | in Claude Code, when its Read tool opens a file under `.github/` | changing a script only CI runs or the packaging probes |
+| [docs/repository.md](docs/repository.md) | the repository map, packaging, the toolchain, how this guide is laid out and loads | no | adding a top-level file or folder; changing the toolchain (the unit tests' `vitest.config.ts` and `tsconfig.vitest.json` among it), a dependency or this guide |
 | [docs/versioning.md](docs/versioning.md) | supported versions, bumps, changesets | no | any consumer-facing change, which needs a changeset; moving a supported version |
 | [docs/releases.md](docs/releases.md) | planning a release, its working folder, carrying it out, the Trusted Publisher, the backlog | no | planning or carrying out a release; writing a plan |
 
-- Claude Code loads a folder's `AGENTS.md` when it reads a file in that folder or below it, together with the
-  `AGENTS.md` of every folder above; other clients, Codex among them, load only the files from the repository root to
-  the folder they started in. So with another client, or for work that touches a folder without reading a file in it,
-  read the folder's file and those of the folders above it yourself before working there.
+- Claude Code loads a folder's `AGENTS.md` when its Read tool opens a file in that folder or below it, in a folder
+  under the one the session started in, together with the `AGENTS.md` of every folder above; reading through the shell
+  (`cat`, `grep`), searching or writing a new file does not load it. Other clients, Codex among them, load only the
+  files from the repository root to the folder they started in. So whenever you reach a folder any other way (the
+  shell, another client, a session started elsewhere), read the folder's file and those of the folders above it
+  yourself before working there.
 - Before starting, name the areas your task touches and read their files. When it spans several areas or the whole
   repository (a review, a refactor across areas, a release, a plan that changes more than one area), read all of their
   files first rather than as you reach each folder.

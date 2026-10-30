@@ -1,9 +1,10 @@
 # Locators
 
 The registry, registration, query, reuse and resolution rules: what a locator path, a registration, a query and a seed
-promise. Claude Code loads this file when it reads a file under `src/locators/`; with another client, read it before
-working there. Read it before changing a locator spec or a locator page too. Part of the contributor guide that the root
-[AGENTS.md](../../AGENTS.md) indexes; its rules and those of [src/AGENTS.md](../AGENTS.md) apply here too.
+promise. Claude Code loads this file when its Read tool opens a file under `src/locators/`; otherwise (the shell,
+another client), read it before working there. Read it before changing a locator spec or a locator page too. Part of the
+contributor guide that the root [AGENTS.md](../../AGENTS.md) indexes; its rules and those of
+[src/AGENTS.md](../AGENTS.md) apply here too.
 
 ## Files
 

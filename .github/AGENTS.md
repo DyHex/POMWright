@@ -1,10 +1,10 @@
 # CI
 
-The workflows, Dependabot, how Publish and Pages run, and the packaging probes. Claude Code loads this file when it
-reads a file under `.github/`; with another client, read it before working there. Read it before changing a script only
-CI runs (`scripts/consumer-check.sh`, `scripts/ci-playwright-version.sh`, `scripts/release-check.sh`) or the packaging
-probes too. Part of the
-contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules apply here too.
+The workflows, Dependabot, how Publish and Pages run, and the packaging probes. Claude Code loads this file when its
+Read tool opens a file under `.github/`; otherwise (the shell, another client), read it before working there. Read it
+before changing a script only CI runs (`scripts/consumer-check.sh`, `scripts/ci-playwright-version.sh`,
+`scripts/release-check.sh`) or the packaging probes too. Part of the contributor guide that the root
+[AGENTS.md](../AGENTS.md) indexes; its rules apply here too.
 
 ## The workflows
 
@@ -32,24 +32,26 @@ into `main` the job `release` (*Release window*, `scripts/release-check.sh pull-
 `main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit, one run at a time (a `concurrency` group
 without `cancel-in-progress`: a waiting run gives way to a newer push, and GitHub takes waiting runs in the order they
 began waiting, which two pushes seconds apart can reverse; Publish and Pages act only on `main`'s tip, so an older run
-never deploys over a newer site); both end with the gate job `build`, `main`'s required status check. `publish.yaml` runs `changesets/action` v2 (`@changesets/cli` 3, `@changesets/changelog-github`
-1) after `CI` succeeds on a push to `main`, guarded by its job condition and by a step (`scripts/release-check.sh
-publish`) that fails while `main`'s tip, read from GitHub, has a version npm does not have and changesets are pending
-(that version would never be published), saying to revert the Version Packages pull request that set it, and otherwise
-goes no further unless the commit that run tested is `main`'s tip and the checkout (a `workflow_run` checks out the
-newest commit when it first starts, and a re-run keeps it; the newer commit's own run continues the release); it
-publishes with npm Trusted Publishing (`id-token: write`; no npm token is stored; `pnpm publish` exchanges the
-workflow's OIDC token and records provenance) from the `npm` environment, which only `main` may deploy to and which the
-Trusted Publisher names, and after publishing warns when a version has no provenance attestation. `pages.yaml` builds
-`website/` and deploys it to GitHub Pages (`https://dyhex.github.io/POMWright/`) after `CI` succeeds on a push to
-`main`, guarded as `publish.yaml` is and building the commit that run tested, only while that commit is `main`'s tip (a
-re-run of an older run deploys nothing), or by `workflow_dispatch`, which builds the commit it was started on.
+never deploys over a newer site); both end with the gate job `build`, `main`'s required status check. `publish.yaml`
+runs `changesets/action` v2 (`@changesets/cli` 3, `@changesets/changelog-github` 1) after `CI` succeeds on a push to
+`main`, guarded by its job condition and by a step (`scripts/release-check.sh publish`) that fails while `main`'s tip,
+read from GitHub, has a version npm does not have and changesets are pending (that version would never be published),
+saying to revert the Version Packages pull request that set it, and otherwise goes no further unless the commit that run
+tested is `main`'s tip and the checkout (a `workflow_run` checks out the newest commit when it first starts, and a
+re-run keeps it; the newer commit's own run continues the release); it publishes with npm Trusted Publishing (`id-token:
+write`; no npm token is stored; `pnpm publish` exchanges the workflow's OIDC token and records provenance) from the
+`npm` environment, which only `main` may deploy to and which the Trusted Publisher names, and after publishing warns
+when a version has no provenance attestation. `pages.yaml` builds `website/` and deploys it to GitHub Pages
+(`https://dyhex.github.io/POMWright/`) after `CI` succeeds on a push to `main`, guarded as `publish.yaml` is and
+building the commit that run tested, only while that commit is `main`'s tip (a re-run of an older run deploys nothing),
+or by `workflow_dispatch`, which builds the commit it was started on.
 
 ## Publish and Pages
 
 - `publish.yaml` starts after `CI` succeeds, and `CI` runs only for pushes to `main` and includes the whole harness;
   its job condition also requires a push run on `main` in this repository. Pull requests run the same jobs through
-  `PR`, which Publish does not listen to. CI runs only for pull requests (drafts included) and `main`. The gate job
+  `PR`, which Publish does not listen to. The `PR` and `CI` workflows run only for pull requests (drafts included)
+  and pushes to `main`. The gate job
   `build` of `pr.yaml` and `main.yaml` is `main`'s required status check, in the ruleset `main: checks`. The published
   package is rebuilt by `pnpm run release`, not taken from the CI artifact (an open issue).
 - A version on `main` that npm does not have while changesets are pending is never published: `changesets/action`
@@ -107,11 +109,11 @@ changeset, waits for the release. When `build` itself is broken and something mu
 
 ## Rules held elsewhere
 
-- The site describes CI: [*Internal → Tests and checks*](../website/src/content/docs/internal/tests-and-checks.md) the
-  jobs and what each runs, [*Internal → Documentation*](../website/src/content/docs/internal/documentation.md) the docs
-  checks of each job and how Pages deploys, and
-  [*Internal → Packaging*](../website/src/content/docs/internal/packaging.md) the `consumer` job's checks. A change to a
-  workflow, a job or a script only CI runs updates them in the same change, by
+- The site describes CI: the jobs and what each runs on
+  [*Internal → Tests and checks*](../website/src/content/docs/internal/tests-and-checks.md), the docs checks of each
+  job and how Pages deploys on [*Internal → Documentation*](../website/src/content/docs/internal/documentation.md),
+  and the `consumer` job's checks on [*Internal → Packaging*](../website/src/content/docs/internal/packaging.md). A
+  change to a workflow, a job or a script only CI runs updates them in the same change, by
   [website/AGENTS.md](../website/AGENTS.md)'s rule that a change to a mechanism updates the pages that describe it.
 
 ## Do not
