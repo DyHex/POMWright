@@ -1,7 +1,7 @@
 # 2H-7: *Upgrading from 2.x*'s JavaScript item (`describe` and `nth`) asks for a change and gives no search, and does not say it needs none, as step 3 promises every item does
 
 - **Kind**: documentation
-- **Status**: decided 2026-10-29, decision 101 in [DECISIONS.md](../DECISIONS.md) (the upgrade guide: four fixes and the sentence that a project meets only some items); planned in its own docs plan
+- **Status**: decided 2026-10-29, decision 101 in [DECISIONS.md](../DECISIONS.md) (the upgrade guide: four fixes and the sentence that a project meets only some items); planned in its own docs plan; done 2026-10-30 in `89a2fe7`
 - **Area**: *Upgrading from 2.x*, *How to upgrade* step 3, against the item *From JavaScript: `describe` and `nth`*
 - **Severity**: Low (one item of a promise the page makes about all of them; the item is JavaScript-only and its
   `describe` half fails with a message that names the fix, but its `nth` half compiles nowhere and fails silently,

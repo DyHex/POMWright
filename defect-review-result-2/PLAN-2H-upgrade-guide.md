@@ -54,3 +54,36 @@ what its item names; `pnpm docs:build`; the grep for the external consumer proje
 
 One commit, `docs: …`, with `Plan: defect-review-result-2/PLAN-2H-upgrade-guide.md` and the `Co-Authored-By:` trailer.
 The maintainer pushes.
+
+## Execution notes
+
+- 2026-10-30, `89a2fe7`, and this record. `pnpm docs:build` passes; no name of the external consumer projects on the
+  branch.
+- **The probes against the build:**
+  - The review's 2.x consumer (`H/upgrade/consumer.ts`) was compiled with the repository's TypeScript, 6.0.3, in two
+    scratch projects installed with npm:
+    - with `pomwright@2.1.0` from the review's packed tarball (`E/upgrade/pomwright-2.1.0.tgz`), it compiles without
+      an error;
+    - with this build's tarball, it gives 22 errors, among them the TS2345 the new item quotes (`'"main"' is not
+      assignable to parameter of type '"createRegistryWithAccessors needs its paths as a type argument: …"'`).
+    - The tarball stands in for a v2.1.0 worktree, which the finding said to recreate; it is the package npm would
+      install, so nothing of the 2.x side is lost.
+  - The page's two 2.x storage lines against a 3.x page object with a schema give, in `tsc`'s order:
+    - TS2353 (`… 'user' does not exist in type 'EntriesFor<{ user: Codec<{ name: string; age: number; }>; }, User>'`);
+    - TS2339 (`… on type 'string | { name: string; age: number; } | null'`);
+    - TS2344.
+
+    A structured value on a helper without a codec gives TS2322 (`Type '{ name: string; age: number; }' is not
+    assignable to type 'string'`).
+  - The review's locale spec (`H/locale/`) through the runner on Chromium: the test that requests `log` fails with
+    `log fixture: locale "en_US" is not a BCP 47 language tag; write it with hyphens, such as "en-US"`. The spec was
+    copied into `test/tests/` and deleted afterwards.
+- **The searches**, from the root of the scratch 2.x project, to which a `playwright.config.ts` with `locale: "en_US"`
+  and a `.js` file calling `nth` and `describe` were added; each finds what its item names:
+  - `createRegistryWithAccessors(` finds the call without a type argument and not the one with it;
+  - `locale:` finds the config;
+  - the JavaScript search finds `helpers.js`;
+  - the storage search finds the `set<User>` and `get<User>` lines.
+- **Different from the plan:** the README part of the frame item (decision 101's point 1, "and in the README") had
+  nothing left to change. The README no longer holds a copy of the item; it was trimmed to what POMWright is and links
+  to the site. `first()` and `last()` were dropped from the page only.

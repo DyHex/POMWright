@@ -1,7 +1,7 @@
 # 2E-4: *Upgrading from 2.x* does not list that a project whose `locale` is not a BCP 47 tag (`en_US`) now fails every test that uses `log`
 
 - **Kind**: documentation
-- **Status**: decided 2026-10-29, decision 101 in [DECISIONS.md](../DECISIONS.md) (the upgrade guide: four fixes and the sentence that a project meets only some items); planned in its own docs plan
+- **Status**: decided 2026-10-29, decision 101 in [DECISIONS.md](../DECISIONS.md) (the upgrade guide: four fixes and the sentence that a project meets only some items); planned in its own docs plan; done 2026-10-30 in `89a2fe7`
 - **Area**: E19 the fixture's locale check; E40 the pages (inventory-blind.md); *Upgrading from 2.x*, *Reports*
   (inventory-reconciled.md, first only)
 - **Severity**: Low (the migration guide misses an item that makes 2.x code fail; the failure is immediate, on the

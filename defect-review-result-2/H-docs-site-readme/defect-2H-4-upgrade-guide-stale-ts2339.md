@@ -1,7 +1,7 @@
 # 2H-4: *Upgrading from 2.x* shows `Property 'user' does not exist on type 'string | null'` for a leftover `get<User>`; since f422b77 TypeScript reports `type 'string | { name: string; age: number; } | null'`
 
 - **Kind**: documentation
-- **Status**: decided 2026-10-29, decision 101 in [DECISIONS.md](../DECISIONS.md) (the upgrade guide: four fixes and the sentence that a project meets only some items); planned in its own docs plan
+- **Status**: decided 2026-10-29, decision 101 in [DECISIONS.md](../DECISIONS.md) (the upgrade guide: four fixes and the sentence that a project meets only some items); planned in its own docs plan; done 2026-10-30 in `89a2fe7`
 - **Area**: *Upgrading from 2.x*, *Session storage → Values are stored as written* (the compile errors a leftover type
   argument gives)
 - **Severity**: Low (a compiler message the page tells the reader to expect, copied from 3.0.1's types; a reader who
