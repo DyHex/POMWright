@@ -156,4 +156,30 @@ a recommendation.
 
 ## Execution notes
 
-None yet.
+- 2026-10-30. The plan was committed in `5723d6f`, step 1 in `83d483b`, and this record is step 2.
+- **Built from the prototype's patch, tidied:**
+  - `CallDocument.ask` and `enter` share a private `taken()`, which takes the handle once;
+  - `write` and `eachKey` take the call's document as `held`;
+  - the write-at-once path has a comment in place of the prototype's marker.
+- **Unit:** five tests in `storageTurns.test.ts` cover the plan's six cases (the document replaced while asked is one test
+  with both outcomes). Four failed on the code before the change; the inherited write passes both ways, as intended.
+  The other error of the question fails on the old code only because the fake raises it through the handle, which the
+  old code did not use. The fake page gained the document's own URL, hooks around the question, `addInitScript` and an
+  answer to the Navigation API check. 980 unit tests.
+- **Harness** (the packed build, `--retries=0`):
+
+  | Run | Result |
+  | --- | --- |
+  | the storage specs, three browsers, with the new deterministic case | 360 passed, 3 skipped; error messages unchanged |
+  | the deterministic case, three browsers, 10 each | 30 of 30 (30 of 30 failed before) |
+  | the overlay test, Firefox, 16 workers | 600 of 600 (5 of 200 failed before) |
+  | the overlay test, Chromium and WebKit, 100 each | 200 of 200 |
+  | the inherited-popup tests and the unawaited seed, three browsers, 50 each | 1050 of 1050 |
+
+- **Full runs:**
+  - `pnpm test:constrained --reporter=line`: 1845 passed and 3 skipped in 275 s; 980 unit; 33 step locations; 27
+    test-server tests.
+  - `pnpm pack-test --reporter=line` at rest: 1845 passed and 3 skipped in 149 s.
+  - `pnpm lint`, `pnpm docs:build` and `pnpm lint:guide` pass, and no name of the external consumer projects appears on
+    the branch.
+- Nothing unexpected.
