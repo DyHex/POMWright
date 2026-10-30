@@ -330,8 +330,8 @@ test("a non-ASCII path is compared as the browser reports it: goto, expectThisPa
 });
 
 class DelayedItemNav extends PageObject<"body"> {
-	constructor(page: Page, navOptions?: NavigationOptions) {
-		super(page, BASE, "/testnav/item/7", { label: "DelayedItemNav", navOptions });
+	constructor(page: Page, navOptions?: NavigationOptions, urlPath = "/testnav/item/7") {
+		super(page, BASE, urlPath, { label: "DelayedItemNav", navOptions });
 	}
 	protected defineLocators() {
 		this.add("body").locator("body");
@@ -350,52 +350,24 @@ test.describe("the page object's navOptions are the defaults of every navigation
 	});
 
 	test("navOptions.waitUntil decides what goto waits for", async ({ page }) => {
-		// page.route serves the item page and holds its image, a stand-in for a slow resource, which the test server has
-		// none of: the commit is real, and the held image keeps "load" from coming; interception could hide a timing a
-		// slow server would give, which only the order commit, then load matters for here
-		let release: () => void = () => {};
-		const held = new Promise<void>((resolve) => {
-			release = resolve;
-		});
-		await page.route(`${BASE}/testnav/item/7`, (route) =>
-			route.fulfill({ contentType: "text/html", body: '<p>item</p><img src="/testnav/held.png">' }),
-		);
-		await page.route(`${BASE}/testnav/held.png`, async (route) => {
-			await held;
-			await route.fulfill({ status: 404 });
-		});
-		const committed = new DelayedItemNav(page, { waitUntil: "commit" });
+		// the server answers the item page's image 10 s late, so the page commits at once and its "load" comes only then
+		const committed = new DelayedItemNav(page, { waitUntil: "commit" }, "/testnav/item/7?image=10000");
 		await committed.navigation.goto();
 		expect(await page.evaluate(() => document.readyState)).not.toBe("complete");
 		await expect(committed.navigation.goto({ waitUntil: "load", timeout: 500 })).rejects.toThrow("Timeout 500ms");
-		release();
 	});
 
 	test("expectThisPage and expectAnotherPage name a late load state of the right URL", async ({ page }) => {
-		// page.route holds the item pages' image, so their "load" does not come: a stand-in for a slow resource, which
-		// the test server has none of; the URLs and the commits are real. Interception could hide a timing a slow server
-		// would give; the messages depend only on the URL reached and the load state that did not come
-		let release: () => void = () => {};
-		const held = new Promise<void>((resolve) => {
-			release = resolve;
-		});
-		await page.route(/\/testnav\/item\/\d+$/, (route) =>
-			route.fulfill({ contentType: "text/html", body: '<p>item</p><img src="/testnav/held.png">' }),
-		);
-		await page.route(`${BASE}/testnav/held.png`, async (route) => {
-			await held;
-			await route.fulfill({ status: 404 });
-		});
-		const item = new DelayedItemNav(page);
+		// the server answers both item pages' image 10 s late, so each page commits at once and its "load" comes only then
+		const item = new DelayedItemNav(page, undefined, "/testnav/item/7?image=10000");
 		await item.navigation.goto({ waitUntil: "commit" });
 		await expect(item.navigation.expectThisPage({ timeout: 1000 })).rejects.toThrow(
-			`DelayedItemNav: reached "${BASE}/testnav/item/7", but its "load" state did not come in time (page.waitForURL: Timeout 1000ms exceeded.)`,
+			`DelayedItemNav: reached "${BASE}/testnav/item/7?image=10000", but its "load" state did not come in time (page.waitForURL: Timeout 1000ms exceeded.)`,
 		);
-		await page.goto(`${BASE}/testnav/item/8`, { waitUntil: "commit" });
+		await page.goto(`${BASE}/testnav/item/8?image=10000`, { waitUntil: "commit" });
 		await expect(item.navigation.expectAnotherPage({ timeout: 1000 })).rejects.toThrow(
-			`DelayedItemNav: left "${BASE}/testnav/item/7" for "${BASE}/testnav/item/8", but its "load" state did not come in time (page.waitForURL: Timeout 1000ms exceeded.)`,
+			`DelayedItemNav: left "${BASE}/testnav/item/7?image=10000" for "${BASE}/testnav/item/8?image=10000", but its "load" state did not come in time (page.waitForURL: Timeout 1000ms exceeded.)`,
 		);
-		release();
 	});
 });
 
@@ -415,14 +387,8 @@ test.describe("without navOptions or a call's timeout, the project's navigationT
 	});
 
 	test("goto waits up to navigationTimeout; a call's own timeout wins", async ({ page }) => {
-		// page.route answers after 2 s, a stand-in for a slow server, which the test server has none of (its delayed
-		// link navigates late, it does not answer late); it could hide how a slow server's response is timed, which the
-		// timeouts compared here do not depend on
-		await page.route(`${BASE}/testnav/item/7`, async (route) => {
-			await new Promise((resolve) => setTimeout(resolve, 2_000));
-			await route.fulfill({ contentType: "text/html", body: "<h1>Item 7</h1>" });
-		});
-		const item = new DelayedItemNav(page);
+		// the server answers the item page 2 s late
+		const item = new DelayedItemNav(page, undefined, "/testnav/item/7?delay=2000");
 		await expect(item.navigation.goto()).rejects.toThrow("Timeout 700ms exceeded");
 		// the navigation goes on after goto gives up; a second one started before it ends fails in Chromium
 		// (net::ERR_ABORTED), so the second call waits for it

@@ -328,19 +328,39 @@ app.get("/testnav", (_req, res) => {
   `);
 });
 
+/** A query flag's milliseconds; anything but digits is 0. @param {unknown} value */
+const milliseconds = (value) => (typeof value === "string" && /^\d+$/.test(value) ? Number(value) : 0);
+
+// Query flags: delay=<ms> answers that late (a slow server); image=<ms> adds an image the server answers that late (a
+// slow resource, so the page's load event comes only then).
 app.get("/testnav/item/:id", (req, res) => {
 	if (!/^\d+$/.test(req.params.id)) {
 		res.status(404).send("Not found");
 		return;
 	}
-	res.send(`
+	const image =
+		req.query.image === undefined ? "" : `<img src="/testnav/image.svg?delay=${milliseconds(req.query.image)}">`;
+	setTimeout(
+		() =>
+			res.send(`
     <html>
       <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">
         <h1 id="item-heading">Item ${req.params.id}</h1>
         <a id="back" href="/testnav">Back</a>
+        ${image}
       </body>
     </html>
-  `);
+  `),
+		milliseconds(req.query.delay),
+	);
+});
+
+// An image the server answers after delay=<ms>, for the item page's image flag.
+app.get("/testnav/image.svg", (req, res) => {
+	setTimeout(
+		() => res.type("image/svg+xml").send('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>'),
+		milliseconds(req.query.delay),
+	);
 });
 
 // Commits, then navigates straight back to /testnav before its own load event: a redirect that bounces.
