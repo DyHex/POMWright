@@ -64,7 +64,7 @@ registry.getNestedLocator("main.section@orders.item@open");
 
 A path given to `has` or `hasNot` resolves to that path's own locator with its own steps, without its ancestors,
 because Playwright evaluates `has` inside the element being filtered: the heading is looked for inside each section,
-not from the top of the page. A misspelt path is a compile error. The path may be registered after the filter that
+not from the top of the page. A misspelled path is a compile error. The path may be registered after the filter that
 names it; the registry's [verification](/POMWright/docs/verifying-registries/) reports a name that is never registered.
 
 ### A path, a locator or a chain

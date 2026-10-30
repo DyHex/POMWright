@@ -100,7 +100,7 @@ describe("assertUrlPath", () => {
 });
 
 describe("isAbsoluteUrl", () => {
-	it("recognises a scheme prefix", () => {
+	it("recognizes a scheme prefix", () => {
 		for (const value of ["https://app.example/x", "http://localhost:9000", "about:blank", "mailto:a@b.example"]) {
 			expect(isAbsoluteUrl(value), value).toBe(true);
 		}
@@ -170,7 +170,7 @@ describe("createUrlMatcher", () => {
 		}
 	});
 
-	it("normalises a string base: trailing slash, upper-case host, default port", () => {
+	it("normalizes a string base: trailing slash, upper-case host, default port", () => {
 		const url = "https://shop.example/account/42";
 		expect(createUrlMatcher("https://shop.example/", "/account/42").test(url)).toBe(true);
 		expect(createUrlMatcher("https://SHOP.example", "/account/42").test(url)).toBe(true);

@@ -7,7 +7,7 @@ description: "verify() resolves every registered path once and reports every mis
 
 Playwright's locators are lazy: a mistake in one surfaces only when an action uses it, possibly late in a test or in a
 test that rarely runs. Most mistakes in a registry are compile errors already, such as a path that is not in the union
-or a misspelt `has` reference. The rest can be found without a browser, and POMWright finds them all at once:
+or a misspelled `has` reference. The rest can be found without a browser, and POMWright finds them all at once:
 `verify()` resolves every registered path and reports every failure in one error.
 
 A page object verifies its registry right after `defineLocators()`, so a mistake fails the test in the fixture, before

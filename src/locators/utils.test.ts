@@ -303,7 +303,7 @@ describe("createLocator, frame case", () => {
 });
 
 describe("frame definitions without a selector", () => {
-	it("are recognised by isAnyFrameDefinition", () => {
+	it("are recognized by isAnyFrameDefinition", () => {
 		expect(isAnyFrameDefinition({ type: "frameLocator" })).toBe(true);
 		expect(isAnyFrameDefinition({ type: "frameLocator", selector: "iframe" })).toBe(false);
 		expect(isAnyFrameDefinition({ type: "locator", selector: "iframe" })).toBe(false);

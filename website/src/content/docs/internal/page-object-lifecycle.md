@@ -26,7 +26,7 @@ The definition runs once per page object, at whichever comes first:
 - **the scheduled check**, a microtask that runs as soon as the code that called `new` has finished its synchronous
   part. In a fixture that is `await use(new LoginPage(page))`, before the test body starts;
 - **the first locator call**: `add`, `getNestedLocator`, `getLocator`, `getLocatorSchema` or `verify`, from a field
-  initialiser, a method, or the test.
+  initializer, a method, or the test.
 
 ```mermaid
 stateDiagram-v2

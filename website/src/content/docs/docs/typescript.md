@@ -70,7 +70,7 @@ export abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
 }
 ```
 
-A subclass calls `this.clickOn("main.button@save")`, and a misspelt path is a compile error at that call.
+A subclass calls `this.clickOn("main.button@save")`, and a misspelled path is a compile error at that call.
 
 ## The URL types
 

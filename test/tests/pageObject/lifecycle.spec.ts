@@ -91,7 +91,7 @@ class DuplicateNav extends PageObject<Paths> {
 }
 
 class FieldResolvesNav extends PageObject<Paths> {
-	// resolves during field initialisation, which runs the definition there; a getter is the recommended form
+	// resolves during field initialization, which runs the definition there; a getter is the recommended form
 	readonly heading = this.getNestedLocator("body.heading");
 
 	constructor(
@@ -190,7 +190,7 @@ const lifecycleTest = test.extend<{
 
 test.describe("what the definition sees", () => {
 	lifecycleTest(
-		"a parameter property, a field initialiser and a constructor-body assignment, in a fixture",
+		"a parameter property, a field initializer and a constructor-body assignment, in a fixture",
 		async ({ page, statefulNav }) => {
 			await page.goto(`${BASE}/testnav`);
 			await expect(statefulNav.getNestedLocator("body.link@named")).toHaveId("self-hash");
@@ -219,7 +219,7 @@ test.describe("what the definition sees", () => {
 		await expect(late.getNestedLocator("body.link@byId")).toHaveId("self-query");
 	});
 
-	test("a field initialiser that resolves a locator sees a parameter property under the runner's transform", async ({
+	test("a field initializer that resolves a locator sees a parameter property under the runner's transform", async ({
 		page,
 	}) => {
 		const nav = new FieldResolvesNav(page, "Navigation playground");
@@ -252,7 +252,7 @@ test.describe("when the definition runs", () => {
 });
 
 test.describe("registry mistakes at a first use", () => {
-	test("a verification failure is thrown at the use, labelled, with the cause, and the check does not fail the test afterwards", async ({
+	test("a verification failure is thrown at the use, labeled, with the cause, and the check does not fail the test afterwards", async ({
 		page,
 	}) => {
 		const nav = new TypoNav(page);
@@ -268,7 +268,7 @@ test.describe("registry mistakes at a first use", () => {
 		await afterTheCheck();
 	});
 
-	test("a registration error is labelled with defineLocators()", async ({ page }) => {
+	test("a registration error is labeled with defineLocators()", async ({ page }) => {
 		expect(() => new DuplicateNav(page).getLocator("body")).toThrowError(
 			/^DuplicateNav: defineLocators\(\) failed: A locator schema with the path "body" already exists\./,
 		);
@@ -316,7 +316,7 @@ test.describe("registry mistakes in the check right after construction", () => {
 			void asyncNav;
 		});
 
-		test("with the labelled message", () => {
+		test("with the labeled message", () => {
 			const message = readFileSync(errorFile(), "utf8");
 			rmSync(errorFile());
 			expect(message).toContain(ASYNC);

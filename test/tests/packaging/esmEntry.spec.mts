@@ -33,7 +33,7 @@ test.describe("the published package", () => {
 		expect(root.default).toEqual({ types: "./dist/index.d.ts", default: "./dist/index.js" });
 	});
 
-	test("the manifest declares the Node floor and the SPDX licence", () => {
+	test("the manifest declares the Node floor and the SPDX license", () => {
 		const manifest = require("pomwright/package.json") as { engines?: { node?: string }; license?: string };
 		expect(manifest.engines?.node).toBe(">=20");
 		expect(manifest.license).toBe("Apache-2.0");

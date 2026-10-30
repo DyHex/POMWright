@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 # One run at a time: GitHub keeps one running and one waiting run per group, a newer push replaces the waiting run, and
-# a running one is never cancelled, so every run that starts finishes its checks. GitHub takes waiting runs in the
+# a running one is never canceled, so every run that starts finishes its checks. GitHub takes waiting runs in the
 # order they began waiting, not in push order, so two pushes seconds apart can run out of order; and a re-run of an
 # older run keeps its commit. Neither deploys an older commit over a newer one: pages.yaml deploys only main's tip and
 # publish.yaml goes on only on it, so deployments follow commit order.

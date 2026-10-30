@@ -50,7 +50,7 @@ type NeedsPaths =
 /**
  * The type of the path parameter of `add` and the resolving methods: the path itself when it is well-formed,
  * otherwise the tuple of `LocatorSchemaPathFormat` naming the rule it breaks. A helper in a base class that is generic
- * in its paths takes its path parameter with it, so a misspelt path is a compile error where the helper is called. On a
+ * in its paths takes its path parameter with it, so a misspelled path is a compile error where the helper is called. On a
  * registry created without its paths, every path is a compile error saying so.
  *
  * @example

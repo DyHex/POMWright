@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { createRegistryWithAccessors } from "pomwright";
-import { BasedPage, ComposedPage, DirectPage, MalformedPage, MisspeltPage, ModulePage } from "./checkSite.pages";
+import { BasedPage, ComposedPage, DirectPage, MalformedPage, MisspelledPage, ModulePage } from "./checkSite.pages";
 
 // Where a registry mistake points, against the packed package, whose bundle frames are what count. A page object's
 // check runs in a microtask right after construction; it is captured around `new` and run at once, so its error is
@@ -84,9 +84,9 @@ test.describe("a page object's check points at the line that created it", () => 
 	});
 
 	test("a mistake only verify() finds: the new line, and the message names both paths", ({ page }) => {
-		const error = checkOf(() => new MisspeltPage(page)); // SITE new-misspelt
-		expect(frames(error)[0]).toContain(site("checkSite.spec.ts", "new-misspelt"));
-		expect(error.message).toMatch(/^MisspeltPage: Locator registry verification failed/);
+		const error = checkOf(() => new MisspelledPage(page)); // SITE new-misspelled
+		expect(frames(error)[0]).toContain(site("checkSite.spec.ts", "new-misspelled"));
+		expect(error.message).toMatch(/^MisspelledPage: Locator registry verification failed/);
 		expect(error.message).toContain('"main.list"');
 		expect(error.message).toContain('"mian"');
 	});

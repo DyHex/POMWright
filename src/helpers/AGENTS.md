@@ -98,6 +98,11 @@ Promise checks of `@step` and `defineLocators()`).
   rest, each regex as written). `goto` takes a URL string or options, as `page.goto` does. `goto()` without a target is the this-page navigation; `expectThisPage` and
   `expectAnotherPage` are one `page.waitForURL` each. POMWright sets no timeout or `waitUntil` default of its own.
 
+## Rules held elsewhere
+
+- A change to session storage, navigation or steps runs `pnpm test:constrained` too, where races show that a large
+  machine hides ([test/AGENTS.md](../../test/AGENTS.md#commands)).
+
 ## Do not
 
 - Reintroduce JSON-encoding every session storage value, or `setOnNextNavigation`.

@@ -69,7 +69,7 @@ export class MalformedPage extends PageObject<string> {
 	}
 }
 
-export class MisspeltPage extends PageObject<"main" | "main.list"> {
+export class MisspelledPage extends PageObject<"main" | "main.list"> {
 	constructor(page: Page) {
 		super(page, "http://localhost:9000", "/");
 	}

@@ -233,7 +233,7 @@ describe("what the definition sees", () => {
 		}
 	}
 
-	it("sees a parameter property, a field initialiser, a constructor-body assignment and a value set right after new", () => {
+	it("sees a parameter property, a field initializer, a constructor-body assignment and a value set right after new", () => {
 		const { page, calls } = createStubPage();
 		const { instance, runCheck } = construct(() => new Localized(page, "nb", "item"));
 		instance.suffix = "z";
@@ -306,7 +306,7 @@ describe("failures", () => {
 	const VERIFICATION =
 		'Typo: Locator registry verification failed for 1 of 2 paths:\n  "main.button": No locator schema registered for path "main.titel".';
 
-	it("a registration error from the check is labelled, keeps the original as cause, and points at the construction site", () => {
+	it("a registration error from the check is labeled, keeps the original as cause, and points at the construction site", () => {
 		const { runCheck } = construct(() => new Duplicate(createStubPage().page));
 		const error = caught(runCheck);
 		expect(error.message).toMatch(
@@ -326,7 +326,7 @@ describe("failures", () => {
 		expect(error.cause).toBeInstanceOf(TypeError);
 	});
 
-	it("a verification failure is labelled with the verification message", () => {
+	it("a verification failure is labeled with the verification message", () => {
 		const error = caught(construct(() => new Typo(createStubPage().page)).runCheck);
 		expect(error.message).toBe(VERIFICATION);
 		expect((error.cause as Error).message).toBe(VERIFICATION.slice("Typo: ".length));
@@ -373,7 +373,7 @@ describe("failures", () => {
 			}
 		}
 
-		it("fails the check with the labelled message, before verify()", () => {
+		it("fails the check with the labeled message, before verify()", () => {
 			const error = caught(construct(() => new Async(createStubPage().page)).runCheck);
 			expect(error.message).toBe(ASYNC);
 			expect(error.cause).toBeUndefined();
@@ -429,7 +429,7 @@ describe("failures", () => {
 		expect(runCheck).not.toThrow();
 	});
 
-	it("a subclass constructor that throws after super(): a second, labelled error when the definition reads a field it never set (documented)", () => {
+	it("a subclass constructor that throws after super(): a second, labeled error when the definition reads a field it never set (documented)", () => {
 		class Strict extends PageObject<Paths> {
 			private readonly title: string;
 			constructor(page: Page, heading: string) {
@@ -497,7 +497,7 @@ describe("the locators option", () => {
 		}
 	}
 
-	it("strictChains reaches the registry: a sparse definition fails the scheduled check with the labelled message", () => {
+	it("strictChains reaches the registry: a sparse definition fails the scheduled check with the labeled message", () => {
 		const { page } = createStubPage();
 		const { runCheck } = construct(() => new Sparse(page, true));
 		expect(runCheck).toThrowError(

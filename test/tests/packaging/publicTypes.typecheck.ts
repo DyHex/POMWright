@@ -138,8 +138,8 @@ add("main.heading", { reuse: wideSeed }).getByText("x");
 
 // filters, indices and the path rules
 const filter: FilterDefinition<Paths> = { has: "list.item", hasText: "x" };
-// @ts-expect-error a misspelt path reference
-const misspelt: FilterDefinition<Paths> = { has: "list.itme" };
+// @ts-expect-error a misspelled path reference
+const misspelled: FilterDefinition<Paths> = { has: "list.itme" };
 const index: IndexSelector = "last";
 getLocatorSchema("list.item").filter(filter).nth(index);
 const wellFormed: LocatorSchemaPathFormat<"main.heading"> = "main.heading";
@@ -332,7 +332,7 @@ void [
 	seeds,
 	decorator,
 	wrongSeed,
-	misspelt,
+	misspelled,
 ];
 void [wellFormed, malformed, ListPage, arrayHas, Steps];
 void [copy, voidCopy, narrowed, strictRegistry, StrictPage];
