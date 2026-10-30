@@ -63,3 +63,7 @@ parent covers its subfolders.
   is what tsup's declaration build, `check-api-coverage.mjs` and `check-error-messages.mjs` use, and 7 has none; the
   snippet check runs `tsc`); TypeScript 6 includes only the
   `@types` packages a tsconfig lists, so the root `tsconfig.json` lists `node`.
+- No new runtime dependencies. A new dev dependency, of the root, `test/` or `website/`, is recorded with its reason in
+  the plan or the commit that adds it, and in the working folder's decisions log while one exists (see
+  [releases.md](releases.md)). The site's dependencies stay in `website/package.json`: the root `package.json`'s
+  scripts only call into `website/`.

@@ -164,4 +164,5 @@ too. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md) index
 
 ## Do not
 
-- Reintroduce a `file:` tarball dependency, or sudo in the harness scripts.
+- Reintroduce a `file:` tarball dependency, a second build in a harness job (CI passes `POMWRIGHT_TARBALL`), or sudo
+  in the harness scripts.

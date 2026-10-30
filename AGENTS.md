@@ -111,7 +111,7 @@ review and the guide split by folder and by task.
 - Claude Code loads a folder's `AGENTS.md` when it reads a file in that folder or below it, together with the
   `AGENTS.md` of every folder above; other clients, Codex among them, load only the files from the repository root to
   the folder they started in. So with another client, or for work that touches a folder without reading a file in it,
-  read the folder's file yourself before working there.
+  read the folder's file and those of the folders above it yourself before working there.
 - Before starting, name the areas your task touches and read their files. When it spans several areas or the whole
   repository (a review, a refactor across areas, a release, a plan that changes more than one area), read all of their
   files first rather than as you reach each folder.

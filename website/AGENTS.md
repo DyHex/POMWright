@@ -127,8 +127,8 @@ page).
   and then `scripts/check-diagrams.mjs`, every Mermaid diagram rendered in Chromium, light and dark (Chromium from the
   root's `@playwright/test`); `pnpm docs:preview`, that build served as it deploys, at
   `http://localhost:4392/POMWright/`, the check to run before a push. Astro 7 needs Node 22.22
-  or later; the site builds on Node 24, and the library's Node 20 floor is untouched. The site's dependencies never
-  enter the root `package.json`, whose scripts only call into `website/`.
+  or later; the site builds on Node 24, and the library's Node 20 floor is untouched. The site's dependencies follow
+  [docs/repository.md](../docs/repository.md#toolchain): they never enter the root `package.json`.
 - Considered and not planned: linting Markdown (biome does not process `.md`); a spelling check (the American
   spelling rule above is kept by review).
 

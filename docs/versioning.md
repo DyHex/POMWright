@@ -6,8 +6,18 @@ change, which needs a changeset, and before a supported version moves. Part of t
 
 ## Supported versions
 
-- `@playwright/test` is an exact root dev dependency at the peer floor (1.64.0): the peer floor, the root dev pin and
-  the harness pin in `test/package.json` move together, by decision.
+- `@playwright/test` is an exact root dev dependency at the peer floor (1.64.0). The floor moves by decision, in eight
+  places together: the peer range in `package.json`, the root dev pin, the harness pin in `test/package.json`, the
+  README's requirements line, *Installation*'s list, *Upgrading from 2.x* (its first step and its section on the floor),
+  the root `AGENTS.md` (the floor with the reason for each version it needs) and `test/AGENTS.md` (the installed version
+  in *Probing* and the harness's pin in *The harness*). Then a `git grep` for the old version finds what is said about
+  it elsewhere (a code comment, a page's statement about the browsers it ships), each checked again.
+- Node's floor is `package.json#engines` (`>=20`), Playwright's own, and moves when Playwright's does. With it move CI's
+  `harness-node` matrix and the `consumer` job's Node step (`checks.yaml`, and the comments of `pr.yaml` and
+  `main.yaml`), the README's requirements line, *Installation*'s list, *Upgrading from 2.x*, *Internal → Packaging*,
+  *Internal → Tests and checks*, the root `AGENTS.md` and `.github/AGENTS.md`; a `git grep` for the old line finds the
+  rest. Before the release, one check stays manual: npm warns `EBADENGINE` when the tarball is installed on a Node below
+  the new floor ([.github/AGENTS.md](../.github/AGENTS.md#packaging-probes)).
 - The TypeScript floor (5.0) lives in three places that move together, as the Playwright peer floor and its pins do: the
   README's badge, *Installation*'s sentence under *TypeScript settings*, and the oldest version of
   `scripts/consumer-check.sh`'s loop.

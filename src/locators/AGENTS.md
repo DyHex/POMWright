@@ -3,7 +3,7 @@
 The registry, registration, query, reuse and resolution rules: what a locator path, a registration, a query and a seed
 promise. Claude Code loads this file when it reads a file under `src/locators/`; with another client, read it before
 working there. Read it before changing a locator spec or a locator page too. Part of the contributor guide that the root
-[AGENTS.md](../../AGENTS.md) indexes; its rules apply here too.
+[AGENTS.md](../../AGENTS.md) indexes; its rules and those of [src/AGENTS.md](../AGENTS.md) apply here too.
 
 ## Files
 
@@ -84,6 +84,8 @@ validation with `LOCATOR_SCHEMA_PATH_WHITESPACE`, `assertStrategyPrimary` over `
   and the `<iframe>` element as a terminal; `frameLocator()` is Playwright's any-frame locator, first segment only, no
   steps, no terminal form. Never reintroduce `target.frameLocator(selector)` with dropped steps.
 - A locator change is tested as [test/AGENTS.md](../../test/AGENTS.md#the-harness-test) says for locator behavior.
+- A change to the registry or resolution reruns `pnpm bench` and updates *Internal → Performance* from its output, as
+  [test/AGENTS.md](../../test/AGENTS.md#commands) says.
 - Considered and not planned: validating `nth`'s index, which Playwright's `locator.nth` takes as given (rejecting
   `nth(undefined)`, documented as matching nothing, would be breaking).
 

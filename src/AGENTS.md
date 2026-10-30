@@ -45,8 +45,6 @@ contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules app
   behavior, with a test; code shaped by how Playwright runs and reports it (steps, stacks, the published bundle,
   compile errors a page quotes). Questioning such code is welcome, with evidence, by the root's rule; removing it
   without its reason is not.
-- No new runtime dependencies. A new dev dependency is recorded, with its reason, in the plan or the commit that adds
-  it, and in the working folder's decisions log while one exists (see [docs/releases.md](../docs/releases.md)).
 - Considered and not planned: a punctuation convention for error messages (each is punctuated as reads best for
   it, and a convention would change about two dozen messages for no reader's benefit).
 
@@ -66,6 +64,7 @@ contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules app
   doc comments themselves follow [website/AGENTS.md](../website/AGENTS.md): a change to one updates the pages and doc
   comments that describe it, the Internal pages included.
 - A consumer-facing change needs a changeset: [docs/versioning.md](../docs/versioning.md).
+- No new runtime dependencies, and how a dev dependency is added: [docs/repository.md](../docs/repository.md#toolchain).
 - The `log` fixture (`src/fixture/`) and the URLs and navigation of `pageObject.ts` follow [src/helpers/AGENTS.md](helpers/AGENTS.md).
 - Specs go in `test/`: [test/AGENTS.md](../test/AGENTS.md).
 
