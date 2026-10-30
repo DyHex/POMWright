@@ -114,8 +114,9 @@ test.describe("a document with an opaque origin", () => {
 		await context.setOffline(true);
 		await page.goto(`${A}/teststorage`).catch(() => undefined);
 		if (browserName !== "webkit") {
-			// Chromium and Firefox commit an error page; WebKit stays on the page it was on
-			await page.waitForURL((url) => url.href !== `${B}/testpath`, { waitUntil: "commit" });
+			// Chromium and Firefox commit an error page; WebKit stays on the page it was on. Polled, not page.waitForURL,
+			// which fails when a navigation it waits through ends in an error, as the failed goto above can under load
+			await expect.poll(() => page.url()).not.toBe(`${B}/testpath`);
 		}
 		const outcome = await testStorage.sessionStorage.set("token", "x").then(
 			() => "resolved",
