@@ -1,7 +1,8 @@
 # 2R-6: the lifecycle outcomes spec's nested run outgrows the test timeout under load
 
 - **Kind**: test defect (a timeout sized for an idle machine)
-- **Status**: found 2026-10-30, for the maintainer's decision
+- **Status**: found 2026-10-30; planned in
+  [PLAN-2R-5-2R-6-retries-under-load.md](../PLAN-2R-5-2R-6-retries-under-load.md), agreed 2026-10-30
 - **Area**: `test/tests/pageObject/lifecycle.outcomes.spec.ts`
 - **Severity**: Low (the test, not POMWright)
 - **Semver of the fix**: none

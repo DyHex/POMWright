@@ -1,7 +1,8 @@
 # 2R-5: `seed`'s Navigation API check counts Playwright's lag as replacements, and gives up during a short chain
 
 - **Kind**: defect
-- **Status**: found 2026-10-30, for the maintainer's decision
+- **Status**: found 2026-10-30; planned in
+  [PLAN-2R-5-2R-6-retries-under-load.md](../PLAN-2R-5-2R-6-retries-under-load.md), agreed 2026-10-30
 - **Area**: `assertNavigationApi` in `src/helpers/sessionStorageSeed.ts` (decision 81); in principle also `currentUrl`
   in `src/helpers/sessionStorage.ts` (decision 118), which uses the same bound
 - **Severity**: Medium, as [2A-1](../A-session-storage/defect-2A-1-seed-fails-during-redirect-chain.md), whose fix
