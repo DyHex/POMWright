@@ -1443,3 +1443,32 @@ hearing the commit before the new document answers and leave a commit between th
 
 **Why**: as with decision 118, the document that answers is the source that does not depend on the order of
 Playwright's events, and the handle pins the write to it (decision 114).
+
+## 124. A check that POMWright's retry pauses are Playwright's (2026-10-30)
+
+**Settles**: the maintainer's request after decision 121: pin Playwright's pauses, or import them.
+
+**The case**: decision 121 pauses before each retry as Playwright pauses before retrying its own actions, `[20, 50, 100,
+100, 500]`. In `playwright-core` that is a constant local to `retryWithProgressAndBackoff`, a method of the server's
+frame class bundled into `lib/coreBundle.js`. No export, public type or option reaches it: `./lib/coreBundle` is
+exported, but the constant is not on it, and the getByRole roles come from a type of the public signature, which the
+pauses do not have. The unit tests pin POMWright's pauses only.
+
+**Decided**:
+
+1. **`scripts/check-playwright-retries.mjs`**: reads the pauses from the `playwright-core` that `test/` resolves (the
+   method's definition and the first array of its body) and compares them with `RETRY_PAUSES`. `pnpm typecheck` runs
+   it last; `pack-test.sh`, which runs those steps itself, runs it after `check-error-messages.mjs`, so CI checks the
+   pin and the latest 1.x. Probed: it passes at 1.64.0, and its pattern finds the same pauses in 1.64.1, npm's latest.
+2. **It fails, not warns**, on a difference, and when it cannot find the method, so a release that moves the code is
+   never passed over. Its message says what to update: the constant, its unit tests, the total in `MAX_RETRIES`'s
+   comment and *Internal → Seed registry*, or the check.
+3. **Docs**: `test/AGENTS.md` (*Commands*: eight checks), `docs/repository.md` (`scripts/`), *Internal → Tests and
+   checks* (item 8), the comment of `RETRY_PAUSES`.
+
+Rejected: **a vitest test**, which runs at the root's pin only; **measuring the pauses in a browser**, which is
+timing-based and would be flaky on a loaded machine if checked tightly enough to catch a change; **a warning**, which
+would leave "as Playwright's actions do" untrue unnoticed.
+
+**Why**: POMWright says it mirrors Playwright here, and a value it cannot import is checked where a new Playwright
+first appears.

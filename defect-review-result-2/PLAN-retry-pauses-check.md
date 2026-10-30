@@ -18,7 +18,8 @@
 It also fails when it cannot find Playwright's method, so a change is never passed over. The fix is then to read
 Playwright's source again and update the constant, its unit tests and docs, or the check.
 
-`pack-test.sh` runs `pnpm typecheck` in every harness job, so CI checks both the Playwright pin and the latest 1.x. A
+`pack-test.sh` runs the same steps as `pnpm typecheck`, one by one, in every harness job, after `PLAYWRIGHT_VERSION`
+has swapped in the version to test, so CI checks both the Playwright pin and the latest 1.x. A
 Playwright release that changes the pauses turns the latest row red until POMWright follows, as other differences on
 that row do.
 
@@ -33,8 +34,9 @@ that row do.
   [types.ts:84](../src/locators/types.ts#L84)). The pauses have no type.
 - Nothing in the repository reads Playwright's source. The unit tests pin POMWright's pauses, so they would still pass
   if Playwright changed its own.
-- CI runs `pnpm test:unit` once, at the root's pin, and the harness, `pack-test.sh` with `pnpm typecheck`, at the pin and
-  at the latest 1.x ([checks.yaml](../.github/workflows/checks.yaml)).
+- CI runs `pnpm test:unit` once, at the root's pin, and the harness at the pin and at the latest 1.x
+  ([checks.yaml](../.github/workflows/checks.yaml)). The harness is `pack-test.sh`, which runs the steps of
+  `pnpm typecheck` itself ([pack-test.sh:39-46](../pack-test.sh#L39-L46)).
 
 ## Options
 
@@ -55,7 +57,8 @@ that row do.
      `lib/` for `retryWithProgressAndBackoff` and the first array in its body, and reads `RETRY_PAUSES`. It prints one
      line on success, as the other checks do. On a difference it fails with both arrays and what to update; on a
      missing method it fails with the version and what to read.
-   - `package.json`: `pnpm typecheck` runs it last.
+   - `package.json`: `pnpm typecheck` runs it last; `pack-test.sh`, which runs those steps itself, runs it after
+     `check-error-messages.mjs`.
    - The comment of `RETRY_PAUSES` names the check.
    - Docs:
      - `test/AGENTS.md` (*Commands*, the list of what `pnpm typecheck` runs: eight);

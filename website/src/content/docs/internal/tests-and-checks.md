@@ -70,6 +70,11 @@ its own so that no `--reporter` given to the harness can switch it off.
    every compile-error message its types define, must be on the page; every message line on the page must end as one
    of them does. Errors no user can reach, and messages that only put a label in front of another error's, are listed
    in the script with their reasons. The API pages' **Throws** and the doc comments' `@throws` are kept by hand.
+8. `scripts/check-playwright-retries.mjs`: the pauses POMWright makes before it asks the page again (`RETRY_PAUSES`, see
+   [the seed registry](/POMWright/internal/seed-registry/)) against those the installed Playwright makes before it
+   retries one of its own actions, read from `playwright-core`'s source, since no export, type or option reaches them.
+   It also fails when it cannot find Playwright's method, so a release that moves the code is never passed over.
+   Through the harness jobs it runs at the Playwright pin and at the latest 1.x, where a change shows first.
 
 ## CI
 

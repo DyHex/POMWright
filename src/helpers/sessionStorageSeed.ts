@@ -93,7 +93,7 @@ export const MAX_RETRIES = 20;
  * The pauses before each retry, in ms, the last one repeated: those Playwright makes before each retry of its own
  * actions (`retryWithProgressAndBackoff` in playwright-core 1.64.0, which locator actions and `waitForSelector` use),
  * which no option changes. They outlast the moment after a replacement when an evaluation can still reach the old
- * document.
+ * document. No export reaches Playwright's, so `scripts/check-playwright-retries.mjs` compares the two.
  */
 const RETRY_PAUSES = [20, 50, 100, 100, 500];
 

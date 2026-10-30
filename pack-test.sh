@@ -44,6 +44,8 @@ pnpm -C "$SCRIPT_DIR" exec tsc -p test/tsconfig.legacyDecorators.emit.json
 node "$SCRIPT_DIR/scripts/check-doc-snippets.mjs"
 node "$SCRIPT_DIR/scripts/check-api-coverage.mjs"
 node "$SCRIPT_DIR/scripts/check-error-messages.mjs"
+# reads the Playwright test/ has, the latest 1.x when PLAYWRIGHT_VERSION swapped it in above
+node "$SCRIPT_DIR/scripts/check-playwright-retries.mjs"
 # shellcheck disable=SC2086 # PLAYWRIGHT_INSTALL_ARGS is a word list on purpose
 pnpm -C "$TEST_DIR" exec playwright install ${PLAYWRIGHT_INSTALL_ARGS:-}
 pnpm -C "$TEST_DIR" exec playwright test "$@"
