@@ -1472,3 +1472,39 @@ would leave "as Playwright's actions do" untrue unnoticed.
 
 **Why**: POMWright says it mirrors Playwright here, and a value it cannot import is checked where a new Playwright
 first appears.
+
+## 125. The claims only a stand-in backs, checked for real (2026-10-30)
+
+**Settles**: the gaps of [PLAN-2I-contributor-guide.md](PLAN-2I-contributor-guide.md)'s execution note 3, which the
+maintainer asked to build now rather than file in the backlog.
+
+**The case**: step 7 of PLAN-2I disclosed every stand-in (decision 113), and four claims had no real test beside the
+stand-in: the four text-matching strategies matched only on documents set with `setContent`; a late load and a late
+server only through `page.route`; a refused connection only through `route.abort` (where Firefox showed its error page
+in some runs only, so the test skips Firefox); the URL host forms only through `page.route`. The probes for the plan
+showed every browser resolving `*.localhost` itself, the test server answering on `::1`, Firefox showing its error page
+on a real refused connection in 10 of 10 rounds, and the docs' reason for `toHaveURL` and credentials naming the wrong
+URL: Playwright compares `location.href`, which browsers give without credentials, and `document.URL` keeps them.
+
+**Decided**:
+
+1. **Built now**, before PLAN-bench-performance.
+2. **`/testgetby`**, a fixture page with its page object and `testGetBy.spec.ts`; the four `add.getBy*` comments
+   point to it.
+3. **The item route's `delay` and `image` flags** and `/testnav/image.svg`; the three `testNav` tests drop
+   `page.route`.
+4. **The test server's app on a port of the spec's own** for the refused connection; `TestStorageSecond` takes an
+   optional `baseUrl`; the Firefox skip goes only after 30 rounds per browser on parallel workers and a run on 4 CPUs
+   pass.
+5. **Every host form the test server can answer runs against it**; the four port forms on `shop.example`, which need
+   port 80 or 443 or TLS, stay on `page.route`, disclosed; `localhost:09000` is added.
+6. **The reason names `location.href`** in the two pages, `fullUrl`'s doc comment, the spec and `test/AGENTS.md`, and
+   the spec pins it.
+7. **No changeset and no bump**, as for `55e7149`, which wrote the same sentences without one.
+
+Rejected: elements added to an existing fixture page (two fixtures in one); routes with the delay in the path (samples,
+and a check that waits out the delay); a proxy forwarding to port 9000, or Playwright's `proxy` option for the host
+forms (each a stand-in of its own, with code of its own).
+
+**Why**: a claim only a stand-in backs is a gap (decision 113), and each of these could be checked for real at little
+cost; the one that cannot, a browser without the Navigation API, keeps its disclosed stand-in.
