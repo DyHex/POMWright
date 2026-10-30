@@ -1,4 +1,4 @@
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
@@ -1262,10 +1262,6 @@ test.describe("a navigation to a seeded origin that fails", () => {
 			testStorage,
 			testStorageSecond,
 		}) => {
-			test.skip(
-				browserName === "firefox" && failure === "route.abort()",
-				"Firefox shows its error page after an aborted request in some runs only (27 of 30); after a refused connection or offline it always does",
-			);
 			test.fail(browserName !== "webkit", "Chromium and Firefox cannot apply a seed after a failed navigation there");
 			const port = failure === "a refused connection" ? await freePort() : undefined;
 			seededOrigin = port === undefined ? B : `http://127.0.0.1:${port}`;
@@ -1283,7 +1279,19 @@ test.describe("a navigation to a seeded origin that fails", () => {
 			await second.navigation.goto().catch(() => undefined);
 			// Chromium and Firefox commit their error page after goto has rejected (Firefox's then fails this test);
 			// WebKit shows none
-			if (browserName !== "webkit") {
+			if (browserName === "firefox" && failure === "route.abort()") {
+				// after route.abort(), Firefox shows no error page in some runs (3 of 60 at rest, 11 of 60 on 4 CPUs; when it
+				// shows one, within 0.4 s), and the next arrival then receives the seed, as on WebKit; the page's failure can
+				// end this test as its error page arrives, before a later test.fail() could mark it, so those runs are
+				// skipped and the others checked as Firefox's always are
+				const shown = await page
+					.waitForURL((url) => url.href !== before, { waitUntil: "commit", timeout: 5_000 })
+					.then(
+						() => true,
+						() => false,
+					);
+				test.skip(!shown, "Firefox showed no error page after route.abort() in this run");
+			} else if (browserName !== "webkit") {
 				await expect.poll(() => page.url()).not.toBe(before);
 			}
 			await context.setOffline(false);
@@ -1295,7 +1303,10 @@ test.describe("a navigation to a seeded origin that fails", () => {
 		});
 
 		test(`after ${failure}, the failure gives the reason at the seed's line`, async ({ browserName }) => {
-			test.skip(browserName === "firefox" && failure === "route.abort()", "see the test above");
+			test.skip(
+				browserName === "firefox" && failure === "route.abort()" && !existsSync(outcomeFile()),
+				"the retry above was skipped in this run",
+			);
 			const { message, stack, origin } = JSON.parse(readFileSync(outcomeFile(), "utf8"));
 			rmSync(outcomeFile());
 			if (browserName === "webkit") {
