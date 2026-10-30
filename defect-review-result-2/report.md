@@ -1377,8 +1377,8 @@ or none: the release stays 3.0.2.
 | [2B-4](B-registration-and-resolution/defect-2B-4-add-without-locator-method.md) | | design question | Low | patch | this branch: `verify()` reports it; a changeset | decided (#88) |
 | [2C-3](C-queries/defect-2C-3-replace-any-frame-terminal-compiles.md) | | design question | Low | none | this branch: docs clause (item 24) and a probe comment; no type change | decided (#92) |
 | [2R-1](R-triage/defect-2R-1-query-default-path-test-gaps.md) | | test gap | Low | none | this branch: tests only (locators plan); found in the triage | decided (#93) |
-| [2R-2](R-triage/defect-2R-2-navigation-message-names-the-start-page.md) | | defect | Low | patch (unreleased) | this branch: the destination from the new document's `location.href`; found in CI after the session storage plan | decided (#118) |
-| [2R-3](R-triage/defect-2R-3-opaque-origin-test-wait-under-load.md) | | test defect | Low | none | this branch: the test's wait; found probing 2R-2 under load | decided (#119) |
+| [2R-2](R-triage/defect-2R-2-navigation-message-names-the-start-page.md) | | defect | Low | patch (unreleased) | this branch: the destination from the new document's `location.href`; found in CI after the session storage plan | done (#118: fc6ce43, f816c2e) |
+| [2R-3](R-triage/defect-2R-3-opaque-origin-test-wait-under-load.md) | | test defect | Low | none | this branch: the test's wait; found probing 2R-2 under load | done (#119: 751fe70, fdc7918) |
 | [2D-4](D-page-objects-urls-navigation/defect-2D-4-detached-navigation-methods.md) | | design question | Low | none | not adopted (unbound, as Playwright's); reconsidered on request | decided (#91) |
 
 The merged files keep their own reproductions: [2A-7](A-session-storage/defect-2A-7-upgrading-ts2339-text-stale.md),

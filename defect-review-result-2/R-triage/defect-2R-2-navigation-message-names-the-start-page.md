@@ -2,7 +2,8 @@
 
 - **Kind**: defect
 - **Status**: decided 2026-10-30, decision 118 in [DECISIONS.md](../DECISIONS.md) (the destination from the new
-  document's `location.href`); planned in [PLAN-2R-2-2R-3-destination-and-load.md](../PLAN-2R-2-2R-3-destination-and-load.md)
+  document's `location.href`); planned in [PLAN-2R-2-2R-3-destination-and-load.md](../PLAN-2R-2-2R-3-destination-and-load.md);
+  done 2026-10-30 in `fc6ce43` and `f816c2e`
 - **Area**: `guarded` in `src/helpers/sessionStorage.ts`
 - **Severity**: Low (the call fails as it should, with the right keys; the destination it names is wrong, which sends
   the tester looking for a reload that never happened and at the wrong origin's storage)

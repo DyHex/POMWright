@@ -2,7 +2,8 @@
 
 - **Kind**: test defect (flaky under load)
 - **Status**: decided 2026-10-30, decision 119 in [DECISIONS.md](../DECISIONS.md) (the test waits with
-  `expect.poll`); planned in [PLAN-2R-2-2R-3-destination-and-load.md](../PLAN-2R-2-2R-3-destination-and-load.md)
+  `expect.poll`); planned in [PLAN-2R-2-2R-3-destination-and-load.md](../PLAN-2R-2-2R-3-destination-and-load.md);
+  done 2026-10-30 in `751fe70` (the test) and `fdc7918` (the harness under load)
 - **Area**: `test/tests/testApp/sessionStorage.spec.ts`, *a document with an opaque origin*
 - **Severity**: Low (the test, not POMWright; the shape CI's runner has can hit it, on `main`, where Firefox runs)
 - **Semver of the fix**: none (a test)
@@ -20,8 +21,11 @@
 
 ## Cause
 
-Inferred, not traced: under load the failed navigation reaches the test's wait before Firefox's error page commits,
-and `waitForURL` fails with that navigation's error instead of waiting for the commit after it.
+Playwright's `waitForURL`, when the URL does not match yet, waits through `navigated` events and fails on the first one
+that carries an error (the client's `waitForNavigation`, `playwright-core` 1.64.0 `lib/coreBundle.js`). Inferred, not
+traced: under load the failed `goto`'s event reaches the test's wait after the `goto` has rejected, so the wait fails
+with that navigation's error instead of waiting for the error page's commit. The fix's numbers are in the plan's
+*Execution notes*.
 
 ## Fix
 

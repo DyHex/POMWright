@@ -250,4 +250,46 @@ with a recommendation.
 
 ## Execution notes
 
-None yet.
+- 2026-10-30. The agreed plan was committed in `f33683e`, then one commit per step: `fc6ce43` (1), `f816c2e` (2),
+  `751fe70` (3), `fdc7918` (4), and this record (5).
+- **Step 1 exported only `replacedByNavigation`.** `MAX_REPLACEMENTS` was exported in step 2, together with its first
+  user outside the seed module, so that no commit carries an export nothing uses. The helper of step 2 is
+  `SessionStorage`'s private `currentUrl`.
+- **No harness case reproduces 2R-2 every time; the gap is recorded here.** A temporary spec ran three shapes 50 times
+  each on Chromium, 1 worker, against the build without the fix:
+  - a call made right after the page starts a navigation named the right page 50 of 50 times, for both `set` and
+    `get(keys)`;
+  - the existing `set` test's shape named the start page 34 of 50 times, and 50 of 50 were right with the fix.
+
+  The unit tests cover the logic with a stand-in. The existing `set` test and `get(keys)`'s parallel reads remain the
+  real-timing checks.
+- **The unit tests' fakes now tell `location.href` apart by the question's text.** This is in `sessionStorage.test.ts`
+  (`evaluations`) and `storageTurns.test.ts`, because before the fix a fake answered every `page.evaluate` alike. The
+  three new tests failed against step 1's code and pass with step 2's.
+- **Verification of 2R-2,** with the packed build and `--retries=0`:
+
+  | Shape | Runs | Result |
+  | --- | --- | --- |
+  | `set` at rest, 1 worker, Chromium | 300 | 300 of 300 |
+  | `set` and `get(keys)`, `taskset -c 0-3`, 2 workers, three browsers | 100 each | 600 of 600 |
+  | the same two, `taskset -c 0-1`, 4 workers, Chromium | 200 each | 400 of 400 |
+
+- **Verification of 2R-3:** 4 workers rather than the plan's 2, to raise the failure rate before the fix.
+  - Before the fix: 4 of 100 failed on Firefox with `taskset -c 0-3` and 4 workers, each with `NS_ERROR_OFFLINE`.
+  - After the fix, in the same shape: 200 of 200 on Firefox, and 100 of 100 on Chromium and WebKit.
+- **The first full `pnpm test:constrained`:** 960 unit tests; 1842 passed and 3 skipped on three browsers in 4.1
+  minutes; 33 step locations; 27 test-server tests. It took 265 s in all, well inside the 15-minute cap, so the script
+  needs no `--global-timeout` of its own. Pass `--reporter=line` when it runs unattended, as for `pack-test`.
+- **Final verification at `fdc7918`:**
+  - The full `pnpm pack-test --reporter=line` at rest, 16 workers: 1842 passed and 3 skipped on three browsers in 2.1
+    minutes; 33 step locations; 27 test-server tests.
+  - The checks inside it: 227 page blocks and 96 doc examples compiled; API coverage of 40 exports and 108 members;
+    error messages 78 and 9.
+  - Unit: 960. `pnpm lint`, `pnpm docs:build` and `pnpm lint:guide` (56 links) pass.
+  - No name of the external consumer projects appears on the branch.
+- **Corrected in step 4:** decision 119's reason, committed in step 2, said the race never showed on the whole machine.
+  It did, under 48 workers (136 of 1,500). It now cites 900 of 900 passing with 6 workers.
+- **Debt noticed, not fixed:** `access` still asks `document.domain` after a call fails as destroyed. `guarded` then
+  throws the navigation message whatever the answer, so that round trip on the failure path is never used. Suggested
+  remedy: `access` skips the lookup when `replacedByNavigation(error)`, as a behavior-preserving refactor with a unit
+  test that counts the evaluations.
