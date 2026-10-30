@@ -59,7 +59,8 @@ test("getById with a unicode-mode RegExp writes a quote, a backtick and >> by th
 
 	registry.add("main").locator("main");
 	registry.add("main.quote").getById(/^say"hi$/u);
-	registry.add("main.apostrophe").getById(/^it's$/v);
+	// biome-ignore lint/complexity/useRegexLiterals: tsc over test/ targets below es2024, which rejects the v flag in a literal
+	registry.add("main.apostrophe").getById(new RegExp("^it's$", "v")); // tsc over test/ targets below es2024, which has the literal
 	registry.add("main.backtick").getById(/^a`b$/u);
 	registry.add("main.chain").getById(/^a>>b$/u);
 

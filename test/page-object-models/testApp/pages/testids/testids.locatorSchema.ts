@@ -70,7 +70,8 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 	registry.add("body.any@prefixGlobal").getById(/^button\.submit\./g);
 	// unicode mode (u, v) rejects a backslash before a quote, a backtick or >, which Playwright's selector needs
 	registry.add("body.p@quoteUnicode").getById(/^say"hi$/u);
-	registry.add("body.p@apostropheUnicodeSets").getById(/^it's$/v);
+	// biome-ignore lint/complexity/useRegexLiterals: tsc over test/ targets below es2024, which rejects the v flag in a literal
+	registry.add("body.p@apostropheUnicodeSets").getById(new RegExp("^it's$", "v")); // tsc over test/ targets below es2024, which has the literal
 	registry.add("body.p@backtickUnicode").getById(/^a`b$/u);
 	registry.add("body.p@chainUnicode").getById(/^a>>b$/u);
 
