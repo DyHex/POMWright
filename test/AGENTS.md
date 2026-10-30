@@ -107,7 +107,8 @@ it before working there. Read it before running these commands, probing a claim,
   whose first script snapshots `sessionStorage` and which shows the navigation's type and `document.referrer`; hops to
   the second origin `http://127.0.0.1:9000`, the same server, by every kind of navigation; iframes, COOP and COEP
   flags, and two service workers). New fixture pages go in as new routes, not into the static page. `server.js` exports
-  the app and listens only when started as a program (`pnpm start`), so a spec can load it. No page loads anything from
+  the app and listens only when started as a program (`pnpm start`), so a spec can load it, or run it on a port of its
+  own (`sessionStorage.spec.ts`, for a connection refused until the app listens there). No page loads anything from
   outside the test server: a slow host once made the harness flaky. Every run starts its own server and never reuses
   one already on port 9000 (`reuseExistingServer: false`, locally too): a server left by a run that ended without
   stopping it served the `server.js` it started with, so a run fails at once when the port is taken; stop that

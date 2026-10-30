@@ -692,8 +692,9 @@ app.get("/teststorage/sw-passthrough.js", (_req, res) => {
   `);
 });
 
-// The app, for test-server/externalRequests.spec.ts, which reads every route from Express's router. The server listens
-// only when this file is started as a program (`pnpm start`), so loading it starts no second server.
+// The app, for test-server/externalRequests.spec.ts, which reads every route from Express's router, and for
+// tests/testApp/sessionStorage.spec.ts, which runs it on a port of its own after that port refused a connection. The
+// server listens only when this file is started as a program (`pnpm start`), so loading it starts no second server.
 module.exports = app;
 
 if (require.main === module) {

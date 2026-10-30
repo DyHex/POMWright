@@ -1,10 +1,14 @@
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { User } from "@page-object-models/testApp/pages/teststorage/teststorage.locatorSchema";
 import type TestStorage from "@page-object-models/testApp/pages/teststorage/teststorage.page";
+import TestStorageSecond from "@page-object-models/testApp/pages/teststorage/teststorage-second.page";
 import type { Page, Route, TestInfo } from "@playwright/test";
 import { PageObject, SessionStorage } from "pomwright";
+import app from "../../server";
 
 const A = "http://localhost:9000";
 const B = "http://127.0.0.1:9000";
@@ -1216,14 +1220,41 @@ test.describe("a navigation to a seeded origin that fails", () => {
 			test.info().project.outputDir,
 			`failed-navigation-${test.info().project.name}-${test.info().repeatEachIndex}.json`,
 		);
+	// a refused connection is real: the seeded origin is a port nothing listens on until the retry, where the test
+	// server's app then listens, in this worker; the test closes it, and a failing test's worker is replaced too
+	let server: Server | undefined;
+	let seededOrigin = B;
 	test.afterEach(() => {
+		server?.closeAllConnections();
+		server?.close();
+		server = undefined;
 		if (test.info().title.startsWith("the retry") && test.info().expectedStatus !== "skipped") {
 			const [error] = test.info().errors;
-			writeFileSync(outcomeFile(), JSON.stringify({ message: error?.message ?? null, stack: error?.stack ?? "" }));
+			writeFileSync(
+				outcomeFile(),
+				JSON.stringify({ message: error?.message ?? null, stack: error?.stack ?? "", origin: seededOrigin }),
+			);
 		}
 	});
+	/** A port nothing listens on: one the system hands out, closed again. */
+	const freePort = () =>
+		new Promise<number>((resolve, reject) => {
+			const probe = createServer()
+				.once("error", reject)
+				.listen(0, "127.0.0.1", () => {
+					const { port } = probe.address() as AddressInfo;
+					probe.close(() => resolve(port));
+				});
+		});
+	/** The test server's app on that port; another process that took the port in between fails it with EADDRINUSE. */
+	const listen = (port: number) =>
+		new Promise<Server>((resolve, reject) => {
+			const started = createServer(app)
+				.once("error", reject)
+				.listen(port, "127.0.0.1", () => resolve(started));
+		});
 
-	for (const failure of ["offline", "a refused connection"] as const) {
+	for (const failure of ["offline", "a refused connection", "route.abort()"] as const) {
 		test(`the retry after ${failure} never loads the app without the entries`, async ({
 			page,
 			context,
@@ -1232,35 +1263,40 @@ test.describe("a navigation to a seeded origin that fails", () => {
 			testStorageSecond,
 		}) => {
 			test.skip(
-				browserName === "firefox" && failure === "a refused connection",
-				"Firefox shows an error page for an aborted connection only in some runs; offline it always does",
+				browserName === "firefox" && failure === "route.abort()",
+				"Firefox shows its error page after an aborted request in some runs only (27 of 30); after a refused connection or offline it always does",
 			);
 			test.fail(browserName !== "webkit", "Chromium and Firefox cannot apply a seed after a failed navigation there");
+			const port = failure === "a refused connection" ? await freePort() : undefined;
+			seededOrigin = port === undefined ? B : `http://127.0.0.1:${port}`;
+			const second = port === undefined ? testStorageSecond : new TestStorageSecond(page, { baseUrl: seededOrigin });
 			await testStorage.navigation.goto();
-			await testStorageSecond.sessionStorage.seed({ token: "t" });
+			await second.sessionStorage.seed({ token: "t" });
 			if (failure === "offline") {
 				await context.setOffline(true);
-			} else {
-				// page.route's abort stands in for a server that refuses the connection, which the test server, always up,
-				// cannot do; it could hide how a browser treats a real refused connection (when it shows its error page),
-				// and offline, the other case, is the browser's own
+			}
+			if (failure === "route.abort()") {
+				// a project's own abort of the navigation, which the test checks as such, not a stand-in
 				await page.route(`${B}/**`, (route) => route.abort("connectionrefused"), { times: 1 });
 			}
 			const before = page.url();
-			await testStorageSecond.navigation.goto().catch(() => undefined);
+			await second.navigation.goto().catch(() => undefined);
 			// Chromium and Firefox commit their error page after goto has rejected (Firefox's then fails this test);
 			// WebKit shows none
 			if (browserName !== "webkit") {
 				await expect.poll(() => page.url()).not.toBe(before);
 			}
 			await context.setOffline(false);
-			await testStorageSecond.navigation.goto();
+			if (port !== undefined) {
+				server = await listen(port);
+			}
+			await second.navigation.goto();
 			expect(await startup(page)).toEqual({ token: "t" });
 		});
 
 		test(`after ${failure}, the failure gives the reason at the seed's line`, async ({ browserName }) => {
-			test.skip(browserName === "firefox" && failure === "a refused connection", "see the test above");
-			const { message, stack } = JSON.parse(readFileSync(outcomeFile(), "utf8"));
+			test.skip(browserName === "firefox" && failure === "route.abort()", "see the test above");
+			const { message, stack, origin } = JSON.parse(readFileSync(outcomeFile(), "utf8"));
 			rmSync(outcomeFile());
 			if (browserName === "webkit") {
 				expect(message).toBeNull();
@@ -1268,10 +1304,10 @@ test.describe("a navigation to a seeded origin that fails", () => {
 			}
 			const reason =
 				browserName === "chromium"
-					? "the browser counted the page's arrival on http://127.0.0.1:9000 as a return there"
-					: "the document that arrived on http://127.0.0.1:9000 has an opaque origin";
+					? `the browser counted the page's arrival on ${origin} as a return there`
+					: `the document that arrived on ${origin} has an opaque origin`;
 			expect(message).toContain(
-				`TestStorageSecond.SessionStorage.seed: the seed for http://127.0.0.1:9000 (keys: "token") was not applied: ${reason}`,
+				`TestStorageSecond.SessionStorage.seed: the seed for ${origin} (keys: "token") was not applied: ${reason}`,
 			);
 			expect(stack.split("\n").find((line: string) => line.trim().startsWith("at "))).toMatch(
 				/sessionStorage\.spec\.ts:\d+:\d+/,
