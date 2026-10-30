@@ -1,12 +1,14 @@
 # 2R-7: a seed called on `about:blank` can write at once into the document that arrives during the call
 
 - **Kind**: defect
-- **Status**: found 2026-10-30, for the maintainer's decision
+- **Status**: found 2026-10-30; planned in
+  [PLAN-2R-7-seed-inherited-arrival.md](../PLAN-2R-7-seed-inherited-arrival.md), agreed 2026-10-30
 - **Area**: `seed`'s write-at-once path for a page whose URL has no origin (`writeOnOrigin` in
   `src/helpers/sessionStorage.ts`, the `mayHaveInherited` branch of `SeedRegistry.add` in
   `src/helpers/sessionStorageSeed.ts`)
 - **Severity**: Medium. The call resolves, and the app's first script ran without the entries: what `seed` promises
-  never happens. It was seen only with Playwright's step overlay.
+  never happens. Real timing hit it only with Playwright's step overlay, on Firefox; once the timing lands, every
+  browser writes into the arrived document (the plan's deterministic case).
 - **Semver of the fix**: patch
 - **Found**: 2026-10-30, the full `pnpm pack-test` after
   [PLAN-2R-5-2R-6-retries-under-load.md](../PLAN-2R-5-2R-6-retries-under-load.md):
@@ -34,10 +36,14 @@
   4. `page.evaluateHandle`, `webStorage.setItem` and `elementHandle.evaluate` follow: the write at once.
   The same order appears in the other failed round read.
 
+- A deterministic case: Playwright's `page.evaluate` and `page.evaluateHandle` were wrapped so that the page commits
+  on the seeded origin right before the seed's first evaluation, a stand-in for the timing. Today the call resolved, and
+  the arrived document's storage held the entry, 30 of 30 runs on three browsers.
+
 ## Cause
 
 At the call the page was on `about:blank`, so the call may write at once if the document inherited the seeded origin,
-as a popup's does (decision 80's path). In its turn `SeedRegistry.add` read the main frame's URL, still without an
+as a popup's does (`52f2d4c`). In its turn `SeedRegistry.add` read the main frame's URL, still without an
 origin, and called `writeOnOrigin`. That function asks the page for `self.origin`, and Playwright evaluated it in the
 document that had meanwhile arrived on the origin. The answer matched, so `seed` wrote into that document after its
 first script had run.
