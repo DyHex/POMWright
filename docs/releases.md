@@ -43,6 +43,23 @@ Rules:
 
 The rules on commits are in the root AGENTS.md (*How to work*): they hold for every commit.
 
+### From a review's findings
+
+3.0.2 was prepared from two defect reviews. What worked there adapts the rules above; it does not replace them. How a
+review is run is the [`defect-review` skill](../skills/defect-review/SKILL.md)'s, not repeated here.
+
+- The review's result folder (its report, findings and probes) served as the working folder, under its own name, with
+  `DECISIONS.md` and the plans added beside the report, whose ledger marks each entry with its decision and plan.
+- The findings were decided item by item with the maintainer, each with what its fix could break checked before the
+  decision. Decisions are numbered across folders: a second review's continue from the first's, so a number names one
+  decision.
+- One plan per item or group of items fixed together (`PLAN-<items>-<slug>.md`, or one per area when an area's items
+  are fixed together), `PLAN-T<n>-<slug>.md` for a test gap without a finding, and `PLAN-<slug>.md` for the
+  maintainer's own items. An area's plans were written as soon as its items were decided, not after the whole triage.
+- The changesets served as the release notes; there was no release-notes file.
+- The plans were built checks first, so every later plan ran under them, then each code area with its docs, and the
+  contributor guide last, since it describes the result. Rule 7's audit and cleanup close the release as for any other.
+
 ## Carrying out a release
 
 How Publish and Pages run is in [.github/AGENTS.md](../.github/AGENTS.md).
