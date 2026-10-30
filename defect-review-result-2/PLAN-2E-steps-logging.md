@@ -66,3 +66,25 @@ Per step: `pnpm lint`, `pnpm test:unit`. At the end: `pnpm typecheck`, `pnpm doc
 
 Two commits, `fix(logging): …` and `docs: …`, each with `Plan: defect-review-result-2/PLAN-2E-steps-logging.md` and the
 `Co-Authored-By:` trailer. The maintainer pushes.
+
+## Execution notes
+
+- 2026-10-30. The commits, one per step: `dad687e` (1, decision 94), `98afe68` (2, decisions 105 and 112, point 2),
+  and this record.
+- **Verification:**
+  - the full `pnpm pack-test --reporter=line`: 1863 passed and 3 skipped on three browsers, and 36 step locations
+    (33 before: `get`, `clear` and `seed` added);
+  - `pnpm test:constrained`, which `test/AGENTS.md` asks for after a change to steps: the same, in 279 s;
+  - 1006 unit tests; `pnpm typecheck`, `pnpm docs:build` and `pnpm lint` pass; no name of the external consumer
+    projects on the branch.
+- **Step 1:** the unit test of the POSIX names failed on the old code (`"en-US.UTF-8"` was hinted) and passes with
+  the change. Every hint it checks is accepted by `Intl.getCanonicalLocales`. `C.UTF-8`, `sr_RS@latin`, `de_DE@euro`
+  and `x_!!` get no hint.
+- **Step 2:**
+  - The review's location probe and its print reporter (`E/locations/`) were re-run against the build, copied into
+    `test/` and deleted afterwards. Its step and error lines were identical to the review's `run2.txt`, and every
+    placement on *Test steps* is taken from them.
+  - The two title tests pin behavior that already held (decision 105 documents it), so they pass on the old code as
+    well.
+  - *Test steps*' opening sentence now says "called and awaited", with a link to the new section.
+- Nothing unexpected.

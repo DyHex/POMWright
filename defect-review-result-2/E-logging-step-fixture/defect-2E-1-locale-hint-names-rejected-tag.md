@@ -1,7 +1,7 @@
 # 2E-1: For a POSIX locale name such as `en_US.UTF-8`, the locale check's hint names a value the same check rejects
 
 - **Kind**: defect
-- **Status**: decided 2026-10-29, decision 94 in [DECISIONS.md](../DECISIONS.md) (the codeset dropped, no hint for a modifier); planned in the steps and logging plan
+- **Status**: decided 2026-10-29, decision 94 in [DECISIONS.md](../DECISIONS.md) (the codeset dropped, no hint for a modifier); planned in the steps and logging plan; done 2026-10-30 in `dad687e`
 - **Area**: E12 `checkDateFormat`; E19 the fixture's locale check; E26 messages (inventory-blind.md)
 - **Severity**: Low (a misleading message on an uncommon input: the fix it names fails the same way; nothing is lost and
   the test fails either way)
