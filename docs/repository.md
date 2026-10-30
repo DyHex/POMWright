@@ -69,8 +69,8 @@ parent covers its subfolders.
   switch to the version the field names. pnpm runs no dependency's install script unless the root
   `pnpm-workspace.yaml` allows it (`allowBuilds`: esbuild, for tsup); a new one fails the install until it is allowed
   there, after a look at what it runs. Each lockfile pins pnpm itself by integrity. TypeScript is 6 (its compiler API
-  is what tsup's declaration build, `check-api-coverage.mjs` and `check-error-messages.mjs` use, and 7 has none; the
-  snippet check runs `tsc`); TypeScript 6 includes only the
+  is what tsup's declaration build, `check-api-coverage.mjs`, `check-error-messages.mjs` and
+  `generate-emit-members.mjs` use, and 7 has none; the snippet check runs `tsc`); TypeScript 6 includes only the
   `@types` packages a tsconfig lists, so the root `tsconfig.json` lists `node`.
 - No new runtime dependencies. A new dev dependency, of the root, `test/` or `website/`, is recorded with its reason in
   the plan or the commit that adds it, and in the working folder's decisions log while one exists (see

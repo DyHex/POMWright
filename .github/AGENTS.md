@@ -39,7 +39,7 @@ read from GitHub, has a version npm does not have and changesets are pending (th
 saying to revert the Version Packages pull request that set it, and otherwise goes no further unless the commit that run
 tested is `main`'s tip and the checkout (a `workflow_run` checks out the newest commit when it first starts, and a
 re-run keeps it; the newer commit's own run continues the release); it publishes with npm Trusted Publishing (`id-token:
-write`; no npm token is stored; `pnpm publish` exchanges the workflow's OIDC token and records provenance) from the
+write`; the workflow uses no npm token; `pnpm publish` exchanges the workflow's OIDC token and records provenance) from the
 `npm` environment, which only `main` may deploy to and which the Trusted Publisher names, and after publishing warns
 when a version has no provenance attestation. `pages.yaml` builds `website/` and deploys it to GitHub Pages
 (`https://dyhex.github.io/POMWright/`) after `CI` succeeds on a push to `main`, guarded as `publish.yaml` is and

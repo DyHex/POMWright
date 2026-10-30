@@ -2,7 +2,7 @@ name: Publish
 
 # Versions and publishes the package after CI succeeds on a push to main, with changesets/action: while changesets are
 # pending it opens or updates the "Version Packages" pull request; once that is merged, the next run publishes the new
-# version. npm authenticates this workflow by Trusted Publishing (OIDC), so no npm token is stored, and pnpm publish
+# version. npm authenticates this workflow by Trusted Publishing (OIDC), so it uses no npm token, and pnpm publish
 # records provenance from the same identity. The Trusted Publisher allows npm publish, so a version goes live when this
 # run publishes it; merging the Version Packages pull request is the human gate, and pr.yaml's Release window holds every
 # other pull request into main until the new version is on npm. The job runs in the npm

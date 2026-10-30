@@ -70,6 +70,9 @@ How Publish and Pages run is in [.github/AGENTS.md](../.github/AGENTS.md).
   allowed in the repository's settings, a pull request with auto-merge on and its review approved merges itself. A
   changeset merged before then would leave that version unpublished: the next Version Packages pull request would bump
   past it (*The rulesets on `main`* in [.github/AGENTS.md](../.github/AGENTS.md)).
+- The Version Packages pull request is opened by `github-actions[bot]`, so GitHub holds its `PR` run until the
+  maintainer approves it on the pull request (PR #52's run was `action_required` until then); its `build` and
+  *Release window* run after the approval.
 - Do not use **Update branch** on a Version Packages pull request: it merges `main` in without running
   `changeset version`, so a changeset merged since would ride along unversioned. The *Release window* job fails it;
   Publish rebuilds the pull request a few minutes after the merge that made it stale.
@@ -78,15 +81,18 @@ How Publish and Pages run is in [.github/AGENTS.md](../.github/AGENTS.md).
   That restores its changesets, the next Version Packages pull request includes them, and the revert passes the
   *Release window* at once.
 - Releases are published with npm Trusted Publishing: npmjs.com trusts `publish.yaml` of this repository, `pnpm publish`
-  exchanges the workflow's OIDC token, no npm token is stored, and npm records provenance. The Trusted Publisher allows
-  `npm publish`, so a release goes live when Publish runs, and merging the Version Packages pull request is the human
-  gate. The publish job runs in the GitHub environment `npm`, which only `main` may deploy to, and the Trusted Publisher
-  names that environment, so a `publish.yaml` on another branch cannot publish; the environment and its branch rule are
-  set up before the publisher. A stage-only publisher, which holds each version until a maintainer approves it with 2FA,
-  was considered and not adopted: `changeset publish` runs `pnpm publish` and cannot stage, so it would need a publish
-  script of its own that also writes the tag and the GitHub release the action creates. npm expires a new Trusted
-  Publisher whose first publish has not succeeded within 2 days, so one is set up, or set up again, right before the
-  release it is for. After a release, check its attestation (`npm view pomwright@<version> dist --json`, or
+  exchanges the workflow's OIDC token, the workflow uses no npm token, and npm records provenance. Once a release has
+  gone out through the Trusted Publisher, the package's publishing access on npmjs.com stays at "Require two-factor
+  authentication and disallow tokens": no npm token can publish it, and the Trusted Publisher, which authenticates with
+  OIDC, still can ([npm's *Trusted publishing* page](https://docs.npmjs.com/trusted-publishers)). The Trusted Publisher
+  allows `npm publish`, so a release goes live when Publish runs, and merging the Version Packages pull request is the
+  human gate. The publish job runs in the GitHub environment `npm`, which only `main` may deploy to, and the Trusted
+  Publisher names that environment, so a `publish.yaml` on another branch cannot publish; the environment and its branch
+  rule are set up before the publisher. A stage-only publisher, which holds each version until a maintainer approves it
+  with 2FA, was considered and not adopted: `changeset publish` runs `pnpm publish` and cannot stage, so it would need a
+  publish script of its own that also writes the tag and the GitHub release the action creates. npm expires a new
+  Trusted Publisher whose first publish has not succeeded within 2 days, so one is set up, or set up again, right before
+  the release it is for. After a release, check its attestation (`npm view pomwright@<version> dist --json`, or
   `https://registry.npmjs.org/-/npm/v1/attestations/pomwright@<version>`); the workflow warns when it finds none.
 
 ## Backlog
