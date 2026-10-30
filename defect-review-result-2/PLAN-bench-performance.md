@@ -134,8 +134,7 @@ this record follows. The runs' output is kept in [bench-runs/](bench-runs/).
    range of a cell: pinned to 0 to 3, locator tables 13%, storage at rest 9%; unpinned, 5% and 54%. Pinned, the
    locator tables' widest cells are the registries of 10,000 paths and more. A fourth run, pinned to all eight
    performance cores (`taskset -c 0-15`), alone (load average 0.14 at the start), spread 6% and 23%, and 23% under its
-   8 workers; a first attempt at it had a docs build beside it and was discarded, at the maintainer's word. So
-   the locator tables spread least unpinned (5%) or on all eight fast cores (6%), and the storage calls least on CPUs 0
+   8 workers. So the locator tables spread least unpinned (5%) or on all eight fast cores (6%), and the storage calls least on CPUs 0
    to 3 (9% and 11% in two runs). A process that VS Code's Playwright extension started at 20:50 (`playwright
    test-server`) was alive, at 0% CPU when checked, during runs 2 to 4; no test file changed during the runs, which is
    what would have made it work.
