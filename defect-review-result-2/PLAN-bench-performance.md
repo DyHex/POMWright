@@ -103,3 +103,48 @@ numbers checked against the kept output once more before the commit.
 
 Phase 1: no commit, a report. Phase 2: one commit for the scripts, one for the page, with `Plan:
 defect-review-result-2/PLAN-bench-performance.md` and the `Co-Authored-By:` trailer. The maintainer pushes.
+
+## Execution notes
+
+Built 2026-10-30: phase 1's findings and decision 126 in `cd7b61f`, the scripts in `649d903`, the page in `026cba4`;
+this record follows. The runs' output is kept in [bench-runs/](bench-runs/).
+
+1. **The method, as agreed.** `pnpm bench` runs each section five times in fresh processes and prints each cell's
+   median and range; the machine line prints the CPUs the process may use and the load average at the start. The
+   registry section warms every kind first, prepares inputs outside the timer, times a registry's creation on its own
+   (0.059 µs), collects before each sample, keeps every result, takes the heap's median, and measures the round trip
+   after 500 calls to warm up. A failing Playwright run shows its output. Sections can be named, and
+   `POMWRIGHT_BENCH_RUNS=1` runs once.
+2. **The storage benchmark (decision 115)**, `test/benchmarks/sessionStorage.spec.ts`, through
+   `playwright.bench.config.ts`, which now has a `fixture` project and three `storage-*` projects and starts the test
+   server only for the storage section (`POMWRIGHT_BENCH_SERVER`). Under the harness's parallel workers means half the
+   CPUs the process may use, as the harness's "50%", so 2 workers when pinned to CPUs 0 to 3, as on CI's runner, and 16
+   unpinned. Decision 114's comparison runs against a build of `c7d998c` (`0764cda^`), exported with `git archive`,
+   built and packed in the scratchpad, and loaded through `POMWRIGHT_BENCH_BASELINE`, with `NODE_PATH` pointing its
+   `require` of `@playwright/test` at the harness's copy.
+3. **Unexpected, corrected during the build: one long test made Playwright's own calls look slow.** In the first
+   version, one test held every case, and Playwright's plain calls at 100 keys took 68 to 127 ms against POMWright's
+   60. Probes, each a temporary spec deleted after its run: the same calls in a short test took 35 to 43 ms; within one
+   test, 100 calls grew from about 33 to 43 ms over 9,000 steps; a call in the test body cost more than one inside a
+   step (pinned, chromium and webkit, 10 rounds: 35 to 52 against 27 to 44 ms per 100). So each case is now a test of
+   its own on a shared page, and Playwright's calls come out at about 0.3 ms per key; the page says why, and that
+   Playwright's calls are measured as a test writes them, in its body.
+4. **Pinning, measured.** Unpinned, 100 plain `setItem` calls took a median of 46 to 54 ms with ranges of 23 to 86;
+   pinned to CPUs 0 to 3, 28 to 40 ms with ranges of 24 to 60 (one run per browser). Across the kept runs, the median
+   range of a cell: pinned to 0 to 3, locator tables 13%, storage at rest 9%; unpinned, 5% and 54%. Pinned, the
+   locator tables' widest cells are the registries of 10,000 paths and more; why the unpinned run spread less there is
+   not known. A fourth run, pinned to all eight performance cores (`taskset -c 0-15`), spread 13% and 24%, so CPUs 0 to
+   3 stay the reference; a docs build ran during part of that fourth run, so its figures are weaker than the others.
+5. **The kept runs**: `run1-pinned.out` (the page's), `run2-pinned.out`, both `taskset -c 0-3` at `649d903`, with the
+   baseline build; `run3-unpinned.out`; `run4-pinned-0-15.out`; `runs.log` with each run's time (about 11.5 minutes
+   pinned). Run 2 differs from run 1 by 1.8% in the median cell of the locator tables (12% at most) and by 3.0% in the
+   storage tables' (82% at most, WebKit's arrival under load).
+6. **The page against the output**: every one of its 231 cells with a range is in `run1-pinned.out` verbatim (checked
+   by a script); the ratios and per-path figures were computed from the output (the chart values to two decimals). The
+   claims across runs (the ratios' ranges, WebKit's arrival at 10 keys 0 to 15 ms above the scripts', the arrival's 8 to
+   10 ms for 100 entries) are from runs 1 to 3.
+7. **Verification**: `pnpm lint`, `pnpm lint:guide`, `tsc -p test`, `pnpm docs:build`, `pnpm docs:diagrams` (17
+   diagrams, light and dark, no problems), `docsChains.spec.ts` (19 passed).
+8. **Stand-ins**: the baseline build is a real build of an older commit, not a stand-in; the probes behind note 3 ran in
+   the real runner on the test server. The two init scripts are what a test would write by hand, the comparison the
+   page draws, and the page lists what they leave out.

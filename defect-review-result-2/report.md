@@ -1353,7 +1353,7 @@ or none: the release stays 3.0.2.
 | [2F-3](F-packaging-types-changesets/defect-2F-3-migration-hint-rule-names-2x.md) | | documentation | Low | none | this branch: contributor guide plan | done (#109: 3587221) |
 | [2F-4](F-packaging-types-changesets/defect-2F-4-schema-migration-misses-base-class.md) | | documentation | Low | none | this branch: session storage plan | done (#106: e551ead) |
 | [2G-3](G-ci-release-publishing/defect-2G-3-pages-every-merge-claim.md) | | documentation | Low | none | this branch: contributor guide plan | done (#107: 0c8f1bf) |
-| [2G-4](G-ci-release-publishing/defect-2G-4-performance-scale-line-not-reproducible.md) | | documentation | Low | none | this branch: benchmarks plan, at the end | decided (#107) |
+| [2G-4](G-ci-release-publishing/defect-2G-4-performance-scale-line-not-reproducible.md) | | documentation | Low | none | this branch: benchmarks plan, at the end | done (#107, #126: 649d903, 026cba4) |
 | [2G-5](G-ci-release-publishing/defect-2G-5-ci-descriptions-lag-the-jobs.md) | (2I's `pr.yaml` note) | documentation | Low | none | this branch: contributor guide plan | done (#107: 0c8f1bf) |
 | [2H-1](H-docs-site-readme/defect-2H-1-documentation-page-ci-sentence.md) | 2T-6, 2I-4 | documentation | Low | none | this branch: contributor guide plan | done (#107: 0c8f1bf) |
 | [2H-2](H-docs-site-readme/defect-2H-2-misspelt-british-spelling.md) | (2I's "initialiser" note) | documentation | Low | none | this branch: contributor guide plan, final pass | done (#108: 17db243) |
