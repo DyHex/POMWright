@@ -1,7 +1,7 @@
 # 2R-1: the tests do not compare `update()`, `replace()` and `clearSteps()` without a path with their explicit form, nor reject `unskip()` and `unskip(ownPath)` at compile time
 
 - **Kind**: test gap
-- **Status**: decided 2026-10-29, decision 93 in [DECISIONS.md](../DECISIONS.md): cover both gaps; planned in the locators plan
+- **Status**: decided 2026-10-29, decision 93 in [DECISIONS.md](../DECISIONS.md): cover both gaps; planned in the locators plan; done 2026-10-30 in `6925541`
 - **Area**: the query builder's path-less forms (`src/locators/locatorQueryBuilder.ts`) and their tests
 - **Severity**: Low (the code is right; a later change could break the equivalence or the types unnoticed)
 - **Semver of the fix**: none (tests only)

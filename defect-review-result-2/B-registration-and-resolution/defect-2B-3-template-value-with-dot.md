@@ -1,7 +1,7 @@
 # 2B-3: a template member's open part "accepts any value", but a value with a dot adds segments, and a registered prefix of it is then chained as an ancestor
 
 - **Kind**: documentation
-- **Status**: decided 2026-10-29, decision 103 in [DECISIONS.md](../DECISIONS.md); planned in the locators plan (docs)
+- **Status**: decided 2026-10-29, decision 103 in [DECISIONS.md](../DECISIONS.md); planned in the locators plan (docs); done 2026-10-30 in `a05f533`
 - **Area**: B-11 typed paths (template members), B-10 path rules, B-22 resolution
 - **Severity**: Low (needs a value with a dot whose part before the dot is a registered value too, such as `report` and
   `report.pdf`; the locator then finds nothing, silently until an action or assertion fails)

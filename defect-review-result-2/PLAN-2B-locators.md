@@ -103,3 +103,52 @@ probes (2B-1 on three browsers, 2B-4) against the build.
 
 Four commits, one per step, `fix(locators): …`, `test(locators): …` or `docs: …`, each with `Plan:
 defect-review-result-2/PLAN-2B-locators.md` and the `Co-Authored-By:` trailer. The maintainer pushes.
+
+## Execution notes
+
+- 2026-10-30. The commits, one per step:
+  - `4e3a361` (1, decision 87), corrected by `935de09`;
+  - `1dc488f` (2, decision 88);
+  - `6925541` (3, decision 93);
+  - `a05f533` (4, decisions 92 and 103);
+  - and this record.
+- **Verification:**
+  - the full `pnpm pack-test --reporter=line`: 1860 passed and 3 skipped on three browsers; 33 step locations; 27
+    test-server tests;
+  - the checks inside it: 227 page blocks and 96 doc examples compiled; API coverage 40 exports and 108 members; error
+    messages 79 and 9; the retry-pauses check;
+  - 996 unit tests; `pnpm lint` and `pnpm docs:build` pass; no name of the external consumer projects on the branch.
+- **The new tests:** each failed before its step and passes after it.
+  - The unit cases of steps 1 and 2: 2 harness tests and 3 unit tests of 4, run against the old code. The fourth unit
+    test checks that nothing is reported, and passes both ways, as intended.
+  - Step 3: each `@ts-expect-error` was removed once and gave a compile error.
+- **The review's probes, against this build:**
+  - 2B-1 (`B/p02/2B-1.mjs` with `POMWRIGHT_ROOT` set to this repository) exits 0 on three browsers: every `getById`
+    case finds its element, and the `getByRole` limitation remains as documented.
+  - 2B-4 (`B/p10/dangling-add.mjs`, a scratch copy pointed at this build): the page object now fails at its first
+    use, labeled `LoginPage:`, with the new message.
+- Unexpected, for the maintainer:
+  1. **Step 1's commit broke `pnpm typecheck`.** It wrote `/^it's$/v` in the test-id page object and the `getById`
+     spec, and `tsc` over `test/` targets below ES2024, which rejects the `v` flag in a literal (TS1501). The step's
+     gates were lint, the unit tests and the specs, and Playwright runs specs without a type check. `935de09` builds
+     both with `new RegExp(…, "v")`, with a `biome-ignore` of `useRegexLiterals`, whose fix otherwise turns them back
+     into literals.
+     - Suggested remedy: a step that touches `test/` also runs `pnpm exec tsc --noEmit -p test`; I do so from now on.
+  2. **An orphaned test server served every local run an old `server.js`.** A `node ./server.js` from a harness run
+     at 20:03 on 29 October was still listening on port 9000, reparented to systemd: the run that started it ended
+     without stopping it. The local config reuses a server it finds (`reuseExistingServer: true`), so it was
+     reused.
+     - `server.js` had not changed since 03:27 that day, so no earlier result is affected. It showed only when step
+       1 added two ids, and it was stopped.
+     - Debt, not fixed: a stale local test server silently serves old routes. Suggested remedy: the server answers
+       a route with a hash of its own source, and the harness compares it with `server.js` before running; or
+       `reuseExistingServer: false` locally, which fails loudly on a server already running.
+  3. **The limitation decision 87 documents is narrower than its wording.** A probe of every strategy Playwright
+     builds:
+     - Playwright's own `getByRole("button", { name: /don't save/iu })` works bare and under a parent locator, and
+       fails once something follows it (`.first()`, POMWright's description). Every text method, `getByTestId` and
+       `filter`'s `hasText` fail through POMWright.
+     - The docs and the changeset say "once anything follows them".
+  4. **Decision 88 was built on the builder's existing `registered` flag,** exposed as `stored`, rather than a new
+     getter. A duplicate `add(path)`, whose locator method already threw, is not reported again. The message's
+     helper joins the error-message check's `PARTS`, beside `strictChainsMessage`.

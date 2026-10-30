@@ -1,7 +1,7 @@
 # 2C-3: `replace().frameLocator()` without a selector on the query's own path compiles, though it throws every time; `skip()` of the same path is a compile error
 
 - **Kind**: design question
-- **Status**: decided 2026-10-29, decision 92 in [DECISIONS.md](../DECISIONS.md): no type change; a docs clause in item 24's batch and a comment in the type probe
+- **Status**: decided 2026-10-29, decision 92 in [DECISIONS.md](../DECISIONS.md): no type change; a docs clause in item 24's batch and a comment in the type probe; done 2026-10-30 in `a05f533`
 - **Area**: `LocatorUpdateBuilder` types in `replace` mode; the any-frame form in a query
 - **Severity**: Low (a mistake that always throws at the call, with a message that says what to do; the types could
   catch it, as they catch the analogous `skip`)

@@ -1324,7 +1324,7 @@ or none: the release stays 3.0.2.
 | [2A-3](A-session-storage/defect-2A-3-inputs-read-after-the-call.md) | | defect | Low | patch | this branch: take the input at the call (encoded then) | done (#84: ac9046f) |
 | [2A-4](A-session-storage/defect-2A-4-keys-unquoted-in-messages.md) | | defect | Low | patch | this branch: quote keys; pages, four changesets and a new one | done (#85: e37a039) |
 | [2A-10](A-session-storage/defect-2A-10-opaque-check-reads-shadowable-origin.md) | | defect | Low | patch | this branch: `document.domain`, which a page cannot shadow; with 2A-2 | done (#83: 277adc6) |
-| [2B-1](B-registration-and-resolution/defect-2B-1-unicode-regexp-quote.md) | | defect | Low | patch (`getById`); none (others) | this branch: hex escapes in `getById`; document the rest, link #40446 | decided (#87) |
+| [2B-1](B-registration-and-resolution/defect-2B-1-unicode-regexp-quote.md) | | defect | Low | patch (`getById`); none (others) | this branch: hex escapes in `getById`; document the rest, link #40446 | done (#87: 4e3a361, 935de09) |
 | [2D-1](D-page-objects-urls-navigation/defect-2D-1-load-state-timeout-message.md) | | defect | Low | patch | this branch: the load-state message ("reached …"); listed; a changeset | decided (#89) |
 | [2D-2](D-page-objects-urls-navigation/defect-2D-2-absolute-url-type.md) | | defect | Low | patch | this branch: `AbsoluteUrl` starts with a letter; docs exact; a changeset | decided (#90) |
 | [2E-1](E-logging-step-fixture/defect-2E-1-locale-hint-names-rejected-tag.md) | | defect | Low | patch | this branch: the codeset dropped, no hint for a modifier; changeset corrected | decided (#94) |
@@ -1339,10 +1339,10 @@ or none: the release stays 3.0.2.
 | [2I-2](I-contributor-guide/defect-2I-2-rules-their-trigger-does-not-reach.md) | | documentation | Medium | none | this branch: pointers and index rows from the triggers, `.github/` included | decided (#82) |
 | [2A-5](A-session-storage/defect-2A-5-sandboxed-arrival-not-listed.md) | | documentation | Low | none | this branch: session storage plan (docs) | done (#102: 1817e47) |
 | [2A-6](A-session-storage/defect-2A-6-schema-extra-codec-compiles.md) | | documentation | Low | none | this branch: session storage plan (docs) | done (#102: 1817e47) |
-| [2B-2](B-registration-and-resolution/defect-2B-2-string-registry-format-check.md) | | documentation | Low | none | this branch: locators plan (docs) | decided (#103) |
-| [2B-3](B-registration-and-resolution/defect-2B-3-template-value-with-dot.md) | | documentation | Low | none | this branch: locators plan (docs) | decided (#103) |
-| [2C-1](C-queries/defect-2C-1-replace-first-argument-required.md) | | documentation | Low | none | this branch: locators plan (docs) | decided (#103) |
-| [2C-2](C-queries/defect-2C-2-errors-page-getlocatorschema.md) | | documentation | Low | none | this branch: locators plan (docs) | decided (#103) |
+| [2B-2](B-registration-and-resolution/defect-2B-2-string-registry-format-check.md) | | documentation | Low | none | this branch: locators plan (docs) | done (#103: a05f533) |
+| [2B-3](B-registration-and-resolution/defect-2B-3-template-value-with-dot.md) | | documentation | Low | none | this branch: locators plan (docs) | done (#103: a05f533) |
+| [2C-1](C-queries/defect-2C-1-replace-first-argument-required.md) | | documentation | Low | none | this branch: locators plan (docs) | done (#103: a05f533) |
+| [2C-2](C-queries/defect-2C-2-errors-page-getlocatorschema.md) | | documentation | Low | none | this branch: locators plan (docs) | done (#103: a05f533) |
 | [2D-3](D-page-objects-urls-navigation/defect-2D-3-outcomes-table-test-body.md) | | documentation | Low | none | this branch: page objects and URLs plan (docs) | decided (#104) |
 | [2D-5](D-page-objects-urls-navigation/defect-2D-5-regexp-subclass-rationale.md) | | documentation | Low | none | this branch: page objects and URLs plan (docs) | decided (#104) |
 | [2E-2](E-logging-step-fixture/defect-2E-2-where-a-step-is-reported.md) | | documentation | Low | none | this branch: steps and logging plan (docs) | decided (#105) |
@@ -1374,9 +1374,9 @@ or none: the release stays 3.0.2.
 | 2Z-2 (section 5) | | documentation | Low | none | this branch: session storage plan (docs) | done (#102: 1817e47) |
 | 2Z-3 (section 5) | | documentation | Low | none | this branch: the rule in the guide; wording; an issue filed by the maintainer | decided (#111) |
 | [2A-8](A-session-storage/defect-2A-8-same-origin-navigation-stops-a-batch.md) | | design question | Low | none (behavior kept) | this branch: keep failing; the messages name the destination; docs | done (#86: e37a039) |
-| [2B-4](B-registration-and-resolution/defect-2B-4-add-without-locator-method.md) | | design question | Low | patch | this branch: `verify()` reports it; a changeset | decided (#88) |
-| [2C-3](C-queries/defect-2C-3-replace-any-frame-terminal-compiles.md) | | design question | Low | none | this branch: docs clause (item 24) and a probe comment; no type change | decided (#92) |
-| [2R-1](R-triage/defect-2R-1-query-default-path-test-gaps.md) | | test gap | Low | none | this branch: tests only (locators plan); found in the triage | decided (#93) |
+| [2B-4](B-registration-and-resolution/defect-2B-4-add-without-locator-method.md) | | design question | Low | patch | this branch: `verify()` reports it; a changeset | done (#88: 1dc488f) |
+| [2C-3](C-queries/defect-2C-3-replace-any-frame-terminal-compiles.md) | | design question | Low | none | this branch: docs clause (item 24) and a probe comment; no type change | done (#92: a05f533) |
+| [2R-1](R-triage/defect-2R-1-query-default-path-test-gaps.md) | | test gap | Low | none | this branch: tests only (locators plan); found in the triage | done (#93: 6925541) |
 | [2R-2](R-triage/defect-2R-2-navigation-message-names-the-start-page.md) | | defect | Low | patch (unreleased) | this branch: the destination from the new document's `location.href`; found in CI after the session storage plan | done (#118: fc6ce43, f816c2e) |
 | [2R-3](R-triage/defect-2R-3-opaque-origin-test-wait-under-load.md) | | test defect | Low | none | this branch: the test's wait; found probing 2R-2 under load | done (#119: 751fe70, fdc7918) |
 | [2R-4](R-triage/defect-2R-4-domain-lookup-after-a-replaced-document.md) | | debt | Low | none | this branch: `access` skips `document.domain` after a replaced document; found building 2R-2 | done (#120: 908c816) |

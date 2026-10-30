@@ -1,7 +1,7 @@
 # 2C-2: *Error messages* lists the unregistered-path message under the resolving calls, but `getLocatorSchema` throws it at its own call
 
 - **Kind**: documentation
-- **Status**: decided 2026-10-29, decision 103 in [DECISIONS.md](../DECISIONS.md); planned in the locators plan (docs)
+- **Status**: decided 2026-10-29, decision 103 in [DECISIONS.md](../DECISIONS.md); planned in the locators plan (docs); done 2026-10-30 in `a05f533`
 - **Area**: `getLocatorSchema(path)`; *Error messages* (`api/errors.md`)
 - **Severity**: Low (the message and its fix are right; only the list of calls that throw it leaves out the one a query
   meets first)
