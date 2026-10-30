@@ -242,3 +242,40 @@ Steps 1 to 4, each verified and committed with the trailer, then step 5 and the 
 PLAN-bench-performance's phase 1.
 
 ## Execution notes
+
+Built 2026-10-30, one commit per step: the plan and decision 125 in `5a76e19`, then `9a3f718` (1), `98f54e1` (2),
+`c6e0ff1` (3) and `c71fce8` (4); this record is step 5.
+
+1. **Unexpected, corrected during the build: `route.abort()` is a documented case of its own.** The failure table of
+   *Seeding session storage* names "a refused connection, offline, `route.abort()`", and the old test was its only
+   coverage. Replacing it with the real refused connection would have left that row untested, so step 3 keeps it as a
+   third case, where the abort is a project's own mock that the test checks as such, not a stand-in. Firefox stays
+   skipped there, with the rate measured: without the skip, 30 rounds on 8 workers showed its error page in 27 and
+   none in 3, where the poll for the error page timed out. On a real refused connection Firefox showed it in 30 of 30
+   (and in every round since), so the refused case runs on all three browsers.
+2. **Debt found, not fixed: the table row's Firefox claim under `route.abort()`.** The row says the test fails on
+   Chromium and Firefox. On Firefox, after `route.abort()`, in about 1 run in 10 no error page shows, and what the seed
+   does then (applies on the next arrival, as on WebKit, or fails) was not probed: the poll stops the test first.
+   Remedy: probe those runs (the retry without the poll), then either the row says "on Firefox, after `route.abort()`,
+   usually", or the test branches on whether the error page showed and asserts each outcome.
+3. **Step 1.** The helper compares element identity (each registry match against Playwright's own, by handle). A
+   mismatch made on purpose, a copy of the spec comparing "Welcome" with Playwright's "Goodbye", failed with
+   "Expected: true, Received: false", and the copy was deleted. The test-server check opened `/testgetby` (27 to 28
+   tests), and `/testnav/image.svg` in step 2 (29).
+4. **Step 2.** The three tests, 10 rounds on 8 workers: 90 passed on three browsers, and 90 under `taskset -c 0-3`.
+   Without a flag, the item route answers after a `setTimeout` of 0, as good as at once.
+5. **Step 3.** The pair with two cases (before `route.abort()` came back): 30 rounds on 8 workers, 360 passed; with
+   `taskset -c 0-3`, 360 passed. With the three cases: 480 passed and 60 skipped (Firefox's `route.abort()` pair), on
+   8 workers and under `taskset -c 0-3` alike. The port race (another process taking the port between the probe's
+   close and the app's listen) did not show in those runs; it would fail the test at `listen`, never pass it.
+6. **Step 4.** 24 forms (20 on the test server, 4 on `page.route`), 72 tests on three browsers; 5 rounds on 8 workers,
+   360 passed. The spec now checks `[location.href, document.URL]` for every form. `pnpm typecheck` (the doc
+   comment's checks), `pnpm docs:build` and `pnpm lint:guide` passed. `git grep "document's URL"` finds only an
+   unrelated unit-test comment.
+7. **Stand-ins.** The specs add none; the four port forms keep theirs, disclosed in the comment. The probes behind the
+   plan are disclosed in its *Probes*.
+8. **Verification at the end**, at `c71fce8`: `pnpm test:unit`, 1006 passed; the full `pnpm pack-test --reporter=line`,
+   exit 0 in 148 s, 1884 passed and 3 skipped, 36 step locations where they were called, the test server's 29 passed;
+   `pnpm test:constrained --reporter=line`, exit 0 in 281 s, the same counts. The 21 more than PLAN-2I's run: 12 of
+   `testGetBy.spec.ts`, 4 of the `route.abort()` pair on Chromium and WebKit, Firefox's 2 of the refused pair, 3 of the
+   new host form. The 3 skipped are still 3: Firefox's refused pair runs now, its `route.abort()` pair is skipped.

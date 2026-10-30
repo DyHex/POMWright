@@ -131,6 +131,11 @@ where they were called, the test server's 27 passed.
      the only way; the gap cannot be closed.
    - `urlHosts.spec.ts`: IDN, IPv6 and credentials forms reach no real host. Remedy for IPv6 only: the test server
      listening on `::1`.
+
+   Built on 2026-10-30 in [PLAN-T17-stand-in-gaps.md](PLAN-T17-stand-in-gaps.md) (decision 125), all but the
+   Navigation API: `/testgetby` and its spec; the item route's `delay` and `image` flags; a real refused connection on
+   a port of the spec's own, with `route.abort()` kept as a case of its own; every host form the test server can
+   answer, IDN under `*.localhost`, which every browser resolves itself (four port forms stay on `page.route`).
 4. **Step 8 swept past the decision's list**, for "American spelling throughout": besides the four pages, the doc
    comment and `src/pageObject.test.ts`'s title, the test titles and comments with British forms (`labelled`,
    `initialiser`, `initialisation`, `recognised`, `recognises`, `normalises`, `licence`, `misspelt`, the
