@@ -262,6 +262,41 @@ app.get("/testids", (_req, res) => {
   `);
 });
 
+// Route to handle "/testgetby": text, labels, placeholders and alt texts for the getBy* strategies that match on
+// them, each group in a section, with a decoy outside it, so a nested chain finds fewer than a page-wide one
+app.get("/testgetby", (_req, res) => {
+	res.send(`<!DOCTYPE html>
+    <html>
+      <head><meta charset="utf-8"><title>Test getBy</title></head>
+      <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">
+        <h1>Locators by text</h1>
+        <section id="greetings">
+          <p>Welcome</p>
+          <p>Welcome back, Ada</p>
+          <p>Goodbye</p>
+        </section>
+        <p>Welcome</p>
+        <form id="account">
+          <label>Username <input name="user"></label>
+          <label for="email">Email</label>
+          <input id="email" name="email">
+          <input name="search" aria-label="Search">
+          <span id="password-label">Password</span>
+          <input name="password" type="password" aria-labelledby="password-label">
+          <input name="name" placeholder="Enter your name">
+          <textarea name="comment" placeholder="Enter a comment"></textarea>
+        </form>
+        <input name="decoy" placeholder="Enter your name">
+        <section id="gallery">
+          <img src="/images/nature.svg" alt="Nature" style="width:80px">
+          <img src="/images/lights.svg" alt="Northern Lights" style="width:80px">
+        </section>
+        <img src="/images/nature.svg" alt="Nature" style="width:40px">
+      </body>
+    </html>
+  `);
+});
+
 // Navigation fixture for the PageObject navigation helper. Links and buttons
 // navigate to the same path with a query, a hash, or a trailing slash, to an item page whose
 // path has a dynamic segment, to another page, and (after a delay) to a page that bounces back.

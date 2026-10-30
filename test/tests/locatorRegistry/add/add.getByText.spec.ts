@@ -3,8 +3,8 @@ import { createRegistryWithAccessors } from "pomwright";
 
 // Checked on a page, and against Playwright's own locator built with the same arguments. The page is a document set
 // with page.setContent, a stand-in for a page the test server serves: a locator matches on the DOM alone, however the
-// document arrived, so it could hide only what loading a page brings (scripts, frames, another origin). No spec uses
-// getByText on a served page: a gap, of little weight for a match on the DOM.
+// document arrived, so it could hide only what loading a page brings (scripts, frames, another origin).
+// testApp/testGetBy.spec.ts resolves getByText on a page the test server serves, through a page object.
 
 test("add getByText to registry", async ({ page }) => {
 	type LocatorSchemaPaths = "elementByText";

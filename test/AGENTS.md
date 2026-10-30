@@ -94,7 +94,8 @@ it before working there. Read it before running these commands, probing a claim,
   notifications dropdown and three columns, its stylesheet, icons and images all its own) and the routes
   `/testpath`, `/testpath/:color`, `/testfilters`, `/iframe` (with `/iframe/a`, `/b`, `/c`, a nested frame and a
   hidden iframe section), `/testids` (ids that are valid HTML but awkward as CSS selectors, and one empty
-  `data-testid`), `/testnav` (with `/testnav/item/:id` and `/testnav/bounce`,
+  `data-testid`), `/testgetby` (text, labels of each kind, placeholders and alt texts, each group in a section with a
+  decoy outside it), `/testnav` (with `/testnav/item/:id` and `/testnav/bounce`,
   the navigation fixture: query, hash, trailing slash, delayed and bouncing navigations), and `/teststorage` (GET and
   POST, urlencoded, multipart or `text/plain`, with `/teststorage/frame` (`?nested=1` adds `srcdoc`, `about:blank` and
   `data:` frames), `/redirect`, `/chain`, `/login`, `/login307`, `/login308`, `/api`, `/race` (an app that writes and
