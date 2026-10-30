@@ -317,11 +317,14 @@ message after the label. See [page objects](/POMWright/docs/page-objects/#how-a-
 OrdersPage: expected URL "https://shop.example/orders"; found "https://shop.example/orders?tab=1" (page.waitForURL: Timeout 15000ms exceeded.)
 OrdersPage: expected to have left "https://shop.example/orders"; found "https://shop.example/orders" (page.waitForURL: Timeout 15000ms exceeded.)
 OrdersPage: left "https://shop.example/orders" but returned to it; found "https://shop.example/orders"
+OrdersPage: reached "https://shop.example/orders", but its "load" state did not come in time (page.waitForURL: Timeout 15000ms exceeded.)
+OrdersPage: left "https://shop.example/orders" for "https://shop.example/login", but its "load" state did not come in time (page.waitForURL: Timeout 15000ms exceeded.)
 ```
 
 Thrown by `expectThisPage()` and `expectAnotherPage()` when the browser is not where they wait for it within the
 timeout, with Playwright's error as `cause`. A page's identity is its exact URL; a page whose URL varies has a RegExp
-part.
+part. When the URL is the one waited for and its load state (`waitUntil`, `"load"` unless set) does not come in time,
+the last two say so.
 
 ```text
 AccountPage: goto() without a URL needs a string fullUrl; this page object has a RegExp URL. Pass an absolute URL instead.

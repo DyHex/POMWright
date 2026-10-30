@@ -135,3 +135,58 @@ describe("createNavigation runtime guards", () => {
 		);
 	});
 });
+
+describe("a wait that times out", () => {
+	// a stub page whose waitForURL rejects as Playwright's does; the harness waits on real pages ("expectThisPage and
+	// expectAnotherPage name a late load state of the right URL", testNav.spec.ts)
+	type Wait = {
+		waitForUrl(
+			predicate: (url: URL) => boolean,
+			what: string,
+			reached: (found: string) => string,
+			options?: NavigationOptions,
+		): Promise<void>;
+	};
+	const timeout = () =>
+		Object.assign(new Error("page.waitForURL: Timeout 1000ms exceeded.\nCall log: …"), { name: "TimeoutError" });
+	const waitOn = (url: string, failure: Error, options?: NavigationOptions) => {
+		const stub = {
+			waitForURL: async () => {
+				throw failure;
+			},
+			url: () => url,
+		} as unknown as Page;
+		const matcher = createUrlMatcher("https://app.example", "/x");
+		const navigation = createNavigation(stub, "https://app.example", "/x", matcher, "XPage", () => null, options);
+		return (navigation as unknown as Wait)
+			.waitForUrl(matcher, 'expected URL "https://app.example/x"', (found) => `reached ${JSON.stringify(found)}`)
+			.then(
+				() => undefined,
+				(error: Error) => error,
+			);
+	};
+
+	it("on the URL waited for, says the URL was reached and names the load state that did not come", async () => {
+		const failure = timeout();
+		const error = await waitOn("https://app.example/x", failure);
+		expect(error?.message).toBe(
+			'XPage: reached "https://app.example/x", but its "load" state did not come in time (page.waitForURL: Timeout 1000ms exceeded.)',
+		);
+		expect(error?.cause).toBe(failure);
+		const late = await waitOn("https://app.example/x", timeout(), { waitUntil: "networkidle" });
+		expect(late?.message).toContain('but its "networkidle" state did not come in time');
+	});
+
+	it("on another URL, or on another error, keeps the message that names what was expected", async () => {
+		expect((await waitOn("https://app.example/y", timeout()))?.message).toBe(
+			'XPage: expected URL "https://app.example/x"; found "https://app.example/y" (page.waitForURL: Timeout 1000ms exceeded.)',
+		);
+		const closed = new Error("page.waitForURL: Target page, context or browser has been closed");
+		expect((await waitOn("https://app.example/x", closed))?.message).toBe(
+			'XPage: expected URL "https://app.example/x"; found "https://app.example/x" (page.waitForURL: Target page, context or browser has been closed)',
+		);
+		expect((await waitOn("not a url", timeout()))?.message).toBe(
+			'XPage: expected URL "https://app.example/x"; found "not a url" (page.waitForURL: Timeout 1000ms exceeded.)',
+		);
+	});
+});

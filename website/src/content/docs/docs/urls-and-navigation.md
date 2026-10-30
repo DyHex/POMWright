@@ -149,6 +149,14 @@ OrdersPage: expected to have left "https://shop.example/orders"; found "https://
 OrdersPage: left "https://shop.example/orders" but returned to it; found "https://shop.example/orders"
 ```
 
+`page.waitForURL` also waits for the load state. When the URL is right and that state does not come in time, as on a
+page whose images are still loading, the message says so and names the state:
+
+```text
+OrdersPage: reached "https://shop.example/orders", but its "load" state did not come in time (page.waitForURL: Timeout 15000ms exceeded.)
+OrdersPage: left "https://shop.example/orders" for "https://shop.example/login", but its "load" state did not come in time (page.waitForURL: Timeout 15000ms exceeded.)
+```
+
 ## Pages whose URL varies
 
 A `baseUrl` or `urlPath` may be a RegExp: an account page at `/account/42`, or a login page on an identity provider

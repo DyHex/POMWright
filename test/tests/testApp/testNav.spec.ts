@@ -367,6 +367,32 @@ test.describe("the page object's navOptions are the defaults of every navigation
 		await expect(committed.navigation.goto({ waitUntil: "load", timeout: 500 })).rejects.toThrow("Timeout 500ms");
 		release();
 	});
+
+	test("expectThisPage and expectAnotherPage name a late load state of the right URL", async ({ page }) => {
+		// page.route holds the item pages' image, so their "load" does not come: a stand-in for a slow resource, which
+		// the test server has none of; the URLs and the commits are real
+		let release: () => void = () => {};
+		const held = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		await page.route(/\/testnav\/item\/\d+$/, (route) =>
+			route.fulfill({ contentType: "text/html", body: '<p>item</p><img src="/testnav/held.png">' }),
+		);
+		await page.route(`${BASE}/testnav/held.png`, async (route) => {
+			await held;
+			await route.fulfill({ status: 404 });
+		});
+		const item = new DelayedItemNav(page);
+		await item.navigation.goto({ waitUntil: "commit" });
+		await expect(item.navigation.expectThisPage({ timeout: 1000 })).rejects.toThrow(
+			`DelayedItemNav: reached "${BASE}/testnav/item/7", but its "load" state did not come in time (page.waitForURL: Timeout 1000ms exceeded.)`,
+		);
+		await page.goto(`${BASE}/testnav/item/8`, { waitUntil: "commit" });
+		await expect(item.navigation.expectAnotherPage({ timeout: 1000 })).rejects.toThrow(
+			`DelayedItemNav: left "${BASE}/testnav/item/7" for "${BASE}/testnav/item/8", but its "load" state did not come in time (page.waitForURL: Timeout 1000ms exceeded.)`,
+		);
+		release();
+	});
 });
 
 test.describe("without navOptions or a call's timeout, the project's navigationTimeout bounds every navigation method", () => {

@@ -10,6 +10,15 @@ type WaitUntil = NonNullable<Parameters<Page["goto"]>[1]>["waitUntil"];
  */
 const boxedAt = (location: StepLocation | undefined) => ({ box: true, location });
 
+/** Whether `url` passes a wait's predicate; a URL that does not parse does not, so it cannot hide Playwright's error. */
+const passes = (predicate: (url: URL) => boolean, url: string): boolean => {
+	try {
+		return predicate(new URL(url));
+	} catch {
+		return false;
+	}
+};
+
 /** A URL with a scheme; the only `goto` target accepted when the page object's `baseUrl` is a RegExp. */
 export type AbsoluteUrl = `${string}:${string}`;
 
@@ -58,6 +67,8 @@ type NavigationBase<Target extends string> = {
 	 * `runPostNavigationActions`, which defaults to `true`.
 	 * @throws When the URL does not match in time:
 	 * `OrdersPage: expected URL "https://shop.example/orders"; found "https://shop.example/orders?tab=1" (…)`
+	 * @throws When the URL matches and its load state does not come in time:
+	 * `OrdersPage: reached "https://shop.example/orders", but its "load" state did not come in time (…)`
 	 *
 	 * @example
 	 * ```ts
@@ -74,6 +85,8 @@ type NavigationBase<Target extends string> = {
 	 * @throws When the browser stays, or comes straight back:
 	 * `OrdersPage: expected to have left "https://shop.example/orders"; found "https://shop.example/orders" (…)`,
 	 * `OrdersPage: left "https://shop.example/orders" but returned to it; found "https://shop.example/orders"`
+	 * @throws When it left and the load state of the page it moved to does not come in time:
+	 * `OrdersPage: left "https://shop.example/orders" for "https://shop.example/login", but its "load" state did not come in time (…)`
 	 *
 	 * @example
 	 * ```ts
@@ -189,18 +202,29 @@ class Navigation {
 	/**
 	 * One `page.waitForURL` call: Playwright waits for a navigation to a matching URL and the
 	 * requested load state, or, when the URL already matches, for the load state of the current
-	 * document. Its timeout error names only the load state, so it is rethrown with the page object,
-	 * what was expected, and the URL found at failure time.
+	 * document. Its timeout error names neither, so it is rethrown with the page object and the URL
+	 * found at failure time: what was expected when that URL is not the one waited for, and, when it
+	 * is, that the URL was reached and the load state did not come in time (`reached` says how).
 	 */
-	private async waitForUrl(predicate: (url: URL) => boolean, what: string, options?: NavigationOptions) {
+	private async waitForUrl(
+		predicate: (url: URL) => boolean,
+		what: string,
+		reached: (found: string) => string,
+		options?: NavigationOptions,
+	) {
+		const waitUntil = this.resolveWaitUntil(options);
 		try {
-			await this.page.waitForURL(predicate, {
-				waitUntil: this.resolveWaitUntil(options),
-				timeout: this.resolveTimeout(options),
-			});
+			await this.page.waitForURL(predicate, { waitUntil, timeout: this.resolveTimeout(options) });
 		} catch (error) {
 			const detail = error instanceof Error ? error.message.split("\n")[0] : String(error);
-			throw new Error(`${this.label}: ${what}; found ${JSON.stringify(this.page.url())} (${detail})`, { cause: error });
+			const found = this.page.url();
+			if (error instanceof Error && error.name === "TimeoutError" && passes(predicate, found)) {
+				throw new Error(
+					`${this.label}: ${reached(found)}, but its ${JSON.stringify(waitUntil ?? "load")} state did not come in time (${detail})`,
+					{ cause: error },
+				);
+			}
+			throw new Error(`${this.label}: ${what}; found ${JSON.stringify(found)} (${detail})`, { cause: error });
 		}
 	}
 
@@ -288,7 +312,12 @@ class Navigation {
 		await test.step(
 			`${this.label}: Expect this Page`,
 			async () => {
-				await this.waitForUrl(this.matcher, `expected URL ${this.describeFullUrl()}`, options);
+				await this.waitForUrl(
+					this.matcher,
+					`expected URL ${this.describeFullUrl()}`,
+					(found) => `reached ${JSON.stringify(found)}`,
+					options,
+				);
 				if (options?.runPostNavigationActions !== false) {
 					await this.executeActions();
 				}
@@ -306,7 +335,12 @@ class Navigation {
 		await test.step(
 			`${this.label}: Expect any other Page`,
 			async () => {
-				await this.waitForUrl((url) => !this.matcher(url), `expected to have left ${this.describeFullUrl()}`, options);
+				await this.waitForUrl(
+					(url) => !this.matcher(url),
+					`expected to have left ${this.describeFullUrl()}`,
+					(found) => `left ${this.describeFullUrl()} for ${JSON.stringify(found)}`,
+					options,
+				);
 				if (this.matcher(new URL(this.page.url()))) {
 					throw new Error(
 						`${this.label}: left ${this.describeFullUrl()} but returned to it; found ${JSON.stringify(this.page.url())}`,

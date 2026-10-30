@@ -87,6 +87,7 @@ await loginPage.navigation.expectAnotherPage({ timeout: 10_000 });
 ```text
 OrdersPage: expected to have left "https://shop.example/orders"; found "https://shop.example/orders" (page.waitForURL: Timeout 15000ms exceeded.)
 OrdersPage: left "https://shop.example/orders" but returned to it; found "https://shop.example/orders"
+OrdersPage: left "https://shop.example/orders" for "https://shop.example/login", but its "load" state did not come in time (page.waitForURL: Timeout 15000ms exceeded.)
 ```
 
 ### expectThisPage()
@@ -118,6 +119,7 @@ await loginPage.navigation.expectThisPage({ runPostNavigationActions: false, wai
 
 ```text
 OrdersPage: expected URL "https://shop.example/orders"; found "https://shop.example/orders?tab=1" (page.waitForURL: Timeout 15000ms exceeded.)
+OrdersPage: reached "https://shop.example/orders", but its "load" state did not come in time (page.waitForURL: Timeout 15000ms exceeded.)
 ```
 
 Playwright's error is the `cause`.
