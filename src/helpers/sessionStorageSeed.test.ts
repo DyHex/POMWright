@@ -140,6 +140,11 @@ describe("seedScript", () => {
 	});
 });
 
+// The page below stands in for Playwright's page and its main frame: it records the init scripts and listeners the
+// registry adds, and lets a test hold, fail or emit them on demand, so the registry's races can be made to happen in
+// any order. It could hide what a browser and Playwright do between those steps (when an init script runs, which
+// events come in what order, a document replaced during a call); sessionStorage.spec.ts and
+// sessionStorageOverlay.spec.ts in test/tests/testApp/ seed real pages on all three browsers.
 const frame = (url: string): Frame & { current: string } => {
 	const f = { current: url, url: () => f.current } as unknown as Frame & { current: string };
 	return f;

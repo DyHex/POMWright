@@ -7,8 +7,9 @@ import type { ReusableLocatorFactoryInternal } from "./reusableLocatorBuilder";
 import type { ReusableLocator } from "./types";
 import type { StrategyMethod } from "./utils";
 
-// Registration never touches the page, so a bare object is enough; resolution is covered by the
-// integration specs against the real page.
+// Registration never touches the page, so a bare object stands in for it, and hides nothing registration does; the
+// chains are read on the fake page (fakePage.ts says what it stands in for and could hide), and
+// test/tests/locatorRegistry/add/ registers and resolves for real, through the packed package.
 type Paths = "a" | "a.b" | "seeded" | "anyFrame" | "anyFrame.button";
 const stubPage = {} as Page;
 const createRegistry = () => new LocatorRegistryInternal<Paths>(stubPage);

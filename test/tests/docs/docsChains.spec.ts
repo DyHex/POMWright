@@ -9,7 +9,10 @@ import { createRegistryWithAccessors, PageObject } from "pomwright";
 // locator otherwise prints instead (`describe("")`). A selector the page shows on its own is compared through
 // `page.locator(selector)`, which Playwright prints as it prints the registry's. Each test also reads its page and
 // checks that it shows every chain, selector and message compared here, so a change on either side fails here until
-// the page and this spec change together.
+// the page and this spec change together. Where a test needs a document, it sets the page's example with
+// page.setContent, a stand-in for a page the test server serves: a chain, and the strict mode error Playwright gives
+// for it, depend on the DOM alone, however the document arrived, so it could hide only what loading a page brings
+// (scripts, frames, another origin), which no page's message here depends on.
 
 const chain = (locator: Locator) => `${locator.describe("")}`;
 

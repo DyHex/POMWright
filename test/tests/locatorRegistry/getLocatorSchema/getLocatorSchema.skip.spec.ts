@@ -4,6 +4,10 @@ import { createRegistryWithAccessors } from "pomwright";
 
 const createRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page);
 
+// The one page here, in the last test, is a document set with page.setContent, a stand-in for a page the test server
+// serves: which element a chain matches depends on the DOM alone, however the document arrived, so it could hide only
+// what loading a page brings (scripts, frames, another origin).
+
 test("the terminal path cannot be skipped", async ({ page }) => {
 	type Paths = "root" | "root.target";
 

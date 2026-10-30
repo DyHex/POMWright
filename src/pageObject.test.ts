@@ -3,8 +3,9 @@ import { afterEach, beforeEach, describe, expect, expectTypeOf, it, type MockIns
 import { type GetNestedLocatorAccessor, type LocatorRegistry, LocatorRegistryInternal } from "./locators";
 import { PageObject, type PageObjectOptions } from "./pageObject";
 
-// Construction touches no Page method, so a chainable stub that records the strategy calls is enough;
-// what the locators match is covered by the integration specs against the real page.
+// Construction touches no Page method, so a chainable stub that records the strategy calls stands in for the page;
+// it could hide a call Playwright would reject or what the locators match, which test/tests/pageObject/ checks on real
+// pages, through the packed package.
 const createStubPage = () => {
 	const calls: { method: string; args: unknown[] }[] = [];
 	const chain: object = new Proxy(
@@ -26,7 +27,9 @@ const createStubPage = () => {
  * Constructs with the check that `PageObject` schedules recorded instead of queued, so a test can run it
  * where it can assert on it. The spy is installed only around the `new` expression: in that synchronous
  * window nothing but `PageObject` schedules, whereas a spy left in place would also swallow microtasks
- * that vitest and Node schedule.
+ * that vitest and Node schedule. A stand-in for the microtask: it could hide what running later changes (an error
+ * thrown outside the code under test, a test going on past the `new` line), which `lifecycle.spec.ts` and
+ * `lifecycle.outcomes.spec.ts` in test/tests/pageObject/ check in Playwright's runner.
  */
 const construct = <T>(make: () => T) => {
 	const scheduled: (() => void)[] = [];

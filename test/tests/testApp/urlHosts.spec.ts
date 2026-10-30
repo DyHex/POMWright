@@ -3,8 +3,11 @@ import { expect, test } from "@playwright/test";
 import { PageObject } from "pomwright";
 
 // A string baseUrl in a form that new URL normalizes: the page object's fullUrl is the normalized URL, which is the URL
-// every browser reports for that page. Every request is fulfilled by page.route, so no host, DNS or IPv6 listener is
-// needed. A URL with credentials keeps them in page.url(), which waitForURL and the navigation methods read; the
+// every browser reports for that page. Every request is fulfilled by page.route, a stand-in for a server at each host,
+// so no host, DNS or IPv6 listener is needed: the browser normalizes the URL before the request, so the URL it reports
+// is its own, but the stand-in could hide what a real host adds (a redirect, a refused connection, a host the network
+// resolves otherwise). The test server's two hosts, localhost and 127.0.0.1, are navigated for real by testApp/'s
+// other specs. A URL with credentials keeps them in page.url(), which waitForURL and the navigation methods read; the
 // document's URL, which toHaveURL compares, has none.
 
 class HostPage extends PageObject<"body"> {

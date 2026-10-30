@@ -6,7 +6,8 @@
 // Four kinds of path: short (3 segments) and long (12 segments), each with plain definitions or with one filter step
 // per definition. Every segment of a path is registered, so a chain has one Playwright locator per segment. Locator
 // methods build objects in Node and talk to no browser, so a real chromium page is only the target they are built on.
-// The numbers are a median over runs; they depend on the machine, so the page prints its own beside them.
+// The numbers are a median over runs; they depend on the machine, so the page prints its own beside them. They are
+// taken at rest, on one worker with nothing else running: a declared condition, not what a loaded test run sees.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, rmSync } from "node:fs";

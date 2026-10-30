@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// test.step is replaced by a recorder; the steps in a real report are covered by the integration specs.
+// test.step is replaced by a recorder, a stand-in for Playwright's runner, so a test reads the title and options each
+// call passes without a run. It could hide what the runner does with them: the step in the report, its location, an
+// error inside it, boxing. test/tests/step/step.spec.ts and test/step-locations/ check those through the runner.
 const recorded: { title: string; options: unknown }[] = [];
 vi.mock("@playwright/test", () => ({
 	test: {

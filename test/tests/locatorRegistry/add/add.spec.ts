@@ -3,6 +3,10 @@ import type { Locator, Page } from "@playwright/test";
 import { createRegistryWithAccessors } from "pomwright";
 
 const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
+// The page is a document set with page.setContent, a stand-in for a page the test server serves: a locator matches on
+// the DOM alone, however the document arrived, so it could hide only what loading a page brings (scripts, frames,
+// another origin). Each test compares the registry's locator with Playwright's own, rendered and on the same document,
+// which a served page would not change.
 /** A locator as Playwright renders it without a description, which a resolved locator otherwise prints instead. */
 const render = (locator: Locator) => `${locator.describe("")}`;
 

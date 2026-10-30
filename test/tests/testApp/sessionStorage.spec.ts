@@ -24,7 +24,8 @@ const onSecondOrigin = (url: URL) => url.origin === B && url.pathname === "/test
 const storedItem = (page: Page, key: string) => page.evaluate((k) => sessionStorage.getItem(k), key);
 // the storage of the origin the page is on now, not what its document rendered at load
 const liveStorage = (page: Page) => page.evaluate(() => Object.fromEntries(Object.entries(sessionStorage)));
-// a whole-page mock whose document snapshots its storage as the fixture page does
+// a whole-page mock whose document snapshots its storage as the fixture page does. Where a test registers it with
+// page.route, the mock is what the test checks (seed beside a project's own mocks), not a stand-in for a page
 const mock = (route: Route) =>
 	route.fulfill({
 		contentType: "text/html",
@@ -1240,6 +1241,9 @@ test.describe("a navigation to a seeded origin that fails", () => {
 			if (failure === "offline") {
 				await context.setOffline(true);
 			} else {
+				// page.route's abort stands in for a server that refuses the connection, which the test server, always up,
+				// cannot do; it could hide how a browser treats a real refused connection (when it shows its error page),
+				// and offline, the other case, is the browser's own
 				await page.route(`${B}/**`, (route) => route.abort("connectionrefused"), { times: 1 });
 			}
 			const before = page.url();
@@ -1724,6 +1728,9 @@ test.describe("seed and the app's own navigations", () => {
 	});
 
 	test("in a browser without the Navigation API, seed fails at the call", async ({ page, testStorage }) => {
+		// deleting the API in an init script stands in for a browser without it, which none of Playwright's browsers is;
+		// it could hide what such a browser lacks besides (seed then fails on something else first), and no real browser
+		// can show it
 		await page.addInitScript(() => {
 			Reflect.deleteProperty(window, "navigation");
 			Object.defineProperty(window, "navigation", { value: undefined });

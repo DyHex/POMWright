@@ -478,6 +478,9 @@ describe("path rules, at compile time and at run time", () => {
 	});
 });
 
+// A FakeLocator stands in for Playwright's Locator here and in stringifyForLog below (fakePage.ts says what it could
+// hide): Playwright's own locators are passed as has in add.filter.spec.ts and getLocatorSchema.filter.spec.ts, and
+// rendered in the duplicate-path error in add.spec.ts.
 describe("isLocatorInstance", () => {
 	const fn = () => undefined;
 	it("accepts an object with filter, nth and locator methods, as a Playwright Locator has", () => {

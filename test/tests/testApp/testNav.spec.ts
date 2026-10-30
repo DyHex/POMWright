@@ -350,6 +350,9 @@ test.describe("the page object's navOptions are the defaults of every navigation
 	});
 
 	test("navOptions.waitUntil decides what goto waits for", async ({ page }) => {
+		// page.route serves the item page and holds its image, a stand-in for a slow resource, which the test server has
+		// none of: the commit is real, and the held image keeps "load" from coming; interception could hide a timing a
+		// slow server would give, which only the order commit, then load matters for here
 		let release: () => void = () => {};
 		const held = new Promise<void>((resolve) => {
 			release = resolve;
@@ -370,7 +373,8 @@ test.describe("the page object's navOptions are the defaults of every navigation
 
 	test("expectThisPage and expectAnotherPage name a late load state of the right URL", async ({ page }) => {
 		// page.route holds the item pages' image, so their "load" does not come: a stand-in for a slow resource, which
-		// the test server has none of; the URLs and the commits are real
+		// the test server has none of; the URLs and the commits are real. Interception could hide a timing a slow server
+		// would give; the messages depend only on the URL reached and the load state that did not come
 		let release: () => void = () => {};
 		const held = new Promise<void>((resolve) => {
 			release = resolve;
@@ -411,6 +415,9 @@ test.describe("without navOptions or a call's timeout, the project's navigationT
 	});
 
 	test("goto waits up to navigationTimeout; a call's own timeout wins", async ({ page }) => {
+		// page.route answers after 2 s, a stand-in for a slow server, which the test server has none of (its delayed
+		// link navigates late, it does not answer late); it could hide how a slow server's response is timed, which the
+		// timeouts compared here do not depend on
 		await page.route(`${BASE}/testnav/item/7`, async (route) => {
 			await new Promise((resolve) => setTimeout(resolve, 2_000));
 			await route.fulfill({ contentType: "text/html", body: "<h1>Item 7</h1>" });

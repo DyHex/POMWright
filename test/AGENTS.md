@@ -38,7 +38,9 @@ it before working there. Read it before running these commands, probing a claim,
   resolving and verifying locators beside the same chains built with Playwright's locator methods, and, through
   `test/benchmarks/pageObjectFixture.spec.ts` with `test/playwright.bench.config.ts`, a page object set up as a fixture
   beside one written with Playwright alone, in time and heap; printed as the tables of *Internal → Performance*. It is not part of CI, where timings vary too much to gate on; rerun it and update
-  the page, its machine line included, when a change touches the registry or resolution.
+  the page, its machine line included, when a change touches the registry or resolution. It runs at rest, one worker
+  and nothing else running: a declared condition, not what a loaded test run sees, which the page states with its
+  machine line (the root's rule on stand-ins, [AGENTS.md](../AGENTS.md#how-to-work)).
 - `pnpm test:constrained` (`taskset -c 0-3 pnpm test --workers=8`) runs `pnpm test` with 8 workers on 4 CPUs: a
   machine about as small as CI's runner (2 cores, 4 threads, where the harness runs 2 workers), under more load. Races
   in POMWright's navigation checks show there that a large machine hides: one that CI's runner showed passed 900 of 900
@@ -67,6 +69,21 @@ it before working there. Read it before running these commands, probing a claim,
   throws outside the code under test; a test that fails, even as expected under `test.fail()`, has its worker
   replaced, so a later test cannot read what it left in memory (`pageObject/callSite/callSite.spec.ts` hands a stack
   over through a file named per project and repeat).
+- **Stand-ins**, by the root's rule *The real thing over a stand-in* ([AGENTS.md](../AGENTS.md#how-to-work)): a probe
+  or a spec opens the test server's pages rather than a document served through `page.route` or set with
+  `setContent`, whenever the case depends on how the page arrives (a navigation, a redirect, a load). In the 3.0.2
+  work, a redirect chain served through `page.route` failed on Chromium alone (Firefox and WebKit in 0 or 1 round of
+  30), and with the server's pages on Firefox and WebKit too (4 to 12 rounds of 30). A navigation timed by wrapping a
+  Playwright call is a stand-in as well, and disclosed with its result. A claim about browsers runs on all three; a
+  race, with parallel workers and enough rounds to show it (the one above, failing 4 to 12 times in 30, could pass a
+  few rounds), and under `pnpm test:constrained` when it depends on load. A stand-in kept in a spec says in its comment
+  what it replaces, why, what it could hide and which test covers the real thing.
+- **Playwright's own log.** To understand what Playwright did (what a call waited for, which events came in what
+  order, how a browser was launched), rerun the one test or probe with
+  `DEBUG="pw:api,pw:browser,pw:client-certificates,pw:webserver"`, and `pw:protocol` when the browser protocol's own
+  messages are the question. Set it on the command, never in `test/.env`, which every run reads. Run one test or a few
+  (`-g`, a file, `--project`) with `--workers=1`, write the output to a file, and quote the lines that decide the
+  question where the result is reported.
 
 ## The harness (`test/`)
 

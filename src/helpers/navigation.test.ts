@@ -71,8 +71,9 @@ describe("URL type aliases", () => {
 });
 
 describe("createNavigation runtime guards", () => {
-	// Only the guards that throw before any Playwright call are testable here; the navigation
-	// behaviour itself is covered by the integration specs under test/.
+	// Only the guards that throw before any Playwright call are testable here, so an empty object stands in for the
+	// page: it hides nothing these guards do, since a call to it would fail the test. The navigation itself is
+	// covered on real pages by testNav.spec.ts and testPath.spec.ts in test/tests/testApp/.
 	const fakePage = {} as Page;
 
 	it("rejects goto() without a target on a RegExp fullUrl", async () => {
@@ -137,8 +138,9 @@ describe("createNavigation runtime guards", () => {
 });
 
 describe("a wait that times out", () => {
-	// a stub page whose waitForURL rejects as Playwright's does; the harness waits on real pages ("expectThisPage and
-	// expectAnotherPage name a late load state of the right URL", testNav.spec.ts)
+	// a stub page whose waitForURL rejects as Playwright's does, with its message written here: it could hide a change in
+	// what Playwright throws, which the harness reads from a real wait ("expectThisPage and expectAnotherPage name a
+	// late load state of the right URL", testNav.spec.ts)
 	type Wait = {
 		waitForUrl(
 			predicate: (url: URL) => boolean,

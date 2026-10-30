@@ -86,7 +86,8 @@ const typeContract = (registry: LocatorRegistryInternal<Paths>) => {
 };
 void typeContract;
 
-// Runtime: a fake page records the chain each locator was built from.
+// Runtime: a fake page records the chain each locator was built from (fakePage.ts says what it stands in for and could
+// hide); test/tests/locatorRegistry/getLocatorSchema/ builds and resolves the queries for real.
 type ChainPaths = "main" | "main.list" | "main.list.item" | "a" | "a.b.c";
 const createChainRegistry = () => {
 	const registry = new LocatorRegistryInternal<ChainPaths>(createFakePage());

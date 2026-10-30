@@ -1,9 +1,11 @@
 import type { Page } from "@playwright/test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// test.step is replaced by a recorder. The helpers' steps are boxed and given the caller's line as their location, so the
-// report shows them at the test's line, as `@step` rows are; test/step-locations reads the reported locations, which only
-// the runner computes.
+// test.step is replaced by a recorder, and the page by the object below, which answers each call the helpers make: a
+// stand-in for Playwright's runner and a browser, so a test reads the options each step is given. The helpers' steps
+// are boxed and given the caller's line as their location, so the report shows them at the test's line, as `@step`
+// rows are. The stand-in could hide where the runner puts a step, which only the runner computes:
+// test/step-locations reads the reported locations, through the packed package.
 const recorded: { title: string; options: unknown }[] = [];
 vi.mock("@playwright/test", () => ({
 	test: {

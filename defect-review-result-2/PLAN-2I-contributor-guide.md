@@ -95,3 +95,37 @@ otherwise delete; the CI pages describe the jobs as they run.
 
 Eight commits, one per step, `docs: …` or `chore: …`, with `Plan: defect-review-result-2/PLAN-2I-contributor-guide.md`
 and the `Co-Authored-By:` trailer; a stop after step 3. The maintainer pushes.
+
+## Execution notes
+
+Built 2026-10-30, one commit per step: 9e7777b (1), 3f25a75 (2), 0c8f1bf (3, then the stop; the maintainer pushed and
+the run was green), 3587221 (4), 20f7e98 (5), 39fb880 (6), then steps 7 and 8.
+
+1. **Beyond the step lists, same decisions.** Step 2: `website/AGENTS.md`'s site-dependency sentence became a pointer to
+   the moved rule. Step 3: `website/AGENTS.md`'s *Deployment* names the tip rule; `.github/AGENTS.md`'s CI pointer also
+   names *Internal → Packaging* (the `consumer` job); the Node floor's list names `.github/AGENTS.md`; both floor
+   bullets end with a `git grep` for the old version; `pages.yaml`'s tip step prints a new message (inside `run:`, so not
+   only a comment). Step 4: the six folder intros carry 2I-3's loading wording too, `website/AGENTS.md`'s intro takes
+   step 1's widened trigger (missed in step 1), the map gains `test/.emit-members/`, and `.github/AGENTS.md` no longer
+   starts a line with `1)`, which GitHub rendered as a list (the maintainer's yes, 2026-10-30). Step 6:
+   `docs/repository.md` names `generate-emit-members.mjs` among the compiler API's users.
+2. **Step 6's publishing-access sentence** was checked against npm's *Trusted publishing* page (2026-10-30): "disallow
+   tokens" affects only traditional tokens, and trusted publishers keep working; whether a maintainer can still publish
+   by hand with 2FA, the page does not say, so the guide does not claim "only the Trusted Publisher". The issue draft is
+   `ISSUE-after-merge.md`, finalized from the first review's records and the issues as the public API shows them
+   (`gh` was not authenticated): #54's body names `check-doc-snippets.mjs` as a compiler-API user, which it is not, and
+   misses `check-error-messages.mjs` and `generate-emit-members.mjs`; #55's body names the old `harness-node-floor` job;
+   #58's body already holds its update, so nothing is left to post there.
+3. **Step 7's gaps: claims only a stand-in backs**, for the maintainer:
+   - `getByText`, `getByLabel`, `getByPlaceholder` and `getByAltText` are matched only on documents set with
+     `setContent` (`add.*.spec.ts`); no test-server page object uses them. Little weight: a match is on the DOM, and each
+     spec compares with Playwright's own locator. Remedy, if wanted: one page object on the test server using them.
+   - A slow resource and a slow server: three `testNav.spec.ts` tests (`waitUntil`, the late load state's message,
+     `goto`'s timeout) hold or delay responses through `page.route`; the test server answers everything at once.
+     Remedy: a route on the test server that answers late (a delay parameter), which covers two of them for real.
+   - A refused connection (`sessionStorage.spec.ts`, the retry after a failed navigation): `route.abort`. Remedy: a
+     third origin on a port where nothing listens, a refused connection for real.
+   - A browser without the Navigation API: no browser Playwright ships lacks it, so the init script that deletes it is
+     the only way; the gap cannot be closed.
+   - `urlHosts.spec.ts`: IDN, IPv6 and credentials forms reach no real host. Remedy for IPv6 only: the test server
+     listening on `::1`.

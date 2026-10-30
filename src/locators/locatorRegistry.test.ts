@@ -8,6 +8,8 @@ import {
 } from "./locatorRegistry";
 import type { FilterDefinition, ReusableLocator } from "./types";
 
+// The registries are built on the fake page, which records each chain (fakePage.ts says what it stands in for and
+// could hide); test/tests/locatorRegistry/ registers, verifies and resolves for real, through the packed package.
 type Paths = "list" | "list.item" | "btn" | "row" | "seeded" | "x";
 const createRegistry = () => {
 	const registry = new LocatorRegistryInternal<Paths>(createFakePage());

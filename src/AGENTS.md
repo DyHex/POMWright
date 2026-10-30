@@ -34,6 +34,9 @@ a file under `src/`; otherwise (the shell, another client), read it before worki
 - Error messages name the registry path (`formatLocatorSchemaPathForError`) and the DSL method the user called.
   Validate DSL input at the boundary, before anything is registered; `assertIdValue` is the pattern.
 - Descriptive path names in docs and tests. No anonymous segments.
+- A unit test's fake page (`locators/fakePage.ts`, a stub object) or mocked `test.step` is a stand-in by design (the
+  root's rule, [AGENTS.md](../AGENTS.md#how-to-work)): its comment says what it stands in for and could hide, and names
+  the harness test that checks the same claim for real; a claim only a unit test backs is a gap to raise.
 - `// biome-ignore` only with a one-line justification. No `try/catch` around imports.
 - Prefer behavior-preserving refactors. A contract change (anything documented behavior relies on) goes through a
   plan (see [docs/releases.md](../docs/releases.md)), never in silently. A fix enforces what the code already promises; it never adds a capability that

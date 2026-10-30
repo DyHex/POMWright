@@ -3,8 +3,13 @@ import type { Page } from "@playwright/test";
 /**
  * Test support for the unit tests, never imported by the runtime (so tsup does not bundle it): a page whose
  * locators record the chain they were built from, `locator('ul').getByRole('listitem').nth(0)`, rendering
- * their arguments when they are called, as Playwright serializes them. Resolution against real DOM is
- * covered by the integration specs.
+ * their arguments when they are called, as Playwright serializes them.
+ *
+ * A stand-in for Playwright's page and locators, so a unit test can read the chain the registry built without a
+ * browser. It could hide anything Playwright itself does with the calls: an argument it rejects or renders otherwise,
+ * an option it ignores, and what the chain matches on a page. The harness covers that for real, through the packed
+ * package: `test/tests/locatorRegistry/` compares each chain with Playwright's own locator and resolves it on a page,
+ * and `test/tests/docs/docsChains.spec.ts` compares every chain the docs show.
  */
 export class FakeLocator {
 	constructor(

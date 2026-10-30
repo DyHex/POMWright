@@ -1,7 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { createRegistryWithAccessors } from "pomwright";
 
-// Checked on a page and in the rendered chain.
+// Checked on a page and in the rendered chain. The page is a document set with page.setContent, a stand-in for a page
+// the test server serves: a locator matches on the DOM alone, however the document arrived, so it could hide only what
+// loading a page brings (scripts, frames, another origin). testApp/'s page objects use getById on the test server's
+// pages (testIds.spec.ts).
 
 const ids =
 	'<div id="unique-element">plain</div><div id="#unique-element">hash</div><div id="settings.panel">dot</div>' +

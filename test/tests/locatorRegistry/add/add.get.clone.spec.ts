@@ -5,7 +5,11 @@ import { createRegistryWithAccessors } from "pomwright";
 const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
 // get and getIfExists are internal; their clone-on-read shows publicly as a query that is a copy: changing it leaves
-// the registry as registered
+// the registry as registered.
+// The page is a document set with page.setContent, a stand-in for a page the test server serves: a locator matches on
+// the DOM alone, however the document arrived, so it could hide only what loading a page brings (scripts, frames,
+// another origin). Each test compares the registry's locator with Playwright's own on the same document, which a served
+// page would not change.
 test("registry.get returns a cloned definition copy", async ({ page }) => {
 	type LocatorSchemaPaths = "button";
 

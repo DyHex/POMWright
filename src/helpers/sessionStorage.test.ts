@@ -17,6 +17,12 @@ const title = "Poc.SessionStorage.set";
 type VoiceCheckoutModel = { offerings: { offeringId: string }[] };
 const model: VoiceCheckoutModel = { offerings: [{ offeringId: "20000063" }] };
 
+// Each test builds its page from fakes that answer what the helper asks (the URL, `evaluate`, the storage calls): a
+// stand-in for Playwright's page, so a document can be replaced at a chosen call. It could hide when a real navigation
+// replaces the document and what Playwright's calls then throw; sessionStorage.spec.ts and
+// sessionStorageOverlay.spec.ts in test/tests/testApp/ run the helper on real pages, navigations included, on all three
+// browsers.
+
 /**
  * The fakes' documents: `evaluateHandle` stands in for Playwright's handle to the page's document, which throws once its
  * document is replaced; here once `state.document` has moved past the one it was taken in. It cannot show that
@@ -573,7 +579,7 @@ describe("a call whose document is replaced", () => {
 		const replaced = (call: string) =>
 			new Error(`${call}: Execution context was destroyed, most likely because of a navigation`);
 		// vitest's fake timers stand in for time, so the pauses before the retries (8,270 ms for the bound's) pass at once;
-		// the harness's navigation tests make the real ones
+		// they could hide how a pause falls against a real navigation, which the harness's navigation tests make for real
 		beforeEach(() => {
 			vi.useFakeTimers();
 		});
