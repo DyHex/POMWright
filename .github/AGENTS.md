@@ -103,6 +103,15 @@ changeset, waits for the release. When `build` itself is broken and something mu
 - Considered and not planned: a scheduled workflow that tests the latest release against each new Playwright
   release (GitHub has no event for another repository's releases).
 
+## Rules held elsewhere
+
+- The site describes CI: [*Internal → Tests and checks*](../website/src/content/docs/internal/tests-and-checks.md) the
+  jobs and what each runs, [*Internal → Documentation*](../website/src/content/docs/internal/documentation.md) the docs
+  checks of each job and how Pages deploys, and
+  [*Internal → Packaging*](../website/src/content/docs/internal/packaging.md) the `consumer` job's checks. A change to a
+  workflow, a job or a script only CI runs updates them in the same change, by
+  [website/AGENTS.md](../website/AGENTS.md)'s rule that a change to a mechanism updates the pages that describe it.
+
 ## Do not
 
 - Reintroduce a second build in a harness job, or build the site in a harness job.

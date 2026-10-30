@@ -62,8 +62,9 @@ contributor guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules app
 
 ## Rules held elsewhere
 
-- A doc comment, and a message, chain or rendering a page shows, follow [website/AGENTS.md](../website/AGENTS.md): a change to one
-  updates the pages and doc comments that show it.
+- Anything a page or doc comment describes (behavior, a message, chain or rendering, a mechanism or a design) and the
+  doc comments themselves follow [website/AGENTS.md](../website/AGENTS.md): a change to one updates the pages and doc
+  comments that describe it, the Internal pages included.
 - A consumer-facing change needs a changeset: [docs/versioning.md](../docs/versioning.md).
 - The `log` fixture (`src/fixture/`) and the URLs and navigation of `pageObject.ts` follow [src/helpers/AGENTS.md](helpers/AGENTS.md).
 - Specs go in `test/`: [test/AGENTS.md](../test/AGENTS.md).
