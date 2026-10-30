@@ -2,7 +2,7 @@
 
 - **Kind**: debt (a refactor: no message changes)
 - **Status**: decided 2026-10-30, decision 120 in [DECISIONS.md](../DECISIONS.md); planned in
-  [PLAN-2R-4-domain-lookup.md](../PLAN-2R-4-domain-lookup.md)
+  [PLAN-2R-4-domain-lookup.md](../PLAN-2R-4-domain-lookup.md); done 2026-10-30 in `908c816`
 - **Area**: `access` and `guarded` in `src/helpers/sessionStorage.ts`
 - **Severity**: Low (one round trip on a call that already failed, and one more of POMWright's own evaluations in the
   user's trace; no message is wrong)

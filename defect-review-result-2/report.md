@@ -1379,7 +1379,9 @@ or none: the release stays 3.0.2.
 | [2R-1](R-triage/defect-2R-1-query-default-path-test-gaps.md) | | test gap | Low | none | this branch: tests only (locators plan); found in the triage | decided (#93) |
 | [2R-2](R-triage/defect-2R-2-navigation-message-names-the-start-page.md) | | defect | Low | patch (unreleased) | this branch: the destination from the new document's `location.href`; found in CI after the session storage plan | done (#118: fc6ce43, f816c2e) |
 | [2R-3](R-triage/defect-2R-3-opaque-origin-test-wait-under-load.md) | | test defect | Low | none | this branch: the test's wait; found probing 2R-2 under load | done (#119: 751fe70, fdc7918) |
-| [2R-4](R-triage/defect-2R-4-domain-lookup-after-a-replaced-document.md) | | debt | Low | none | this branch: `access` skips `document.domain` after a replaced document; found building 2R-2 | decided (#120) |
+| [2R-4](R-triage/defect-2R-4-domain-lookup-after-a-replaced-document.md) | | debt | Low | none | this branch: `access` skips `document.domain` after a replaced document; found building 2R-2 | done (#120: 908c816) |
+| [2R-5](R-triage/defect-2R-5-seed-check-counts-the-lag-as-replacements.md) | | defect | Medium | patch (unreleased) | this branch: found by the first `test:constrained` after 2R-4; pre-existing (fails at `9a437a3` too) | open |
+| [2R-6](R-triage/defect-2R-6-outcomes-spec-timeout-under-load.md) | | test defect | Low | none | this branch: found by the same run | open |
 | [2D-4](D-page-objects-urls-navigation/defect-2D-4-detached-navigation-methods.md) | | design question | Low | none | not adopted (unbound, as Playwright's); reconsidered on request | decided (#91) |
 
 The merged files keep their own reproductions: [2A-7](A-session-storage/defect-2A-7-upgrading-ts2339-text-stale.md),

@@ -14,6 +14,7 @@ Unchanged. A call that fails because its document was replaced still fails with 
 keys, and Playwright's error as the `cause`. A refused call is still explained as before.
 
 What changes:
+
 - `access` no longer asks `document.domain` when the error is a replaced document (`replacedByNavigation`). It throws
   the same labeled error it throws today when the answer explains nothing, and `guarded` replaces it with the
   navigation message, as now.
@@ -79,6 +80,7 @@ What changes:
   | `set` | at rest, 1 worker, Chromium | 300 |
   | `set` and `get(keys)` | `taskset -c 0-3`, 2 workers, three browsers | 100 each |
   | `set` and `get(keys)` | `taskset -c 0-1`, 4 workers, Chromium | 200 each |
+
 - **The trace again:** the same 20 traced runs of `set`, to show the Evaluates after the failure.
 
 ## Docs
@@ -107,4 +109,36 @@ a recommendation.
 
 ## Execution notes
 
-None yet.
+- 2026-10-30. The plan was committed in `13a4b81`, step 1 in `908c816`, and this record is step 2. The maintainer asked
+  for the plan and its build together, choosing option A over B beforehand.
+- **Unit:** the test of the replaced cases failed on the code before the change (one `document.domain` question each)
+  and passes with it. The test of the cases that keep the question passes either way, as it should. 964 unit tests.
+- **Harness:** the storage specs, 357 passed and 3 skipped on three browsers; the error-message check is unchanged (78
+  thrown, 3 passed through).
+- **The two navigation tests,** with `currentUrl`'s question now the first after the failure:
+
+  | Shape | Result |
+  | --- | --- |
+  | `set` at rest, 1 worker, Chromium | 300 of 300 |
+  | `set` and `get(keys)`, `taskset -c 0-3`, 2 workers, three browsers | 600 of 600 |
+  | `set` and `get(keys)`, `taskset -c 0-1`, 4 workers, Chromium | 400 of 400 |
+
+- **The trace,** 20 runs of `set` with `--trace=on`: one Evaluate after the failure in each, where there were two. The
+  steps were "Evaluate, Set WebStorage item ✗, Evaluate" 16 times, "Evaluate ✗, Evaluate" 3 times and "Evaluate, Set
+  WebStorage item, Evaluate ✗, Evaluate" once. The `location.href` question did not fail in any of them.
+- **Full runs:**
+  - `pnpm pack-test --reporter=line` at rest: 1842 passed and 3 skipped in 157 s; 33 step locations; 27 test-server
+    tests. `pnpm docs:build` and `pnpm lint:guide` pass, and no name of the external consumer projects appears on the
+    branch.
+  - **Unexpected:** `pnpm test:constrained --reporter=line` failed 2 tests (1840 passed, 3 skipped, 304 s; 964 unit).
+    Both are outside this plan and pre-existing, and both are filed for the maintainer:
+    - [2R-5](R-triage/defect-2R-5-seed-check-counts-the-lag-as-replacements.md): `seed`'s Navigation API check gave up
+      during the 5-redirect chain. On 4 CPUs with 8 workers it fails 4 of 100 runs here and 5 of 100 at `9a437a3`.
+      Playwright's log shows 21 failed tries against 2 to 5 commits: one replacement produces several fast failures,
+      and the bound counts each.
+    - [2R-6](R-triage/defect-2R-6-outcomes-spec-timeout-under-load.md): the Firefox lifecycle outcomes spec timed out
+      at 60 s. Its nested run takes 12.5 s at rest and up to 56.8 s with 8 copies on 4 CPUs.
+
+    This is what the constrained run is for: the run after the previous plan passed, and this one met two races that
+    a 32-thread machine does not.
+- The worktree of `9a437a3` used for 2R-5's baseline was in the scratchpad, and was removed.
