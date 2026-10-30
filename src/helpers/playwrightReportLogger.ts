@@ -326,6 +326,24 @@ export class PlaywrightReportLogger {
 	}
 }
 
+/**
+ * The hint for a locale written with underscores, as a POSIX name is (`en_US.UTF-8`, as `LANG` holds it): the tag with
+ * hyphens, without the codeset (`.…`), an encoding a tag has no place for. A modifier (`@…`) can change the script
+ * (`sr_RS@latin` is `sr-Latn-RS`), so a value with one gets no hint, and neither does one whose hint `Intl` rejects too.
+ */
+const localeHint = (locale: string): string => {
+	if (!locale.includes("_") || locale.includes("@")) {
+		return "";
+	}
+	const tag = locale.replace(/\..*$/, "").replaceAll("_", "-");
+	try {
+		Intl.getCanonicalLocales(tag);
+	} catch {
+		return "";
+	}
+	return `; write it with hyphens, such as ${JSON.stringify(tag)}`;
+};
+
 /** Who checks a locale and a time zone: the `log` fixture names Playwright's options, `attachLogsToTest` its own. */
 type DateFormatSource = "log fixture" | "attachLogsToTest";
 
@@ -346,10 +364,9 @@ export const checkDateFormat = (
 		try {
 			Intl.getCanonicalLocales(checkedLocale);
 		} catch {
-			const hint = checkedLocale.includes("_")
-				? `; write it with hyphens, such as ${JSON.stringify(checkedLocale.replaceAll("_", "-"))}`
-				: "";
-			throw new Error(`${source}: locale ${JSON.stringify(checkedLocale)} is not a BCP 47 language tag${hint}`);
+			throw new Error(
+				`${source}: locale ${JSON.stringify(checkedLocale)} is not a BCP 47 language tag${localeHint(checkedLocale)}`,
+			);
 		}
 	}
 	if (checkedTimeZone !== undefined) {

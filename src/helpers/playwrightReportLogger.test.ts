@@ -168,6 +168,24 @@ describe("the locale and the time zone", () => {
 		);
 	});
 
+	it("hint a POSIX name's tag without its codeset, and give no hint for a modifier or a hint Intl rejects", () => {
+		const hinted: Record<string, string> = { "en_US.UTF-8": "en-US", "nb_NO.utf8": "nb-NO", zh_Hant_TW: "zh-Hant-TW" };
+		for (const [value, tag] of Object.entries(hinted)) {
+			expect(() => checkDateFormat(value, undefined, "log fixture")).toThrowError(
+				`log fixture: locale ${JSON.stringify(value)} is not a BCP 47 language tag; write it with hyphens, such as ${JSON.stringify(tag)}`,
+			);
+			expect(Intl.getCanonicalLocales(tag)).toEqual([tag]);
+		}
+		// a modifier can change the script: sr_RS@latin is sr-Latn-RS, and sr-RS would format in Cyrillic
+		for (const value of ["sr_RS@latin", "de_DE@euro", "C.UTF-8", "x_!!"]) {
+			expect(() => checkDateFormat(value, undefined, "log fixture")).toThrowError(
+				new RegExp(
+					`^log fixture: locale ${JSON.stringify(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} is not a BCP 47 language tag$`,
+				),
+			);
+		}
+	});
+
 	it("reject a time zone Intl does not know, named as the caller names it", () => {
 		expect(() => checkDateFormat(undefined, "Invalid/Zone", "log fixture")).toThrowError(
 			`log fixture: timezoneId "Invalid/Zone" is not a time zone Node's Intl knows`,

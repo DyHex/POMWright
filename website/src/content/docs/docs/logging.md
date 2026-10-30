@@ -90,6 +90,14 @@ unchecked, and an underscore form works in Chromium only, so with `locale: "en_U
 log fixture: locale "en_US" is not a BCP 47 language tag; write it with hyphens, such as "en-US"
 ```
 
+A POSIX locale name, such as `en_US.UTF-8` as the `LANG` environment variable holds it, is not a tag either: write
+`en-US`. The hint leaves out the codeset (`.UTF-8`), which is an encoding. A name with a modifier gets no hint, since the
+modifier can change the script: `sr_RS@latin` is `sr-Latn-RS`.
+
+```text
+log fixture: locale "en_US.UTF-8" is not a BCP 47 language tag; write it with hyphens, such as "en-US"
+```
+
 ## Child loggers
 
 A child logger has a name of its own and shares its parent's entries and level, so a page object can log under its own
