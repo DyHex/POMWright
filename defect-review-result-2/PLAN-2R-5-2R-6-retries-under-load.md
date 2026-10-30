@@ -180,4 +180,32 @@ with a recommendation.
 
 ## Execution notes
 
-None yet.
+- 2026-10-30. The plan was committed in `39e531f`, then one commit per step: `2b9a7d8` (1), `f4f4fe0` (2), and this
+  record (3).
+- **Unit:** the four pause tests failed on the code before step 1 (no pause) and pass with it; the tests of the bound
+  run under fake timers. 970 unit tests.
+- **Harness** (the packed build, `--retries=0`):
+
+  | Run | Result |
+  | --- | --- |
+  | the storage specs, three browsers | 357 passed, 3 skipped; error messages unchanged (78 thrown) |
+  | the 5-redirect seed test, Chromium, `taskset -c 0-3`, 8 workers, 300 runs | 300 of 300 (4 of 100 failed before) |
+  | the 2, 3 and 5 redirect tests, three browsers, the same shape, 50 each | 450 of 450 |
+  | the `set` and `get(keys)` navigation tests, three browsers, `taskset -c 0-3`, 2 workers, 50 each | 300 of 300 |
+  | the outcomes spec with `test.slow()`, Firefox, 12 copies on 4 CPUs | 12 of 12 (12 of 12 timed out before) |
+
+- **Full runs:**
+  - `pnpm test:constrained --reporter=line`: 1842 passed and 3 skipped in 276 s; 970 unit; 33 step locations; 27
+    test-server tests. It passed in full, as the plan required.
+  - `pnpm lint`, `pnpm docs:build` and `pnpm lint:guide` pass, and no name of the external consumer projects appears on
+    the branch.
+  - **Unexpected:** the full `pnpm pack-test --reporter=line` at rest (16 workers) failed 1 test: 1841 passed, 3
+    skipped, 136 s. It is outside this plan and pre-existing, and is filed for the maintainer as
+    [2R-7](R-triage/defect-2R-7-seed-writes-into-an-arrived-document.md).
+    - The test: `sessionStorageOverlay.spec.ts` on Firefox. A seed called on `about:blank` resolved, and the
+      document's first script saw no entry.
+    - Its rate on Firefox at 16 workers: 5 of 200 runs here, and 4 of 200 at `908c816`, before this plan. Chromium
+      and WebKit were 0 of 200 at `908c816`, and the same race without the overlay was 0 of 200 here.
+    - Playwright's log shows the cause: `seed`'s write-at-once path for an inherited origin asked `self.origin` of the
+      document that had arrived on the origin during the call.
+- The scratch worktree of `908c816` used for 2R-7's baseline was removed.

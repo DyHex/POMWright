@@ -2,7 +2,8 @@
 
 - **Kind**: test defect (a timeout sized for an idle machine)
 - **Status**: found 2026-10-30; planned in
-  [PLAN-2R-5-2R-6-retries-under-load.md](../PLAN-2R-5-2R-6-retries-under-load.md), agreed 2026-10-30; decision 122
+  [PLAN-2R-5-2R-6-retries-under-load.md](../PLAN-2R-5-2R-6-retries-under-load.md), agreed 2026-10-30; decision 122;
+  done 2026-10-30 in `f4f4fe0`
 - **Area**: `test/tests/pageObject/lifecycle.outcomes.spec.ts`
 - **Severity**: Low (the test, not POMWright)
 - **Semver of the fix**: none
