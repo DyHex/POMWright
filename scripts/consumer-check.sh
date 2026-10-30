@@ -6,9 +6,10 @@
 #     node16 and nodenext (CommonJS and ESM), and bundler (esnext and preserve), each reading the declarations it should;
 #   - attw (@arethetypeswrong/cli, downloaded at a pinned version, never a dependency) reports no problem;
 #   - Playwright's runner runs scripts/consumer/runner in a CommonJS and a "type": "module" project;
-#   - TypeScript 5.0 (with skipLibCheck, for Playwright's own declarations), the latest 5.x, the latest 6.x and the latest
-#     release compile the consumer with standard decorators and with experimentalDecorators. The oldest of these is the
-#     floor the README badge and the Installation page state; the three move together.
+#   - TypeScript 5.0 and 5.1 (with skipLibCheck: below 5.2, Playwright's declarations and, with the @types/node the
+#     repository uses, Node's report errors; POMWright's never do), the latest 5.x, the latest 6.x and the latest release
+#     compile the consumer with standard decorators and with experimentalDecorators. The oldest of these is the floor
+#     the README badge and the Installation page state; the three move together.
 # With --node-floor, only the loading check: import and require give one copy, on the Node that runs it (CI: Node 20, the
 # engines floor). Run by the consumer job of .github/workflows/checks.yaml, and by hand:
 #   bash scripts/consumer-check.sh [--node-floor] <tarball>
@@ -26,7 +27,7 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 FIXTURES="$SCRIPT_DIR/consumer"
 
 ATTW_VERSION=0.18.5
-TYPESCRIPT_VERSIONS=(5.0 5 6 latest)
+TYPESCRIPT_VERSIONS=(5.0 5.1 5 6 latest)
 
 dev_dependency() {
 	node -p 'require(process.argv[1]).devDependencies[process.argv[2]]' "$ROOT_DIR/package.json" "$1"
@@ -97,7 +98,7 @@ for v in "${TYPESCRIPT_VERSIONS[@]}"; do
 	tsc="node_modules/ts-$v/bin/tsc"
 	version="$(node -p 'require(process.argv[1]).version' "$dir/node_modules/ts-$v/package.json")"
 	extra=()
-	[[ "$v" == "5.0" ]] && extra=(--skipLibCheck)
+	[[ "$v" == "5.0" || "$v" == "5.1" ]] && extra=(--skipLibCheck)
 	compile "TypeScript $version, standard decorators" "$tsc" consumer.ts index.d.mts --module esnext \
 		--moduleResolution bundler "${extra[@]}"
 	compile "TypeScript $version, experimentalDecorators" "$tsc" consumer.ts index.d.mts --module esnext \

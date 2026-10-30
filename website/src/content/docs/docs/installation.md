@@ -54,8 +54,10 @@ holds two copies of POMWright, even when some files `import` it and others `requ
 
 ## TypeScript settings
 
-POMWright needs no `tsconfig.json` setting of its own. Its declarations compile with TypeScript 5.0 and later; 5.0 needs
-`skipLibCheck` for Playwright's own declarations. Playwright compiles your TypeScript itself and does not check its
+POMWright needs no `tsconfig.json` setting of its own. Its declarations compile with TypeScript 5.0 and later, without
+`skipLibCheck`. Below TypeScript 5.2, Playwright's declarations and Node's may need it, depending on `@types/node`:
+with `@types/node` 24, 5.0 and 5.1 report errors in both, and with 22, 5.0 reports them in Node's. Turn on
+`skipLibCheck` there, or use TypeScript 5.2 or later. Playwright compiles your TypeScript itself and does not check its
 types ([TypeScript](https://playwright.dev/docs/test-typescript)). To check them with `tsc`, note that TypeScript 6
 includes only the `@types` packages a tsconfig lists, and Playwright's own declarations need Node's, so a Playwright
 project lists `"types": ["node"]`, with or without POMWright. With that, everything in these docs compiles. Three
