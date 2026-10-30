@@ -6,7 +6,9 @@ description: "Every change a POMWright 2.x project meets in 3.x: what changed an
 ## Introduction
 
 POMWright 3 is a major release. Most of what a 2.x project wrote keeps working; this page lists everything that
-does not, grouped by area. Each item stands on its own: what changed and why, how it shows up in your project, what to
+does not, grouped by area. A project meets only some of these items, since each concerns one feature or one way of
+using it: `tsc` and the searches in *How to upgrade* show which apply to yours, and the rest can be skipped. Each item
+stands on its own: what changed and why, how it shows up in your project, what to
 write instead, and the page that explains the concept. The 2.x documentation stays available at the
 [`v2.1.0` tag](https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2).
 
@@ -48,6 +50,19 @@ grep -rn "pomwright/" --include=*.ts --exclude-dir=node_modules .
 See [Installation](/POMWright/docs/installation/).
 
 ## Locators
+
+### `createRegistryWithAccessors` takes its paths
+
+**Compile error.** 2.x inferred the paths as `string` when `createRegistryWithAccessors(page)` had no type argument, so
+no path was checked. 3.x requires the union, and every path of a registry created without it is a compile error:
+
+```text
+error TS2345: Argument of type '"main"' is not assignable to parameter of type '"createRegistryWithAccessors needs its paths as a type argument: createRegistryWithAccessors<Paths>(page)"'.
+```
+
+Pass the union, `createRegistryWithAccessors<Paths>(page)`, or `<string>` for paths known only at run time (see
+[the registry](/POMWright/docs/locator-paths/#the-registry)). Find the calls with
+`grep -rn 'createRegistryWithAccessors(' --include=*.ts --exclude-dir=node_modules .`.
 
 ### `getById` matches the id as written
 
@@ -91,8 +106,8 @@ character meant literally (`/order\.row/`), and expect a flag such as `i` to tak
 
 ### Steps on a frame segment apply
 
-**Compiles.** In 2.x, a `filter`, `nth`, `first` or `last` on a `frameLocator(selector)` registration was dropped when
-the chain was built; with several matching iframes, the action failed with a strict mode violation. In 3.x a frame
+**Compiles.** In 2.x, a `filter` or `nth` on a `frameLocator(selector)` registration was dropped when the chain was
+built; with several matching iframes, the action failed with a strict mode violation. In 3.x a frame
 segment is `locator(selector)` with its steps, then `contentFrame()`, so the step selects the `<iframe>`:
 
 ```ts
@@ -106,8 +121,7 @@ registry.add("shell.frame@payment.button@pay").getByRole("button", { name: "Pay"
 // 3.x: locator('iframe').nth(1).contentFrame().getByRole('button', { name: 'Pay' })
 ```
 
-Review every `frameLocator(…)` registration followed by `.nth(`, `.filter(`, `.first(` or `.last(`; the step now
-takes effect. Telling frames apart by their ancestor segments is still the better way:
+Review every `frameLocator(…)` registration followed by `.nth(` or `.filter(`; the step now takes effect. Telling frames apart by their ancestor segments is still the better way:
 
 ```sh
 grep -rn 'frameLocator(' --include=*.ts --exclude-dir=node_modules .
@@ -308,7 +322,9 @@ Fix the reference. A standalone registry from `createRegistryWithAccessors` call
 **Fails at run time** or **compiles**; TypeScript rejected these calls already. `describe(null)` and
 `describe(undefined)` throw, where 2.x fell back to the path; `describe("")` removes a description, as in Playwright.
 `nth(null)` and `nth(undefined)` reach Playwright's `nth`, which matches nothing, where 2.x dropped them and matched
-every element. Call `nth` only when there is an index: `if (index !== undefined) query.nth(index)`. See
+every element. Call `nth` only when there is an index: `if (index !== undefined) query.nth(index)`. Find the calls in
+JavaScript files, and review each whose argument can be `null` or `undefined`:
+`grep -rnE '\.(nth|describe)\(' --include=*.js --include=*.mjs --include=*.cjs --exclude-dir=node_modules .`. See
 [Filters and indices](/POMWright/docs/filters-and-indices/) and [Descriptions](/POMWright/docs/descriptions/).
 
 ## Page objects
@@ -544,7 +560,7 @@ if it came straight back. This needs no change. See [URLs and navigation](/POMWr
 
 ### Values are stored as written
 
-**Compiles.** 2.x JSON-encoded every value: `set({ token: "abc" })` reached the app as `"abc"`, with the quotes, and
+**Compiles** for strings; **compile error** for structured values without a codec. 2.x JSON-encoded every value: `set({ token: "abc" })` reached the app as `"abc"`, with the quotes, and
 objects were stored as JSON. 3.x stores strings exactly as given, as Playwright's `page.sessionStorage` does; a key
 that holds structured data is declared once with a codec, which also types it. The `set<T>` and `get<T>` type
 arguments are gone:
@@ -581,9 +597,12 @@ names, so TypeScript reads the old `<User>` as a key and reports, for the 2.x li
 
 ```text
 error TS2353: Object literal may only specify known properties, and 'user' does not exist in type 'EntriesFor<{ user: Codec<{ name: string; age: number; }>; }, User>'.
+error TS2339: Property 'user' does not exist on type 'string | { name: string; age: number; } | null'.
 error TS2344: Type 'User' does not satisfy the constraint 'string'.
-error TS2339: Property 'user' does not exist on type 'string | null'.
 ```
+
+A structured value for a key without a codec, which 2.x stored as JSON, is a compile error too:
+`error TS2322: Type '{ name: string; age: number; }' is not assignable to type 'string'.`
 
 Delete the type argument and declare the key's codec. Find them with
 `grep -rnE '\.(get|set|seed)<' --include=*.ts --exclude-dir=node_modules .`. Keys with a codec and keys without one,
@@ -661,7 +680,18 @@ update anything that looks for that title. See [Test steps](/POMWright/docs/test
 
 ### Log attachments keep what was logged
 
-**Compiles.** Attachment names use Playwright's `locale` and `timezoneId`, where 2.x always wrote them in `nb-NO`. For
+**Compiles**; **fails at run time** for a `locale` that Node's `Intl` rejects. The `log` fixture checks Playwright's
+`locale` and `timezoneId` when a test starts, where 2.x ignored them, so a locale Chromium accepts but that is not a
+BCP 47 tag, such as `en_US`, fails every test that requests `log`:
+
+```text
+log fixture: locale "en_US" is not a BCP 47 language tag; write it with hyphens, such as "en-US"
+```
+
+Write it with hyphens. Find it with `grep -rn 'locale:' --include=*.ts --exclude-dir=node_modules .` in the configs and
+the `test.use()` calls (see [Names in your locale](/POMWright/docs/logging/#names-in-your-locale)).
+
+Attachment names use Playwright's `locale` and `timezoneId`, where 2.x always wrote them in `nb-NO`. For
 the 2.x names, set `use: { locale: "nb-NO" }` in the config. POMWright's `log` fixture passes the test's `locale` and
 `timezoneId`. A fixture of your own that calls `attachLogsToTest(testInfo)` gets the project's `use.locale` and
 `use.timezoneId` from the config; to follow `test.use()` as well, it passes them:
