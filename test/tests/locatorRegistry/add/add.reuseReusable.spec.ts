@@ -1,8 +1,10 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
-import type { Page } from "@playwright/test";
-import { type FilterDefinition, LocatorRegistryInternal, type ReusableLocator } from "../../../../src/locators";
+import type { Locator, Page } from "@playwright/test";
+import { createRegistryWithAccessors, type FilterDefinition, type ReusableLocator } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
+/** A locator as Playwright renders it without a description, which a resolved locator otherwise prints instead. */
+const render = (locator: Locator) => `${locator.describe("")}`;
 
 test("add can reuse a reusable locator definition", async ({ page }) => {
 	type LocatorSchemaPaths = "heading" | "heading.first";
@@ -14,20 +16,18 @@ test("add can reuse a reusable locator definition", async ({ page }) => {
 	registry.add("heading", { reuse: h2 });
 	registry.add("heading.first", { reuse: h2 }).nth(0);
 
-	expect(registry.get("heading")).toEqual({
-		definition: { role: "heading", options: { level: 2 }, type: "role" },
-		locatorSchemaPath: "heading",
-		steps: [{ filter: { hasText: /Summary/ }, kind: "filter" }],
-	});
+	expect(render(registry.getLocator("heading"))).toEqual(
+		render(page.getByRole("heading", { level: 2 }).filter({ hasText: /Summary/ })),
+	);
 
-	expect(registry.get("heading.first")).toEqual({
-		definition: { role: "heading", options: { level: 2 }, type: "role" },
-		locatorSchemaPath: "heading.first",
-		steps: [
-			{ filter: { hasText: /Summary/ }, kind: "filter" },
-			{ index: 0, kind: "index" },
-		],
-	});
+	expect(render(registry.getLocator("heading.first"))).toEqual(
+		render(
+			page
+				.getByRole("heading", { level: 2 })
+				.filter({ hasText: /Summary/ })
+				.nth(0),
+		),
+	);
 });
 
 test("reusable builder yields the same locator chain as a direct definition", async ({ page }) => {
@@ -55,17 +55,11 @@ test("add reuse by reusable locator patches options while preserving selector", 
 	registry.add("errorMessage", { reuse: errorMessage });
 	registry.add("error.invalidPassword", { reuse: errorMessage }).locator({ hasText: /invalid password/ });
 
-	expect(registry.get("errorMessage")).toEqual({
-		definition: { selector: "error-message", type: "locator" },
-		locatorSchemaPath: "errorMessage",
-		steps: [],
-	});
+	expect(render(registry.getLocator("errorMessage"))).toEqual(render(page.locator("error-message")));
 
-	expect(registry.get("error.invalidPassword")).toEqual({
-		definition: { options: { hasText: /invalid password/ }, selector: "error-message", type: "locator" },
-		locatorSchemaPath: "error.invalidPassword",
-		steps: [],
-	});
+	expect(render(registry.getLocator("error.invalidPassword"))).toEqual(
+		render(page.locator("error-message", { hasText: /invalid password/ })),
+	);
 });
 
 test("add reuse by reusable locator inherits selector and discriminant", async ({ page }) => {
@@ -77,17 +71,13 @@ test("add reuse by reusable locator inherits selector and discriminant", async (
 	registry.add("errorMessage", { reuse: errorMessage });
 	registry.add("error.invalidPassword", { reuse: errorMessage }).locator({ hasText: /invalid email/ });
 
-	expect(registry.get("errorMessage")).toEqual({
-		definition: { options: { hasText: /invalid password/ }, selector: "error-message", type: "locator" },
-		locatorSchemaPath: "errorMessage",
-		steps: [],
-	});
+	expect(render(registry.getLocator("errorMessage"))).toEqual(
+		render(page.locator("error-message", { hasText: /invalid password/ })),
+	);
 
-	expect(registry.get("error.invalidPassword")).toEqual({
-		definition: { options: { hasText: /invalid email/ }, selector: "error-message", type: "locator" },
-		locatorSchemaPath: "error.invalidPassword",
-		steps: [],
-	});
+	expect(render(registry.getLocator("error.invalidPassword"))).toEqual(
+		render(page.locator("error-message", { hasText: /invalid email/ })),
+	);
 });
 
 test("add reuse with a reusable locator does not mutate the reusable definition", async ({ page }) => {
@@ -101,20 +91,18 @@ test("add reuse with a reusable locator does not mutate the reusable definition"
 	registry.add("heading.first", { reuse: reusable }).nth(0);
 
 	expect(reusable.steps).toEqual([{ filter: { hasText: /Summary/ }, kind: "filter" }]);
-	expect(registry.get("heading")).toEqual({
-		definition: { role: "heading", options: { level: 2 }, type: "role" },
-		locatorSchemaPath: "heading",
-		steps: [{ filter: { hasText: /Summary/ }, kind: "filter" }],
-	});
+	expect(render(registry.getLocator("heading"))).toEqual(
+		render(page.getByRole("heading", { level: 2 }).filter({ hasText: /Summary/ })),
+	);
 
-	expect(registry.get("heading.first")).toEqual({
-		definition: { role: "heading", options: { level: 2 }, type: "role" },
-		locatorSchemaPath: "heading.first",
-		steps: [
-			{ filter: { hasText: /Summary/ }, kind: "filter" },
-			{ index: 0, kind: "index" },
-		],
-	});
+	expect(render(registry.getLocator("heading.first"))).toEqual(
+		render(
+			page
+				.getByRole("heading", { level: 2 })
+				.filter({ hasText: /Summary/ })
+				.nth(0),
+		),
+	);
 });
 
 test("add reuse enforces matching locator type overrides", async ({ page }) => {
@@ -130,29 +118,19 @@ test("add reuse enforces matching locator type overrides", async ({ page }) => {
 	);
 
 	// a throwing DSL call changes nothing: the path keeps the seed it was registered with
-	expect(registry.get("button")).toEqual({
-		definition: { role: "button", options: { name: "Submit" }, type: "role" },
-		locatorSchemaPath: "button",
-		steps: [],
-	});
+	expect(render(registry.getLocator("button"))).toEqual(render(page.getByRole("button", { name: "Submit" })));
 
 	const builder = registry.add("button.reuseLocator", { reuse: button });
 	// @ts-expect-error mismatched locator strategies are not allowed when reusing a locator (getById attempt on role locator)
 	expect(() => builder.getById("Submit")).toThrowError('must use the "role" strategy');
-	expect(registry.get("button.reuseLocator").definition).toEqual({
-		role: "button",
-		options: { name: "Submit" },
-		type: "role",
-	});
+	// any public read here would end the registration; the override below succeeding shows the failed call took nothing
 
 	// the failed call consumed nothing: the one matching override is still available on the same builder
 	builder.getByRole({ name: "Submit" });
 
-	expect(registry.get("button.reuseLocator")).toEqual({
-		definition: { role: "button", options: { name: "Submit" }, type: "role" },
-		locatorSchemaPath: "button.reuseLocator",
-		steps: [],
-	});
+	expect(render(registry.getLocator("button.reuseLocator"))).toEqual(
+		render(page.getByRole("button", { name: "Submit" })),
+	);
 });
 
 test("add reuse patches role options while preserving role value", async ({ page }) => {
@@ -163,11 +141,9 @@ test("add reuse patches role options while preserving role value", async ({ page
 
 	registry.add("heading", { reuse: h2 }).getByRole({ name: "Summary" });
 
-	expect(registry.get("heading")).toEqual({
-		definition: { role: "heading", options: { level: 2, name: "Summary" }, type: "role" },
-		locatorSchemaPath: "heading",
-		steps: [],
-	});
+	expect(render(registry.getLocator("heading"))).toEqual(
+		render(page.getByRole("heading", { level: 2, name: "Summary" })),
+	);
 });
 
 test("add reuse typing narrows override methods to the matching strategy", async ({ page }) => {
@@ -194,11 +170,9 @@ test("add reuse allows only one matching locator override", async ({ page }) => 
 	builder.getByRole("heading", { name: "Summary" });
 
 	expect(() => builder.getByRole("heading", { name: "Other" })).toThrowError("only one matching override is allowed");
-	expect(registry.get("heading").definition).toEqual({
-		role: "heading",
-		options: { level: 2, name: "Summary" },
-		type: "role",
-	});
+	expect(render(registry.getLocator("heading"))).toEqual(
+		render(page.getByRole("heading", { level: 2, name: "Summary" })),
+	);
 });
 
 test("createReusable.filter supports Playwright Locator instances for has/hasNot", async ({ page }) => {
@@ -329,9 +303,9 @@ test("reusable getById seeds store the id verbatim, inherit on omission, and rej
 	registry.add("panel.inherit", { reuse: seed }).getById(undefined);
 	registry.add("panel.override", { reuse: seed }).getById("#literal-hash");
 
-	expect(registry.get("panel").definition).toEqual({ id: "settings.panel", type: "id" });
-	expect(registry.get("panel.inherit").definition).toEqual({ id: "settings.panel", type: "id" });
-	expect(registry.get("panel.override").definition).toEqual({ id: "#literal-hash", type: "id" });
+	expect(render(registry.getLocator("panel"))).toEqual(render(page.locator('[id="settings.panel"]')));
+	expect(render(registry.getLocator("panel.inherit"))).toEqual(render(page.locator('[id="settings.panel"]')));
+	expect(render(registry.getLocator("panel.override"))).toEqual(render(page.locator('[id="#literal-hash"]')));
 
 	expect(() => registry.createReusable.getById("")).toThrowError("createReusable.getById requires a non-empty id.");
 });
@@ -397,7 +371,7 @@ test("changing a seed's definition after creation changes nothing", async ({ pag
 	const seed = registry.createReusable.getByRole("button", { name: "Save" });
 	(seed.definition.options as { name: string }).name = "Changed";
 	registry.add("x", { reuse: seed });
-	expect(registry.get("x").definition).toEqual({ type: "role", role: "button", options: { name: "Save" } });
+	expect(render(registry.getLocator("x"))).toEqual(render(page.getByRole("button", { name: "Save" })));
 });
 
 test.describe("a seeded override's options follow update's Merge Patch, against the DOM", () => {
@@ -420,11 +394,7 @@ test.describe("a seeded override's options follow update's Merge Patch, against 
 		await expect(registry.getNestedLocator("section.loose")).toHaveText(["Reset Color"]);
 		await expect(registry.getNestedLocator("section.all")).toHaveText(["Red", "Blue", "Green", "Reset Color"]);
 		await expect(registry.getNestedLocator("section.heading")).toHaveText("Primary Colors Section");
-		expect(registry.get("section.loose").definition).toEqual({
-			type: "role",
-			role: "button",
-			options: { name: "Reset" },
-		});
+		expect(render(registry.getLocator("section.loose"))).toEqual(render(page.getByRole("button", { name: "Reset" })));
 	});
 
 	test("null as the first of two arguments throws: a primary is always a value", async ({ page }) => {
@@ -472,7 +442,7 @@ test.describe("an any-frame seed", () => {
 		expect(() => registry.add("stepped", { reuse: anyFrameSeed([{ kind: "index", index: 0 }]) })).toThrowError(
 			'reuse cannot apply to "stepped": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.',
 		);
-		expect(() => registry.get("stepped")).toThrowError('No locator schema registered for path "stepped".');
+		expect(() => registry.getLocator("stepped")).toThrowError('No locator schema registered for path "stepped".');
 	});
 
 	test("an override that gives it a selector makes it a frame segment that takes steps", async ({ page }) => {

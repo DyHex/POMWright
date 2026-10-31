@@ -98,6 +98,16 @@ registry.getLocatorSchema("main.list.item").describe("First order").getNestedLoc
 
 - LocatorQueryBuilder
 
+**Throws**
+
+```text
+describe requires a string for "main.list.item"; pass "" to remove the description.
+describe() cannot apply to "anyFrame": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
+```
+
+The second when the query's path is the any-frame `frameLocator()`, which has no element to describe; replace the path
+first.
+
 ### filter()
 
 Adds a [`locator.filter()`](https://playwright.dev/docs/api/class-locator#locator-filter) step to a segment, after
@@ -290,7 +300,8 @@ registry.getLocatorSchema("main.list.item").skip("main.list").getNestedLocator()
 **Throws**
 
 A change to a skipped segment and a second `skip` of it throw at the call, and so does skipping the query's own path
-(from JavaScript):
+(from JavaScript). An `update()` or `replace()` builder taken before the `skip` throws when its method applies the
+change:
 
 ```text
 filter() cannot apply to "main.list": it is skipped in this query; call unskip("main.list") first.
@@ -372,9 +383,11 @@ update("main.button@save") cannot change the strategy from "role" to "locator"; 
 
 ## Errors of every method
 
-A `subPath` outside the query's chain, or a segment of it without a locator, throws at the call:
+A `subPath` outside the query's chain, or a segment of it without a locator, throws at the call; so does a segment
+registered after the query was taken, since the query reads its own copy of the chain:
 
 ```text
 "main.button@save" is not a valid sub-path of "main.list.item".
 "main.form" is not a valid sub-path of "main.form.button@save". It is a segment of that path, but no locator schema is registered for it.
+"shell.list" is not a valid sub-path of "shell.list.item". It is a segment of that path, and it was registered after this query was taken; take a new query with getLocatorSchema("shell.list.item") to use it.
 ```

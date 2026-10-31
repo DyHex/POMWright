@@ -50,8 +50,14 @@ test/test-results/
 test/blob-report/
 test/playwright/.cache/
 
-# The documentation's TypeScript examples, extracted and compiled by scripts/check-doc-snippets.mjs
+# The documentation's TypeScript examples, and the doc comments', extracted and compiled by scripts/check-doc-snippets.mjs
 test/.doc-snippets/
+test/.doc-examples/
+
+# @step's legacy decorators as tsc emits them (test/tsconfig.legacyDecorators.emit.json), run by test/step-locations
+test/.legacy-decorators/
+# every public member, generated from the published declarations for the declaration-emit check
+test/.emit-members/
 
 # Astro's generated types of the documentation site (website/dist is ignored by the dist rule)
 website/.astro/

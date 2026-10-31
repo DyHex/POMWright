@@ -74,7 +74,10 @@ export class OrdersPage extends PageObject<Paths> {
 ## Sub-paths
 
 Most methods take a sub-path: the query's own path or one of its registered ancestors. Without one they work on the
-query's own path. A path outside the chain, or a segment of it without a locator, throws at the call:
+query's own path. TypeScript offers the sub-paths of the chain for each member of the path union: a path written out
+when it is a segment of the chain, a [template member](/POMWright/docs/locator-paths/#paths-with-a-dynamic-part) for
+each segment it matches, the query's own path included. On a registry typed `<string>` any sub-path compiles, and the
+check below is the only one. A path outside the chain, or a segment of it without a locator, throws at the call:
 
 ```text
 "main.button@save" is not a valid sub-path of "main.list.item".
@@ -119,6 +122,7 @@ returns the query:
 | `update().getByRole({ name: null })` | `getByRole("button", { exact: true })`: one option deleted |
 | `update().getByRole("button", null)` or `update().getByRole(null)` | `getByRole("button")`: every option deleted |
 | `update().getByRole({ name: undefined })`, `update().getByRole("button", undefined)`, `update().getByRole()` | unchanged: `undefined` is "not given", as in Playwright |
+| `update().getByRole(undefined, { name: "Cancel" })`, `update().getByRole(role, { name: "Cancel" })` with `role` undefined | `getByRole("button", { name: "Cancel", exact: true })`: an `undefined` first argument keeps the registered one, so an optional value can be passed through |
 
 Another strategy's method throws and says what to use instead:
 
@@ -129,7 +133,8 @@ update("main.button@save") cannot change the strategy from "role" to "locator"; 
 ## A new definition: `replace`
 
 `replace(subPath?)` installs a definition of any strategy, with Playwright's own arguments: the first argument is
-required and the options are Playwright's, without `null`:
+required (but `frameLocator`'s, whose absence installs [the any-frame form](#the-any-frame-form-in-a-query)) and the
+options are Playwright's, without `null`:
 
 ```ts
 import type { LocatorRegistry } from "pomwright";
@@ -143,6 +148,47 @@ registry.getLocatorSchema("main.list.item").replace("main.list").getByRole("list
 
 Neither `update` nor `replace` touches the segment's steps or its description: a step is something Playwright chains
 after the locator, whatever its strategy. Take them away with `clearSteps()` and `describe("")`.
+
+## The any-frame form in a query
+
+`replace(subPath).frameLocator()` without a selector installs Playwright's any-frame
+[`frameLocator()`](/POMWright/docs/frames/#any-frame-framelocator-without-a-selector) on an ancestor, for one use: the
+paths below it then resolve inside whichever frame contains them. It must be the first segment of the chain, so the
+query skips every registered ancestor before it:
+
+```ts
+import type { LocatorRegistry } from "pomwright";
+
+type Paths = "main" | "main.frame@payment" | "main.frame@payment.button@confirm";
+declare const registry: LocatorRegistry<Paths>;
+// ---cut---
+registry.add("main").locator("main");
+registry.add("main.frame@payment").frameLocator("iframe#payment");
+registry.add("main.frame@payment.button@confirm").getByRole("button", { name: "Confirm" });
+
+registry
+  .getLocatorSchema("main.frame@payment.button@confirm")
+  .skip("main")
+  .replace("main.frame@payment")
+  .frameLocator()
+  .getNestedLocator();
+// frameLocator().getByRole('button', { name: 'Confirm' })
+```
+
+The any-frame form has no element of its own, so:
+
+- an ancestor left registered fails the resolution:
+  `frameLocator() without a selector must be the first segment of the chain; "main.frame@payment" has the ancestor "main".`
+- the query's own path cannot take it. TypeScript does not catch this, unlike `skip` of the query's own path; the
+  call throws at once:
+  `replace() cannot apply to "main.frame@payment": it is the path this query resolves, and frameLocator() without a selector has no element to resolve to; replace an ancestor instead.`
+- a segment with steps in the query needs `clearSteps(subPath)` first:
+  `replace() cannot apply to "main.frame@payment": it has filter or nth steps, and frameLocator() without a selector takes none; call clearSteps("main.frame@payment") first.`
+- afterwards, `filter` and `nth` reject the segment:
+  `filter() cannot apply to "main.frame@payment": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.`
+
+`describe` is not affected: it applies to the query's own path, which `replace` cannot turn into the any-frame form. It
+rejects only a query of a path registered as that form.
 
 ## Keeping a query
 
@@ -211,7 +257,8 @@ query.unskip("main.list").getNestedLocator();
 ```
 
 The query's own path cannot be skipped: TypeScript does not offer it, and from JavaScript it throws. A skipped segment
-rejects changes until it is unskipped, since they would have no effect:
+rejects changes until it is unskipped, since they would have no effect, also from an `update()` or `replace()` builder
+taken before the `skip`:
 
 ```text
 filter() cannot apply to "main.list": it is skipped in this query; call unskip("main.list") first.

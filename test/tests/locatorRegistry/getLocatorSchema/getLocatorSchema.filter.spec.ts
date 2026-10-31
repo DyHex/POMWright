@@ -1,10 +1,6 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
-import {
-	type FilterDefinition,
-	LocatorRegistryInternal,
-	type LocatorStrategyDefinition,
-} from "../../../../src/locators";
+import { createRegistryWithAccessors, type FilterDefinition } from "pomwright";
 
 test("filter adds an additional filter per sub-path", async ({ testFilters }) => {
 	const filtered = testFilters
@@ -204,8 +200,20 @@ test("frameLocator keeps the chain inside the frame and applies frame-level step
 });
 
 test.describe("getNestedLocator for locatorSchema with filter property", () => {
+	// each definition as the public replace() arguments that install it
+	type Definition =
+		| { type: "role"; role: Parameters<Page["getByRole"]>[0]; options?: Parameters<Page["getByRole"]>[1] }
+		| {
+				type: "text" | "label" | "placeholder" | "altText" | "title";
+				text: string | RegExp;
+				options?: { exact?: boolean };
+		  }
+		| { type: "locator"; selector: string; options?: Parameters<Page["locator"]>[1] }
+		| { type: "testId"; testId: string | RegExp }
+		| { type: "id"; id: string | RegExp }
+		| { type: "frameLocator"; selector?: string };
 	type TestCase = {
-		definition: LocatorStrategyDefinition;
+		definition: Definition;
 		expected: string;
 		label: string;
 	};
@@ -273,7 +281,7 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	}
 });
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
 test("getLocatorSchema.filter supports Playwright Locator instances for has/hasNot", async ({ page }) => {
 	type LocatorSchemaPaths = "item";

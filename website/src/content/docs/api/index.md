@@ -28,6 +28,7 @@ the errors thrown, with the real messages. The same text is in the doc comments,
 | [`LocatorQueryBuilder`](/POMWright/api/class-locatorquerybuilder/) | a query, what `getLocatorSchema(path)` returns |
 | [`LocatorUpdateBuilder`](/POMWright/api/class-locatorupdatebuilder/) | what a query's `update()` and `replace()` return |
 | [`ReusableLocator`](/POMWright/api/class-reusablelocator/) | a seed from `createReusable` |
+| [`ReusableLocatorFactory`](/POMWright/api/class-reusablelocator/#reusablelocatorfactory) | the type of `createReusable`, which makes seeds |
 | [`FilterDefinition`](/POMWright/api/types/#filterdefinition) | the argument of `filter` |
 | [`IndexSelector`](/POMWright/api/types/#indexselector) | the argument of `nth` |
 | [`LocatorSchemaPathFormat`](/POMWright/api/types/#locatorschemapathformat) | the path rules as a type |
@@ -50,6 +51,10 @@ the errors thrown, with the real messages. The same text is in the doc comments,
 | [`json`](/POMWright/api/class-sessionstorage/#json) | the JSON codec |
 | [`Codec`](/POMWright/api/class-sessionstorage/#codec) | how a key's value is stored and read back |
 | [`SessionStorageSchema`](/POMWright/api/class-sessionstorage/#sessionstorageschema) | codecs by key |
+| [`SessionStorageOptions`](/POMWright/api/class-sessionstorage/#sessionstorageoptions) | the options of `new SessionStorage()` |
+| [`SeedOptions`](/POMWright/api/class-sessionstorage/#seedoptions) | the options of `seed` |
+| [`Decoded`](/POMWright/api/class-sessionstorage/#decoded) | the type of a key's value under a schema |
+| [`AllEntries`](/POMWright/api/class-sessionstorage/#allentries) | what `get()` returns |
 
 ## Reports
 
@@ -57,8 +62,9 @@ the errors thrown, with the real messages. The same text is in the doc comments,
 | --- | --- |
 | [`test`](/POMWright/api/fixtures/) | Playwright's `test` with the `log` fixture |
 | [`PlaywrightReportLogger`](/POMWright/api/class-playwrightreportlogger/) | a logger whose entries are attached to the report |
-| [`LogEntry`](/POMWright/api/class-playwrightreportlogger/#logentry), [`LogLevel`](/POMWright/api/class-playwrightreportlogger/#loglevel) | one entry; the levels |
+| [`LogEntry`](/POMWright/api/class-playwrightreportlogger/#logentry), [`LogLevel`](/POMWright/api/class-playwrightreportlogger/#loglevel-1) | one entry; the levels |
 | [`step`](/POMWright/api/step/) | the `@step` decorator |
+| [`StepDecorator`](/POMWright/api/step/#stepdecorator) | the type of the decorator `step()` returns |
 
 ## Errors
 

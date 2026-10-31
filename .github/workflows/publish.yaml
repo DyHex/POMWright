@@ -1,4 +1,14 @@
 name: Publish
+
+# Versions and publishes the package after CI succeeds on a push to main, with changesets/action: while changesets are
+# pending it opens or updates the "Version Packages" pull request; once that is merged, the next run publishes the new
+# version. npm authenticates this workflow by Trusted Publishing (OIDC), so it uses no npm token, and pnpm publish
+# records provenance from the same identity. The Trusted Publisher allows npm publish, so a version goes live when this
+# run publishes it; merging the Version Packages pull request is the human gate, and pr.yaml's Release window holds every
+# other pull request into main until the new version is on npm. The job runs in the npm
+# environment, which only main may deploy to, and the Trusted Publisher names it, so a publish.yaml on any other branch
+# cannot publish.
+
 on:
   workflow_run:
     workflows: [CI]
@@ -10,7 +20,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 permissions:
   contents: write
   pull-requests: write
-  id-token: write # npm provenance: the published tarball names this workflow run and its commit
+  id-token: write # npm Trusted Publishing (OIDC): npm authenticates this workflow and records provenance
 
 jobs:
   publish:
@@ -21,24 +31,67 @@ jobs:
       github.event.workflow_run.head_branch == 'main' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
+    # Only main may deploy to npm (the environment's branch rule), and the Trusted Publisher accepts a token only from
+    # this environment, so a publish.yaml pushed to another branch cannot publish.
+    environment: npm
     steps:
+      # a workflow_run checks out the newest commit on main when the run first started (a re-run keeps that commit),
+      # which may not be the one this CI run tested
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          fetch-depth: 0 # the guard reads main's history
+      # The guard (scripts/release-check.sh publish). It fails while main's tip, read from GitHub, has a version npm does
+      # not have and changesets are pending: changesets/action would not publish that version, and its next Version
+      # Packages pull request would bump past it, so the run says to revert the pull request that set it. Otherwise
+      # the release goes on only when the commit CI tested is main's tip and the checkout; when main has moved on, the
+      # newer commit's own run continues it, re-runs included.
+      - name: Continue only on the commit CI tested
+        id: tested
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: bash scripts/release-check.sh publish
+      - if: steps.tested.outputs.current == 'true'
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           version: 12.14.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - if: steps.tested.outputs.current == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24.x
           cache: "pnpm"
 
-      - run: pnpm install --frozen-lockfile
+      - if: steps.tested.outputs.current == 'true'
+        run: pnpm install --frozen-lockfile
+      # changesets/action v2 fails the run when the publish script fails; pnpm publish authenticates with the
+      # workflow's OIDC token (id-token: write above)
       - name: Create Release Pull Request or Publish
+        if: steps.tested.outputs.current == 'true'
         id: changesets
-        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
-          publish: pnpm run release
+          publish-script: pnpm run release
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      # Every version published here should carry a provenance attestation. This warns rather than fails: by the time it
+      # runs the version is published, and failing the run would not take it back.
+      - name: Check the provenance of what was published
+        if: steps.changesets.outputs.published == 'true'
+        shell: bash # -eo pipefail: a failed command anywhere in a pipe fails the step
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          # changeset publish runs pnpm publish, which hands the upload to npm with this environment
-          NPM_CONFIG_PROVENANCE: "true"
+          PUBLISHED: ${{ steps.changesets.outputs.published-packages }}
+        run: |
+          for version in $(jq -r '.[] | select(.name == "pomwright") | .version' <<<"$PUBLISHED"); do
+            url="https://registry.npmjs.org/-/npm/v1/attestations/pomwright@$version"
+            found=false
+            for _ in $(seq 1 20); do
+              if [ "$(curl -s -o /dev/null -w '%{http_code}' "$url")" = "200" ]; then
+                found=true
+                break
+              fi
+              sleep 30
+            done
+            if [ "$found" = true ]; then
+              echo "pomwright@$version has a provenance attestation: $url"
+            else
+              echo "::warning::No provenance attestation for pomwright@$version after 10 minutes. Check $url or run: npm view pomwright@$version dist --json"
+            fi
+          done

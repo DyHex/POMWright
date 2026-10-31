@@ -1,6 +1,10 @@
 # Keeps the commit pins of the GitHub Actions in .github/workflows and the npm dev dependencies of the root, test/ and
-# website/ current: one grouped pull request a month each, which CI checks like any other. @playwright/test is left
-# alone: its root and test/ pins are the peer floor, which moves only by decision, together with peerDependencies.
+# website/ current: once a month, one grouped pull request of minor and patch updates each, which CI checks like any
+# other. A major update comes as a pull request of its own, so a failing major never holds the routine updates.
+# @playwright/test is left alone: its root and test/ pins are the peer floor, which moves only by decision, together
+# with peerDependencies. Held majors, each tracked by an issue: typescript (#54: version 7 has no compiler API yet, which
+# the declaration build and two of the doc checks use) and @types/node (#55: it follows the Node version of contributors and
+# CI, 24).
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -11,6 +15,9 @@ updates:
       github-actions:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
   - package-ecosystem: npm
     directory: /website
     schedule:
@@ -19,16 +26,26 @@ updates:
       website:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: monthly
     ignore:
       - dependency-name: "@playwright/test"
+      - dependency-name: typescript # issue #54
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node" # issue #55
+        update-types: ["version-update:semver-major"]
     groups:
       root:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
   - package-ecosystem: npm
     directory: /test
     schedule:
@@ -36,7 +53,12 @@ updates:
     ignore:
       - dependency-name: "@playwright/test"
       - dependency-name: pomwright
+      - dependency-name: "@types/node" # issue #55
+        update-types: ["version-update:semver-major"]
     groups:
       harness:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch

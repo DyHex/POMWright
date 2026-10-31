@@ -4,6 +4,10 @@ import { createRegistryWithAccessors } from "pomwright";
 
 const createRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page);
 
+// The one page here, in the last test, is a document set with page.setContent, a stand-in for a page the test server
+// serves: which element a chain matches depends on the DOM alone, however the document arrived, so it could hide only
+// what loading a page brings (scripts, frames, another origin).
+
 test("the terminal path cannot be skipped", async ({ page }) => {
 	type Paths = "root" | "root.target";
 
@@ -20,6 +24,23 @@ test("the terminal path cannot be skipped", async ({ page }) => {
 	// @ts-expect-error skip has no form without a sub-path
 	expect(() => query.skip()).toThrowError('"undefined" is not a valid sub-path of "root.target".');
 	expect(`${query.getNestedLocator().describe("")}`).toEqual("locator('div.root').locator('.child')");
+});
+
+test("unskip takes an ancestor too: not the query's own path, and not without a sub-path", async ({ page }) => {
+	type Paths = "root" | "root.target";
+
+	const { add, getLocatorSchema } = createRegistry<Paths>(page);
+
+	add("root").locator("div.root");
+	add("root.target").locator(".child");
+
+	const query = getLocatorSchema("root.target");
+	// @ts-expect-error unskip accepts the ancestors only
+	expect(() => query.unskip("root.target")).toThrowError(
+		'unskip() cannot unskip "root.target": it is not skipped in this query.',
+	);
+	// @ts-expect-error unskip has no form without a sub-path
+	expect(() => query.unskip()).toThrowError('"undefined" is not a valid sub-path of "root.target".');
 });
 
 test("skip on an ancestor leaves it out of the chain", async ({ page }) => {
@@ -125,4 +146,23 @@ test.describe("against the /testfilters page", () => {
 		await expect(testFilters.getNestedLocator("body.section@playground.button")).toHaveCount(4);
 		await expect(testFilters.getLocatorSchema("body.section@playground.button").getNestedLocator()).toHaveCount(4);
 	});
+});
+
+test("an update() or replace() builder taken before skip() cannot change the skipped segment", async ({ page }) => {
+	type Paths = "root" | "root.button";
+
+	const { add, getLocatorSchema } = createRegistry<Paths>(page);
+	await page.setContent('<section id="a"><button>A</button></section><section id="b"><button>B</button></section>');
+
+	add("root").locator("#a");
+	add("root.button").getByRole("button");
+
+	const query = getLocatorSchema("root.button");
+	const pendingUpdate = query.update("root");
+	const pendingReplace = query.replace("root");
+	query.skip("root");
+	const unskip = 'it is skipped in this query; call unskip("root") first.';
+	expect(() => pendingUpdate.locator("#b")).toThrowError(`update() cannot apply to "root": ${unskip}`);
+	expect(() => pendingReplace.getByRole("region")).toThrowError(`replace() cannot apply to "root": ${unskip}`);
+	await expect(query.unskip("root").getNestedLocator()).toHaveText("A");
 });

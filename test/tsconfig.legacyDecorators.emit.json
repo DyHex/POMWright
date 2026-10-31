@@ -1,0 +1,16 @@
+{
+	// @step's legacy decorator calls as tsc writes them: emits step-locations/legacy/legacyWidget.ts with
+	// experimentalDecorators, as CommonJS, into .legacy-decorators (gitignored), which
+	// step-locations/legacyDecorators.spec.ts runs. Run by pnpm typecheck and pack-test.sh.
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"experimentalDecorators": true,
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"verbatimModuleSyntax": false,
+		"noEmit": false,
+		"rootDir": "./step-locations/legacy",
+		"outDir": "./.legacy-decorators"
+	},
+	"files": ["step-locations/legacy/legacyWidget.ts"]
+}

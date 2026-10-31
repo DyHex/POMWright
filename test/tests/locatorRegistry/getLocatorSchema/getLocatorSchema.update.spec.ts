@@ -1,5 +1,5 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
-import { LocatorRegistryInternal } from "../../../../src/locators";
+import { createRegistryWithAccessors } from "pomwright";
 
 test("replace changes intermediate definitions without mutating registry", async ({ testFilters }) => {
 	const original = testFilters.getNestedLocator("body.section.heading");
@@ -252,7 +252,7 @@ test("replace switches locator strategies and keeps the filter and index steps; 
 
 test("update getByRole overloads preserve patch semantics without undefined placeholders", async ({ page }) => {
 	type LocalPath = "overload" | "overload.target";
-	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	const registry = createRegistryWithAccessors<LocalPath>(page).registry;
 
 	registry.add("overload").locator("body");
 	registry.add("overload.target").getByRole("button", { name: "initial" }).filter({ hasText: "initial" }).nth(0);
@@ -282,7 +282,7 @@ test("update getByRole overloads preserve patch semantics without undefined plac
 
 test("update overloads cover multiple strategies and retain filter/index steps", async ({ page }) => {
 	type LocalPath = "update.text" | "update.locator" | "update.frame";
-	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	const registry = createRegistryWithAccessors<LocalPath>(page).registry;
 
 	registry.add("update.text").getByText("seed");
 	registry.add("update.locator").locator(".seed");
@@ -344,7 +344,7 @@ test("replace and update accept ids verbatim and RegExp ids as patterns", async 
 
 test("update follows JSON Merge Patch for options", async ({ page }) => {
 	type LocalPath = "root" | "root.btn" | "root.sel";
-	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	const registry = createRegistryWithAccessors<LocalPath>(page).registry;
 	registry.add("root").locator("body");
 	registry.add("root.btn").getByRole("button", { name: "Login", exact: true });
 	registry.add("root.sel").locator("section", { hasText: "x" });
@@ -387,7 +387,7 @@ test("update follows JSON Merge Patch for options", async ({ page }) => {
 
 test("update keeps the registered strategy and names replace() for another", async ({ page }) => {
 	type LocalPath = "root" | "root.btn" | "root.item";
-	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	const registry = createRegistryWithAccessors<LocalPath>(page).registry;
 	registry.add("root").locator("body");
 	registry.add("root.btn").getByRole("button");
 	registry.add("root.item").locator("li").filter({ hasText: "x" }).nth(0);
@@ -409,7 +409,7 @@ test("update keeps the registered strategy and names replace() for another", asy
 
 test("update and replace reject an empty primary only where Playwright cannot use it", async ({ page }) => {
 	type LocalPath = "root" | "root.sel" | "root.btn" | "root.frame" | "root.tid" | "root.txt";
-	const registry = new LocatorRegistryInternal<LocalPath>(page);
+	const registry = createRegistryWithAccessors<LocalPath>(page).registry;
 	registry.add("root").locator("body");
 	registry.add("root.sel").locator("section");
 	registry.add("root.btn").getByRole("button");

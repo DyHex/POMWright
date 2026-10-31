@@ -3,6 +3,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { createFakePage, type FakeLocator } from "./fakePage";
 import type { LocatorQueryBuilder } from "./locatorQueryBuilder";
 import { LocatorRegistryInternal } from "./locatorRegistry";
+import type { LocatorChainPaths } from "./types";
 
 type Paths = "main" | "list" | "list.item";
 // Building a query never touches the page; resolution is covered by the integration specs.
@@ -27,6 +28,22 @@ describe("types", () => {
 		expectTypeOf(query.describe("d")).toEqualTypeOf<LocatorQueryBuilder<Paths, "list.item">>();
 		expectTypeOf(query.update().getByRole("listitem")).toEqualTypeOf<LocatorQueryBuilder<Paths, "list.item">>();
 		expectTypeOf(query.replace().getByRole("listitem")).toEqualTypeOf<LocatorQueryBuilder<Paths, "list.item">>();
+	});
+
+	it("sub-paths are typed per member of the path union: literals, template members and string", () => {
+		// a literal member when it is a segment of the chain, never a namespace that is not a declared path
+		expectTypeOf<LocatorChainPaths<"main" | "main.form.submit" | "footer", "main.form.submit">>().toEqualTypeOf<
+			"main" | "main.form.submit"
+		>();
+		// a template member for each segment it matches: the query's own path and template ancestors
+		expectTypeOf<
+			LocatorChainPaths<"main" | "main.orders" | `main.orders.row@${string}`, "main.orders.row@1042">
+		>().toEqualTypeOf<"main" | "main.orders" | "main.orders.row@1042">();
+		expectTypeOf<LocatorChainPaths<"main" | `main.tab@${string}`, "main.tab@open.title">>().toEqualTypeOf<
+			"main" | "main.tab@open" | "main.tab@open.title"
+		>();
+		// a string member as any string, which the runtime checks
+		expectTypeOf<LocatorChainPaths<string, "main.list.item">>().toEqualTypeOf<string>();
 	});
 });
 
@@ -69,7 +86,8 @@ const typeContract = (registry: LocatorRegistryInternal<Paths>) => {
 };
 void typeContract;
 
-// Runtime: a fake page records the chain each locator was built from.
+// Runtime: a fake page records the chain each locator was built from (fakePage.ts says what it stands in for and could
+// hide); test/tests/locatorRegistry/getLocatorSchema/ builds and resolves the queries for real.
 type ChainPaths = "main" | "main.list" | "main.list.item" | "a" | "a.b.c";
 const createChainRegistry = () => {
 	const registry = new LocatorRegistryInternal<ChainPaths>(createFakePage());
@@ -81,6 +99,16 @@ const createChainRegistry = () => {
 	return registry;
 };
 const REGISTERED = "locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').nth(0)";
+
+describe("update with an explicit undefined first argument", () => {
+	it("keeps the registered one, as an omitted argument does, with or without options", () => {
+		const query = () => createChainRegistry().getLocatorSchema("main.list.item");
+		expect(String(query().update().locator(undefined, { hasText: "Open" }).getLocator())).toBe(
+			"locator('li', { hasText: 'Open' }).nth(0)",
+		);
+		expect(String(query().update().locator(undefined).getLocator())).toBe("locator('li').nth(0)");
+	});
+});
 
 describe("skip and unskip", () => {
 	it("leave an ancestor out of the chain and bring it back exactly as it was", () => {
@@ -117,6 +145,17 @@ describe("skip and unskip", () => {
 		);
 		expect(() => skipped().nth("main.list", 1)).toThrowError(`nth() cannot apply to "main.list": ${unskip}`);
 		expect(() => skipped().clearSteps("main.list")).toThrowError(`clearSteps() cannot apply to "main.list": ${unskip}`);
+	});
+
+	it("reject a change from an update() or replace() builder kept from before the skip, changing nothing", () => {
+		const unskip = 'it is skipped in this query; call unskip("main.list") first.';
+		const query = createChainRegistry().getLocatorSchema("main.list.item");
+		const pendingUpdate = query.update("main.list");
+		const pendingReplace = query.replace("main.list");
+		query.skip("main.list");
+		expect(() => pendingUpdate.locator("ol")).toThrowError(`update() cannot apply to "main.list": ${unskip}`);
+		expect(() => pendingReplace.getByRole("list")).toThrowError(`replace() cannot apply to "main.list": ${unskip}`);
+		expect(String(query.unskip("main.list").getNestedLocator())).toBe(REGISTERED);
 	});
 
 	it("leave the query unchanged when such a call throws", () => {
@@ -169,6 +208,36 @@ describe("sub-path errors", () => {
 		}
 		expect(message).toBe('"main" is not a valid sub-path of "a.b.c".');
 	});
+
+	it("say when the segment was registered after the query was taken, and how to see it", () => {
+		const registry = createChainRegistry();
+		const query = registry.getLocatorSchema("a.b.c") as unknown as {
+			filter: (path: string, filter: object) => unknown;
+		};
+		// "a.b" is outside ChainPaths: registered through a wide view of the registry, as run-time paths are
+		(registry as unknown as LocatorRegistryInternal<string>).add("a.b").locator("div");
+		expect(() => query.filter("a.b", { hasText: "x" })).toThrowError(
+			'"a.b" is not a valid sub-path of "a.b.c". It is a segment of that path, and it was registered after this query was taken; take a new query with getLocatorSchema("a.b.c") to use it.',
+		);
+		const fresh = registry.getLocatorSchema("a.b.c") as unknown as {
+			filter: (path: string, filter: object) => unknown;
+		};
+		expect(() => fresh.filter("a.b", { hasText: "x" })).not.toThrow();
+	});
+
+	it("are thrown at run time on a registry typed <string>, where every sub-path compiles", () => {
+		const registry = new LocatorRegistryInternal<string>({} as Page);
+		registry.add("main").locator("main");
+		registry.add("main.list").getByRole("list");
+		registry.add("main.list.item").getByRole("listitem");
+		registry.add("footer").locator("footer");
+		const query = registry.getLocatorSchema("main.list.item");
+		expect(() => query.nth("footer", 0)).toThrowError('"footer" is not a valid sub-path of "main.list.item".');
+		expect(() => query.skip("main.list.item")).toThrowError(
+			'skip() cannot skip "main.list.item": it is the path this query resolves; skip one of its ancestors.',
+		);
+		expect(() => query.nth("main.list", 0)).not.toThrow();
+	});
 });
 
 describe("describe on a query", () => {
@@ -212,6 +281,15 @@ describe("the any-frame form in a query", () => {
 		expect(() => added.replace("main.frame").frameLocator()).toThrowError(
 			'replace() cannot apply to "main.frame": it has filter or nth steps, and frameLocator() without a selector takes none; call clearSteps("main.frame") first.',
 		);
+	});
+
+	it("describe() on a query of the any-frame path throws at the call, as filter() and nth() do", () => {
+		const query = createFrameRegistry().getLocatorSchema("any");
+		expect(() => query.describe("all frames")).toThrowError(anyFrameSteps("describe()", "any"));
+		expect(() => createFrameRegistry().getLocatorSchema("any").describe("")).toThrowError(
+			anyFrameSteps("describe()", "any"),
+		);
+		expect(() => createFrameRegistry().getLocatorSchema("any.btn").describe("a button")).not.toThrow();
 	});
 
 	it("after clearSteps the replacement resolves; query methods chain in any order", () => {

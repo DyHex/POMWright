@@ -47,7 +47,12 @@ source's strategy and a copy without the source's steps would be another locator
 registered once and reused where needed.
 
 The source must be registered before the copy: `No locator schema registered for path "nope.path".` otherwise. A path
-cannot reuse itself (a compile error).
+cannot reuse itself: written as one literal, that is a compile error; through a variable, which may hold another path,
+it compiles and `add` throws:
+
+```text
+Locator reuse path cannot be the same as registration path: "main.heading".
+```
 
 ## Seeds: `createReusable`
 
@@ -74,7 +79,7 @@ Use the result of a seed's method: `row.nth(0);` on its own line does nothing.
 
 A path that reuses a seed may change the seed's definition once, with the method of the seed's strategy, as `update()`
 patches a definition (see [Queries](/POMWright/docs/queries/#patching-a-definition-update)): a value replaces, `null`
-deletes, an omitted value keeps the seed's. `filter`, `nth` and `describe` follow as usual:
+deletes, an omitted or `undefined` value, the first argument included, keeps the seed's. `filter`, `nth` and `describe` follow as usual:
 
 ```ts
 import type { LocatorRegistry } from "pomwright";

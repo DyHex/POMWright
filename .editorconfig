@@ -1,4 +1,5 @@
-# This .editorconfig file is used to ensure consistent display of code in GitHub, especially regarding indentation.
+# Indentation for editors and for GitHub's display: code is indented with tabs, as biome formats it; YAML and Markdown
+# with two spaces, as every such file here is (a tab cannot indent YAML).
 
 # top-most EditorConfig file
 root = true
@@ -6,4 +7,12 @@ root = true
 # All files
 [*]
 indent_style = tab
+indent_size = 2
+
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.{md,mdx}]
+indent_style = space
 indent_size = 2

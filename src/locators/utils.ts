@@ -69,37 +69,42 @@ export const formatLocatorSchemaPathForError = (path: string): string =>
 export const describeReceived = (value: unknown): string =>
 	value === null || (typeof value !== "object" && typeof value !== "function") ? String(value) : "an object";
 
-export const validateLocatorSchemaPath = (path: string) => {
+/**
+ * Checks a path against every rule, in a fixed order (whitespace, a leading dot, a trailing dot, consecutive dots), the
+ * order `LocatorSchemaPathFormat` names them at compile time. One broken rule gives its own message; several give one
+ * message naming them all. The path is shown escaped when whitespace is among them.
+ */
+export const validateLocatorSchemaPath = (path: unknown) => {
 	if (typeof path !== "string") {
 		throw new Error(`LocatorSchemaPath must be a string; received ${describeReceived(path)}.`);
 	}
 	if (!path) {
 		throw new Error("LocatorSchemaPath string cannot be empty");
 	}
-
-	// Runtime: reject any Unicode whitespace (aligned with compile-time)
-	if (RUNTIME_WHITESPACE_REGEX.test(path)) {
-		const escaped = formatLocatorSchemaPathForError(path);
-		throw new Error(`LocatorSchemaPath string cannot contain whitespace chars: ${escaped}`);
+	const broken = [
+		RUNTIME_WHITESPACE_REGEX.test(path) && "contain whitespace chars",
+		path.startsWith(".") && "start with a dot",
+		path.endsWith(".") && "end with a dot",
+		path.includes("..") && "contain consecutive dots",
+	].filter((rule) => rule !== false);
+	if (broken.length === 0) {
+		return;
 	}
+	const shown = broken[0] === "contain whitespace chars" ? formatLocatorSchemaPathForError(path) : path;
+	const last = broken.pop();
+	const rules = broken.length === 0 ? `cannot ${last}` : `cannot ${broken.join(", cannot ")} and cannot ${last}`;
+	throw new Error(`LocatorSchemaPath string ${rules}: ${shown}`);
+};
 
-	if (path.startsWith(".")) {
-		throw new Error(`LocatorSchemaPath string cannot start with a dot: ${path}`);
-	}
-
-	if (path.endsWith(".")) {
-		throw new Error(`LocatorSchemaPath string cannot end with a dot: ${path}`);
-	}
-
-	if (path.includes("..")) {
-		throw new Error(`LocatorSchemaPath string cannot contain consecutive dots: ${path}`);
-	}
+/** A path's chain, each ancestor then the path itself, for a path already checked. */
+export const schemaPathChain = (path: string): string[] => {
+	const parts = path.split(".");
+	return parts.map((_part, index) => parts.slice(0, index + 1).join("."));
 };
 
 export const expandSchemaPath = (path: string): string[] => {
 	validateLocatorSchemaPath(path);
-	const parts = path.split(".");
-	return parts.map((_part, index) => parts.slice(0, index + 1).join("."));
+	return schemaPathChain(path);
 };
 
 /**
@@ -117,19 +122,43 @@ export const escapeCssString = (value: string): string =>
 		.replace(/\f/g, "\\c ");
 
 /**
- * Serialises a RegExp for Playwright's selector syntax (`internal:attr=[id=/source/flags]`).
- * Port of Playwright's `escapeRegexForSelector` (playwright-core, Apache-2.0): unescaped quotes
- * and backticks are backslash-escaped, `>>` is escaped so the selector parser does not split the
- * chain, and unicode-mode regexes (`u`, `v`) are passed through as-is because unicode mode rejects
- * identity escapes. All flags are kept; POMWright adds no regex semantics of its own.
+ * Serializes a RegExp for Playwright's selector syntax (`internal:attr=[id=/source/flags]`).
+ * Playwright's chain parser skips the character after a backslash, takes a quote or a backtick as
+ * the start of a quoted string, and splits the chain at `>>`, so the selector text may hold none of
+ * them unescaped. One pass over the source, escape pairs read whole: outside unicode mode a quote
+ * or a backtick gets a backslash, as in Playwright's `escapeRegexForSelector` (playwright-core,
+ * Apache-2.0); unicode mode (`u`, `v`) rejects that identity escape, so there it is written by its
+ * code (`\x22`, `\x27`, `\x60`), the backslash of a `\`` in a `v` class included. The second `>` of
+ * each unescaped `>>` is escaped (`\>`, or `\x3e` in unicode mode), so a named group's closing `>`
+ * stays. Playwright's own helper uses string replacements, which miss the second of two quotes in a
+ * row, double the backslash of a `\>` before a `>`, and escape a named group's closing `>`; a pass
+ * that reads escape pairs whole avoids all three. Only the selector text changes, never the RegExp
+ * it describes. All flags are kept; POMWright adds no regex semantics of its own.
  */
 export const escapeRegExpForSelector = (re: RegExp): string => {
-	if (re.flags.includes("u") || re.flags.includes("v")) {
-		return String(re);
+	const unicode = re.flags.includes("u") || re.flags.includes("v");
+	const quote = (char: string) => (unicode ? `\\x${char.charCodeAt(0).toString(16)}` : `\\${char}`);
+	const isQuote = (char: string) => char === '"' || char === "'" || char === "`";
+	let text = "";
+	let afterGt = false;
+	for (let index = 0; index < re.source.length; index++) {
+		const char = re.source.charAt(index);
+		if (char === "\\") {
+			const escaped = re.source.charAt(++index);
+			text += unicode && isQuote(escaped) ? quote(escaped) : `\\${escaped}`;
+			afterGt = false;
+		} else if (isQuote(char)) {
+			text += quote(char);
+			afterGt = false;
+		} else if (char === ">") {
+			text += afterGt ? (unicode ? "\\x3e" : "\\>") : ">";
+			afterGt = !afterGt;
+		} else {
+			text += char;
+			afterGt = false;
+		}
 	}
-	return String(re)
-		.replace(/(^|[^\\])(\\\\)*(["'`])/g, "$1$2\\$3")
-		.replace(/>>/g, "\\>\\>");
+	return `/${text}/${re.flags}`;
 };
 
 /**
@@ -185,11 +214,52 @@ export const copyValue = <Value>(value: Value): Value =>
 	value instanceof RegExp ? (new RegExp(value) as Value) : value;
 
 /**
- * An options or filter object, copied with every value through `copyValue`. Its values are leaves (strings, numbers,
- * booleans, RegExps, Locators), so nothing below it is left to copy.
+ * The entries of an options, patch or filter object as Playwright reads them, by property access: the object's own
+ * properties, enumerable or not, then the properties of its prototypes up to `Object.prototype`, such as a class's
+ * getters or an inherited default. Methods are left out, except an own enumerable one, which `Object.entries` keeps.
+ */
+export const readFields = (fields: object): [string, unknown][] => {
+	const entries: [string, unknown][] = Object.entries(fields);
+	let prototype: object | null = Object.getPrototypeOf(fields);
+	const ownNames = Object.getOwnPropertyNames(fields);
+	// a plain object whose own properties are all enumerable, the common case, has nothing more to read
+	if ((prototype === null || prototype === Object.prototype) && ownNames.length === entries.length) {
+		return entries;
+	}
+	const seen = new Set(entries.map(([key]) => key));
+	// own properties that are not enumerable (Object.defineProperty), which Playwright reads by property access too
+	for (const name of ownNames) {
+		if (seen.has(name)) {
+			continue;
+		}
+		seen.add(name);
+		const value: unknown = (fields as Record<string, unknown>)[name];
+		if (typeof value !== "function") {
+			entries.push([name, value]);
+		}
+	}
+	for (; prototype !== null && prototype !== Object.prototype; prototype = Object.getPrototypeOf(prototype)) {
+		for (const name of Object.getOwnPropertyNames(prototype)) {
+			if (seen.has(name)) {
+				continue;
+			}
+			seen.add(name);
+			const value: unknown = (fields as Record<string, unknown>)[name];
+			if (typeof value !== "function") {
+				entries.push([name, value]);
+			}
+		}
+	}
+	return entries;
+};
+
+/**
+ * An options or filter object, copied with every value through `copyValue`, read as Playwright reads it
+ * (`readFields`). Its values are leaves (strings, numbers, booleans, RegExps, Locators), so nothing below it is left to
+ * copy.
  */
 export const copyFields = <Fields extends object>(fields: Fields): Fields =>
-	Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, copyValue(value)])) as Fields;
+	Object.fromEntries(readFields(fields).map(([key, value]) => [key, copyValue(value)])) as Fields;
 
 /** A filter as given, copied with `copyFields`: a copy shares nothing a caller can change. */
 export const copyFilter = <Filter>(filter: Filter): Filter =>
@@ -459,7 +529,7 @@ export const mergeOptions = <Options extends object>(
 		return undefined;
 	}
 	const merged: Record<string, unknown> = { ...(current ?? {}) };
-	for (const [key, value] of Object.entries(patch)) {
+	for (const [key, value] of readFields(patch)) {
 		if (value === undefined) {
 			continue;
 		}

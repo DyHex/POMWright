@@ -22,8 +22,12 @@ and no browser handling of its own; your tests stay Playwright tests.
 - **Node.js 20** or later, the version Playwright itself needs.
 - **`"@playwright/test": ">=1.64.0 <2.0.0"`**. POMWright declares it as a peer dependency: your project installs
   Playwright, and POMWright uses that copy.
-- **TypeScript** is what these docs use. POMWright also works from JavaScript; every rule its types state is also
-  checked at runtime.
+- **TypeScript** is what these docs use. POMWright also works from JavaScript: paths, the first argument of every
+  locator method, URLs and session storage values are checked at runtime as the types check them. An index is not:
+  `nth` hands it to Playwright as given, as Playwright's `locator.nth` takes it (see
+  [indices](/POMWright/docs/filters-and-indices/#indices-nth)). Nor is the value of a key with a codec: it goes to its
+  codec as given, so `json<T>()` stores whatever `JSON.stringify` makes of it, while a key without a codec must be a
+  string (see [codecs](/POMWright/docs/session-storage/#codecs-for-structured-values)).
 
 ## Install
 
@@ -50,9 +54,14 @@ holds two copies of POMWright, even when some files `import` it and others `requ
 
 ## TypeScript settings
 
-POMWright needs no `tsconfig.json` setting: with TypeScript's defaults everything in these docs compiles, and
-Playwright compiles your TypeScript itself ([TypeScript](https://playwright.dev/docs/test-typescript)). Three settings
-change how code that uses POMWright is checked. None is required, and each only matters when you turn it on:
+POMWright needs no `tsconfig.json` setting of its own. Its declarations compile with TypeScript 5.0 and later, without
+`skipLibCheck`. Below TypeScript 5.2, Playwright's declarations and Node's may need it, depending on `@types/node`:
+with `@types/node` 24, 5.0 and 5.1 report errors in both, and with 22, 5.0 reports them in Node's. Turn on
+`skipLibCheck` there, or use TypeScript 5.2 or later. Playwright compiles your TypeScript itself and does not check its
+types ([TypeScript](https://playwright.dev/docs/test-typescript)). To check them with `tsc`, note that TypeScript 6
+includes only the `@types` packages a tsconfig lists, and Playwright's own declarations need Node's, so a Playwright
+project lists `"types": ["node"]`, with or without POMWright. With that, everything in these docs compiles. Three
+settings change how code that uses POMWright is checked. None is required, and each only matters when you turn it on:
 
 - **Decorators.** Nothing to enable. [`@step`](/POMWright/docs/test-steps/) works with TypeScript's standard
   decorators, the default, and with `experimentalDecorators: true`, in your editor and in Playwright's runner. Use
@@ -61,8 +70,8 @@ change how code that uses POMWright is checked. None is required, and each only 
   `pageActionsToPerformAfterNavigation()`, as on any method that replaces one from a base class, and reports TS4114
   without it. With the setting off, the keyword is allowed but not needed. `defineLocators()` never needs it.
 - **`declaration: true`.** Off by default, and only needed by a project that publishes its page objects as a package.
-  When it is on, every exported value's type must be nameable. POMWright's types are, except in one pattern; see
-  [Locator modules](/POMWright/docs/locator-modules/#what-a-module-may-return).
+  When it is on, every exported value's type must be nameable. POMWright's types are, with two exceptions; see
+  [`declaration: true`](/POMWright/docs/typescript/#declaration-true).
 
 The examples in these docs are compiled with `strict` and `noUncheckedIndexedAccess`.
 

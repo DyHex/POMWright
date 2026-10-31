@@ -103,10 +103,35 @@ object where a string belongs, gets the missing-value message: `locator requires
 The only call without a first argument is `frameLocator()`, which registers Playwright's any-frame locator (see
 [Frames](/POMWright/docs/frames/#any-frame-framelocator-without-a-selector)).
 
+### A RegExp in unicode mode
+
+:::note
+A RegExp with the `u` or `v` flag that holds a quote, an apostrophe or a backtick breaks the locators Playwright builds
+from it once anything follows them: `getByRole`'s `name`, `getByText`, `getByLabel`, `getByPlaceholder`,
+`getByAltText`, `getByTitle`, `getByTestId` and `filter`'s `hasText`. In Playwright alone,
+`page.getByRole("button", { name: /don't save/iu })` works and its `.first()` does not parse. POMWright always follows
+a resolved locator with its description, so such a registration fails whenever it is resolved. Write the character by
+its code (`/don\x27t save/iu`) or leave out `u`. Playwright declined to change this
+([microsoft/playwright#40446](https://github.com/microsoft/playwright/issues/40446)). `getById` writes the character by
+its code itself (see [Locating by id](/POMWright/docs/locating-by-id/#flags)).
+:::
+
+### A RegExp outside unicode mode
+
+:::note
+Outside unicode mode, Playwright puts a backslash before each quote, apostrophe and backtick of the pattern, as its
+selector syntax needs, but misses the second of two in a row, and puts one before a named group's closing `>` when
+another `>` follows it. In Playwright alone, `page.getByRole("button", { name: /don["']t save/i })` works and its
+`.first()` does not parse, so such a registration fails whenever it is resolved, as in unicode mode above; and
+`page.getByText(/^(?<g>>?)x$/)` does not parse even alone. Write that character by its code
+(`/don["\x27]t save/i`, `/^(?<g>\x3e?)x$/`). `getById` reads the pattern whole and needs neither (see
+[Locating by id](/POMWright/docs/locating-by-id/#flags)).
+:::
+
 ## One registration per path
 
-A path holds one locator. Registering it again throws at the second method call and shows both records, the existing
-one and the attempted one:
+A path holds one locator. Registering it again throws at the second locator method, or, with `{ reuse }`, at `add`
+itself, which registers at once, and shows both records, the existing one and the attempted one:
 
 ```text
 A locator schema with the path "list.items" already exists.
@@ -128,6 +153,9 @@ The message spreads the JSON over more lines; it is shortened here. Calling a se
 throws too: `A locator definition for "main.button" has already been provided; only one locator type can be set for a
 registration.` A call that throws registers nothing and changes nothing that is registered.
 
+Since each path has one registration, and every chain through it is built from that registration, a change to the
+page is an edit in one place. See [when the page changes](/POMWright/docs/locator-paths/#when-the-page-changes).
+
 ## Registered locators do not change
 
 The registry keeps a copy of every options and filter object you pass, so changing the object afterwards changes
@@ -145,8 +173,11 @@ options.name = "Cancel";
 registry.getLocator("form.button@save"); // getByRole('button', { name: 'Save' })
 ```
 
-The copy reaches every value you pass. A RegExp is copied too, whether it is the first argument, an option or a filter
-value, so rewriting yours afterwards with `compile()` changes nothing registered. A `Locator` is kept as it is: every
+The copy reaches every value you pass, and reads an options or filter object as Playwright does, by property access:
+every property Playwright reads, an own property that is not enumerable, a getter on a class or a value from the
+object's prototype, is copied with the rest, a method is not. A RegExp is copied too, whether it is
+the first argument, an option or a filter value, so rewriting yours afterwards with `compile()` changes nothing
+registered. A `Locator` is kept as it is: every
 method of a `Locator` returns a new one, so the one you passed cannot change. This holds for `add`, `createReusable`
 and queries alike. To change a locator for one use, query it; see [Queries](/POMWright/docs/queries/).
 
@@ -167,11 +198,32 @@ item.filter({ hasText: "Open" }); // throws; list.item stays getByRole('listitem
 ```
 
 ```text
-filter() cannot apply to "list.item": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+filter() cannot apply to "list.item": its registration was ended by add("list"); give a registration all its steps in its add(…) chain, or query the path for one use.
 ```
 
 So nothing that reads the registry ever sees a registration change. In a page object, the check that runs after
 `defineLocators()` ends the last one.
+
+A registry call in a step's own arguments counts too, since JavaScript runs a call's arguments before the call: a
+`filter`'s arguments, and a `locator`'s options, which take a `has` locator. In
+`add("list.item@open").getByRole("listitem").filter({ has: registry.getLocator("badge") })`, `getLocator` ends the
+registration of `list.item@open` before `filter` runs. The message names the call and the two ways to write such a
+filter, a path or a locator resolved before `add(…)` (see
+[a path, a locator or a chain](/POMWright/docs/filters-and-indices/#a-path-a-locator-or-a-chain)):
+
+```text
+filter() cannot apply to "list.item@open": its registration was ended by getLocator("badge"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "badge" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+```
+
+In `locator()`'s options, the path goes in a `filter` step instead, since Playwright treats
+`locator(selector, { has })` and `locator(selector).filter({ has })` alike. A query in the arguments ends the
+registration too, at `getLocatorSchema`; the message then says to resolve it before `add(…)`, without the path, which
+would drop the query's changes:
+
+```text
+locator() cannot apply to "section@inline": its registration was ended by getLocator("heading@explorer"). If that call is in this locator's options, which run first, resolve the locator before add(…), or filter by a path in a step: .filter({ has: "heading@explorer" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+filter() cannot apply to "section@inline": its registration was ended by getLocatorSchema("heading@explorer"). If that query is in this filter's arguments, which run first, resolve it before add(…). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+```
 
 ## When locators are registered
 

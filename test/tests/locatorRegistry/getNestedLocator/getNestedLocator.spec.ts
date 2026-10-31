@@ -1,8 +1,8 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../../src/locators";
+import { createRegistryWithAccessors, type LocatorRegistry } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
 test("getNestedLocator should resolve chained locators automatically", async ({ page }) => {
 	type LocatorSchemaPaths =
@@ -13,21 +13,21 @@ test("getNestedLocator should resolve chained locators automatically", async ({ 
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
-	registry.add("topMenu").locator(".w3-top");
-	registry.add("topMenu.notifications").locator(".w3-dropdown-hover");
-	registry.add("topMenu.notifications.dropdown").locator(".w3-dropdown-content");
-	registry.add("topMenu.notifications.dropdown.item").locator(".w3-bar-item");
+	registry.add("topMenu").locator(".top");
+	registry.add("topMenu.notifications").locator(".dropdown-hover");
+	registry.add("topMenu.notifications.dropdown").locator(".dropdown-content");
+	registry.add("topMenu.notifications.dropdown.item").locator(".bar-item");
 
 	const manuallyChained = page
-		.locator(".w3-top")
-		.locator(".w3-dropdown-hover")
-		.locator(".w3-dropdown-content")
-		.locator(".w3-bar-item");
+		.locator(".top")
+		.locator(".dropdown-hover")
+		.locator(".dropdown-content")
+		.locator(".bar-item");
 
 	const automaticallyChained = registry.getNestedLocator("topMenu.notifications.dropdown.item");
 
 	expect(`${automaticallyChained.describe("")}`).toEqual(
-		"locator('.w3-top').locator('.w3-dropdown-hover').locator('.w3-dropdown-content').locator('.w3-bar-item')",
+		"locator('.top').locator('.dropdown-hover').locator('.dropdown-content').locator('.bar-item')",
 	);
 
 	expect(`${automaticallyChained.describe("")}`).toEqual(`${manuallyChained.describe("")}`);
@@ -42,17 +42,17 @@ test("getLocator returns the terminal locator while getNestedLocator builds the 
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
-	registry.add("topMenu").locator(".w3-top");
-	registry.add("topMenu.notifications").locator(".w3-dropdown-hover");
-	registry.add("topMenu.notifications.dropdown").locator(".w3-dropdown-content");
-	registry.add("topMenu.notifications.dropdown.item").locator(".w3-bar-item");
+	registry.add("topMenu").locator(".top");
+	registry.add("topMenu.notifications").locator(".dropdown-hover");
+	registry.add("topMenu.notifications.dropdown").locator(".dropdown-content");
+	registry.add("topMenu.notifications.dropdown.item").locator(".bar-item");
 
 	const direct = registry.getLocator("topMenu.notifications.dropdown.item");
 	const nested = registry.getNestedLocator("topMenu.notifications.dropdown.item");
 
-	expect(`${direct.describe("")}`).toEqual("locator('.w3-bar-item')");
+	expect(`${direct.describe("")}`).toEqual("locator('.bar-item')");
 	expect(`${nested.describe("")}`).toEqual(
-		"locator('.w3-top').locator('.w3-dropdown-hover').locator('.w3-dropdown-content').locator('.w3-bar-item')",
+		"locator('.top').locator('.dropdown-hover').locator('.dropdown-content').locator('.bar-item')",
 	);
 });
 
@@ -65,10 +65,10 @@ test("getNestedLocator returns a fresh locator each time", async ({ page }) => {
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
-	registry.add("topMenu").locator(".w3-top");
-	registry.add("topMenu.notifications").locator(".w3-dropdown-hover");
-	registry.add("topMenu.notifications.dropdown").locator(".w3-dropdown-content");
-	registry.add("topMenu.notifications.dropdown.item").locator(".w3-bar-item");
+	registry.add("topMenu").locator(".top");
+	registry.add("topMenu.notifications").locator(".dropdown-hover");
+	registry.add("topMenu.notifications.dropdown").locator(".dropdown-content");
+	registry.add("topMenu.notifications.dropdown.item").locator(".bar-item");
 
 	const first = registry.getNestedLocator("topMenu.notifications.dropdown.item");
 	const second = registry.getNestedLocator("topMenu.notifications.dropdown.item");
@@ -80,67 +80,67 @@ test.describe("getNestedLocator for locatorSchema with filter property", () => {
 	const cases = [
 		{
 			label: "role",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByRole("button"),
 			expected: "getByRole('button')",
 		},
 		{
 			label: "text",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByText("text"),
 			expected: "getByText('text')",
 		},
 		{
 			label: "label",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByLabel("label"),
 			expected: "getByLabel('label')",
 		},
 		{
 			label: "placeholder",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByPlaceholder("placeholder"),
 			expected: "getByPlaceholder('placeholder')",
 		},
 		{
 			label: "altText",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByAltText("altText"),
 			expected: "getByAltText('altText')",
 		},
 		{
 			label: "title",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByTitle("title"),
 			expected: "getByTitle('title')",
 		},
 		{
 			label: "locator",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").locator("locator"),
 			expected: "locator('locator')",
 		},
 		{
 			label: "testId",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getByTestId("testId"),
 			expected: "getByTestId('testId')",
 		},
 		{
 			label: "id",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getById("id"),
 			expected: `locator('[id="id"]')`,
 		},
 		{
 			label: "id with CSS-significant characters",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getById("a.b"),
 			expected: `locator('[id="a.b"]')`,
 		},
 		{
 			label: "id as RegExp",
-			register: (registry: LocatorRegistryInternal<"fictional.filter@undefined">) =>
+			register: (registry: LocatorRegistry<"fictional.filter@undefined">) =>
 				registry.add("fictional.filter@undefined").getById(/^a\.b$/),
 			expected: `locator('internal:attr=[id=/^a\\\\.b$/]')`,
 		},

@@ -9,12 +9,12 @@ on:
 
 permissions:
   contents: read
-  actions: read # checks.yaml reads the runs of this workflow to find the last green commit
 
-# One run at a time, in push order, so publish.yaml and pages.yaml, which start when a run succeeds, follow the order
-# of the commits: an older commit's run can never finish after a newer one's and deploy its site over the newer site.
-# A run that is waiting gives way to a newer push (GitHub keeps one waiting run per group); a running one is never
-# cancelled, so every run that starts finishes its checks.
+# One run at a time: GitHub keeps one running and one waiting run per group, a newer push replaces the waiting run, and
+# a running one is never canceled, so every run that starts finishes its checks. GitHub takes waiting runs in the
+# order they began waiting, not in push order, so two pushes seconds apart can run out of order; and a re-run of an
+# older run keeps its commit. Neither deploys an older commit over a newer one: pages.yaml deploys only main's tip and
+# publish.yaml goes on only on it, so deployments follow commit order.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -24,11 +24,10 @@ jobs:
     uses: ./.github/workflows/checks.yaml
     with:
       browsers: '["chromium", "firefox", "webkit"]'
-      workflow: main.yaml
-      node-floor: true # the chromium harness on Node 20 as well
+      older-node-lines: true # the chromium harness on Node 20 and 22 as well
 
-  # The gate. Its job id is the required status check of main ("build"): do not rename it without changing the
-  # branch protection rule with it.
+  # The gate. Its job id is the required status check of main ("build") in the ruleset main: checks: do not rename it
+  # without changing the ruleset with it.
   build:
     needs: checks
     if: always()

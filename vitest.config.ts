@@ -5,9 +5,9 @@ import { defineConfig } from "vitest/config";
 // tsup bundles from index.ts, so these files never reach the published package.
 //
 // typecheck: the same files are also type-checked with tsc on every run, so
-// `expectTypeOf` assertions and `// @ts-expect-error` lines are enforced in CI
-// (nothing else in the repo runs tsc). Vitest labels this mode experimental, which
-// is why package.json pins vitest to an exact version.
+// `expectTypeOf` assertions and `// @ts-expect-error` lines are enforced, here and in
+// CI; no other tsc run covers them (`pnpm typecheck` compiles test/). Vitest labels this
+// mode experimental, which is why package.json pins vitest to an exact version.
 export default defineConfig({
 	test: {
 		include: ["src/**/*.test.ts"],

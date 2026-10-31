@@ -23,14 +23,16 @@ import {
 	assertDescription,
 	cloneLocatorStrategyDefinition,
 	copyFilter,
-	expandSchemaPath,
 	isAnyFrameDefinition,
+	schemaPathChain,
 } from "./utils";
 
 /**
  * A query, what `getLocatorSchema(path)` returns: a private copy of the path's chain to change for one use and then
  * resolve. Its methods change this query and return it; the registry never changes. A method that takes a `subPath`
- * works on that segment of the chain, the path itself or a registered ancestor; without one, on the path itself.
+ * works on that segment of the chain, the path itself or a registered ancestor; without one, on the path itself. The
+ * `subPath` is typed per member of the path union: a literal member when it is a segment of the chain, a template member
+ * for each segment it matches, and a `string` member as any string, which the runtime checks.
  *
  * @example
  * ```ts
@@ -63,7 +65,8 @@ export class LocatorQueryBuilderInternal<
 		private readonly registry: LocatorRegistryInternal<LocatorSchemaPathType>,
 		private readonly path: LocatorSubstring,
 	) {
-		const chain = expandSchemaPath(path);
+		// the path was checked at getLocatorSchema
+		const chain = schemaPathChain(path);
 		this.chain = new Set(chain);
 		let hasTerminal = false;
 		for (const part of chain) {
@@ -96,7 +99,8 @@ export class LocatorQueryBuilderInternal<
 	 * @returns An update builder whose methods return this query.
 	 * @throws When `subPath` is not a registered segment of the chain (`"main.button@save" is not a valid sub-path of
 	 * "main.list.item".`), or when it is skipped in this query (`update() cannot apply to "main.list": it is skipped in
-	 * this query; call unskip("main.list") first.`).
+	 * this query; call unskip("main.list") first.`), at this call or, for a builder kept while the segment was skipped,
+	 * when the builder's method applies the change.
 	 *
 	 * @example
 	 * ```ts
@@ -265,7 +269,9 @@ export class LocatorQueryBuilderInternal<
 	 * @param description A string; `""` removes the description.
 	 * @returns This query.
 	 * @throws When the description is not a string (from JavaScript):
-	 * `describe requires a string for "main.list.item"; pass "" to remove the description.`
+	 * `describe requires a string for "main.list.item"; pass "" to remove the description.`; when the query's path is the
+	 * any-frame `frameLocator()`, which has no element to describe (replace the path first):
+	 * `describe() cannot apply to "anyFrame": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.`
 	 *
 	 * @example
 	 * ```ts
@@ -276,6 +282,7 @@ export class LocatorQueryBuilderInternal<
 	 */
 	describe(description: LocatorDescription): LocatorQueryBuilder<LocatorSchemaPathType, LocatorSubstring> {
 		assertDescription(description, { method: "describe", path: this.path });
+		this.ensureStepTarget("describe", this.path);
 		this.descriptions.set(this.path, description);
 		return this;
 	}
@@ -284,6 +291,8 @@ export class LocatorQueryBuilderInternal<
 		subPath: SubPath,
 		updates: LocatorUpdate,
 	) {
+		// checked again here: a builder kept from before a skip() must not change the skipped segment
+		this.ensureNotSkipped("update", subPath);
 		const merged = mergeLocatorDefinition(this.ensureSubPath(subPath), updates, subPath);
 		this.definitions.set(subPath, cloneLocatorStrategyDefinition(merged));
 		return this;
@@ -299,7 +308,8 @@ export class LocatorQueryBuilderInternal<
 	 * @returns An update builder whose methods return this query.
 	 * @throws When `subPath` is not a registered segment of the chain (`"main.button@save" is not a valid sub-path of
 	 * "main.list.item".`), or when it is skipped in this query (`replace() cannot apply to "main.list": it is skipped in
-	 * this query; call unskip("main.list") first.`).
+	 * this query; call unskip("main.list") first.`), at this call or, for a builder kept while the segment was skipped,
+	 * when the builder's method applies the change.
 	 *
 	 * @example
 	 * ```ts
@@ -333,6 +343,7 @@ export class LocatorQueryBuilderInternal<
 		subPath: SubPath,
 		updates: LocatorUpdate,
 	) {
+		this.ensureNotSkipped("replace", subPath);
 		const nextDefinition = buildReplacementDefinition(updates, subPath);
 		// the any-frame form has no element: it cannot be what this query resolves, nor carry steps
 		if (isAnyFrameDefinition(nextDefinition)) {
@@ -461,9 +472,12 @@ export class LocatorQueryBuilderInternal<
 		if (definition !== undefined) {
 			return definition;
 		}
-		const reason = this.chain.has(subPath)
-			? " It is a segment of that path, but no locator schema is registered for it."
-			: "";
+		// the query reads its own copy, taken at getLocatorSchema; the registry may have the segment by now
+		const reason = !this.chain.has(subPath)
+			? ""
+			: this.registry.has(subPath)
+				? ` It is a segment of that path, and it was registered after this query was taken; take a new query with getLocatorSchema("${this.path}") to use it.`
+				: " It is a segment of that path, but no locator schema is registered for it.";
 		throw new Error(`"${subPath}" is not a valid sub-path of "${this.path}".${reason}`);
 	}
 
@@ -475,8 +489,8 @@ export class LocatorQueryBuilderInternal<
 		}
 	}
 
-	/** An any-frame segment has no element, so a filter or index step on it is rejected at the call. */
-	private ensureStepTarget(method: "filter" | "nth", subPath: string) {
+	/** An any-frame segment has no element, so a filter, an index or a description on it is rejected at the call. */
+	private ensureStepTarget(method: "filter" | "nth" | "describe", subPath: string) {
 		if (isAnyFrameDefinition(this.ensureSubPath(subPath))) {
 			throw new Error(anyFrameStepsMessage(`${method}()`, subPath));
 		}

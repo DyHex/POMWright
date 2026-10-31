@@ -1,8 +1,11 @@
 #!/bin/bash
 
 # Builds and packs pomwright, installs the packed package into test/ with a frozen lockfile, type-checks the harness
-# and the documentation's examples against the published declarations, checks that the API reference and the doc
-# comments cover those declarations, downloads the browsers and runs Playwright.
+# and the examples of the documentation and the README against the published declarations, checks that the API
+# reference and the doc comments cover those declarations and that the Error messages page lists every message the
+# code throws, downloads the browsers and runs Playwright, then checks where the report places steps
+# (test/playwright.steps.config.ts) and, outside CI, that no page of the test server loads anything from another host
+# (test-server-check.sh).
 # Arguments go to `playwright test`:
 #   pnpm pack-test --project=chromium tests/testApp/testIds.spec.ts --reporter=line
 # Never needs sudo. Playwright's system libraries are a once-per-machine step (`pnpm -C test exec playwright
@@ -34,9 +37,23 @@ if [[ -n "${PLAYWRIGHT_VERSION:-}" ]]; then
 fi
 
 pnpm -C "$SCRIPT_DIR" exec tsc --noEmit -p test
+# every public member of the installed package, for the declaration emit below
+node "$SCRIPT_DIR/scripts/generate-emit-members.mjs"
 pnpm -C "$SCRIPT_DIR" exec tsc -p test/tsconfig.declarations.json
+pnpm -C "$SCRIPT_DIR" exec tsc -p test/tsconfig.legacyDecorators.json
+# emits @step's legacy decorator calls as tsc writes them, for the step-location run below
+pnpm -C "$SCRIPT_DIR" exec tsc -p test/tsconfig.legacyDecorators.emit.json
 node "$SCRIPT_DIR/scripts/check-doc-snippets.mjs"
 node "$SCRIPT_DIR/scripts/check-api-coverage.mjs"
+node "$SCRIPT_DIR/scripts/check-error-messages.mjs"
+# reads the Playwright test/ has, the latest 1.x when PLAYWRIGHT_VERSION swapped it in above
+node "$SCRIPT_DIR/scripts/check-playwright-retries.mjs"
 # shellcheck disable=SC2086 # PLAYWRIGHT_INSTALL_ARGS is a word list on purpose
 pnpm -C "$TEST_DIR" exec playwright install ${PLAYWRIGHT_INSTALL_ARGS:-}
 pnpm -C "$TEST_DIR" exec playwright test "$@"
+# where the report places steps and their errors: no browser, and a reporter of its own, which no --reporter replaces
+pnpm -C "$TEST_DIR" exec playwright test -c playwright.steps.config.ts
+# no page of the test server loads anything from another host; CI runs this in a job of its own
+if [[ -z "${CI:-}" ]]; then
+	"$SCRIPT_DIR/test-server-check.sh"
+fi

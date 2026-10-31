@@ -1,33 +1,49 @@
 name: PR
 
-# Every pull request, draft or not, from this repository or a fork. The harness runs on chromium only, also on Node 20,
-# the engines floor; main.yaml runs all three browsers after the merge. Publish never listens to this workflow.
+# Every pull request, draft or not, from this repository or a fork. The harness runs on chromium only, also on Node 20
+# and 22, the older LTS lines from the engines floor; main.yaml runs all three browsers after the merge. Publish never
+# listens to this workflow.
 
 on:
   pull_request:
 
 permissions:
   contents: read
-  actions: read # checks.yaml reads the runs of this workflow to find the last green commit
 
 jobs:
   checks:
     uses: ./.github/workflows/checks.yaml
     with:
       browsers: '["chromium"]' # firefox and webkit run on main (main.yaml)
-      workflow: pr.yaml
-      node-floor: true # the chromium harness on Node 20 as well, before the merge
+      older-node-lines: true # the chromium harness on Node 20 and 22 as well, before the merge
 
-  # The gate. Its job id is the required status check of main ("build"): do not rename it without changing the
-  # branch protection rule with it.
+  # Holds a pull request into main while main's version is being published, and fails a Version Packages pull request
+  # brought up to date with main after a changeset landed (scripts/release-check.sh). It judges the merge commit its
+  # run was given, so it binds every merge only with the ruleset main: checks, which requires an up-to-date branch: a
+  # pull request that passed before a release was merged must be updated, which runs it again.
+  release:
+    name: Release window
+    if: github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40 # the script waits up to 30 minutes for npm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2 # the merge commit and its parents: HEAD^1 is main's tip
+      - run: bash scripts/release-check.sh pull-request
+
+  # The gate. Its job id is the required status check of main ("build") in the ruleset main: checks: do not rename it
+  # without changing the ruleset with it.
   build:
-    needs: checks
+    needs: [checks, release]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Require the checks to have passed
         env:
           RESULT: ${{ needs.checks.result }}
+          RELEASE: ${{ needs.release.result }}
         run: |
-          echo "checks: $RESULT"
+          echo "checks: $RESULT, release window: $RELEASE"
           test "$RESULT" = "success"
+          test "$RELEASE" = "success" || test "$RELEASE" = "skipped"

@@ -7,7 +7,7 @@ description: "verify() resolves every registered path once and reports every mis
 
 Playwright's locators are lazy: a mistake in one surfaces only when an action uses it, possibly late in a test or in a
 test that rarely runs. Most mistakes in a registry are compile errors already, such as a path that is not in the union
-or a misspelt `has` reference. The rest can be found without a browser, and POMWright finds them all at once:
+or a misspelled `has` reference. The rest can be found without a browser, and POMWright finds them all at once:
 `verify()` resolves every registered path and reports every failure in one error.
 
 A page object verifies its registry right after `defineLocators()`, so a mistake fails the test in the fixture, before
@@ -40,6 +40,14 @@ reference to a path that is never registered, a loop of references, a reference 
 and a reference to an any-frame segment all fail, each reported at the path that owns it. An any-frame
 `frameLocator()` is checked against its first-segment rule (see [Frames](/POMWright/docs/frames/)). Registration
 mistakes, a duplicate path or an empty selector, throw earlier, at the call that makes them.
+
+An `add(path)` that never gets a locator method, such as `add("main.form@login");` written as a statement, registers
+nothing, and every chain below the path would leave the segment out. TypeScript accepts the statement, so `verify()`
+reports it, naming the call that ended the registration:
+
+```text
+"main.form@login": add("main.form@login") ended without a locator method (at add("main.form@login.button@login")); give it one or remove it
+```
 
 What it does not check: whether a selector parses (Playwright parses it at the first action), whether an element
 exists, whether a locator is unique, a query's changes, and a path in the union that is never registered and never
@@ -86,7 +94,7 @@ Locator registry verification failed for 1 of 2 paths:
 ```
 
 A page object takes it as a constructor option, `locators: { strictChains: true }`, usually once, in the site's
-[base class](/POMWright/docs/organising-a-project/#a-base-class-for-your-site). A path that fails both checks gets both
+[base class](/POMWright/docs/organizing-a-project/#a-base-class-for-your-site). A path that fails both checks gets both
 messages on its line. `skip` works as before: it leaves a registered segment out of one query. Under the option an
 any-frame segment, which may have no registered ancestor, can only be a root path.
 

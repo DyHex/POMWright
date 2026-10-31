@@ -9,8 +9,8 @@ explains the build, the package's entry points and its declarations. How to inst
 
 ## One build, two entries
 
-`pnpm build` runs tsup on `index.ts`, which writes one CommonJS build, `dist/index.js`, and its declarations,
-`dist/index.d.ts`. Then `scripts/write-esm-entry.mjs` writes the ESM entry: `dist/index.mjs` imports the CommonJS build
+`pnpm build` runs tsup on `index.ts`, which empties `dist/` and writes one CommonJS build, `dist/index.js`, and its
+declarations, `dist/index.d.ts`. Then `scripts/write-esm-entry.mjs` writes the ESM entry: `dist/index.mjs` imports the CommonJS build
 and re-exports each of its names, and `dist/index.d.mts` re-exports its declarations. The names are read from the built
 module, so the ESM entry cannot drift from `index.ts`.
 
@@ -22,7 +22,8 @@ split.
 ## The `exports` map
 
 `package.json` maps the root, `"."`, to the ESM entry for `import` and the CommonJS build for `require`, each with its
-own declarations, and exposes `./package.json`. Nothing else is importable: `pomwright/dist/index.js` fails with
+own declarations, and, last, to the CommonJS build for `default`, the condition a resolver falls back to when it
+matches neither, as `@playwright/test`'s map does. It also exposes `./package.json`. Nothing else is importable: `pomwright/dist/index.js` fails with
 `ERR_PACKAGE_PATH_NOT_EXPORTED`, so internal files can change without breaking a consumer. `engines.node` is `>=20`,
 Playwright's own floor, and `@playwright/test` is a peer dependency: POMWright never bundles or installs it. The
 `files` list decides what is packed: `dist`, the README, the license and the changelog.
@@ -34,13 +35,50 @@ value, so every public type that names an internal class is a type alias over it
 [builders](/POMWright/internal/builders/)). Internals are TypeScript-`private`; the declarations are emitted without
 `stripInternal`. The doc comments are kept, which is what the editor shows on hover.
 
+A consumer's own declarations must be able to name every type POMWright hands out, or a project with
+`declaration: true` cannot export a function that returns it. An alias of an indexed access type, such as
+`LocatorRegistryInternal<Paths>["add"]`, does not survive that: TypeScript resolves it to the method's type, and the
+consumer's declarations spell that type out, down to the registration builders, which are not exported. So
+`AddAccessor` is an interface that repeats `add`'s signature, a unit test holds the two to each other, and
+`LocatorRegistry` types its `add` with it instead of picking the method from the class.
+
+A type in a declaration file is written through a module specifier TypeScript can resolve from that file. Playwright
+declares its types in `playwright` and `playwright-core`, which `@playwright/test` re-exports. Under npm every package
+is at the top of `node_modules`, and the declarations name the declaring packages directly, for POMWright's values as
+for Playwright's own. Under pnpm only a project's own dependencies are there, so TypeScript can name Playwright's types
+only through `@playwright/test`, and it finds that way only when the compilation imports `@playwright/test`. A module
+that exports an extended `test` or a seed's `definition`, in a compilation where no file imports it, then fails with
+TS2883. POMWright cannot name the types for the consumer: the fix is the consumer's import, or an annotation with
+POMWright's own types (see [`declaration: true`](/POMWright/docs/typescript/#declaration-true)). Re-exporting
+Playwright's types from `pomwright` was not adopted: Playwright's things come from `@playwright/test`, as `expect` does,
+and the re-exports would be a second public name for each.
+
 ## Checked on the packed package
 
-The harness installs the tarball `pnpm pack` produced, extracted, so it tests what npm would publish. A spec in ESM,
-`test/tests/packaging/esmEntry.spec.mts`, checks both entries, that they share one copy, that deep imports fail, and the
-manifest. Two compile-only files check the published types: `publicTypes.typecheck.ts`, every export and the types
-that must and must not compile, and `publicTypes.emit.ts`, which a project with `declaration: true` must be able to
-emit without annotations.
+The harness installs the tarball `pnpm pack` produced, extracted, so it tests what npm would publish. In
+`test/tests/packaging/`:
+
+- `esmEntry.spec.mts`, a spec in ESM, checks both entries, that they share one copy, that deep imports fail, and the
+  manifest.
+- `packageFiles.spec.ts` checks the installed package's exact file list: in `dist/`, `index.js` and `index.d.ts` from
+  tsup and `index.mjs` and `index.d.mts` from `scripts/write-esm-entry.mjs`, and nothing else, so a stale file from an
+  earlier build cannot ship.
+- Compile-only files check the published types: `publicTypes.typecheck.ts`, every export and the types that must and
+  must not compile; the declaration emit, which a project with `declaration: true` must be able to do without
+  annotations, so a type that is not exported fails it; and `stepLegacyDecorators.typecheck.ts`, `@step` under
+  `experimentalDecorators` as well as under the standard decorators. The emit compiles two modules:
+  `publicTypes.emit.ts`, by hand, the chains, seeds and forms a project writes; and one that
+  `scripts/generate-emit-members.mjs` writes from `emitSeeds.ts`, a value of every export, and the installed
+  declarations: every public member of every export returned on its own, and the page objects' protected members
+  through a subclass. Members are read, not listed, so one added to the API is covered at once; an export is listed,
+  and the generator fails until a new one has a seed or a place among those with no members to walk. Generated, it
+  emitted on TypeScript 5.0, 5.4, 5.9, 6.0 and 7.0, and with pnpm's layout.
+- `@step`'s legacy decorator calls are emitted by `tsc` and run against the package by the step-location check (see
+  [tests and checks](/POMWright/internal/tests-and-checks/#type-checks)).
+
+CI's `consumer` job installs the same tarball with npm into projects of their own: TypeScript under every module
+resolution and from 5.0 to the latest release, attw, Playwright's runner in a CommonJS and an ESM project, and Node 20
+loading both entries (see [CI](/POMWright/internal/tests-and-checks/#ci)).
 
 ## A build for testing before a release
 

@@ -1,8 +1,8 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../../src/locators";
+import { createRegistryWithAccessors } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
 test("locator schema builders resolve the terminal path as the default description", async ({ page }) => {
 	type LocatorSchemaPaths = "panel" | "panel.button";
@@ -29,12 +29,9 @@ test("describe on locator schema builder overrides the resolved description only
 	const locator = registry.getLocatorSchema("panel").describe("Override panel").getLocator();
 
 	expect(locator.description()).toEqual("Override panel");
-	expect(registry.get("panel")).toEqual({
-		description: "Original panel",
-		definition: { selector: "section.panel", type: "locator" },
-		locatorSchemaPath: "panel",
-		steps: [],
-	});
+	// the query changed only itself: the registry keeps its description and definition
+	expect(registry.getLocator("panel").description()).toEqual("Original panel");
+	expect(`${registry.getLocator("panel").describe("")}`).toEqual(`${page.locator("section.panel")}`);
 });
 
 test("describe on locator schema builder overrides the path default without mutating it", async ({ page }) => {

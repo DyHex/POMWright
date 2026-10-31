@@ -33,8 +33,10 @@ export class LoginPage extends PageObject<Paths> {
 }
 ```
 
-The report shows `LoginPage.submit` as a step, with the click inside it, at the line that called `submit()`. `@step`
-works on any class, page object or not, and on static methods, which are titled by their class (`AccountPage.create`).
+The report shows `LoginPage.submit` as a step, with the click inside it, at the line that called and awaited `submit()`
+(see [where a step is reported](#where-a-step-is-reported)). `@step` works on any class, page object or not, on
+generic methods, which keep their type parameters, and on static methods, which are titled by their class
+(`AccountPage.create`).
 
 ## Title and options
 
@@ -55,14 +57,36 @@ export class Checkout {
 
   @step("Wait for the receipt", { timeout: 10_000 })
   async receipt() {}
+
+  @step("Choose how to pay")
+  async choose<Method extends "card" | "invoice">(method: Method): Promise<Method> {
+    return method; // choose("card") is a Promise<"card">
+  }
 }
 ```
+
+The default title names the class of the object the method runs on, not the class that declares it: a method a
+`LoginPage` inherits from a base page object is titled `LoginPage.submit`, and an override that calls
+`super.submit()` shows two steps with the same title, one inside the other.
+
+## Where a step is reported
+
+A call awaited on the line that makes it is reported at that line, boxed or not. In other forms the step is where
+Playwright places a `test.step`:
+
+- a step whose Promise is awaited on a later line has no location when it is unboxed;
+- in a `Promise.all` written over several lines, an unboxed step is at the `await` line, a boxed one at its own line;
+- a call made by a helper that returns its Promise without awaiting it is at the helper's line when boxed, and at the
+  line that awaited the helper when unboxed;
+- a boxed step under another decorator that wraps the method, such as a timing or logging decorator, is at that
+  decorator's line, and its error at the line that awaited the call.
 
 ## Only methods that return a Promise
 
 `test.step` always returns a Promise and runs its body later, so a method that returned a plain value would hand its
 caller a Promise, and its errors would escape the caller's `try`. TypeScript therefore rejects `@step` on such a
-method, and the error names the fix:
+method, and the error names the fix. From JavaScript, where nothing checks the types, the call rejects with the same
+text, as a `TypeError` thrown in the step:
 
 ```ts
 import { step } from "pomwright";
@@ -73,6 +97,26 @@ export class Cart {
   total(): number {
     return 42;
   }
+}
+```
+
+## Sharing a decorator
+
+`step()` returns the decorator, so a configuration used in many classes can be stored once, in a module of its own, and
+imported where it is needed. Its type is `StepDecorator`:
+
+```ts title="steps.ts"
+import { type StepDecorator, step } from "pomwright";
+
+export const boxedStep: StepDecorator = step({ box: true });
+```
+
+```ts
+import { boxedStep } from "./steps";
+
+export class Checkout {
+  @boxedStep
+  async confirm() {} // "Checkout.confirm", reported at the line that called confirm()
 }
 ```
 

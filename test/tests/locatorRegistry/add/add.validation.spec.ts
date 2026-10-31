@@ -166,3 +166,17 @@ test("an empty testId and an empty text match real elements", async ({ page, tes
 	await expect(getLocator("emptyTestId")).toHaveText("empty testid");
 	expect(await getLocator("anyText").count()).toBeGreaterThan(0);
 });
+
+test("a locator method that throws for a registered path leaves the registration as it was", async ({
+	page,
+	testIds,
+}) => {
+	const { add, getLocator } = createRegistryWithAccessors<"main">(page);
+	add("main").locator("body");
+	const duplicate = add("main");
+	expect(() => duplicate.getByRole("main")).toThrowError('A locator schema with the path "main" already exists.');
+	expect(() => duplicate.getByRole("main")).toThrowError('A locator schema with the path "main" already exists.');
+	await page.goto(testIds.fullUrl);
+	await expect(getLocator("main")).toHaveCount(1);
+	await expect(getLocator("main")).toHaveJSProperty("tagName", "BODY");
+});

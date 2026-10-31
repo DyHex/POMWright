@@ -56,33 +56,41 @@ const payment = new SessionStorage(page, { label: "Payment", origin: "https://pa
   - `origin` string *(optional)*
 
     The origin the helper belongs to: the default origin of `seed`, and the only one `set`, `get` and `clear` touch.
-    Without it, the helper works on whatever origin the page is on, and `seed` needs `{ origin }`.
+    Without it, the helper works on whatever origin the page is on, and `seed` needs `{ origin }`. A scheme without an
+    origin in the URL standard, such as `chrome-extension://…/` or `file://…/`, is rejected.
 
   - `schema` [SessionStorageSchema](#sessionstorageschema) *(optional)*
 
-    Codecs by key, for keys that hold structured values. The helper's type parameter is the schema's type.
+    Codecs by key, for keys that hold structured values. The helper's type parameter is the schema's type, taken from
+    this value; given explicitly (`new SessionStorage<typeof schema>(page, { schema })`), the value is required, with a
+    codec for every declared key.
 
 **Throws**
 
 ```text
 Shop.SessionStorage.constructor: origin must be an origin such as "https://app.example" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "shop.example"
+Shop.SessionStorage.constructor: origin must be an origin such as "https://app.example" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "chrome-extension://abcdef/", whose scheme has no URL origin
 ```
 
 ---
 
 ## Methods
 
-Every method is a step of the report. `set`, `get` and `clear` work on the origin the page is on, and throw when the
-helper belongs to another origin, or when the page has no origin yet:
+Every method is a step of the report. Calls for one origin act in the order they were made, also when they overlap,
+across every helper on the page (see [the methods](/POMWright/docs/session-storage/#the-methods)). `set`, `get` and
+`clear` work on the origin the page is on, and throw when the helper belongs to another origin, when the page has no
+origin yet, and when the document's origin is opaque, as a sandboxed document's and the browser's error page's after
+a failed navigation are:
 
 ```text
 AccountPage.SessionStorage.get: the page is on https://login.example, not on this page object's origin https://shop.example; another origin's sessionStorage is reachable only from a document on it. Use the page object for https://login.example, or a standalone SessionStorage without an origin
 Shop.SessionStorage.set: the page has no origin yet (about:blank); navigate to the origin first or use seed()
+Shop.SessionStorage.clear: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)
 ```
 
 ### clear()
 
-Removes every entry, one key, or several.
+Removes every entry, one key, or several, one key at a time.
 
 **Usage**
 
@@ -105,6 +113,19 @@ await storage.clear(); // everything
 **Returns**
 
 - Promise\<void\>
+
+**Throws**
+
+```text
+Shop.SessionStorage.clear: the page navigated to https://shop.example/home while clear() was removing keys from https://shop.example; 1 of 3 keys were removed ("token"); "locale" was being removed and may have reached the new document
+Shop.SessionStorage.clear: the page navigated to https://shop.example/home while clear() was removing every entry from https://shop.example; it may have reached the new document
+Shop.SessionStorage.clear: the page left https://shop.example for https://login.example while clear() waited for its turn; the call did nothing
+```
+
+When the page leaves the origin, or its document is replaced, during the call: the keys it names as removed are gone,
+and the one in flight, or
+`clear()`'s, may have reached the new document. The third for a helper without an origin, when the call waited for its
+turn while the page left the origin the call was made on: it removes nothing.
 
 ### get()
 
@@ -131,25 +152,35 @@ await storage.get(["token", "missing"]); // { token: "abc", missing: null }
 **Returns**
 
 - Promise: every present entry; the value or `null`; or a record with every key asked for, `null` for each missing one.
-  Values are typed by the schema: a declared key as its codec's type, any other key as a string.
+  Values are typed by the schema: a declared key as its codec's type, any other key as a string, a key typed `string`
+  or a branded string as a string or any declared codec's type, and a pattern as a string or the types of the declared
+  keys it matches (see [Decoded](#decoded)).
 
 **Throws**
 
 ```text
-Shop.SessionStorage.get: value for "user" could not be decoded: {not json
+Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)); stored value, 9 characters: "{not json"
+Shop.SessionStorage.get: the page navigated to https://login.example/ while get() was reading "token" from https://shop.example; it may have read the new document
+Shop.SessionStorage.get: the page left https://shop.example for https://login.example while get() waited for its turn; the call did nothing
 ```
 
-The codec's error is the `cause`.
+The codec's error is the `cause`. The second when the page leaves the origin, or its document is replaced, during the
+read: it fails rather than
+return what it may have read from the new document. The third for a helper without an origin, when the call waited for
+its turn while the page left the origin the call was made on: it reads nothing.
 
 ### seed()
 
 Stores entries for an origin before the app's next load there, so the app's first script sees them, without leaving
-the page the test is on; on the origin already, it writes at once. See
+the page the test is on; on the origin already, it writes at once, also on an `about:blank` popup that inherited it.
+See
 [how it works](/POMWright/docs/seeding-session-storage/#how-it-works).
 
-Calls for one origin merge in the order they were made, later values winning per key, also when they overlap. Await
+Calls for one origin merge in the order they were made, later values winning per key, also when they overlap, on the
+origin or before the hop. Await
 `seed` before the action that starts the hop: see
-[several seeds](/POMWright/docs/seeding-session-storage/#several-seeds).
+[several seeds](/POMWright/docs/seeding-session-storage/#several-seeds). Entries that are empty at run time
+(`seed({})`) do nothing.
 
 **Usage**
 
@@ -179,16 +210,27 @@ await loginPage.navigation.goto(); // the app's first script already sees the to
 
 **Throws**
 
-At the call, without an origin, in a browser without the Navigation API, and when the page commits a document on the
-origin while the seed is being registered; later, failing the test with this call's line in the stack, when the
-browser refuses the write or the page closes before the seed was applied:
+At the call, without an origin, for a value its key's codec cannot encode (or a value that is not a string, for a key
+without a codec), in a browser without the Navigation API, when the page commits a document on the
+origin while the seed is being registered, when the page closes before it is registered, and, on the origin already,
+when the document's origin is opaque, or the page leaves it or its document is replaced during the write, as for `set`; later, failing the test with this call's line in the stack, when the
+browser refuses the write, when the document that arrives on the origin does not take the seed (a failed navigation
+there, or a sandboxed document), or when the page closes before the seed was applied:
 
 ```text
 Shop.SessionStorage.seed: an origin is required; pass { origin } or construct the helper with one
+Shop.SessionStorage.seed: value for "orderId" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)
+Shop.SessionStorage.seed: value for "orderId" could not be encoded
+Shop.SessionStorage.seed: the codec for "orderId" returned undefined instead of a string
 Shop.SessionStorage.seed: the page committed a document on https://pay.example while seed() was registering, so the app may have started without the entries; await that navigation before seeding, or seed before starting it
 Shop.SessionStorage.seed: seed() needs the Navigation API (navigation.activation) to write only on the first arrival at https://pay.example, and this browser has none (Mozilla/5.0 …); use set() on the origin and reload instead
-Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: orderId): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
-Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
+Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: "orderId"); await seed() before the test ends
+Shop.SessionStorage.seed: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)
+Shop.SessionStorage.seed: the page navigated to https://shop.example/home while seed() was writing to https://shop.example; 1 of 2 keys were written ("orderId"); "amount" was being written and may have reached the new document
+Shop.SessionStorage.seed: could not write sessionStorage for https://pay.example (keys: "orderId"): QuotaExceededError: The quota has been exceeded.; the app loaded without the entries
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: "orderId") was never applied: the page closed without navigating there; remove the seed call, or navigate to the origin before the test ends
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: "orderId") was not applied: the document that arrived on https://pay.example has an opaque origin (the browser's error page after a failed navigation, or a sandboxed document)
+Shop.SessionStorage.seed: the seed for https://pay.example (keys: "orderId") was not applied: the browser counted the page's arrival on https://pay.example as a return there (navigation.activation.from is set): the document before it was already on the origin, as after a failed navigation to it
 ```
 
 [What `seed` cannot do](/POMWright/docs/seeding-session-storage/#what-seed-cannot-do) lists every such case.
@@ -196,7 +238,10 @@ Shop.SessionStorage.seed: the seed for https://pay.example (keys: orderId) was n
 ### set()
 
 Writes one entry, or several, each value through its key's codec, or as the string it must be. Every value is
-encoded before any is written, so a bad value writes nothing.
+encoded when the call is made, before any is written, so a bad value writes nothing and a value changed after the call
+is not what is stored. The values are then written one key at a time, as Playwright's `setItem` takes one: a
+navigation stops it, to another origin or within the origin (a reload or a redirect, which replaces the document), the
+keys written before it stay, and the one in flight may have reached the new document.
 
 **Usage**
 
@@ -222,15 +267,38 @@ await storage.set({ token: "abc", locale: "nb" });
 **Throws**
 
 ```text
-Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it
+Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)
 Shop.SessionStorage.set: value for "user" could not be encoded
 Shop.SessionStorage.set: the codec for "user" returned undefined instead of a string
+Shop.SessionStorage.set: the document at https://shop.example/embed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)
+Shop.SessionStorage.set: the page navigated to https://shop.example/home while set() was writing to https://shop.example; 2 of 60 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document
+Shop.SessionStorage.set: the page left https://shop.example for https://login.example while set() waited for its turn; the call did nothing
 ```
 
 The second when the key's codec throws, with its error as `cause`; the third when it returns something other than a
-string.
+string; the fourth on a document whose origin is opaque, a sandboxed one or the browser's error page after a failed
+navigation, as from `get`, `clear` and `seed` there; the fifth
+when the page leaves the origin or its document is replaced during the batch, naming the keys already written and the
+one in flight; the sixth for
+a helper without an origin, when the call waited for its turn while the page left the origin the call was made on: it
+writes nothing. Any other error from Playwright gets the label in front of its message and is the `cause`.
 
 ---
+
+## AllEntries
+
+Added in: v3.0.2
+
+What [`get()`](#get) returns without an argument: every entry, as `Record<string, string>` without a schema; with one,
+the declared keys typed by their codecs and every other key a string.
+
+```ts
+import { json, type AllEntries } from "pomwright";
+
+const accountStorage = { user: json<{ name: string }>() };
+type Everything = AllEntries<typeof accountStorage>;
+// { user?: { name: string } | undefined } & Record<string, string | { name: string }>
+```
 
 ## Codec
 
@@ -248,7 +316,7 @@ const number = (): Codec<number> => ({
 
 ### parse()
 
-Turns the stored string into the value. An error it throws makes `get` fail, naming the key and the value.
+Turns the stored string into the value. An error it throws makes `get` fail, naming the key, the error and the stored value.
 
 **Arguments**
 
@@ -270,6 +338,29 @@ Turns the value into the string to store. It must return a string.
 
 - string
 
+## Decoded
+
+Added in: v3.0.2
+
+The type of a key's value under a schema, for each member of `K`: `Decoded<S, K>` is the codec's type when the member
+is a declared key of `S`, and `string` for any other literal. [`get`](#get) returns it (with `null`), and
+[`set`](#set) and [`seed`](#seed) take it.
+
+```ts
+import { json, type Decoded } from "pomwright";
+
+const accountStorage = { user: json<{ name: string }>() };
+type User = Decoded<typeof accountStorage, "user">; // { name: string }
+type Token = Decoded<typeof accountStorage, "token">; // string
+type AnyKey = Decoded<typeof accountStorage, string>; // string | { name: string }
+type UserKey = Decoded<typeof accountStorage, `u${string}`>; // string | { name: string }
+type FormKey = Decoded<typeof accountStorage, `form:${string}`>; // string
+```
+
+A key typed `string` may be any key, so its value is a string or any declared codec's type, and so is a branded
+string (`string & { … }`). A pattern may be any declared key it matches: its value is a string or those keys' codecs'
+types, and a string alone when it matches none.
+
 ## json
 
 `json<T>()`: the JSON codec, `JSON.stringify` in and `JSON.parse` out. `T` types the key and is not checked against the
@@ -278,6 +369,43 @@ parsed value. See [codecs for structured values](/POMWright/docs/session-storage
 **Returns**
 
 - [Codec](#codec)\<T\>
+
+## SeedOptions
+
+Added in: v3.0.2
+
+The options of [`seed`](#seed).
+
+### origin
+
+`string` *(optional)*
+
+The origin to seed. Defaults to the helper's origin.
+
+## SessionStorageOptions
+
+Added in: v3.0.2
+
+`SessionStorageOptions<S>`: the options of [`new SessionStorage()`](#new-sessionstorage), for a helper of your own
+that forwards them. `S` is the schema's type.
+
+### label
+
+`string` *(optional)*
+
+The prefix of step titles and error messages: `Shop` gives `Shop.SessionStorage.set:`.
+
+### origin
+
+`string` *(optional)*
+
+The origin the helper belongs to: the default origin of `seed`, and the only one `set`, `get` and `clear` touch.
+
+### schema
+
+`S` *(optional)*
+
+Codecs by key, for keys that hold structured values.
 
 ## SessionStorageSchema
 

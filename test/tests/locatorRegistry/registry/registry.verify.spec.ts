@@ -1,10 +1,11 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
-import { type FilterDefinition, LocatorRegistryInternal } from "../../../../src/locators";
+import { createRegistryWithAccessors, type FilterDefinition } from "pomwright";
 
 // verify() resolves every selector-bearing path once, terminal-only, so every has/hasNot path
 // reference goes through the normal resolution, and checks every any-frame path against its
-// first-segment rule. The table in the plan's section 1.9 is the contract.
+// first-segment rule. The contract is on Verifying registries (website/src/content/docs/docs/verifying-registries.md)
+// and Internal → Resolution, under verify() (website/src/content/docs/internal/resolution.md).
 
 type Paths =
 	| "list"
@@ -21,7 +22,7 @@ type Paths =
 	| "shell.anyFrame"
 	| "sparse.chain.leaf";
 
-const createRegistry = (page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createRegistry = (page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
 test("a clean registry and an empty one pass", async ({ page }) => {
 	const registry = createRegistry(page);
@@ -166,10 +167,15 @@ test("verify() has no state: it reports the same result twice and changes nothin
 	const registry = createRegistry(page);
 	registry.add("list").locator("ul").filter({ hasText: "x" }).describe("The list");
 	registry.add("list.item").getByRole("listitem").filter({ has: "list.badge" });
-	const before = registry.get("list");
+	const rendered = () => {
+		const list = registry.getLocator("list");
+		return [`${list.describe("")}`, list.description()];
+	};
+	const before = rendered();
 	expect(() => registry.verify()).toThrowError("1 of 2 paths");
 	expect(() => registry.verify()).toThrowError("1 of 2 paths");
-	expect(registry.get("list")).toEqual(before);
+	expect(rendered()).toEqual(before);
+	expect(before).toEqual([`${page.locator("ul").filter({ hasText: "x" })}`, "The list"]);
 });
 
 test("an array or a filter-only object in has is an unsupported reference, as a FrameLocator is", async ({ page }) => {
@@ -189,4 +195,22 @@ test("an array or a filter-only object in has is an unsupported reference, as a 
 			.filter({ has } as unknown as FilterDefinition<Paths, Paths>);
 		expect(() => registry.verify()).toThrowError(unsupported);
 	}
+});
+
+test("an add(path) that never got a locator method fails, where every chain below it would leave the segment out", async ({
+	page,
+}) => {
+	// an add(path) written as a statement between the paths around it
+	type FormPaths = "main" | "main.form@login" | "main.form@login.button@login";
+	const { registry } = createRegistryWithAccessors<FormPaths>(page);
+	registry.add("main").locator("main");
+	registry.add("main.form@login");
+	registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
+	expect(() => registry.verify()).toThrowError(
+		'Locator registry verification failed for 1 of 3 paths:\n  "main.form@login": add("main.form@login") ended without a locator method (at add("main.form@login.button@login")); give it one or remove it',
+	);
+	// what the check prevents: the chain leaves the form out
+	expect(`${registry.getNestedLocator("main.form@login.button@login").describe("")}`).toBe(
+		"locator('main').getByRole('button', { name: 'Log in' })",
+	);
 });

@@ -140,6 +140,7 @@ When a URL part is not what it must be:
 LoginPage: baseUrl must be an origin such as "https://example.com" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "localhost:9000".
 LoginPage: baseUrl must be a string or a RegExp; received undefined.
 LoginPage: urlPath must be "" or start with exactly one "/"; received "login".
+LoginPage: urlPath must be a path on the page object's origin; received "/\\login.example/account", which names the host "login.example" instead. A "/" followed by another "/" or a "\", also with a tab or line break between them, starts a host.
 ```
 
 ---
@@ -180,14 +181,18 @@ export class LoginPage extends PageObject<"main" | "main.button@login"> {
 
 **Throws**
 
-An error inside `defineLocators()` or from the verification after it, labelled with the page object and kept for
+An error inside `defineLocators()` or from the verification after it, labeled with the page object and kept for
 every later locator call; see [how a mistake is reported](/POMWright/docs/page-objects/#how-a-mistake-is-reported).
 
 ```text
 LoginPage: defineLocators() failed: A locator schema with the path "main" already exists. …
 LoginPage: Locator registry verification failed for 1 of 5 paths:
   "main.form@login": No locator schema registered for path "main.form@login.heading".
+LoginPage: defineLocators() must register its locators synchronously; it returned a Promise. Read what it needs in the constructor or a fixture, and pass it in.
 ```
+
+The last when `defineLocators()` returns a Promise, as an `async` one does: it registers synchronously; see
+[what the definition cannot see](/POMWright/docs/page-objects/#when-definelocators-runs).
 
 ### pageActionsToPerformAfterNavigation()
 
@@ -252,8 +257,12 @@ The `baseUrl` the page object was constructed with.
 
 ### fullUrl
 
-The page object's URL: `new URL(urlPath, baseUrl).href` for two strings, a
-[`UrlMatcher`](/POMWright/api/class-navigation/#urlmatcher) when either part is a RegExp. See
+The page object's URL: for two strings, `new URL(urlPath, baseUrl).href` with a `^` in the path written as `%5E`, the
+form every browser reports, but for Chromium's `%7C` for a `|`; a
+[`UrlMatcher`](/POMWright/api/class-navigation/#urlmatcher) when either part is a RegExp. Playwright's
+`toHaveURL(fullUrl)` fails in two cases POMWright cannot change: on Chromium for a path with `|`, which Chromium reports
+as `%7C`, and on every browser for a base with credentials, since `toHaveURL` compares the page's `location.href`,
+which browsers give without them. `expectThisPage()` matches in both. See
 [fullUrl](/POMWright/docs/urls-and-navigation/#fullurl).
 
 **Usage**
@@ -338,7 +347,9 @@ The Playwright page the page object was constructed with.
 
 ### sessionStorage
 
-The session storage helper for the page object's origin, typed by the schema. See
+The session storage helper, labeled with the page object's label and typed by the schema. With a string `baseUrl` it
+belongs to that origin: it touches only that origin's storage, and `seed()` needs no origin. With a RegExp `baseUrl` it
+has no origin: it works on the origin the page is on, and `seed()` needs `{ origin }`. See
 [`SessionStorage`](/POMWright/api/class-sessionstorage/) and
 [through a page object](/POMWright/docs/session-storage/#through-a-page-object).
 

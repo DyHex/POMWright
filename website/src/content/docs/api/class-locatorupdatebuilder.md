@@ -10,10 +10,10 @@ changes, and the segment keeps its steps and description.
 
 - **`update`** keeps the registered strategy. Call the method of that strategy with a patch in
   [JSON Merge Patch](https://www.rfc-editor.org/rfc/rfc7386) form: a given first argument replaces the registered one,
-  the options merge key by key, a `null` key deletes one, a lone `null` deletes them all, and an omitted value keeps
-  what is registered. Another strategy's method throws and names `replace`.
+  the options merge key by key, a `null` key deletes one, a lone `null` deletes them all, and an omitted or `undefined`
+  value, the first argument included, keeps what is registered. Another strategy's method throws and names `replace`.
 - **`replace`** installs a locator of any strategy, with the arguments of Playwright's own method: the first argument
-  required, Playwright's options.
+  required (but `frameLocator`'s, whose absence installs the any-frame form), Playwright's options.
 
 See [patching a definition](/POMWright/docs/queries/#patching-a-definition-update) and
 [a new definition](/POMWright/docs/queries/#a-new-definition-replace).
@@ -61,7 +61,7 @@ Guide: [queries](/POMWright/docs/queries/).
 
 Every method returns the [query](/POMWright/api/class-locatorquerybuilder/), to chain more changes or resolve it.
 Every method throws, in `update` mode, for a segment registered with another strategy, and in `replace` mode, from
-JavaScript, when the first argument is missing:
+JavaScript, when the first argument is missing (but `frameLocator`, whose absence installs the any-frame form):
 
 ```text
 update("main.button@pay") cannot change the strategy from "role" to "text"; use replace("main.button@pay").getByText(…) instead.
@@ -69,14 +69,17 @@ getByRole requires a role value for "main.button@pay".
 ```
 
 An empty string is rejected in both modes where Playwright cannot use one, as at registration:
-`locator requires a non-empty selector for "main.list@items".`
+`locator requires a non-empty selector for "main.list@items".` A builder taken before the query skipped its segment
+throws in both modes, naming its mode:
+`update() cannot apply to "main.list": it is skipped in this query; call unskip("main.list") first.`
 
 ### frameLocator()
 
 Changes the segment to a frame segment: with a selector, the `<iframe>` element whose descendants resolve inside the
 frame. In `update` mode an omitted selector keeps the registered one. In `replace` mode an omitted selector installs
 Playwright's any-frame `frameLocator()`, which must be the first segment of its chain, so its ancestors are
-[skipped](/POMWright/api/class-locatorquerybuilder/#skip) or unregistered.
+[skipped](/POMWright/api/class-locatorquerybuilder/#skip) or unregistered; see
+[the any-frame form in a query](/POMWright/docs/queries/#the-any-frame-form-in-a-query).
 
 **Usage**
 

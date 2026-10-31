@@ -71,8 +71,9 @@ describe("URL type aliases", () => {
 });
 
 describe("createNavigation runtime guards", () => {
-	// Only the guards that throw before any Playwright call are testable here; the navigation
-	// behaviour itself is covered by the integration specs under test/.
+	// Only the guards that throw before any Playwright call are testable here, so an empty object stands in for the
+	// page: it hides nothing these guards do, since a call to it would fail the test. The navigation itself is
+	// covered on real pages by testNav.spec.ts and testPath.spec.ts in test/tests/testApp/.
 	const fakePage = {} as Page;
 
 	it("rejects goto() without a target on a RegExp fullUrl", async () => {
@@ -91,12 +92,103 @@ describe("createNavigation runtime guards", () => {
 		);
 	});
 
+	it("rejects, from JavaScript, a first argument that is neither a URL string nor options, as page.goto does", async () => {
+		const navigation = createNavigation(
+			fakePage,
+			"https://app.example",
+			"/login",
+			"https://app.example/login",
+			"LoginPage",
+			() => null,
+		);
+		const untyped = navigation as unknown as { goto(first: unknown): Promise<void> };
+		await expect(untyped.goto(new URL("https://help.example/faq"))).rejects.toThrow(
+			"LoginPage: goto() takes a URL string or options; received a URL object; pass its href.",
+		);
+		await expect(untyped.goto(42)).rejects.toThrow(
+			"LoginPage: goto() takes a URL string or options; received a number.",
+		);
+		await expect(untyped.goto(null)).rejects.toThrow("LoginPage: goto() takes a URL string or options; received null.");
+	});
+
+	it("names the page object when a target cannot be resolved against a string baseUrl, with the parser's error as cause", async () => {
+		const navigation = createNavigation(
+			fakePage,
+			"https://shop.example",
+			"/login",
+			"https://shop.example/login",
+			"LoginPage",
+			() => null,
+		);
+		const error = await navigation.goto("http://").catch((thrown: unknown) => thrown);
+		expect((error as Error).message).toBe(
+			'LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.example"',
+		);
+		expect((error as Error).cause).toBeInstanceOf(TypeError);
+	});
+
 	it("rejects a non-absolute target on a RegExp baseUrl", async () => {
 		const matcher = createUrlMatcher(/app\.example/, "/login");
 		const navigation = createNavigation(fakePage, /app\.example/, "/login", matcher, "LoginPage", () => null);
 		const untyped = navigation as unknown as { goto(target: string): Promise<void> };
 		await expect(untyped.goto("/login")).rejects.toThrow(
 			'LoginPage: goto("/login") needs an absolute URL because baseUrl is a RegExp.',
+		);
+	});
+});
+
+describe("a wait that times out", () => {
+	// a stub page whose waitForURL rejects as Playwright's does, with its message written here: it could hide a change in
+	// what Playwright throws, which the harness reads from a real wait ("expectThisPage and expectAnotherPage name a
+	// late load state of the right URL", testNav.spec.ts)
+	type Wait = {
+		waitForUrl(
+			predicate: (url: URL) => boolean,
+			what: string,
+			reached: (found: string) => string,
+			options?: NavigationOptions,
+		): Promise<void>;
+	};
+	const timeout = () =>
+		Object.assign(new Error("page.waitForURL: Timeout 1000ms exceeded.\nCall log: …"), { name: "TimeoutError" });
+	const waitOn = (url: string, failure: Error, options?: NavigationOptions) => {
+		const stub = {
+			waitForURL: async () => {
+				throw failure;
+			},
+			url: () => url,
+		} as unknown as Page;
+		const matcher = createUrlMatcher("https://app.example", "/x");
+		const navigation = createNavigation(stub, "https://app.example", "/x", matcher, "XPage", () => null, options);
+		return (navigation as unknown as Wait)
+			.waitForUrl(matcher, 'expected URL "https://app.example/x"', (found) => `reached ${JSON.stringify(found)}`)
+			.then(
+				() => undefined,
+				(error: Error) => error,
+			);
+	};
+
+	it("on the URL waited for, says the URL was reached and names the load state that did not come", async () => {
+		const failure = timeout();
+		const error = await waitOn("https://app.example/x", failure);
+		expect(error?.message).toBe(
+			'XPage: reached "https://app.example/x", but its "load" state did not come in time (page.waitForURL: Timeout 1000ms exceeded.)',
+		);
+		expect(error?.cause).toBe(failure);
+		const late = await waitOn("https://app.example/x", timeout(), { waitUntil: "networkidle" });
+		expect(late?.message).toContain('but its "networkidle" state did not come in time');
+	});
+
+	it("on another URL, or on another error, keeps the message that names what was expected", async () => {
+		expect((await waitOn("https://app.example/y", timeout()))?.message).toBe(
+			'XPage: expected URL "https://app.example/x"; found "https://app.example/y" (page.waitForURL: Timeout 1000ms exceeded.)',
+		);
+		const closed = new Error("page.waitForURL: Target page, context or browser has been closed");
+		expect((await waitOn("https://app.example/x", closed))?.message).toBe(
+			'XPage: expected URL "https://app.example/x"; found "https://app.example/x" (page.waitForURL: Target page, context or browser has been closed)',
+		);
+		expect((await waitOn("not a url", timeout()))?.message).toBe(
+			'XPage: expected URL "https://app.example/x"; found "not a url" (page.waitForURL: Timeout 1000ms exceeded.)',
 		);
 	});
 });

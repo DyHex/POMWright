@@ -2,7 +2,10 @@ name: Pages
 
 # Builds the documentation site in website/ and deploys it to GitHub Pages, https://dyhex.github.io/POMWright/. The
 # build is the site job's of checks.yaml: it fails on a link or an anchor that does not exist. It runs after CI succeeds
-# on a push to main, guarded as publish.yaml is, and builds the commit CI tested; or by hand.
+# on a push to main, guarded as publish.yaml is, and builds the commit CI tested, but only while that commit is main's
+# tip, so the site follows main's tip whenever its CI passes: a green commit main has moved past is not deployed, and
+# waits for the next green run of a newer commit (or a manual run). By hand, it builds the commit it was started on,
+# whatever its CI said.
 
 on:
   workflow_run:
@@ -29,28 +32,57 @@ jobs:
       github.event.workflow_run.head_branch == 'main' &&
       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.tip.outputs.deploy }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # the commit CI tested; a manual run builds the commit it was started on
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      # A re-run of an older CI run keeps its commit, as does a run that finishes after a newer push's, and deploying
+      # it would put an older site over a newer one. So only main's tip is deployed: the newer commit's own run deploys
+      # a site that holds this commit's changes once its CI passes; while that CI fails, the site stays where it was.
+      - name: Deploy only main's tip
+        id: tip
+        shell: bash # -eo pipefail: a failed git ls-remote fails the step instead of reading as a moved main
+        env:
+          EVENT: ${{ github.event_name }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ "$EVENT" != "workflow_run" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          tip="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$tip" = "$TESTED_SHA" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "main has moved past $TESTED_SHA to $tip; its run deploys a site holding this one once its CI passes"
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.tip.outputs.deploy == 'true'
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           version: 12.14.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - if: steps.tip.outputs.deploy == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24.x
           cache: pnpm
           cache-dependency-path: website/pnpm-lock.yaml
-      - run: pnpm -C website install --frozen-lockfile
-      - run: pnpm -C website build
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+      - if: steps.tip.outputs.deploy == 'true'
+        run: pnpm -C website install --frozen-lockfile
+      - if: steps.tip.outputs.deploy == 'true'
+        run: pnpm -C website build
+      - if: steps.tip.outputs.deploy == 'true'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: website/dist
 
   deploy:
     name: Deploy to GitHub Pages
     needs: build
+    if: needs.build.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     permissions:
       pages: write

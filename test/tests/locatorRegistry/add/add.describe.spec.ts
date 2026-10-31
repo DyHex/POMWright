@@ -1,8 +1,9 @@
-import { expect, test } from "@fixtures/testApp.fixtures";
-import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../../src/locators";
+import { expect, type Page, test } from "@playwright/test";
+import { createRegistryWithAccessors } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+// Checked through descriptions, rendered chains and reuse.
+
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
 test("describe defaults to the terminal locator path", async ({ page }) => {
 	type LocatorSchemaPaths = "main" | "main.button@login";
@@ -50,13 +51,8 @@ test("describe overrides previous descriptions when chained", async ({ page }) =
 
 	registry.add("button").getByRole("button").describe("Primary").describe("Final");
 
-	expect(registry.get("button")).toEqual({
-		description: "Final",
-		definition: { role: "button", type: "role" },
-		locatorSchemaPath: "button",
-		steps: [],
-	});
 	expect(registry.getLocator("button").description()).toEqual("Final");
+	expect(`${registry.getLocatorSchema("button").describe("").getLocator()}`).toEqual(`${page.getByRole("button")}`);
 });
 
 test("describe does not replace an explicitly supplied empty string with the path default", async ({ page }) => {
@@ -66,8 +62,6 @@ test("describe does not replace an explicitly supplied empty string with the pat
 
 	registry.add("button").getByRole("button").describe("");
 
-	expect(registry.get("button").description).toEqual("");
-
 	const locator = registry.getLocator("button");
 
 	expect(locator.description()).toBeNull();
@@ -75,23 +69,17 @@ test("describe does not replace an explicitly supplied empty string with the pat
 });
 
 test("default descriptions are applied only when locators are resolved", async ({ page }) => {
-	type LocatorSchemaPaths = "button";
+	type LocatorSchemaPaths = "button" | "copy";
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
 	registry.add("button").getByRole("button");
 
-	expect(registry.get("button")).toEqual({
-		definition: { role: "button", type: "role" },
-		locatorSchemaPath: "button",
-		steps: [],
-	});
 	expect(registry.getLocator("button").description()).toEqual("button");
-	expect(registry.get("button")).toEqual({
-		definition: { role: "button", type: "role" },
-		locatorSchemaPath: "button",
-		steps: [],
-	});
+	// the default was not stored: a copy of the path, made after the resolution, defaults to its own path
+	registry.add("copy", { reuse: "button" });
+	expect(registry.getLocator("copy").description()).toEqual("copy");
+	expect(`${registry.getLocatorSchema("copy").describe("").getLocator()}`).toEqual(`${page.getByRole("button")}`);
 });
 
 test("describe applies registered descriptions to terminal frame owner locators", async ({ page }) => {

@@ -29,15 +29,15 @@ The chains on this page are shown without the description, which is the path unl
 
 Each takes the arguments of the Playwright method it is named after and returns the registration, for `filter`, `nth`
 and `describe`. Each throws at the call, naming the method and the path, when its first argument is missing (from
-JavaScript) or is an empty string where Playwright cannot use one, when the path already has a locator, when the
-registration has ended, and, from JavaScript, when the path breaks the path rules:
+JavaScript) or is an empty string where Playwright cannot use one, when the path already has a locator, and when the
+registration has ended. A path that breaks the path rules throws earlier, at `add`
+([`add()`](/POMWright/api/class-locatorregistry/#add)):
 
 ```text
 getByRole requires a role value for "main.button@save".
 A locator schema with the path "main" already exists.
 A locator definition for "main" has already been provided; only one locator type can be set for a registration.
-getByRole() cannot apply to "main.button@save": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
-LocatorSchemaPath string cannot contain consecutive dots: main..list
+getByRole() cannot apply to "main.button@save": its registration was ended by add("main.list.item"); give a registration all its steps in its add(…) chain, or query the path for one use.
 ```
 
 The second message goes on with the existing and the attempted locator; the third is a second locator method on one
@@ -354,7 +354,12 @@ registry.add("main.list").locator("ul.orders");
 
 ```text
 locator requires a non-empty selector for "main.list".
+locator() cannot apply to "section@inline": its registration was ended by getLocator("heading@explorer"). If that call is in this locator's options, which run first, resolve the locator before add(…), or filter by a path in a step: .filter({ has: "heading@explorer" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
 ```
+
+The second form: a registry call in the options ran first and ended the registration (see
+[registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change)); for a query there,
+the message says to resolve it before `add(…)`.
 
 ---
 
@@ -364,7 +369,8 @@ Available after a locator method, chained in any order and number, and applied i
 registration kept in a variable, after the registry was called again, throws:
 
 ```text
-nth() cannot apply to "main.list.item": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.
+nth() cannot apply to "main.button@save": its registration was ended by add("main.list.item"); give a registration all its steps in its add(…) chain, or query the path for one use.
+filter() cannot apply to "list.item@open": its registration was ended by getLocator("badge"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "badge" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
 ```
 
 From JavaScript, a step before the locator method throws:
@@ -432,6 +438,16 @@ registry.add("main.section@orders").locator("section").filter({ has: "main.secti
 
 A `has` path that is not registered, or a cycle of `has` paths, fails
 [`verify()`](/POMWright/api/class-locatorregistry/#verify).
+
+**Throws**
+
+```text
+filter() cannot apply to "list.item@open": its registration was ended by getLocator("badge"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "badge" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+filter() cannot apply to "section@inline": its registration was ended by getLocatorSchema("heading@explorer"). If that query is in this filter's arguments, which run first, resolve it before add(…). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+```
+
+A registry call in the filter's arguments ran first and ended the registration (see
+[registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change)).
 
 ### nth()
 

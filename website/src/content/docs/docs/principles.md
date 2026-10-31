@@ -3,7 +3,7 @@ title: Principles
 description: "The ideas POMWright is built on: mirror Playwright, one locator per path, nothing changes behind your back, fail early, check at runtime."
 ---
 
-These are the rules POMWright's design follows. Knowing them makes its behaviour predictable. Where a page seems to
+These are the rules POMWright's design follows. Knowing them makes its behavior predictable. Where a page seems to
 break one of them, it says why.
 
 ## Mirror Playwright, add only what it lacks
@@ -42,9 +42,11 @@ page object and every path at fault. See
 
 ## Check at runtime; types where they cost nothing
 
-Every rule is checked at runtime, so a value from a variable, an environment or JavaScript code is checked like a
-literal. TypeScript adds what it can check for free: paths that are not in the union, misspelt `has` references, a
-`replace()` without its first argument. POMWright does not add a type that would make ordinary code harder to write in
+Every rule about a value is checked at runtime, so a value from a variable, an environment or JavaScript code is
+checked like a literal. TypeScript adds what it can check for free: paths that are not in the union, misspelled `has`
+references, a `replace()` without its first argument. The rules about types themselves are TypeScript's alone, since
+types do not exist at run time: a storage schema's type and its value agree, and `createRegistryWithAccessors` takes
+its paths as a type argument. POMWright does not add a type that would make ordinary code harder to write in
 exchange for an error the runtime reports anyway.
 
 ## No hidden state, one meaning per method
@@ -56,5 +58,8 @@ given", as in Playwright. POMWright sets no timeout or wait of its own: an unset
 ## What POMWright does not do
 
 It has no runner, no reporter and no assertions: tests use `@playwright/test`. It does not wait for anything Playwright
-would not wait for, retry anything, or catch errors to hide them. It does not decide how you structure a suite beyond
-the page object and the registry; [Organising a project](/POMWright/docs/organising-a-project/) shows one way.
+would not wait for, retry anything a test asked it to do, or catch errors to hide them. When a navigation replaces the
+document while POMWright asks the page a question of its own, such as whether the browser has the Navigation API before
+a `seed`, or where the page went for a navigation message, it asks again in the next document, up to 20 times, after
+the same pauses Playwright makes before it retries one of its own actions. It does not decide how you structure a suite
+beyond the page object and the registry; [Organizing a project](/POMWright/docs/organizing-a-project/) shows one way.

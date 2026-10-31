@@ -1,13 +1,37 @@
 import { type Page, test } from "@playwright/test";
+import { callerLocation, type StepLocation } from "./callSite";
 import { createUrlMatcher, isAbsoluteUrl, resolveUrl, type UrlMatcher } from "./url";
 
 type WaitUntil = NonNullable<Parameters<Page["goto"]>[1]>["waitUntil"];
 
-/** A boxed step is reported at the line that called the helper, as a `@step` row is, not inside POMWright. */
-const BOXED = { box: true };
+/**
+ * A boxed step, reported at the line that called the helper, as a `@step` row is, not inside POMWright: the location is
+ * the caller's line, cut at the method the consumer called (`callerLocation` says why it is passed).
+ */
+const boxedAt = (location: StepLocation | undefined) => ({ box: true, location });
 
-/** A URL with a scheme; the only `goto` target accepted when the page object's `baseUrl` is a RegExp. */
-export type AbsoluteUrl = `${string}:${string}`;
+/** Whether `url` passes a wait's predicate; a URL that does not parse does not, so it cannot hide Playwright's error. */
+const passes = (predicate: (url: URL) => boolean, url: string): boolean => {
+	try {
+		return predicate(new URL(url));
+	} catch {
+		return false;
+	}
+};
+
+/** Each character of `S`, as a union. */
+type Characters<S extends string> = S extends `${infer First}${infer Rest}` ? First | Characters<Rest> : never;
+
+/** The letters a URL scheme starts with. */
+type Letter = Characters<"abcdefghijklmnopqrstuvwxyz">;
+
+/**
+ * A URL with a scheme, which starts with a letter: the only `goto` target accepted when the page object's `baseUrl` is
+ * a RegExp. A relative target that starts with `/`, `?`, `#`, `.` or a digit does not compile; one that starts with a
+ * letter and holds a colon (`a/b:c`) does, since no template type can tell it from a scheme, and is rejected at run
+ * time. A `string` holding a URL narrows with a cast: ``url as `https://${string}` ``.
+ */
+export type AbsoluteUrl = `${Letter | Uppercase<Letter>}${string}:${string}`;
 
 /**
  * The options of every navigation method, and of a page object's `navOptions`. Each option comes from the call, then
@@ -41,28 +65,21 @@ export type ThisPageOptions = NavigationOptions & {
 type GotoTarget<BaseUrl> = BaseUrl extends string ? string : AbsoluteUrl;
 
 /**
- * A page object's navigation helper, `navigation`, narrowed by its URL types: `goto()` without a target exists only
- * when `fullUrl` is a string, and `goto(target)` takes any string on a string `baseUrl` but only an absolute URL on a
- * RegExp `baseUrl`. Each method is one Playwright call, shown as a step of the report at the line that called it.
- *
- * @example
- * ```ts
- * await loginPage.navigation.goto();
- * await loginPage.logIn("ada@shop.example", "correct horse");
- * await loginPage.navigation.expectAnotherPage();
- * ```
- *
- * @see https://dyhex.github.io/POMWright/api/class-navigation/#navigationfor
+ * What every page object's navigation helper has, whatever its URL types; `Target` is what `goto(target)` takes. Typed
+ * by the target, not by `BaseUrl` through `GotoTarget`, so TypeScript compares two helpers by their `goto` parameter:
+ * a string base's helper, which takes any string, then fits where an absolute URL is all that is passed.
  */
-export type NavigationFor<BaseUrl, FullUrl> = {
+type NavigationBase<Target extends string> = {
 	/**
 	 * Waits until the browser is on this page, with one `page.waitForURL`, then runs the actions of
 	 * `pageActionsToPerformAfterNavigation()`.
 	 *
-	 * @param options `waitUntil`, `timeout` and `runPostNavigationActions`; each defaults to the page object's
-	 * `navOptions`.
+	 * @param options `waitUntil` and `timeout`, each defaulting to the page object's `navOptions`, and
+	 * `runPostNavigationActions`, which defaults to `true`.
 	 * @throws When the URL does not match in time:
 	 * `OrdersPage: expected URL "https://shop.example/orders"; found "https://shop.example/orders?tab=1" (…)`
+	 * @throws When the URL matches and its load state does not come in time:
+	 * `OrdersPage: reached "https://shop.example/orders", but its "load" state did not come in time (…)`
 	 *
 	 * @example
 	 * ```ts
@@ -79,6 +96,8 @@ export type NavigationFor<BaseUrl, FullUrl> = {
 	 * @throws When the browser stays, or comes straight back:
 	 * `OrdersPage: expected to have left "https://shop.example/orders"; found "https://shop.example/orders" (…)`,
 	 * `OrdersPage: left "https://shop.example/orders" but returned to it; found "https://shop.example/orders"`
+	 * @throws When it left and the load state of the page it moved to does not come in time:
+	 * `OrdersPage: left "https://shop.example/orders" for "https://shop.example/login", but its "load" state did not come in time (…)`
 	 *
 	 * @example
 	 * ```ts
@@ -88,16 +107,22 @@ export type NavigationFor<BaseUrl, FullUrl> = {
 	 * @see https://dyhex.github.io/POMWright/api/class-navigation/#expectanotherpage
 	 */
 	expectAnotherPage(options?: NavigationOptions): Promise<void>;
+	// a property, not a method: TypeScript then compares it strictly, so a RegExp page's helper is not a string page's
 	/**
 	 * Navigates to a target with `page.goto`, resolved against the page object's `baseUrl` exactly as Playwright
 	 * resolves a target against `baseURL` (`"/account"`, `"?tab=2"`, or an absolute URL). Never runs the page object's
 	 * actions after navigation. Without a target, navigates to this page.
 	 *
 	 * @param target The URL or path. On a RegExp `baseUrl`, an absolute URL.
-	 * @param options `waitUntil`, `timeout` (or, without a target, also `runPostNavigationActions`); each defaults to
-	 * the page object's `navOptions`.
-	 * @throws What `page.goto` throws; on a RegExp `baseUrl`, for a relative target (from JavaScript):
-	 * `AccountPage: goto("/account") needs an absolute URL because baseUrl is a RegExp.`
+	 * @param options `waitUntil` and `timeout`, each defaulting to the page object's `navOptions` (without a target, also
+	 * `runPostNavigationActions`, which defaults to `true`).
+	 * @throws What `page.goto` throws; for a target that cannot be resolved against a string `baseUrl`:
+	 * `LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.example"`; on a RegExp `baseUrl`, for
+	 * a relative target (from JavaScript, or a relative path the type cannot tell apart: one that starts with a letter
+	 * and holds a colon, `a/b:c`):
+	 * `AccountPage: goto("/account") needs an absolute URL because baseUrl is a RegExp.`; for a first argument that is
+	 * neither a string nor options, a `URL` object included (from JavaScript):
+	 * `LoginPage: goto() takes a URL string or options; received a URL object; pass its href.`
 	 *
 	 * @example
 	 * ```ts
@@ -106,27 +131,47 @@ export type NavigationFor<BaseUrl, FullUrl> = {
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-navigation/#goto
 	 */
-	goto(target: GotoTarget<BaseUrl>, options?: NavigationOptions): Promise<void>;
-} & (FullUrl extends string
-	? {
-			/**
-			 * Navigates to this page, `fullUrl`, with `page.goto`, then runs the actions of
-			 * `pageActionsToPerformAfterNavigation()`. Exists when `fullUrl` is a string.
-			 *
-			 * @param options `waitUntil`, `timeout` and `runPostNavigationActions`; each defaults to the page object's
-			 * `navOptions`.
-			 * @throws What `page.goto` throws.
-			 *
-			 * @example
-			 * ```ts
-			 * await loginPage.navigation.goto();
-			 * ```
-			 *
-			 * @see https://dyhex.github.io/POMWright/api/class-navigation/#goto
-			 */
-			goto(options?: ThisPageOptions): Promise<void>;
-		}
-	: object);
+	goto: (target: Target, options?: NavigationOptions) => Promise<void>;
+};
+
+/**
+ * A page object's navigation helper, `navigation`, narrowed by its URL types: `goto()` without a target exists only
+ * when `fullUrl` is a string, and `goto(target)` takes any string on a string `baseUrl` but only an absolute URL on a
+ * RegExp `baseUrl`. Each method is one Playwright call, shown as a step of the report at the line that called it. A
+ * page object's helper is `NavigationFor<string, string>` for two string parts, `NavigationFor<string, UrlMatcher>` for
+ * a RegExp path and `NavigationFor<RegExp, UrlMatcher>` for a RegExp base; a function that takes any page object's
+ * helper types its parameter as the last.
+ *
+ * @example
+ * ```ts
+ * await loginPage.navigation.goto();
+ * await loginPage.logIn("ada@shop.example", "correct horse");
+ * await loginPage.navigation.expectAnotherPage();
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-navigation/#navigationfor
+ */
+export type NavigationFor<BaseUrl, FullUrl> = NavigationBase<GotoTarget<BaseUrl>> &
+	(FullUrl extends string
+		? {
+				/**
+				 * Navigates to this page, `fullUrl`, with `page.goto`, then runs the actions of
+				 * `pageActionsToPerformAfterNavigation()`. Exists when `fullUrl` is a string.
+				 *
+				 * @param options `waitUntil` and `timeout`, each defaulting to the page object's `navOptions`, and
+				 * `runPostNavigationActions`, which defaults to `true`.
+				 * @throws What `page.goto` throws.
+				 *
+				 * @example
+				 * ```ts
+				 * await loginPage.navigation.goto();
+				 * ```
+				 *
+				 * @see https://dyhex.github.io/POMWright/api/class-navigation/#goto
+				 */
+				goto: (options?: ThisPageOptions) => Promise<void>;
+			}
+		: object);
 
 type GotoArguments = [options?: ThisPageOptions] | [target: string, options?: NavigationOptions];
 
@@ -169,24 +214,44 @@ class Navigation {
 	/**
 	 * One `page.waitForURL` call: Playwright waits for a navigation to a matching URL and the
 	 * requested load state, or, when the URL already matches, for the load state of the current
-	 * document. Its timeout error names only the load state, so it is rethrown with the page object,
-	 * what was expected, and the URL found at failure time.
+	 * document. Its timeout error names neither, so it is rethrown with the page object and the URL
+	 * found at failure time: what was expected when that URL is not the one waited for, and, when it
+	 * is, that the URL was reached and the load state did not come in time (`reached` says how).
 	 */
-	private async waitForUrl(predicate: (url: URL) => boolean, what: string, options?: NavigationOptions) {
+	private async waitForUrl(
+		predicate: (url: URL) => boolean,
+		what: string,
+		reached: (found: string) => string,
+		options?: NavigationOptions,
+	) {
+		const waitUntil = this.resolveWaitUntil(options);
 		try {
-			await this.page.waitForURL(predicate, {
-				waitUntil: this.resolveWaitUntil(options),
-				timeout: this.resolveTimeout(options),
-			});
+			await this.page.waitForURL(predicate, { waitUntil, timeout: this.resolveTimeout(options) });
 		} catch (error) {
 			const detail = error instanceof Error ? error.message.split("\n")[0] : String(error);
-			throw new Error(`${this.label}: ${what}; found ${JSON.stringify(this.page.url())} (${detail})`, { cause: error });
+			const found = this.page.url();
+			if (error instanceof Error && error.name === "TimeoutError" && passes(predicate, found)) {
+				throw new Error(
+					`${this.label}: ${reached(found)}, but its ${JSON.stringify(waitUntil ?? "load")} state did not come in time (${detail})`,
+					{ cause: error },
+				);
+			}
+			throw new Error(`${this.label}: ${what}; found ${JSON.stringify(found)} (${detail})`, { cause: error });
 		}
 	}
 
 	private resolveTarget(input: string): string {
 		if (typeof this.baseUrl === "string") {
-			return resolveUrl(input, this.baseUrl);
+			try {
+				return resolveUrl(input, this.baseUrl);
+			} catch (error) {
+				// labeled as every other navigation message; the URL parser's own error is the cause
+				const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
+				throw new Error(
+					`${this.label}: goto(${JSON.stringify(input)}) cannot be resolved against baseUrl ${JSON.stringify(this.baseUrl)}`,
+					{ cause },
+				);
+			}
 		}
 		if (isAbsoluteUrl(input)) {
 			return input;
@@ -201,7 +266,20 @@ class Navigation {
 	 * actions.
 	 */
 	public async goto(...args: GotoArguments): Promise<void> {
+		const location = callerLocation(Navigation.prototype.goto);
 		const [first, second] = args;
+		// as page.goto, which takes a URL string only: from JavaScript, a URL object is not this page's options. Any other
+		// object is taken as the options, as page.goto takes any object as its options: a class instance works today
+		const given: unknown = first;
+		if (
+			given !== undefined &&
+			typeof given !== "string" &&
+			(typeof given !== "object" || given === null || given instanceof URL)
+		) {
+			const received =
+				given instanceof URL ? "a URL object; pass its href" : given === null ? "null" : `a ${typeof given}`;
+			throw new Error(`${this.label}: goto() takes a URL string or options; received ${received}.`);
+		}
 
 		if (typeof first !== "string") {
 			if (typeof this.fullUrl !== "string") {
@@ -222,7 +300,7 @@ class Navigation {
 						await this.executeActions();
 					}
 				},
-				BOXED,
+				boxedAt(location),
 			);
 			return;
 		}
@@ -236,21 +314,27 @@ class Navigation {
 					timeout: this.resolveTimeout(second),
 				});
 			},
-			BOXED,
+			boxedAt(location),
 		);
 	}
 
 	/** Wait until the browser is on this page (URL and load state), then run the post-navigation actions. */
 	public async expectThisPage(options?: ThisPageOptions): Promise<void> {
+		const location = callerLocation(Navigation.prototype.expectThisPage);
 		await test.step(
 			`${this.label}: Expect this Page`,
 			async () => {
-				await this.waitForUrl(this.matcher, `expected URL ${this.describeFullUrl()}`, options);
+				await this.waitForUrl(
+					this.matcher,
+					`expected URL ${this.describeFullUrl()}`,
+					(found) => `reached ${JSON.stringify(found)}`,
+					options,
+				);
 				if (options?.runPostNavigationActions !== false) {
 					await this.executeActions();
 				}
 			},
-			BOXED,
+			boxedAt(location),
 		);
 	}
 
@@ -259,17 +343,23 @@ class Navigation {
 	 * fail at once if the URL is back on this page, which catches a redirect that bounced back.
 	 */
 	public async expectAnotherPage(options?: NavigationOptions): Promise<void> {
+		const location = callerLocation(Navigation.prototype.expectAnotherPage);
 		await test.step(
 			`${this.label}: Expect any other Page`,
 			async () => {
-				await this.waitForUrl((url) => !this.matcher(url), `expected to have left ${this.describeFullUrl()}`, options);
+				await this.waitForUrl(
+					(url) => !this.matcher(url),
+					`expected to have left ${this.describeFullUrl()}`,
+					(found) => `left ${this.describeFullUrl()} for ${JSON.stringify(found)}`,
+					options,
+				);
 				if (this.matcher(new URL(this.page.url()))) {
 					throw new Error(
 						`${this.label}: left ${this.describeFullUrl()} but returned to it; found ${JSON.stringify(this.page.url())}`,
 					);
 				}
 			},
-			BOXED,
+			boxedAt(location),
 		);
 	}
 }

@@ -140,10 +140,11 @@ error. A module is called once per page object, every time a page object is cons
 ## Locators every page shares, in a base class
 
 The locators every page of a site shares, and the methods that use them, can live in the site's
-[base class](/POMWright/docs/organising-a-project/#a-base-class-for-your-site), so that every page object gets them
+[base class](/POMWright/docs/organizing-a-project/#a-base-class-for-your-site), so that every page object gets them
 without registering anything. Instead of each page's module calling the common module, as `login.locators.ts` does
 above, the base class implements `defineLocators()` once: it registers the common module, then calls a method of its
-own in which each page registers its locators. Its methods work on the common locators:
+own in which each page registers its locators. Its methods work on the common locators, queries with a sub-path on them
+included:
 
 ```ts title="shop.page.ts"
 import type { Page } from "@playwright/test";
@@ -165,6 +166,13 @@ export abstract class ShopPage<Paths extends string> extends PageObject<Paths | 
 
   async acceptCookies() {
     await this.getNestedLocator("dialog@consent.button@accept").click();
+  }
+
+  async acceptCookiesFor(vendor: string) {
+    await this.getLocatorSchema("dialog@consent.button@accept")
+      .filter("dialog@consent", { hasText: vendor })
+      .getNestedLocator()
+      .click();
   }
 
   async openHelp() {
@@ -325,7 +333,7 @@ locator('main').getByRole('list', { name: 'Products' }).getByRole('listitem').fi
 
 Playwright looks for the `has` locator inside each element being filtered, so `page.getByText("Sale", { exact: true })`
 finds the badge in each list item, not a "Sale" elsewhere on the page. A registry created with
-`createRegistryWithAccessors(page)` passes the same `page`, the test's fixture: `defineLocators(registry, page)`. A
+`createRegistryWithAccessors<Paths>(page)` passes the same `page`, the test's fixture: `defineLocators(registry, page)`. A
 module that other modules compose keeps its overload, with the page as a second parameter, as in
 [passing state to a module](/POMWright/docs/locator-modules/#passing-state-to-a-module).
 

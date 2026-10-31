@@ -12,8 +12,9 @@ export type LocatorSchemaPathError<S extends string, Reason extends string> = [
 
 /**
  * The path rules as a type: `S` itself when it is a well-formed path (not empty, no leading, trailing or consecutive
- * `.`, no whitespace), otherwise a tuple naming the rule it breaks, which TypeScript shows in the error. A wide
- * `string` is not checked here; the runtime check applies to every path.
+ * `.`, no whitespace), otherwise a tuple naming the rules it breaks, every one, joined by `; `, in the order the runtime
+ * names them; TypeScript shows it in the error. A literal of any length is checked. A wide `string` is not checked
+ * here; the runtime check applies to every path.
  *
  * @example
  * ```ts
@@ -28,28 +29,26 @@ export type LocatorSchemaPathFormat<S extends string> = string extends S
 		S
 	: S extends ""
 		? LocatorSchemaPathError<S, "String can't be empty">
-		: _LocatorSchemaPathFormat<S, S, true, false>;
+		: BrokenRules<S> extends []
+			? S
+			: LocatorSchemaPathError<S, JoinRules<BrokenRules<S>>>;
 
-type _LocatorSchemaPathFormat<
-	Original extends string,
-	Rest extends string,
-	AtStart extends boolean,
-	PrevDot extends boolean,
-> = Rest extends ""
-	? PrevDot extends true
-		? LocatorSchemaPathError<Original, "String can't end with '.'">
-		: Original
-	: Rest extends `${infer C}${infer Tail}`
-		? C extends UnicodeWhitespaceChar
-			? LocatorSchemaPathError<Original, "String can't contain whitespace chars">
-			: C extends "."
-				? AtStart extends true
-					? LocatorSchemaPathError<Original, "String can't start with '.'">
-					: PrevDot extends true
-						? LocatorSchemaPathError<Original, "String can't contain consecutive '.'">
-						: _LocatorSchemaPathFormat<Original, Tail, false, true>
-				: _LocatorSchemaPathFormat<Original, Tail, false, false>
-		: never;
+/**
+ * The path rules a literal breaks, in the order the runtime checks them. Each is a template-literal pattern, so a path
+ * of any length is checked without recursing over its characters.
+ */
+type BrokenRules<S extends string> = [
+	...(S extends `${string}${UnicodeWhitespaceChar}${string}` ? ["String can't contain whitespace chars"] : []),
+	...(S extends `.${string}` ? ["String can't start with '.'"] : []),
+	...(S extends `${string}.` ? ["String can't end with '.'"] : []),
+	...(S extends `${string}..${string}` ? ["String can't contain consecutive '.'"] : []),
+];
+
+type JoinRules<R extends string[]> = R extends [infer F extends string, ...infer Rest extends string[]]
+	? Rest extends []
+		? F
+		: `${F}; ${JoinRules<Rest>}`
+	: never;
 
 export type LocatorSchemaPathValid<Path extends string> = Path extends unknown
 	? LocatorSchemaPathFormat<Path> extends Path
@@ -57,8 +56,9 @@ export type LocatorSchemaPathValid<Path extends string> = Path extends unknown
 		: never
 	: never;
 
-export type RegistryPath<LocatorSchemaPathType extends string> = LocatorSchemaPathType &
-	LocatorSchemaPathValid<LocatorSchemaPathType>;
+export type RegistryPath<LocatorSchemaPathType extends string> = LocatorSchemaPathType extends unknown
+	? LocatorSchemaPathType & LocatorSchemaPathValid<LocatorSchemaPathType>
+	: never;
 
 export type ExtractSubPaths<Path extends string> = Path extends `${infer Head}.${infer Tail}`
 	? Head | `${Head}.${ExtractSubPaths<Tail>}`
@@ -67,8 +67,16 @@ export type ExtractSubPaths<Path extends string> = Path extends `${infer Head}.$
 export type LocatorChainPaths<
 	LocatorSchemaPathType extends string,
 	LocatorSubstring extends LocatorSchemaPathType | undefined,
-> = LocatorSubstring extends string
-	? Extract<LocatorSchemaPathType, LocatorSubstring | ExtractSubPaths<LocatorSubstring>>
+> = LocatorSubstring extends string ? SubPathsPerMember<LocatorSchemaPathType, LocatorSubstring> : never;
+
+/** Per member of the path union: a literal when it is a segment of the chain, a pattern for each segment it matches. */
+type SubPathsPerMember<Member extends string, Path extends string> = Member extends unknown
+	? string extends Member
+		? string
+		: // biome-ignore lint/complexity/noBannedTypes: {} fits Record<Member, unknown> only when Member is a pattern, not a literal
+			{} extends Record<Member, unknown>
+			? Extract<ExtractSubPaths<Path>, Member>
+			: Extract<Member, ExtractSubPaths<Path>>
 	: never;
 
 export type RoleDefinition = {

@@ -114,6 +114,25 @@ test.describe("goto", () => {
 		expect(testNav.page.url()).toBe(`${BASE}/testids`);
 	});
 
+	test("from JavaScript, a URL object throws instead of going to the page object's own URL", async ({ testNav }) => {
+		const untyped = testNav.navigation as unknown as { goto(first: unknown): Promise<void> };
+		await expect(untyped.goto(new URL(`${BASE}/testnav/item/7`))).rejects.toThrow(
+			"TestNav: goto() takes a URL string or options; received a URL object; pass its href.",
+		);
+		expect(testNav.page.url()).toBe("about:blank");
+		await testNav.navigation.goto(new URL(`${BASE}/testnav/item/7`).href);
+		expect(testNav.page.url()).toBe(`${BASE}/testnav/item/7`);
+	});
+
+	test("a target that cannot be resolved against baseUrl names the page object and goes nowhere", async ({
+		testNav,
+	}) => {
+		const error = await testNav.navigation.goto("http://").catch((thrown: unknown) => thrown);
+		expect((error as Error).message).toBe(`TestNav: goto("http://") cannot be resolved against baseUrl "${BASE}"`);
+		expect((error as Error).cause).toBeInstanceOf(TypeError);
+		expect(testNav.page.url()).toBe("about:blank");
+	});
+
 	test("a trailing slash on baseUrl composes to a single slash", async ({ page }) => {
 		const nav = new TrailingSlashNav(page);
 		expect(nav.fullUrl).toBe(`${BASE}/testnav`);
@@ -160,6 +179,18 @@ test.describe("expectThisPage", () => {
 			await expect(testNav.navigation.expectThisPage({ timeout: 500 }), path).rejects.toThrow(
 				`TestNav: expected URL "${BASE}/testnav"; found "${found}" (page.waitForURL: Timeout 500ms exceeded.)`,
 			);
+		}
+	});
+
+	test("an empty query or fragment is another URL, as for Playwright's toHaveURL", async ({ page, testNav }) => {
+		for (const suffix of ["?", "#"]) {
+			await page.goto(`${BASE}/testnav${suffix}`);
+			expect(page.url()).toBe(`${BASE}/testnav${suffix}`);
+			await expect(page).not.toHaveURL(testNav.fullUrl, { timeout: 500 });
+			await expect(testNav.navigation.expectThisPage({ timeout: 500 })).rejects.toThrow(
+				`TestNav: expected URL "${BASE}/testnav"; found "${BASE}/testnav${suffix}" (page.waitForURL: Timeout 500ms exceeded.)`,
+			);
+			await testNav.navigation.expectAnotherPage({ timeout: 500 });
 		}
 	});
 
@@ -299,8 +330,8 @@ test("a non-ASCII path is compared as the browser reports it: goto, expectThisPa
 });
 
 class DelayedItemNav extends PageObject<"body"> {
-	constructor(page: Page, navOptions: NavigationOptions) {
-		super(page, BASE, "/testnav/item/7", { label: "DelayedItemNav", navOptions });
+	constructor(page: Page, navOptions?: NavigationOptions, urlPath = "/testnav/item/7") {
+		super(page, BASE, urlPath, { label: "DelayedItemNav", navOptions });
 	}
 	protected defineLocators() {
 		this.add("body").locator("body");
@@ -319,21 +350,50 @@ test.describe("the page object's navOptions are the defaults of every navigation
 	});
 
 	test("navOptions.waitUntil decides what goto waits for", async ({ page }) => {
-		let release: () => void = () => {};
-		const held = new Promise<void>((resolve) => {
-			release = resolve;
-		});
-		await page.route(`${BASE}/testnav/item/7`, (route) =>
-			route.fulfill({ contentType: "text/html", body: '<p>item</p><img src="/testnav/held.png">' }),
-		);
-		await page.route(`${BASE}/testnav/held.png`, async (route) => {
-			await held;
-			await route.fulfill({ status: 404 });
-		});
-		const committed = new DelayedItemNav(page, { waitUntil: "commit" });
+		// the server answers the item page's image 10 s late, so the page commits at once and its "load" comes only then
+		const committed = new DelayedItemNav(page, { waitUntil: "commit" }, "/testnav/item/7?image=10000");
 		await committed.navigation.goto();
 		expect(await page.evaluate(() => document.readyState)).not.toBe("complete");
 		await expect(committed.navigation.goto({ waitUntil: "load", timeout: 500 })).rejects.toThrow("Timeout 500ms");
-		release();
+	});
+
+	test("expectThisPage and expectAnotherPage name a late load state of the right URL", async ({ page }) => {
+		// the server answers both item pages' image 10 s late, so each page commits at once and its "load" comes only then
+		const item = new DelayedItemNav(page, undefined, "/testnav/item/7?image=10000");
+		await item.navigation.goto({ waitUntil: "commit" });
+		await expect(item.navigation.expectThisPage({ timeout: 1000 })).rejects.toThrow(
+			`DelayedItemNav: reached "${BASE}/testnav/item/7?image=10000", but its "load" state did not come in time (page.waitForURL: Timeout 1000ms exceeded.)`,
+		);
+		await page.goto(`${BASE}/testnav/item/8?image=10000`, { waitUntil: "commit" });
+		await expect(item.navigation.expectAnotherPage({ timeout: 1000 })).rejects.toThrow(
+			`DelayedItemNav: left "${BASE}/testnav/item/7?image=10000" for "${BASE}/testnav/item/8?image=10000", but its "load" state did not come in time (page.waitForURL: Timeout 1000ms exceeded.)`,
+		);
+	});
+});
+
+test.describe("without navOptions or a call's timeout, the project's navigationTimeout bounds every navigation method", () => {
+	test.use({ navigationTimeout: 700 });
+
+	test("expectThisPage and expectAnotherPage wait up to navigationTimeout; a call's own timeout wins", async ({
+		page,
+		testNav,
+	}) => {
+		await testNav.navigation.goto();
+		await expect(testNav.navigation.expectAnotherPage()).rejects.toThrow("Timeout 700ms exceeded");
+		const item = new DelayedItemNav(page);
+		await page.locator("#delayed-item").click(); // navigates after 1.5 s
+		await expect(item.navigation.expectThisPage()).rejects.toThrow("Timeout 700ms exceeded");
+		await item.navigation.expectThisPage({ timeout: 10_000 });
+	});
+
+	test("goto waits up to navigationTimeout; a call's own timeout wins", async ({ page }) => {
+		// the server answers the item page 2 s late
+		const item = new DelayedItemNav(page, undefined, "/testnav/item/7?delay=2000");
+		await expect(item.navigation.goto()).rejects.toThrow("Timeout 700ms exceeded");
+		// the navigation goes on after goto gives up; a second one started before it ends fails in Chromium
+		// (net::ERR_ABORTED), so the second call waits for it
+		await page.waitForURL(item.fullUrl, { timeout: 10_000 });
+		await item.navigation.goto({ timeout: 10_000 });
+		await expect(page.locator("h1")).toHaveText("Item 7");
 	});
 });

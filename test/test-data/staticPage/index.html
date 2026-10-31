@@ -1,100 +1,112 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>W3.CSS Template</title>
+<title>Static test page</title>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-<link rel="stylesheet" href="https://www.w3schools.com/lib/w3-theme-blue-grey.css">
-<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Open+Sans'>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-<style>
-html, body, h1, h2, h3, h4, h5 {font-family: "Open Sans", sans-serif}
-</style>
+<link rel="stylesheet" href="/site.css">
 </head>
-<body class="w3-theme-l5">
+<body class="theme-l5">
+<svg aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute">
+  <symbol id="icon-bars" viewBox="0 0 16 16"><path d="M2 3h12v2H2zM2 7h12v2H2zM2 11h12v2H2z"/></symbol>
+  <symbol id="icon-bell" viewBox="0 0 16 16"><path d="M8 1.5a1 1 0 0 1 1 1v.6c2.3.5 3.8 2.4 3.8 4.9v3l1.2 1.5v.5H2v-.5L3.2 11V8c0-2.5 1.5-4.4 3.8-4.9v-.6a1 1 0 0 1 1-1zM6.3 14h3.4a1.7 1.7 0 0 1-3.4 0z"/></symbol>
+  <symbol id="icon-birthday-cake" viewBox="0 0 16 16"><path d="M2 9h12v5.5H2z"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M4.5 8.5V6M8 8.5V6M11.5 8.5V6"/><circle cx="4.5" cy="4.2" r=".9"/><circle cx="8" cy="4.2" r=".9"/><circle cx="11.5" cy="4.2" r=".9"/></symbol>
+  <symbol id="icon-bug" viewBox="0 0 16 16"><ellipse cx="8" cy="9.3" rx="3.4" ry="4.5"/><circle cx="8" cy="3.8" r="2"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.3" d="M1.5 6.5l3 1.5M14.5 6.5l-3 1.5M1 10h3.5M15 10h-3.5M1.8 14l3-2M14.2 14l-3-2"/></symbol>
+  <symbol id="icon-calendar-check-o" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"><path d="M2 3h12v11H2zM2 6.2h12M5 1.5v3M11 1.5v3M5.5 10.2l2 2 3.5-3.6"/></g></symbol>
+  <symbol id="icon-check" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M2.5 8.5l3.5 3.5 7.5-7.5"/></symbol>
+  <symbol id="icon-circle-o-notch" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 2.6A6 6 0 1 0 11 2.6"/></symbol>
+  <symbol id="icon-comment" viewBox="0 0 16 16"><path d="M8 2C4.1 2 1 4.4 1 7.4c0 1.6.9 3 2.3 4L2.5 14l3.2-1.6c.7.2 1.5.3 2.3.3 3.9 0 7-2.4 7-5.4S11.9 2 8 2z"/></symbol>
+  <symbol id="icon-envelope" viewBox="0 0 16 16"><path d="M1 3.5h14v1.4L8 9.3 1 4.9zM1 6.8l7 4.4 7-4.4v5.7H1z"/></symbol>
+  <symbol id="icon-globe" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"><circle cx="8" cy="8" r="6.2"/><ellipse cx="8" cy="8" rx="2.6" ry="6.2"/><path d="M1.8 8h12.4"/></g></symbol>
+  <symbol id="icon-home" viewBox="0 0 16 16"><path d="M8 1.5 1 8h2v6.5h4v-4h2v4h4V8h2z"/></symbol>
+  <symbol id="icon-pencil" viewBox="0 0 16 16"><path d="M11.3 1.3l3.4 3.4-8.8 8.8H2.5v-3.4z"/></symbol>
+  <symbol id="icon-remove" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></symbol>
+  <symbol id="icon-thumbs-up" viewBox="0 0 16 16"><path d="M1 7h3v8H1zM5 7l3.5-6c1 0 1.8.8 1.6 1.8L9.6 6H14c.9 0 1.5.8 1.3 1.6l-1.3 6c-.2.8-.9 1.4-1.7 1.4H5z"/></symbol>
+  <symbol id="icon-user" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3"/><path d="M2.5 15c0-3.3 2.5-5.5 5.5-5.5s5.5 2.2 5.5 5.5z"/></symbol>
+  <symbol id="icon-users" viewBox="0 0 16 16"><circle cx="5.5" cy="5" r="2.5"/><circle cx="11" cy="5.5" r="2.2"/><path d="M.5 14c0-2.8 2.2-4.5 5-4.5s5 1.7 5 4.5zM11.5 14c0-1.6-.6-3-1.6-3.9.4-.1.7-.1 1.1-.1 2.5 0 4.5 1.4 4.5 4z"/></symbol>
+</svg>
 
 <!-- Navbar -->
-<div class="w3-top">
- <div class="w3-bar w3-theme-d2 w3-left-align w3-large">
-  <a class="w3-bar-item w3-button w3-hide-medium w3-hide-large w3-right w3-padding-large w3-hover-white w3-large w3-theme-d2" href="javascript:void(0);" onclick="openNav()"><i class="fa fa-bars"></i></a>
-  <a href="#" class="w3-bar-item w3-button w3-padding-large w3-theme-d4"><i class="fa fa-home w3-margin-right"></i>Logo</a>
-  <a href="#" class="w3-bar-item w3-button w3-hide-small w3-padding-large w3-hover-white" title="News"><i class="fa fa-globe"></i></a>
-  <a href="#" class="w3-bar-item w3-button w3-hide-small w3-padding-large w3-hover-white" title="Account Settings"><i class="fa fa-user"></i></a>
-  <a href="#" class="w3-bar-item w3-button w3-hide-small w3-padding-large w3-hover-white" title="Messages"><i class="fa fa-envelope"></i></a>
-  <div class="w3-dropdown-hover w3-hide-small">
-    <button class="w3-button w3-padding-large" title="Notifications"><i class="fa fa-bell"></i><span class="w3-badge w3-right w3-small w3-green">3</span></button>     
-    <div class="w3-dropdown-content w3-card-4 w3-bar-block" style="width:300px">
-      <a href="#" class="w3-bar-item w3-button">One new friend request</a>
-      <a href="#" class="w3-bar-item w3-button">John Doe posted on your wall</a>
-      <a href="#" class="w3-bar-item w3-button">Jane likes your post</a>
+<div class="top">
+ <div class="bar theme-d2 left-align large">
+  <a class="bar-item button hide-medium hide-large right padding-large hover-white large theme-d2" href="javascript:void(0);" onclick="openNav()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-bars"></use></svg></a>
+  <a href="#" class="bar-item button padding-large theme-d4"><svg class="icon margin-right" aria-hidden="true" focusable="false"><use href="#icon-home"></use></svg>Logo</a>
+  <a href="#" class="bar-item button hide-small padding-large hover-white" title="News"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-globe"></use></svg></a>
+  <a href="#" class="bar-item button hide-small padding-large hover-white" title="Account Settings"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-user"></use></svg></a>
+  <a href="#" class="bar-item button hide-small padding-large hover-white" title="Messages"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-envelope"></use></svg></a>
+  <div class="dropdown-hover hide-small">
+    <button class="button padding-large" title="Notifications"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-bell"></use></svg><span class="badge right small green">3</span></button>     
+    <div class="dropdown-content card-4 bar-block" style="width:300px">
+      <a href="#" class="bar-item button">One new friend request</a>
+      <a href="#" class="bar-item button">John Doe posted on your wall</a>
+      <a href="#" class="bar-item button">Jane likes your post</a>
     </div>
   </div>
-  <a href="#" class="w3-bar-item w3-button w3-hide-small w3-right w3-padding-large w3-hover-white" title="My Account">
-    <img src="/w3images/avatar2.png" class="w3-circle" style="height:23px;width:23px" alt="Avatar">
+  <a href="#" class="bar-item button hide-small right padding-large hover-white" title="My Account">
+    <img src="/images/avatar2.svg" class="circle" style="height:23px;width:23px" alt="Avatar">
   </a>
  </div>
 </div>
 
 <!-- Navbar on small screens -->
-<div id="navDemo" class="w3-bar-block w3-theme-d2 w3-hide w3-hide-large w3-hide-medium w3-large">
-  <a href="#" class="w3-bar-item w3-button w3-padding-large">Link 1</a>
-  <a href="#" class="w3-bar-item w3-button w3-padding-large">Link 2</a>
-  <a href="#" class="w3-bar-item w3-button w3-padding-large">Link 3</a>
-  <a href="#" class="w3-bar-item w3-button w3-padding-large">My Profile</a>
+<div id="navDemo" class="bar-block theme-d2 hide hide-large hide-medium large">
+  <a href="#" class="bar-item button padding-large">Link 1</a>
+  <a href="#" class="bar-item button padding-large">Link 2</a>
+  <a href="#" class="bar-item button padding-large">Link 3</a>
+  <a href="#" class="bar-item button padding-large">My Profile</a>
 </div>
 
 <!-- Page Container -->
-<div class="w3-container w3-content" style="max-width:1400px;margin-top:80px">    
+<div class="container content" style="max-width:1400px;margin-top:80px">    
   <!-- The Grid -->
-  <div class="w3-row">
+  <div class="row">
     <!-- Left Column -->
-    <div class="w3-col m3">
+    <div class="col m3">
       <!-- Profile -->
-      <div class="w3-card w3-round w3-white">
-        <div class="w3-container">
-         <h4 class="w3-center">My Profile</h4>
-         <p class="w3-center"><img src="/w3images/avatar3.png" class="w3-circle" style="height:106px;width:106px" alt="Avatar"></p>
+      <div class="card round white">
+        <div class="container">
+         <h4 class="center">My Profile</h4>
+         <p class="center"><img src="/images/avatar3.svg" class="circle" style="height:106px;width:106px" alt="Avatar"></p>
          <hr>
-         <p><i class="fa fa-pencil fa-fw w3-margin-right w3-text-theme"></i> Designer, UI</p>
-         <p><i class="fa fa-home fa-fw w3-margin-right w3-text-theme"></i> London, UK</p>
-         <p><i class="fa fa-birthday-cake fa-fw w3-margin-right w3-text-theme"></i> April 1, 1988</p>
+         <p><svg class="icon icon-fw margin-right text-theme" aria-hidden="true" focusable="false"><use href="#icon-pencil"></use></svg> Designer, UI</p>
+         <p><svg class="icon icon-fw margin-right text-theme" aria-hidden="true" focusable="false"><use href="#icon-home"></use></svg> London, UK</p>
+         <p><svg class="icon icon-fw margin-right text-theme" aria-hidden="true" focusable="false"><use href="#icon-birthday-cake"></use></svg> April 1, 1988</p>
         </div>
       </div>
       <br>
       
       <!-- Accordion -->
-      <div class="w3-card w3-round">
-        <div class="w3-white">
-          <button onclick="myFunction('Demo1')" class="w3-button w3-block w3-theme-l1 w3-left-align"><i class="fa fa-circle-o-notch fa-fw w3-margin-right"></i> My Groups</button>
-          <div id="Demo1" class="w3-hide w3-container">
+      <div class="card round">
+        <div class="white">
+          <button onclick="myFunction('Demo1')" class="button block theme-l1 left-align"><svg class="icon icon-fw margin-right" aria-hidden="true" focusable="false"><use href="#icon-circle-o-notch"></use></svg> My Groups</button>
+          <div id="Demo1" class="hide container">
             <p>Some text..</p>
           </div>
-          <button onclick="myFunction('Demo2')" class="w3-button w3-block w3-theme-l1 w3-left-align"><i class="fa fa-calendar-check-o fa-fw w3-margin-right"></i> My Events</button>
-          <div id="Demo2" class="w3-hide w3-container">
+          <button onclick="myFunction('Demo2')" class="button block theme-l1 left-align"><svg class="icon icon-fw margin-right" aria-hidden="true" focusable="false"><use href="#icon-calendar-check-o"></use></svg> My Events</button>
+          <div id="Demo2" class="hide container">
             <p>Some other text..</p>
           </div>
-          <button onclick="myFunction('Demo3')" class="w3-button w3-block w3-theme-l1 w3-left-align"><i class="fa fa-users fa-fw w3-margin-right"></i> My Photos</button>
-          <div id="Demo3" class="w3-hide w3-container">
-         <div class="w3-row-padding">
+          <button onclick="myFunction('Demo3')" class="button block theme-l1 left-align"><svg class="icon icon-fw margin-right" aria-hidden="true" focusable="false"><use href="#icon-users"></use></svg> My Photos</button>
+          <div id="Demo3" class="hide container">
+         <div class="row-padding">
          <br>
-           <div class="w3-half">
-             <img src="/w3images/lights.jpg" style="width:100%" class="w3-margin-bottom">
+           <div class="half">
+             <img src="/images/lights.svg" style="width:100%" class="margin-bottom">
            </div>
-           <div class="w3-half">
-             <img src="/w3images/nature.jpg" style="width:100%" class="w3-margin-bottom">
+           <div class="half">
+             <img src="/images/nature.svg" style="width:100%" class="margin-bottom">
            </div>
-           <div class="w3-half">
-             <img src="/w3images/mountains.jpg" style="width:100%" class="w3-margin-bottom">
+           <div class="half">
+             <img src="/images/mountains.svg" style="width:100%" class="margin-bottom">
            </div>
-           <div class="w3-half">
-             <img src="/w3images/forest.jpg" style="width:100%" class="w3-margin-bottom">
+           <div class="half">
+             <img src="/images/forest.svg" style="width:100%" class="margin-bottom">
            </div>
-           <div class="w3-half">
-             <img src="/w3images/nature.jpg" style="width:100%" class="w3-margin-bottom">
+           <div class="half">
+             <img src="/images/nature.svg" style="width:100%" class="margin-bottom">
            </div>
-           <div class="w3-half">
-             <img src="/w3images/snow.jpg" style="width:100%" class="w3-margin-bottom">
+           <div class="half">
+             <img src="/images/snow.svg" style="width:100%" class="margin-bottom">
            </div>
          </div>
           </div>
@@ -103,30 +115,30 @@ html, body, h1, h2, h3, h4, h5 {font-family: "Open Sans", sans-serif}
       <br>
       
       <!-- Interests --> 
-      <div class="w3-card w3-round w3-white w3-hide-small">
-        <div class="w3-container">
+      <div class="card round white hide-small">
+        <div class="container">
           <p>Interests</p>
           <p>
-            <span class="w3-tag w3-small w3-theme-d5">News</span>
-            <span class="w3-tag w3-small w3-theme-d4">W3Schools</span>
-            <span class="w3-tag w3-small w3-theme-d3">Labels</span>
-            <span class="w3-tag w3-small w3-theme-d2">Games</span>
-            <span class="w3-tag w3-small w3-theme-d1">Friends</span>
-            <span class="w3-tag w3-small w3-theme">Games</span>
-            <span class="w3-tag w3-small w3-theme-l1">Friends</span>
-            <span class="w3-tag w3-small w3-theme-l2">Food</span>
-            <span class="w3-tag w3-small w3-theme-l3">Design</span>
-            <span class="w3-tag w3-small w3-theme-l4">Art</span>
-            <span class="w3-tag w3-small w3-theme-l5">Photos</span>
+            <span class="tag small theme-d5">News</span>
+            <span class="tag small theme-d4">Testing</span>
+            <span class="tag small theme-d3">Labels</span>
+            <span class="tag small theme-d2">Games</span>
+            <span class="tag small theme-d1">Friends</span>
+            <span class="tag small theme">Games</span>
+            <span class="tag small theme-l1">Friends</span>
+            <span class="tag small theme-l2">Food</span>
+            <span class="tag small theme-l3">Design</span>
+            <span class="tag small theme-l4">Art</span>
+            <span class="tag small theme-l5">Photos</span>
           </p>
         </div>
       </div>
       <br>
       
       <!-- Alert Box -->
-      <div class="w3-container w3-display-container w3-round w3-theme-l4 w3-border w3-theme-border w3-margin-bottom w3-hide-small">
-        <span onclick="this.parentElement.style.display='none'" class="w3-button w3-theme-l3 w3-display-topright">
-          <i class="fa fa-remove"></i>
+      <div class="container display-container round theme-l4 border theme-border margin-bottom hide-small">
+        <span onclick="this.parentElement.style.display='none'" class="button theme-l3 display-topright">
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-remove"></use></svg>
         </span>
         <p><strong>Hey!</strong></p>
         <p>People are looking at your profile. Find out who.</p>
@@ -136,100 +148,100 @@ html, body, h1, h2, h3, h4, h5 {font-family: "Open Sans", sans-serif}
     </div>
     
     <!-- Middle Column -->
-    <div class="w3-col m7">
+    <div class="col m7">
     
-      <div class="w3-row-padding">
-        <div class="w3-col m12">
-          <div class="w3-card w3-round w3-white">
-            <div class="w3-container w3-padding">
-              <h6 class="w3-opacity">Social Media template by w3.css</h6>
-              <p contenteditable="true" class="w3-border w3-padding">Status: Feeling Blue</p>
-              <button type="button" class="w3-button w3-theme"><i class="fa fa-pencil"></i>  Post</button> 
+      <div class="row-padding">
+        <div class="col m12">
+          <div class="card round white">
+            <div class="container padding">
+              <h6 class="opacity">Social media test page</h6>
+              <p contenteditable="true" class="border padding">Status: Feeling Blue</p>
+              <button type="button" class="button theme"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-pencil"></use></svg>  Post</button> 
             </div>
           </div>
         </div>
       </div>
       
-      <div class="w3-container w3-card w3-white w3-round w3-margin"><br>
-        <img src="/w3images/avatar2.png" alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
-        <span class="w3-right w3-opacity">1 min</span>
+      <div class="container card white round margin"><br>
+        <img src="/images/avatar2.svg" alt="Avatar" class="left circle margin-right" style="width:60px">
+        <span class="right opacity">1 min</span>
         <h4>John Doe</h4><br>
-        <hr class="w3-clear">
+        <hr class="clear">
         <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
-          <div class="w3-row-padding" style="margin:0 -16px">
-            <div class="w3-half">
-              <img src="/w3images/lights.jpg" style="width:100%" alt="Northern Lights" class="w3-margin-bottom">
+          <div class="row-padding" style="margin:0 -16px">
+            <div class="half">
+              <img src="/images/lights.svg" style="width:100%" alt="Northern Lights" class="margin-bottom">
             </div>
-            <div class="w3-half">
-              <img src="/w3images/nature.jpg" style="width:100%" alt="Nature" class="w3-margin-bottom">
+            <div class="half">
+              <img src="/images/nature.svg" style="width:100%" alt="Nature" class="margin-bottom">
           </div>
         </div>
-        <button type="button" class="w3-button w3-theme-d1 w3-margin-bottom"><i class="fa fa-thumbs-up"></i>  Like</button> 
-        <button type="button" class="w3-button w3-theme-d2 w3-margin-bottom"><i class="fa fa-comment"></i>  Comment</button> 
+        <button type="button" class="button theme-d1 margin-bottom"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-thumbs-up"></use></svg>  Like</button> 
+        <button type="button" class="button theme-d2 margin-bottom"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-comment"></use></svg>  Comment</button> 
       </div>
       
-      <div class="w3-container w3-card w3-white w3-round w3-margin"><br>
-        <img src="/w3images/avatar5.png" alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
-        <span class="w3-right w3-opacity">16 min</span>
+      <div class="container card white round margin"><br>
+        <img src="/images/avatar5.svg" alt="Avatar" class="left circle margin-right" style="width:60px">
+        <span class="right opacity">16 min</span>
         <h4>Jane Doe</h4><br>
-        <hr class="w3-clear">
+        <hr class="clear">
         <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
-        <button type="button" class="w3-button w3-theme-d1 w3-margin-bottom"><i class="fa fa-thumbs-up"></i>  Like</button> 
-        <button type="button" class="w3-button w3-theme-d2 w3-margin-bottom"><i class="fa fa-comment"></i>  Comment</button> 
+        <button type="button" class="button theme-d1 margin-bottom"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-thumbs-up"></use></svg>  Like</button> 
+        <button type="button" class="button theme-d2 margin-bottom"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-comment"></use></svg>  Comment</button> 
       </div>  
 
-      <div class="w3-container w3-card w3-white w3-round w3-margin"><br>
-        <img src="/w3images/avatar6.png" alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
-        <span class="w3-right w3-opacity">32 min</span>
+      <div class="container card white round margin"><br>
+        <img src="/images/avatar6.svg" alt="Avatar" class="left circle margin-right" style="width:60px">
+        <span class="right opacity">32 min</span>
         <h4>Angie Jane</h4><br>
-        <hr class="w3-clear">
+        <hr class="clear">
         <p>Have you seen this?</p>
-        <img src="/w3images/nature.jpg" style="width:100%" class="w3-margin-bottom">
+        <img src="/images/nature.svg" style="width:100%" class="margin-bottom">
         <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
-        <button type="button" class="w3-button w3-theme-d1 w3-margin-bottom"><i class="fa fa-thumbs-up"></i>  Like</button> 
-        <button type="button" class="w3-button w3-theme-d2 w3-margin-bottom"><i class="fa fa-comment"></i>  Comment</button> 
+        <button type="button" class="button theme-d1 margin-bottom"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-thumbs-up"></use></svg>  Like</button> 
+        <button type="button" class="button theme-d2 margin-bottom"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-comment"></use></svg>  Comment</button> 
       </div> 
       
     <!-- End Middle Column -->
     </div>
     
     <!-- Right Column -->
-    <div class="w3-col m2">
-      <div class="w3-card w3-round w3-white w3-center">
-        <div class="w3-container">
+    <div class="col m2">
+      <div class="card round white center">
+        <div class="container">
           <p>Upcoming Events:</p>
-          <img src="/w3images/forest.jpg" alt="Forest" style="width:100%;">
+          <img src="/images/forest.svg" alt="Forest" style="width:100%;">
           <p><strong>Holiday</strong></p>
           <p>Friday 15:00</p>
-          <p><button class="w3-button w3-block w3-theme-l4">Info</button></p>
+          <p><button class="button block theme-l4">Info</button></p>
         </div>
       </div>
       <br>
       
-      <div class="w3-card w3-round w3-white w3-center">
-        <div class="w3-container">
+      <div class="card round white center">
+        <div class="container">
           <p>Friend Request</p>
-          <img src="/w3images/avatar6.png" alt="Avatar" style="width:50%"><br>
+          <img src="/images/avatar6.svg" alt="Avatar" style="width:50%"><br>
           <span>Jane Doe</span>
-          <div class="w3-row w3-opacity">
-            <div class="w3-half">
-              <button class="w3-button w3-block w3-green w3-section" title="Accept"><i class="fa fa-check"></i></button>
+          <div class="row opacity">
+            <div class="half">
+              <button class="button block green section" title="Accept"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-check"></use></svg></button>
             </div>
-            <div class="w3-half">
-              <button class="w3-button w3-block w3-red w3-section" title="Decline"><i class="fa fa-remove"></i></button>
+            <div class="half">
+              <button class="button block red section" title="Decline"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-remove"></use></svg></button>
             </div>
           </div>
         </div>
       </div>
       <br>
       
-      <div class="w3-card w3-round w3-white w3-padding-16 w3-center">
+      <div class="card round white padding-16 center">
         <p>ADS</p>
       </div>
       <br>
       
-      <div class="w3-card w3-round w3-white w3-padding-32 w3-center">
-        <p><i class="fa fa-bug w3-xxlarge"></i></p>
+      <div class="card round white padding-32 center">
+        <p><svg class="icon xxlarge" aria-hidden="true" focusable="false"><use href="#icon-bug"></use></svg></p>
       </div>
       
     <!-- End Right Column -->
@@ -243,36 +255,25 @@ html, body, h1, h2, h3, h4, h5 {font-family: "Open Sans", sans-serif}
 <br>
 
 <!-- Footer -->
-<footer class="w3-container w3-theme-d3 w3-padding-16">
+<footer class="container theme-d3 padding-16">
   <h5>Footer</h5>
 </footer>
 
-<footer class="w3-container w3-theme-d5">
-  <p>Powered by <a href="https://www.w3schools.com/w3css/default.asp" target="_blank">w3.css</a></p>
+<footer class="container theme-d5">
+  <p>A static page served by the test server</p>
 </footer>
  
 <script>
 // Accordion
 function myFunction(id) {
   var x = document.getElementById(id);
-  if (x.className.indexOf("w3-show") == -1) {
-    x.className += " w3-show";
-    x.previousElementSibling.className += " w3-theme-d1";
-  } else { 
-    x.className = x.className.replace("w3-show", "");
-    x.previousElementSibling.className = 
-    x.previousElementSibling.className.replace(" w3-theme-d1", "");
-  }
+  var open = x.classList.toggle("show");
+  x.previousElementSibling.classList.toggle("theme-d1", open);
 }
 
 // Used to toggle the menu on smaller screens when clicking on the menu button
 function openNav() {
-  var x = document.getElementById("navDemo");
-  if (x.className.indexOf("w3-show") == -1) {
-    x.className += " w3-show";
-  } else { 
-    x.className = x.className.replace(" w3-show", "");
-  }
+  document.getElementById("navDemo").classList.toggle("show");
 }
 </script>
 

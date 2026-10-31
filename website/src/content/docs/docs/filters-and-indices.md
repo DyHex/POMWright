@@ -64,8 +64,44 @@ registry.getNestedLocator("main.section@orders.item@open");
 
 A path given to `has` or `hasNot` resolves to that path's own locator with its own steps, without its ancestors,
 because Playwright evaluates `has` inside the element being filtered: the heading is looked for inside each section,
-not from the top of the page. A misspelt path is a compile error. The path may be registered after the filter that
+not from the top of the page. A misspelled path is a compile error. The path may be registered after the filter that
 names it; the registry's [verification](/POMWright/docs/verifying-registries/) reports a name that is never registered.
+
+### A path, a locator or a chain
+
+There are three ways to filter by another registered locator. Inside an `add(…)` chain, resolve a locator before the
+`add`: a `getLocator` in the filter's own arguments runs first, and ends the registration, as does a query
+(`getLocatorSchema(…)`) there (see
+[registering locators](/POMWright/docs/registering-locators/#registered-locators-do-not-change)).
+
+```ts
+import type { LocatorRegistry } from "pomwright";
+
+type Paths =
+  | "card"
+  | "card.badge@new"
+  | "list.item@withBadge"
+  | "list.item@withBadgeLocator"
+  | "list.item@withBadgeInCard";
+declare const registry: LocatorRegistry<Paths>;
+// ---cut---
+registry.add("card").locator(".card");
+registry.add("card.badge@new").getByText("New");
+
+// a path: resolved at each use, to that path's own locator; verify() checks it exists
+registry.add("list.item@withBadge").getByRole("listitem").filter({ has: "card.badge@new" });
+
+// a Locator resolved before add(…): kept as it is; verify() does not see it
+const badge = registry.getLocator("card.badge@new");
+registry.add("list.item@withBadgeLocator").getByRole("listitem").filter({ has: badge });
+
+// a chain resolved before add(…): for a filter that needs the ancestors a path leaves out
+const badgeInCard = registry.getNestedLocator("card.badge@new");
+registry.add("list.item@withBadgeInCard").getByRole("listitem").filter({ has: badgeInCard });
+```
+
+A path is the shortest and may name a path registered later. A `Locator` needs its path registered before the line
+that resolves it.
 
 Filters that refer to each other in a loop cannot be resolved, and verification reports every path in the loop:
 

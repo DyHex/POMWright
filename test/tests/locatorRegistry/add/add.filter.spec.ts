@@ -1,8 +1,8 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
-import { type FilterDefinition, LocatorRegistryInternal } from "../../../../src/locators";
+import { createRegistryWithAccessors, type FilterDefinition } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
 test("add records chained filters and indices in order for nested paths", async ({ page }) => {
 	type LocatorSchemaPaths = "list" | "list.item";

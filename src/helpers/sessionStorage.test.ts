@@ -1,13 +1,14 @@
 import type { Page } from "@playwright/test";
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { PageObject, type StorageTypeFromOptions } from "../pageObject";
 import {
 	type AllEntries,
 	type Codec,
+	type Decoded,
 	decodeValue,
 	encodeEntries,
 	json,
-	type SessionStorage,
+	SessionStorage,
 	type SessionStorageSchema,
 } from "./sessionStorage";
 
@@ -15,6 +16,48 @@ const title = "Poc.SessionStorage.set";
 
 type VoiceCheckoutModel = { offerings: { offeringId: string }[] };
 const model: VoiceCheckoutModel = { offerings: [{ offeringId: "20000063" }] };
+
+// Each test builds its page from fakes that answer what the helper asks (the URL, `evaluate`, the storage calls): a
+// stand-in for Playwright's page, so a document can be replaced at a chosen call. It could hide when a real navigation
+// replaces the document and what Playwright's calls then throw; sessionStorage.spec.ts and
+// sessionStorageOverlay.spec.ts in test/tests/testApp/ run the helper on real pages, navigations included, on all three
+// browsers.
+
+/**
+ * The fakes' documents: `evaluateHandle` stands in for Playwright's handle to the page's document, which throws once its
+ * document is replaced; here once `state.document` has moved past the one it was taken in. It cannot show that
+ * Playwright's handles behave so, which the harness pins on three browsers (`test/tests/testApp/documentHandle.spec.ts`).
+ */
+type Documents = { document: number; taken: number; disposed: number; takenAtCall?: number; calls?: number };
+const documentHandles = (state: Documents) => ({
+	evaluateHandle: async () => {
+		state.taken++;
+		state.takenAtCall = state.calls;
+		const document = state.document;
+		return {
+			evaluate: async () => {
+				if (state.document !== document) {
+					throw new Error(
+						"elementHandle.evaluate: Execution context was destroyed, most likely because of a navigation",
+					);
+				}
+			},
+			dispose: async () => {
+				state.disposed++;
+			},
+		};
+	},
+});
+const oneDocument = () => documentHandles({ document: 0, taken: 0, disposed: 0 });
+
+/**
+ * The fakes' `page.evaluate`, told apart by the question's text: `href()` for `location.href`, which a call asks once its
+ * document went away, and `other` for the rest (`document.domain`, `self.origin`).
+ */
+const evaluations =
+	(href: () => string, other: unknown) =>
+	async (question: () => unknown): Promise<unknown> =>
+		String(question).includes("location.href") ? href() : other;
 
 /** A codec that is not JSON: numbers stored as decimal text. */
 const number = (): Codec<number> => ({
@@ -53,10 +96,23 @@ describe("encodeEntries", () => {
 		});
 	});
 
+	it("keeps keys that name Object.prototype members as own entries, __proto__ included", () => {
+		const entries = Object.fromEntries([
+			["__proto__", "p"],
+			["constructor", "c"],
+			["toString", "t"],
+		]);
+		expect(Object.entries(encodeEntries({}, entries, title))).toEqual([
+			["__proto__", "p"],
+			["constructor", "c"],
+			["toString", "t"],
+		]);
+	});
+
 	it("rejects an undeclared non-string naming the key", () => {
 		for (const value of [1, true, null, undefined, { a: 1 }, ["a"]]) {
 			expect(() => encodeEntries({}, { user: value }, title)).toThrow(
-				`${title}: value for "user" is not a string and no codec is declared for it`,
+				`${title}: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)`,
 			);
 		}
 	});
@@ -114,14 +170,680 @@ describe("decodeValue", () => {
 		expect(decodeValue(schema, "attempts", "3", title)).toBe(3);
 	});
 
-	it("names the key and the raw value when the codec fails, with the cause", () => {
+	it("gives the reason, the length and the whole value, quoted, when the codec fails, with the cause", () => {
+		// JSON.parse's own wording differs between Node versions
 		expect(() => decodeValue(schema, "user", "{not json", title)).toThrow(
-			`${title}: value for "user" could not be decoded: {not json`,
+			/^Poc\.SessionStorage\.set: value for "user" could not be decoded \(SyntaxError: .+\); stored value, 9 characters: "\{not json"$/,
+		);
+		expect(() => decodeValue(schema, "attempts", "x", title)).toThrow(
+			`${title}: value for "attempts" could not be decoded (TypeError: not a number: x); stored value, 1 character: "x"`,
+		);
+		// an empty or whitespace value is visible
+		expect(() => decodeValue(schema, "user", "", title)).toThrow(/; stored value, 0 characters: ""$/);
+		expect(() => decodeValue(schema, "user", " \n", title)).toThrow(/; stored value, 2 characters: " \\n"$/);
+		const silent: Codec<string> = {
+			parse: () => {
+				throw new RangeError();
+			},
+			stringify: String,
+		};
+		expect(() => decodeValue({ token: silent }, "token", "v", title)).toThrow(
+			`${title}: value for "token" could not be decoded (RangeError); stored value, 1 character: "v"`,
 		);
 		try {
 			decodeValue(schema, "attempts", "x", title);
 		} catch (error) {
 			expect((error as Error).cause).toEqual(new TypeError("not a number: x"));
+		}
+	});
+});
+
+describe("a batch the page leaves", () => {
+	/**
+	 * A page whose storage call fails with `failure` on call number `failAt`, after which the page is at `urlAfter`. A
+	 * stand-in for a navigation that destroys a call in flight, which the harness makes for real (`sessionStorage.spec.ts`,
+	 * "set fails with the label and the keys already written when the page navigates during it").
+	 */
+	const pageFailingAt = (failAt: number, failure: Error, urlAfter = "http://localhost:9000/") => {
+		let calls = 0;
+		let url = "http://localhost:9000/teststorage";
+		const fail = async () => {
+			calls++;
+			if (calls === failAt) {
+				url = urlAfter;
+				throw failure;
+			}
+		};
+		return {
+			url: () => url,
+			evaluate: evaluations(() => url, false),
+			...oneDocument(),
+			sessionStorage: { setItem: fail, removeItem: fail },
+		} as unknown as Page;
+	};
+	const destroyed = new Error(
+		"webStorage.setItem: Execution context was destroyed, most likely because of a navigation",
+	);
+	const write = (page: Page, entries: Record<string, string>) =>
+		(
+			new SessionStorage(page, { label: "Shop" }) as unknown as {
+				write(m: string, e: Record<string, string>): Promise<void>;
+			}
+		).write("set", entries);
+
+	it("names the keys already written when the page navigates during the batch", async () => {
+		const error = await write(pageFailingAt(3, destroyed), { a: "1", b: "2", c: "3", d: "4" }).catch((e: Error) => e);
+		expect((error as Error).message).toBe(
+			`Shop.SessionStorage.set: the page navigated to http://localhost:9000/ while set() was writing to http://localhost:9000; 2 of 4 keys were written ("a", "b"); "c" was being written and may have reached the new document`,
+		);
+		expect((error as Error).cause).toBe(destroyed);
+	});
+
+	it("says so for a lone key, and when the page has left for another origin", async () => {
+		const error = await write(pageFailingAt(1, new Error("gone"), "http://127.0.0.1:9000/x"), { token: "t" }).catch(
+			(e: Error) => e,
+		);
+		expect((error as Error).message).toBe(
+			`Shop.SessionStorage.set: the page navigated to http://127.0.0.1:9000/x while set() was writing to http://localhost:9000; 0 of 1 key was written; "token" was being written and may have reached the new document`,
+		);
+	});
+
+	it("quotes every key it names, so an empty key and one holding a comma read as themselves", async () => {
+		const error = await write(pageFailingAt(3, destroyed), { "": "1", "a, b": "2", c: "3" }).catch((e: Error) => e);
+		expect((error as Error).message).toBe(
+			`Shop.SessionStorage.set: the page navigated to http://localhost:9000/ while set() was writing to http://localhost:9000; 2 of 3 keys were written ("", "a, b"); "c" was being written and may have reached the new document`,
+		);
+	});
+
+	it("labels any other failure and keeps it as the cause", async () => {
+		const quota = new Error("webStorage.setItem: QuotaExceededError: The quota has been exceeded.");
+		const error = await write(pageFailingAt(2, quota, "http://localhost:9000/teststorage"), { a: "1", b: "2" }).catch(
+			(e: Error) => e,
+		);
+		expect((error as Error).message).toBe(
+			"Shop.SessionStorage.set: webStorage.setItem: QuotaExceededError: The quota has been exceeded.",
+		);
+		expect((error as Error).cause).toBe(quota);
+	});
+
+	it("names the keys already removed when clear() is interrupted", async () => {
+		const helper = new SessionStorage(pageFailingAt(2, destroyed), { label: "Shop" }) as unknown as {
+			eachKey(
+				m: string,
+				k: string[],
+				words: readonly [string, string],
+				call: (key: string) => Promise<void>,
+			): Promise<void>;
+			page: Page;
+		};
+		const error = await helper
+			.eachKey("clear", ["token", "locale", "theme"], ["removing keys from", "removed"], (key) =>
+				helper.page.sessionStorage.removeItem(key),
+			)
+			.catch((e: Error) => e);
+		expect((error as Error).message).toBe(
+			`Shop.SessionStorage.clear: the page navigated to http://localhost:9000/ while clear() was removing keys from http://localhost:9000; 1 of 3 keys were removed ("token"); "locale" was being removed and may have reached the new document`,
+		);
+	});
+});
+
+describe("a call the page leaves while it succeeds", () => {
+	/**
+	 * A page whose storage calls all succeed; the page is at `urlAfter` once call number `moveAt` has run, its document the
+	 * same, as after `pushState` (a move to another origin is caught by the URL). A stand-in for the URL Playwright's
+	 * client keeps; the harness commits real documents between two calls ("the page commits on the other origin between
+	 * two calls that both succeed").
+	 */
+	const pageMovingAt = (moveAt: number, urlAfter: string, urlBefore = "http://localhost:9000/teststorage") => {
+		let calls = 0;
+		let url = urlBefore;
+		const written: string[] = [];
+		const answer = <T>(value: T) => {
+			calls++;
+			if (calls === moveAt) {
+				url = urlAfter;
+			}
+			return Promise.resolve(value);
+		};
+		const page = {
+			url: () => url,
+			evaluate: async () => false,
+			...oneDocument(),
+			sessionStorage: {
+				setItem: (key: string) => {
+					written.push(key);
+					return answer(undefined);
+				},
+				removeItem: () => answer(undefined),
+				getItem: (key: string) => answer(`value of ${key}`),
+				items: () => answer([{ name: "token", value: "abc" }]),
+				clear: () => answer(undefined),
+			},
+		} as unknown as Page;
+		return { page, written };
+	};
+	type Internals = {
+		write(m: string, e: Record<string, string>): Promise<void>;
+		read(keys: string | readonly string[] | undefined): Promise<unknown>;
+		guarded<T>(
+			m: string,
+			call: () => Promise<T>,
+			navigated: (from: string, to: string, cause: unknown) => Error,
+			doc: unknown,
+		): Promise<T>;
+		inDocument<T>(work: (doc: unknown) => Promise<T>): Promise<T>;
+		navigatedDuring(m: string, doing: string, consequence: string): (from: string, to: string, cause: unknown) => Error;
+	};
+	const internals = (page: Page) => new SessionStorage(page, { label: "Shop" }) as unknown as Internals;
+	const failure = (promise: Promise<unknown>) => promise.then(() => undefined).catch((error: Error) => error);
+
+	it("stops a batch whose page left for another origin between two calls that both resolved", async () => {
+		const { page, written } = pageMovingAt(2, "http://127.0.0.1:9000/");
+		const error = await failure(internals(page).write("set", { a: "1", b: "2", c: "3" }));
+		expect(error?.message).toBe(
+			`Shop.SessionStorage.set: the page navigated to http://127.0.0.1:9000/ while set() was writing to http://localhost:9000; 1 of 3 keys were written ("a"); "b" was being written and may have reached the new document`,
+		);
+		expect(error?.cause).toBeUndefined();
+		expect(written).toEqual(["a", "b"]);
+	});
+
+	it("goes on after a same-document navigation within the origin, whose storage is the same", async () => {
+		const { page, written } = pageMovingAt(1, "http://localhost:9000/elsewhere");
+		await internals(page).write("set", { a: "1", b: "2" });
+		expect(written).toEqual(["a", "b"]);
+	});
+
+	it("fails a read that came from the new origin instead of returning its value, one key, several or all", async () => {
+		const one = await failure(internals(pageMovingAt(1, "http://127.0.0.1:9000/").page).read("token"));
+		expect(one?.message).toBe(
+			'Shop.SessionStorage.get: the page navigated to http://127.0.0.1:9000/ while get() was reading "token" from http://localhost:9000; it may have read the new document',
+		);
+		const several = await failure(internals(pageMovingAt(2, "http://127.0.0.1:9000/").page).read(["a", "b", "c"]));
+		expect(several?.message).toMatch(
+			/^Shop\.SessionStorage\.get: the page navigated to http:\/\/127\.0\.0\.1:9000\/ while get\(\) was reading "[abc]" from http:\/\/localhost:9000; it may have read the new document$/,
+		);
+		const all = await failure(internals(pageMovingAt(1, "http://127.0.0.1:9000/").page).read(undefined));
+		expect(all?.message).toBe(
+			"Shop.SessionStorage.get: the page navigated to http://127.0.0.1:9000/ while get() was reading every entry from http://localhost:9000; it may have read the new document",
+		);
+	});
+
+	it("names a single call by what it was doing", async () => {
+		const { page } = pageMovingAt(1, "http://127.0.0.1:9000/");
+		const helper = internals(page);
+		const error = await failure(
+			helper.inDocument((doc) =>
+				helper.guarded(
+					"clear",
+					() => page.sessionStorage.clear(),
+					helper.navigatedDuring("clear", "removing every entry from", "it may have reached the new document"),
+					doc,
+				),
+			),
+		);
+		expect(error?.message).toBe(
+			"Shop.SessionStorage.clear: the page navigated to http://127.0.0.1:9000/ while clear() was removing every entry from http://localhost:9000; it may have reached the new document",
+		);
+	});
+
+	it("compares a URL without an origin whole", async () => {
+		const { page } = pageMovingAt(1, "http://localhost:9000/", "about:blank");
+		const error = await failure(internals(page).write("set", { a: "1" }));
+		expect(error?.message).toBe(
+			`Shop.SessionStorage.set: the page navigated to http://localhost:9000/ while set() was writing to about:blank; 0 of 1 key was written; "a" was being written and may have reached the new document`,
+		);
+	});
+
+	it("names where the page went by its origin and path, without the query or fragment", async () => {
+		const { page } = pageMovingAt(2, "https://login.example/callback?code=secret#state");
+		const error = await failure(internals(page).write("set", { a: "1", b: "2" }));
+		expect(error?.message).toBe(
+			`Shop.SessionStorage.set: the page navigated to https://login.example/callback while set() was writing to http://localhost:9000; 1 of 2 keys were written ("a"); "b" was being written and may have reached the new document`,
+		);
+	});
+
+	it("names a destination without an origin by its whole URL", async () => {
+		const { page } = pageMovingAt(1, "data:text/html,<p>left?x=1</p>");
+		const error = await failure(internals(page).read("token"));
+		expect(error?.message).toBe(
+			'Shop.SessionStorage.get: the page navigated to data:text/html,<p>left?x=1</p> while get() was reading "token" from http://localhost:9000; it may have read the new document',
+		);
+	});
+});
+
+describe("a call whose document is replaced", () => {
+	/**
+	 * A page whose storage calls all succeed and whose URL stays put; its document is replaced once call number
+	 * `replaceAt` has run, as by a reload. A stand-in for a reload; the harness reloads for real ("a reload or a redirect
+	 * within the origin").
+	 */
+	const pageReloadingAt = (replaceAt: number) => {
+		const state: Documents & { calls: number; written: string[] } = {
+			document: 0,
+			taken: 0,
+			disposed: 0,
+			calls: 0,
+			written: [],
+		};
+		const answer = <T>(value: T) => {
+			state.calls++;
+			if (state.calls === replaceAt) {
+				state.document++;
+			}
+			return Promise.resolve(value);
+		};
+		const page = {
+			url: () => "http://localhost:9000/teststorage",
+			evaluate: evaluations(() => "http://localhost:9000/teststorage", "localhost"),
+			...documentHandles(state),
+			sessionStorage: {
+				setItem: (key: string) => {
+					state.written.push(key);
+					return answer(undefined);
+				},
+				removeItem: (key: string) => {
+					state.written.push(key);
+					return answer(undefined);
+				},
+				getItem: (key: string) => answer(`value of ${key}`),
+				items: () => answer([{ name: "token", value: "abc" }]),
+				clear: () => answer(undefined),
+			},
+		} as unknown as Page;
+		return { page, state };
+	};
+	type Internals = {
+		write(m: string, e: Record<string, string>): Promise<void>;
+		read(keys: string | readonly string[] | undefined): Promise<unknown>;
+		eachKey(
+			m: string,
+			k: string[],
+			words: readonly [string, string],
+			call: (key: string) => Promise<void>,
+		): Promise<void>;
+		guarded<T>(
+			m: string,
+			call: () => Promise<T>,
+			navigated: (from: string, to: string, cause: unknown) => Error,
+			doc: unknown,
+		): Promise<T>;
+		inDocument<T>(work: (doc: unknown) => Promise<T>): Promise<T>;
+		navigatedDuring(m: string, doing: string, consequence: string): (from: string, to: string, cause: unknown) => Error;
+	};
+	const internals = (page: Page) => new SessionStorage(page, { label: "Shop" }) as unknown as Internals;
+	const failure = (promise: Promise<unknown>) => promise.then(() => undefined).catch((error: Error) => error);
+	const here = "http://localhost:9000";
+
+	it("stops a batch whose document was replaced between two storage calls that both resolved, the URL unchanged", async () => {
+		const { page, state } = pageReloadingAt(2);
+		const error = await failure(internals(page).write("set", { a: "1", b: "2", c: "3" }));
+		expect(error?.message).toBe(
+			`Shop.SessionStorage.set: the page navigated to ${here}/teststorage while set() was writing to ${here}; 1 of 3 keys were written ("a"); "b" was being written and may have reached the new document`,
+		);
+		expect(error?.cause).toEqual(
+			expect.objectContaining({ message: expect.stringMatching(/Execution context was destroyed/) }),
+		);
+		expect(state.written).toEqual(["a", "b"]);
+	});
+
+	it("stops clear() with keys the same way, naming the keys removed", async () => {
+		const { page, state } = pageReloadingAt(1);
+		const helper = internals(page);
+		const error = await failure(
+			helper.eachKey("clear", ["token", "locale"], ["removing keys from", "removed"], (key) =>
+				page.sessionStorage.removeItem(key),
+			),
+		);
+		expect(error?.message).toBe(
+			`Shop.SessionStorage.clear: the page navigated to ${here}/teststorage while clear() was removing keys from ${here}; 0 of 2 keys were removed; "token" was being removed and may have reached the new document`,
+		);
+		expect(state.written).toEqual(["token"]);
+	});
+
+	it("fails a read whose document was replaced, one key, several or all, and clear() of every entry", async () => {
+		const one = await failure(internals(pageReloadingAt(1).page).read("token"));
+		expect(one?.message).toBe(
+			`Shop.SessionStorage.get: the page navigated to ${here}/teststorage while get() was reading "token" from ${here}; it may have read the new document`,
+		);
+		const several = await failure(internals(pageReloadingAt(2).page).read(["a", "b", "c"]));
+		expect(several?.message).toMatch(
+			/^Shop\.SessionStorage\.get: the page navigated to http:\/\/localhost:9000\/teststorage while get\(\) was reading "[abc]" from http:\/\/localhost:9000; it may have read the new document$/,
+		);
+		const all = await failure(internals(pageReloadingAt(1).page).read(undefined));
+		expect(all?.message).toBe(
+			`Shop.SessionStorage.get: the page navigated to ${here}/teststorage while get() was reading every entry from ${here}; it may have read the new document`,
+		);
+		const { page } = pageReloadingAt(1);
+		const helper = internals(page);
+		const cleared = await failure(
+			helper.inDocument((doc) =>
+				helper.guarded(
+					"clear",
+					() => page.sessionStorage.clear(),
+					helper.navigatedDuring("clear", "removing every entry from", "it may have reached the new document"),
+					doc,
+				),
+			),
+		);
+		expect(cleared?.message).toBe(
+			`Shop.SessionStorage.clear: the page navigated to ${here}/teststorage while clear() was removing every entry from ${here}; it may have reached the new document`,
+		);
+	});
+
+	it("takes the document once, before the call's first storage call, and disposes of it when the call ends, also when it fails", async () => {
+		const passing = pageReloadingAt(0);
+		await internals(passing.page).write("set", { a: "1", b: "2", c: "3" });
+		expect(passing.state).toMatchObject({ taken: 1, takenAtCall: 0, disposed: 1 });
+		const reading = pageReloadingAt(0);
+		await internals(reading.page).read(["a", "b", "c"]);
+		expect(reading.state).toMatchObject({ taken: 1, takenAtCall: 0, disposed: 1 });
+		const failing = pageReloadingAt(2);
+		await failure(internals(failing.page).write("set", { a: "1", b: "2", c: "3" }));
+		expect(failing.state).toMatchObject({ taken: 1, disposed: 1 });
+	});
+
+	it("reads a document replaced while its handle is taken as a navigation, before anything is written", async () => {
+		const { page, state } = pageReloadingAt(0);
+		const replacing = {
+			...page,
+			evaluateHandle: async () => {
+				throw new Error("page.evaluateHandle: Execution context was destroyed, most likely because of a navigation");
+			},
+		} as unknown as Page;
+		const error = await failure(internals(replacing).write("set", { a: "1", b: "2" }));
+		expect(error?.message).toBe(
+			`Shop.SessionStorage.set: the page navigated to ${here}/teststorage while set() was writing to ${here}; 0 of 2 keys were written; "a" was being written and may have reached the new document`,
+		);
+		expect(state.written).toEqual([]);
+	});
+
+	it("labels Playwright's error when the page closes, which is not a navigation", async () => {
+		const { page } = pageReloadingAt(0);
+		const closing = {
+			...page,
+			evaluateHandle: async () => ({
+				evaluate: async () => {
+					throw new Error("elementHandle.evaluate: Target page, context or browser has been closed");
+				},
+				dispose: async () => undefined,
+			}),
+		} as unknown as Page;
+		const error = await failure(internals(closing).write("set", { a: "1" }));
+		expect(error?.message).toBe(
+			"Shop.SessionStorage.set: elementHandle.evaluate: Target page, context or browser has been closed",
+		);
+	});
+
+	describe("where the page went, when its document is gone before Playwright's client hears of the new one", () => {
+		const there = "http://127.0.0.1:9000";
+		const replaced = (call: string) =>
+			new Error(`${call}: Execution context was destroyed, most likely because of a navigation`);
+		// vitest's fake timers stand in for time, so the pauses before the retries (8,270 ms for the bound's) pass at once;
+		// they could hide how a pause falls against a real navigation, which the harness's navigation tests make for real
+		beforeEach(() => {
+			vi.useFakeTimers();
+		});
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+		/** The call's failure, with every pause elapsed. */
+		const failed = async (page: Page) => {
+			const error = failure(internals(page).write("set", { a: "1" }));
+			await vi.runAllTimersAsync();
+			return error;
+		};
+		/**
+		 * A page whose storage call fails as destroyed while `url()` still reads the page the call started on, as on
+		 * Chromium, which reports the old document's destruction before the new one's commit; asked for `location.href`,
+		 * it fails with each of `hrefFailures` in turn, then answers the new document's URL. A stand-in for that moment,
+		 * which the harness meets with real timing on some runs only ("set fails with the label and the keys already
+		 * written when the page navigates during it", and the parallel reads of "get(keys) fails instead of returning what
+		 * it read").
+		 */
+		const stalePage = (hrefFailures: Error[], closed = false) => {
+			const asked = { href: 0, at: [] as number[] };
+			const page = {
+				url: () => `${here}/teststorage`,
+				isClosed: () => closed,
+				evaluate: async (question: () => unknown) => {
+					if (!String(question).includes("location.href")) {
+						return "localhost";
+					}
+					asked.href++;
+					asked.at.push(Date.now());
+					const failing = hrefFailures.shift();
+					if (failing) {
+						throw failing;
+					}
+					return `${there}/teststorage?token=t#top`;
+				},
+				...oneDocument(),
+				sessionStorage: {
+					setItem: async () => {
+						throw replaced("webStorage.setItem");
+					},
+				},
+			} as unknown as Page;
+			return { page, asked };
+		};
+		const navigatedTo = (url: string) =>
+			`Shop.SessionStorage.set: the page navigated to ${url} while set() was writing to ${here}; 0 of 1 key was written; "a" was being written and may have reached the new document`;
+
+		it("names the URL the new document reports, asking again while a navigation destroys the question", async () => {
+			const { page, asked } = stalePage([replaced("page.evaluate")]);
+			const error = await failed(page);
+			expect(error?.message).toBe(navigatedTo(`${there}/teststorage`));
+			expect(error?.cause).toEqual(expect.objectContaining({ message: expect.stringMatching(/^webStorage\.setItem/) }));
+			expect(asked.href).toBe(2);
+		});
+
+		it("names page.url() as it is when the question fails otherwise, or the page is closed", async () => {
+			const closing = stalePage([new Error("page.evaluate: Target page, context or browser has been closed")]);
+			expect((await failed(closing.page))?.message).toBe(navigatedTo(`${here}/teststorage`));
+			expect(closing.asked.href).toBe(1);
+			const closed = stalePage([replaced("page.evaluate"), replaced("page.evaluate")], true);
+			expect((await failed(closed.page))?.message).toBe(navigatedTo(`${here}/teststorage`));
+			expect(closed.asked.href).toBe(1);
+		});
+
+		it("pauses before each retry as seed's check does: 20, 50, 100, 100, then 500 ms", async () => {
+			const { page, asked } = stalePage(Array.from({ length: 7 }, () => replaced("page.evaluate")));
+			expect((await failed(page))?.message).toBe(navigatedTo(`${there}/teststorage`));
+			expect(asked.at.slice(1).map((time, i) => time - (asked.at[i] ?? 0))).toEqual([20, 50, 100, 100, 500, 500, 500]);
+		});
+
+		it("asks up to 20 times more, and past that names page.url() as it is", async () => {
+			const twenty = stalePage(Array.from({ length: 20 }, () => replaced("page.evaluate")));
+			expect((await failed(twenty.page))?.message).toBe(navigatedTo(`${there}/teststorage`));
+			expect(twenty.asked.href).toBe(21);
+			const more = stalePage(Array.from({ length: 21 }, () => replaced("page.evaluate")));
+			expect((await failed(more.page))?.message).toBe(navigatedTo(`${here}/teststorage`));
+			expect(more.asked.href).toBe(21);
+		});
+	});
+});
+
+describe("the questions a failed call asks the page", () => {
+	const here = "http://localhost:9000";
+	const destroyed = (call: string) =>
+		new Error(`${call}: Execution context was destroyed, most likely because of a navigation`);
+	/**
+	 * A page that counts what a failed call asks it: `document.domain`, which explains a refused call, and `location.href`,
+	 * which names where a replaced document went. The call fails `at` its storage call, the handle check after it, or
+	 * while the handle is taken, with `error`; the page is at `urlAfter` from then on. A stand-in for the real failures,
+	 * which the harness makes on three browsers ("a batch the page leaves", "a call whose document is replaced", "a
+	 * document with an opaque origin").
+	 */
+	const countingPage = (at: "storage" | "check" | "take", error: Error, urlAfter = `${here}/teststorage`) => {
+		let url = `${here}/teststorage`;
+		const asked = { domain: 0, href: 0 };
+		const fail = (): never => {
+			url = urlAfter;
+			throw error;
+		};
+		const page = {
+			url: () => url,
+			isClosed: () => false,
+			evaluate: async (question: () => unknown) => {
+				if (String(question).includes("location.href")) {
+					asked.href++;
+					return url;
+				}
+				asked.domain++;
+				return "localhost";
+			},
+			evaluateHandle: async () => {
+				if (at === "take") {
+					fail();
+				}
+				return {
+					evaluate: async () => {
+						if (at === "check") {
+							fail();
+						}
+					},
+					dispose: async () => undefined,
+				};
+			},
+			sessionStorage: {
+				setItem: async () => {
+					if (at === "storage") {
+						fail();
+					}
+				},
+			},
+		} as unknown as Page;
+		const set = () =>
+			(
+				new SessionStorage(page, { label: "Shop" }) as unknown as {
+					write(m: string, e: Record<string, string>): Promise<void>;
+				}
+			)
+				.write("set", { a: "1" })
+				.then(
+					() => undefined,
+					(failure: Error) => failure,
+				);
+		return { set, asked };
+	};
+	const navigatedTo = (url: string) =>
+		`Shop.SessionStorage.set: the page navigated to ${url} while set() was writing to ${here}; 0 of 1 key was written; "a" was being written and may have reached the new document`;
+
+	it("does not ask document.domain when the document was replaced, during the call, at its check or as it began", async () => {
+		for (const [at, call] of [
+			["storage", "webStorage.setItem"],
+			["check", "elementHandle.evaluate"],
+			["take", "page.evaluateHandle"],
+		] as const) {
+			const { set, asked } = countingPage(at, destroyed(call));
+			expect((await set())?.message, at).toBe(navigatedTo(`${here}/teststorage`));
+			expect(asked, at).toEqual({ domain: 0, href: 1 });
+		}
+	});
+
+	it("asks it once for a refused call, and once for another error while the URL's origin moved", async () => {
+		const refused = countingPage("storage", new Error("webStorage.setItem: SecurityError: The operation is insecure."));
+		expect((await refused.set())?.message).toBe(
+			"Shop.SessionStorage.set: webStorage.setItem: SecurityError: The operation is insecure.",
+		);
+		expect(refused.asked).toEqual({ domain: 1, href: 0 });
+		const moved = countingPage("storage", new Error("gone"), "http://127.0.0.1:9000/x");
+		expect((await moved.set())?.message).toBe(navigatedTo("http://127.0.0.1:9000/x"));
+		expect(moved.asked).toEqual({ domain: 1, href: 0 });
+	});
+});
+
+describe("a refused storage call", () => {
+	const refused = new Error("webStorage.setItem: SecurityError: The operation is insecure.");
+	const labeled = "webStorage.setItem: SecurityError: The operation is insecure.";
+	/** A page at `url` whose document answers `domain` for document.domain, or a closed one, whose evaluation fails. */
+	const accessOn = (url: string, domain: string | "closed") =>
+		new SessionStorage(
+			{
+				url: () => url,
+				evaluate: async () => {
+					if (domain === "closed") {
+						throw new Error("page.evaluate: Target page, context or browser has been closed");
+					}
+					return domain;
+				},
+			} as unknown as Page,
+			{ label: "Shop" },
+		) as unknown as { access(m: string, call: () => Promise<void>): Promise<void> };
+	const fail = async () => {
+		throw refused;
+	};
+
+	it("on a document whose origin is opaque says so, whatever its URL", async () => {
+		await expect(accessOn("http://localhost:9000/sandboxed", "").access("set", fail)).rejects.toThrow(
+			"Shop.SessionStorage.set: the document at http://localhost:9000/sandboxed cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)",
+		);
+	});
+
+	it("on a page without an origin says so, without pointing seed at seed()", async () => {
+		await expect(accessOn("about:blank", "").access("get", fail)).rejects.toThrow(
+			"Shop.SessionStorage.get: the page has no origin yet (about:blank); navigate to the origin first or use seed()",
+		);
+		await expect(accessOn("about:blank", "").access("seed", fail)).rejects.toThrow(
+			/^Shop\.SessionStorage\.seed: the page has no origin yet \(about:blank\); navigate to the origin first$/,
+		);
+	});
+
+	it("on an about:blank popup that inherited its opener's origin labels Playwright's error", async () => {
+		const error = await accessOn("about:blank", "localhost")
+			.access("set", fail)
+			.catch((e: Error) => e);
+		expect((error as Error).message).toBe(`Shop.SessionStorage.set: ${labeled}`);
+		expect((error as Error).cause).toBe(refused);
+	});
+
+	it("on a closed page labels Playwright's error, with or without a URL origin", async () => {
+		for (const url of ["about:blank", "http://localhost:9000/"]) {
+			await expect(accessOn(url, "closed").access("clear", fail), url).rejects.toThrow(
+				`Shop.SessionStorage.clear: ${labeled}`,
+			);
+		}
+	});
+
+	it("otherwise labels Playwright's error", async () => {
+		await expect(accessOn("http://localhost:9000/", "localhost").access("clear", fail)).rejects.toThrow(
+			`Shop.SessionStorage.clear: ${labeled}`,
+		);
+	});
+});
+
+describe("the origin option", () => {
+	// the constructor only validates; it calls nothing on the page
+	const unusedPage = {} as Page;
+	const rule =
+		'Shop.SessionStorage.constructor: origin must be an origin such as "https://app.example" or "http://localhost:9000" ' +
+		"(scheme, host, optional port, no path, query or hash); received";
+
+	it("accepts an origin, with or without a trailing slash", () => {
+		for (const origin of ["https://app.example", "http://localhost:9000/", "https://SHOP.example:8443"]) {
+			expect(() => new SessionStorage(unusedPage, { label: "Shop", origin }), origin).not.toThrow();
+		}
+	});
+
+	it("rejects a URL whose scheme has no origin, saying so", () => {
+		for (const origin of [
+			"chrome-extension://abcdef/",
+			"chrome-extension://abcdef",
+			"app://foo/",
+			"file://host/",
+			"file://host",
+		]) {
+			expect(() => new SessionStorage(unusedPage, { label: "Shop", origin }), origin).toThrow(
+				`${rule} ${JSON.stringify(origin)}, whose scheme has no URL origin`,
+			);
+		}
+	});
+
+	it("rejects a value that is not an origin with the rule alone", () => {
+		for (const origin of ["localhost:9000", "https://app.example/app", "not a url"]) {
+			expect(() => new SessionStorage(unusedPage, { label: "Shop", origin }), origin).toThrow(
+				new RegExp(`received ${JSON.stringify(origin).replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}$`),
+			);
 		}
 	});
 });
@@ -133,6 +855,8 @@ declare const typed: SessionStorage<typeof schema>;
 declare const plain: SessionStorage;
 declare const computed: string[];
 declare const readonlyComputed: readonly string[];
+declare const dynamicKey: string;
+declare const declaredKey: keyof typeof schema;
 
 const voiceStorage = { voiceCheckout: json<VoiceCheckoutModel>() };
 
@@ -177,6 +901,44 @@ class WrongSchemaPage extends PageObject<"main.x", { storage: typeof voiceStorag
 	}
 }
 
+class ValueWithoutTypePage extends PageObject<"main.x"> {
+	constructor() {
+		// @ts-expect-error a schema value without its type: declare it, PageObject<Paths, { storage: typeof schema }>
+		super(page, "https://app.example", "/x", { sessionStorage: { schema: voiceStorage } });
+	}
+	protected defineLocators() {}
+}
+
+type OptionalKey = { voiceCheckout: Codec<VoiceCheckoutModel>; token?: Codec<string> };
+class OptionalKeyWithoutCodecPage extends PageObject<"main.x", { storage: OptionalKey }> {
+	constructor() {
+		// @ts-expect-error a declared key, optional or not, needs its codec in the value
+		super(page, "https://app.example", "/x", { sessionStorage: { schema: voiceStorage } });
+	}
+	protected defineLocators() {}
+}
+
+class EmptySchemaPage extends PageObject<"main.x"> {
+	constructor() {
+		// no declared keys: an empty value is the empty schema
+		super(page, "https://app.example", "/x", { sessionStorage: { schema: {} } });
+	}
+	protected defineLocators() {}
+}
+
+// a standalone helper: an explicit schema type needs its value; without a type argument it is taken from the value
+const schemaAgreement = () => {
+	// @ts-expect-error an explicit schema type without its value
+	const typeWithoutValue = new SessionStorage<typeof voiceStorage>(page);
+	// @ts-expect-error options without the schema
+	const optionsWithoutSchema = new SessionStorage<typeof voiceStorage>(page, { label: "Voice" });
+	const typeAndValue = new SessionStorage<typeof voiceStorage>(page, { schema: voiceStorage });
+	const inferred = new SessionStorage(page, { schema: voiceStorage });
+	expectTypeOf(inferred).toEqualTypeOf<SessionStorage<typeof voiceStorage>>();
+	return [typeWithoutValue, optionsWithoutSchema, typeAndValue];
+};
+void [ValueWithoutTypePage, OptionalKeyWithoutCodecPage, EmptySchemaPage, schemaAgreement];
+
 declare const voice: VoicePage;
 declare const account: AccountPage;
 declare const plainPage: PlainPage;
@@ -207,8 +969,25 @@ const typeContract = async () => {
 		token: string | null;
 		user: VoiceCheckoutModel | null;
 	}>();
-	expectTypeOf(typed.get(computed)).resolves.toEqualTypeOf<{ [x: string]: string | null }>();
-	expectTypeOf(typed.get(readonlyComputed)).resolves.toEqualTypeOf<{ [x: string]: string | null }>();
+	// a key typed string may be any key: a string or any declared codec's type
+	expectTypeOf(typed.get(computed)).resolves.toEqualTypeOf<{
+		[x: string]: string | VoiceCheckoutModel | number | null;
+	}>();
+	expectTypeOf(typed.get(readonlyComputed)).resolves.toEqualTypeOf<{
+		[x: string]: string | VoiceCheckoutModel | number | null;
+	}>();
+	expectTypeOf(typed.get(dynamicKey)).resolves.toEqualTypeOf<string | VoiceCheckoutModel | number | null>();
+	expectTypeOf(plain.get(dynamicKey)).resolves.toEqualTypeOf<string | null>();
+	expectTypeOf(plain.get(computed)).resolves.toEqualTypeOf<{ [x: string]: string | null }>();
+	expectTypeOf(typed.get(declaredKey)).resolves.toEqualTypeOf<VoiceCheckoutModel | number | null>();
+	await typed.set(dynamicKey, model);
+	await typed.set(dynamicKey, "abc");
+	await typed.seed(dynamicKey, 3);
+	// @ts-expect-error the value may be a declared codec's type, so it is not known to be a string
+	(await typed.get(dynamicKey))?.toUpperCase();
+	// a key typed as a pattern may be any declared key it matches
+	const patternKey = "user" as `u${string}`;
+	expectTypeOf(typed.get(patternKey)).resolves.toEqualTypeOf<string | VoiceCheckoutModel | null>();
 	expectTypeOf(plain.get()).resolves.toEqualTypeOf<Record<string, string>>();
 	expectTypeOf(typed.get()).resolves.toMatchTypeOf<{ user?: VoiceCheckoutModel; attempts?: number }>();
 	expectTypeOf<AllEntries<typeof schema>["anything"]>().toEqualTypeOf<string | VoiceCheckoutModel | number>();
@@ -253,3 +1032,26 @@ const typeContract = async () => {
 };
 void typeContract;
 void WrongSchemaPage;
+
+describe("Decoded, per member of the key's type", () => {
+	type Schema = typeof schema;
+	type Brand = string & { readonly __brand: "Key" };
+
+	it("types a literal by its codec, or as a string when it has none", () => {
+		expectTypeOf<Decoded<Schema, "user">>().toEqualTypeOf<VoiceCheckoutModel>();
+		expectTypeOf<Decoded<Schema, "theme">>().toEqualTypeOf<string>();
+		expectTypeOf<Decoded<Schema, "user" | "theme">>().toEqualTypeOf<VoiceCheckoutModel | string>();
+	});
+
+	it("types string and a branded string as any declared key", () => {
+		expectTypeOf<Decoded<Schema, string>>().toEqualTypeOf<string | VoiceCheckoutModel | number>();
+		expectTypeOf<Decoded<Schema, Brand>>().toEqualTypeOf<string | VoiceCheckoutModel | number>();
+	});
+
+	it("types a pattern by the declared keys it can match", () => {
+		expectTypeOf<Decoded<Schema, `u${string}`>>().toEqualTypeOf<string | VoiceCheckoutModel>();
+		expectTypeOf<Decoded<Schema, `form:${string}`>>().toEqualTypeOf<string>();
+		expectTypeOf<Decoded<Schema, Uppercase<string>>>().toEqualTypeOf<string>();
+		expectTypeOf<Decoded<Schema, "attempts" | `u${string}`>>().toEqualTypeOf<number | string | VoiceCheckoutModel>();
+	});
+});

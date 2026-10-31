@@ -238,6 +238,8 @@ app.get("/testids", (_req, res) => {
         <p id="#literal-hash">hash</p>
         <p id="id=weird">id-eq prefix</p>
         <p id="say&quot;hi">quote</p>
+        <p id="it&#39;s">apostrophe</p>
+        <p id="a&#96;b">backtick</p>
         <p id="back\\slash">backslash</p>
         <p id="a>>b">chain chars</p>
         <p id="résumé">unicode</p>
@@ -255,6 +257,41 @@ app.get("/testids", (_req, res) => {
           document.getElementById("shadow-host").attachShadow({ mode: "open" }).innerHTML =
             '<p id="in.open">shadow</p>';
         </script>
+      </body>
+    </html>
+  `);
+});
+
+// Route to handle "/testgetby": text, labels, placeholders and alt texts for the getBy* strategies that match on
+// them, each group in a section, with a decoy outside it, so a nested chain finds fewer than a page-wide one
+app.get("/testgetby", (_req, res) => {
+	res.send(`<!DOCTYPE html>
+    <html>
+      <head><meta charset="utf-8"><title>Test getBy</title></head>
+      <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">
+        <h1>Locators by text</h1>
+        <section id="greetings">
+          <p>Welcome</p>
+          <p>Welcome back, Ada</p>
+          <p>Goodbye</p>
+        </section>
+        <p>Welcome</p>
+        <form id="account">
+          <label>Username <input name="user"></label>
+          <label for="email">Email</label>
+          <input id="email" name="email">
+          <input name="search" aria-label="Search">
+          <span id="password-label">Password</span>
+          <input name="password" type="password" aria-labelledby="password-label">
+          <input name="name" placeholder="Enter your name">
+          <textarea name="comment" placeholder="Enter a comment"></textarea>
+        </form>
+        <input name="decoy" placeholder="Enter your name">
+        <section id="gallery">
+          <img src="/images/nature.svg" alt="Nature" style="width:80px">
+          <img src="/images/lights.svg" alt="Northern Lights" style="width:80px">
+        </section>
+        <img src="/images/nature.svg" alt="Nature" style="width:40px">
       </body>
     </html>
   `);
@@ -291,19 +328,39 @@ app.get("/testnav", (_req, res) => {
   `);
 });
 
+/** A query flag's milliseconds; anything but digits is 0. @param {unknown} value */
+const milliseconds = (value) => (typeof value === "string" && /^\d+$/.test(value) ? Number(value) : 0);
+
+// Query flags: delay=<ms> answers that late (a slow server); image=<ms> adds an image the server answers that late (a
+// slow resource, so the page's load event comes only then).
 app.get("/testnav/item/:id", (req, res) => {
 	if (!/^\d+$/.test(req.params.id)) {
 		res.status(404).send("Not found");
 		return;
 	}
-	res.send(`
+	const image =
+		req.query.image === undefined ? "" : `<img src="/testnav/image.svg?delay=${milliseconds(req.query.image)}">`;
+	setTimeout(
+		() =>
+			res.send(`
     <html>
       <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">
         <h1 id="item-heading">Item ${req.params.id}</h1>
         <a id="back" href="/testnav">Back</a>
+        ${image}
       </body>
     </html>
-  `);
+  `),
+		milliseconds(req.query.delay),
+	);
+});
+
+// An image the server answers after delay=<ms>, for the item page's image flag.
+app.get("/testnav/image.svg", (req, res) => {
+	setTimeout(
+		() => res.type("image/svg+xml").send('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>'),
+		milliseconds(req.query.delay),
+	);
 });
 
 // Commits, then navigates straight back to /testnav before its own load event: a redirect that bounces.
@@ -470,6 +527,30 @@ const renderStoragePage = (req, res) => {
 app.get("/teststorage", renderStoragePage);
 app.post("/teststorage", renderStoragePage);
 
+// A document sandboxed by its Content-Security-Policy: on the origin by URL, with an opaque origin of its own. With
+// ?globals=1 its script declares the globals origin and domain, as an app's own variables would.
+app.get("/teststorage/sandboxed", (req, res) => {
+	res.set("Cache-Control", "no-store");
+	res.set("Content-Security-Policy", "sandbox allow-scripts");
+	const globals =
+		req.query.globals === "1" ? '<script>var origin = "http://localhost:9000"; var domain = "localhost";</script>' : "";
+	res.send(`<!doctype html>
+    <html>
+      <head><meta charset="utf-8"><title>Sandboxed</title>${globals}</head>
+      <body><p>sandboxed</p></body>
+    </html>`);
+});
+
+// An app that declares its own global `navigation`, which shadows window.navigation in its document.
+app.get("/teststorage/shadowed-navigation", (_req, res) => {
+	res.set("Cache-Control", "no-store");
+	res.send(`<!doctype html>
+    <html>
+      <head><meta charset="utf-8"><title>Shadowed navigation</title><script>var navigation = "the app's own";</script></head>
+      <body><pre id="navigation-global"></pre><script>document.getElementById("navigation-global").textContent = String(navigation);</script></body>
+    </html>`);
+});
+
 // A small page for the iframes: snapshots its own sessionStorage and can start a top-level hop. nested=1 adds
 // srcdoc, about:blank and data: frames inside it, documents a seed's script must leave alone.
 app.get("/teststorage/frame", (req, res) => {
@@ -611,7 +692,13 @@ app.get("/teststorage/sw-passthrough.js", (_req, res) => {
   `);
 });
 
-// Start the server
-app.listen(port, () => {
-	console.log(`Server running at http://localhost:${port}/`);
-});
+// The app, for test-server/externalRequests.spec.ts, which reads every route from Express's router, and for
+// tests/testApp/sessionStorage.spec.ts, which runs it on a port of its own after that port refused a connection. The
+// server listens only when this file is started as a program (`pnpm start`), so loading it starts no second server.
+module.exports = app;
+
+if (require.main === module) {
+	app.listen(port, () => {
+		console.log(`Server running at http://localhost:${port}/`);
+	});
+}

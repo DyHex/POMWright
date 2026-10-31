@@ -111,6 +111,40 @@ What the definition cannot see:
   definition while the class is still being built: the fields below it and the constructor body have not run yet, so
   the definition reads them as `undefined`. A getter resolves when it is read and is always safe:
   `get submit() { return this.getNestedLocator("main.form@login.button@login"); }`.
+- **What it would have to `await`.** `defineLocators()` registers synchronously, as every registry method does. A
+  definition that returns a Promise, as an `async` one does, would be checked before the rest of it ran, so it fails the
+  page object, as any mistake in the definition does. Read what it needs in the fixture, where `await` works, and pass
+  it to the constructor.
+
+```text
+LoginPage: defineLocators() must register its locators synchronously; it returned a Promise. Read what it needs in the constructor or a fixture, and pass it in.
+```
+
+:::note
+A subclass constructor that throws after `super(…)` leaves an object nobody receives, but the definition that
+`PageObject`'s constructor scheduled still runs on it. It finds what the subclass never set, and fails the test with a
+second error, `AccountPage: defineLocators() failed: …`, even when the test caught the first. Check the arguments
+before `super(…)`: TypeScript allows statements there that do not use `this`.
+
+```ts
+import type { Page } from "@playwright/test";
+import { PageObject } from "pomwright";
+
+export class AccountPage extends PageObject<"main" | "main.heading@account"> {
+  constructor(page: Page, private readonly accountId: string) {
+    if (!/^\d+$/.test(accountId)) {
+      throw new Error(`AccountPage: accountId must be digits; received ${JSON.stringify(accountId)}`);
+    }
+    super(page, "https://shop.example", `/account/${accountId}`);
+  }
+
+  protected defineLocators(): void {
+    this.add("main").locator("main");
+    this.add("main.heading@account").getByRole("heading", { name: `Account ${this.accountId}` });
+  }
+}
+```
+:::
 
 ## How a mistake is reported
 
@@ -131,6 +165,7 @@ second time. Where the page object is built decides what the test run shows:
 | a test-scoped or worker-scoped fixture | the test fails before its body runs |
 | `beforeEach` | each test fails; its body runs until its first use of the page object |
 | `beforeAll` | every test of the group fails, each body running until its first use; in a `serial` group the first test fails and the others do not run |
+| the test body, or a `test.step` in it | the test fails, the error at the `new` line; the body runs on past it until its next use of the page object |
 
 `new` itself does not throw for such a mistake. A test that asserts one uses the page object right after creating it,
 with no `await` in between:

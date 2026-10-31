@@ -3,8 +3,9 @@ import { afterEach, beforeEach, describe, expect, expectTypeOf, it, type MockIns
 import { type GetNestedLocatorAccessor, type LocatorRegistry, LocatorRegistryInternal } from "./locators";
 import { PageObject, type PageObjectOptions } from "./pageObject";
 
-// Construction touches no Page method, so a chainable stub that records the strategy calls is enough;
-// what the locators match is covered by the integration specs against the real page.
+// Construction touches no Page method, so a chainable stub that records the strategy calls stands in for the page;
+// it could hide a call Playwright would reject or what the locators match, which test/tests/pageObject/ checks on real
+// pages, through the packed package.
 const createStubPage = () => {
 	const calls: { method: string; args: unknown[] }[] = [];
 	const chain: object = new Proxy(
@@ -26,7 +27,9 @@ const createStubPage = () => {
  * Constructs with the check that `PageObject` schedules recorded instead of queued, so a test can run it
  * where it can assert on it. The spy is installed only around the `new` expression: in that synchronous
  * window nothing but `PageObject` schedules, whereas a spy left in place would also swallow microtasks
- * that vitest and Node schedule.
+ * that vitest and Node schedule. A stand-in for the microtask: it could hide what running later changes (an error
+ * thrown outside the code under test, a test going on past the `new` line), which `lifecycle.spec.ts` and
+ * `lifecycle.outcomes.spec.ts` in test/tests/pageObject/ check in Playwright's runner.
  */
 const construct = <T>(make: () => T) => {
 	const scheduled: (() => void)[] = [];
@@ -230,7 +233,7 @@ describe("what the definition sees", () => {
 		}
 	}
 
-	it("sees a parameter property, a field initialiser, a constructor-body assignment and a value set right after new", () => {
+	it("sees a parameter property, a field initializer, a constructor-body assignment and a value set right after new", () => {
 		const { page, calls } = createStubPage();
 		const { instance, runCheck } = construct(() => new Localized(page, "nb", "item"));
 		instance.suffix = "z";
@@ -303,7 +306,7 @@ describe("failures", () => {
 	const VERIFICATION =
 		'Typo: Locator registry verification failed for 1 of 2 paths:\n  "main.button": No locator schema registered for path "main.titel".';
 
-	it("a registration error from the check is labelled, keeps the original as cause, and points at the construction site", () => {
+	it("a registration error from the check is labeled, keeps the original as cause, and points at the construction site", () => {
 		const { runCheck } = construct(() => new Duplicate(createStubPage().page));
 		const error = caught(runCheck);
 		expect(error.message).toMatch(
@@ -323,7 +326,7 @@ describe("failures", () => {
 		expect(error.cause).toBeInstanceOf(TypeError);
 	});
 
-	it("a verification failure is labelled with the verification message", () => {
+	it("a verification failure is labeled with the verification message", () => {
 		const error = caught(construct(() => new Typo(createStubPage().page)).runCheck);
 		expect(error.message).toBe(VERIFICATION);
 		expect((error.cause as Error).message).toBe(VERIFICATION.slice("Typo: ".length));
@@ -347,6 +350,57 @@ describe("failures", () => {
 	it("the label option names the page object", () => {
 		const error = caught(construct(() => new Duplicate(createStubPage().page, "Custom")).runCheck);
 		expect(error.message).toMatch(/^Custom: defineLocators\(\) failed:/);
+	});
+
+	describe("an async definition", () => {
+		const ASYNC =
+			"Async: defineLocators() must register its locators synchronously; it returned a Promise. Read what it needs in the constructor or a fixture, and pass it in.";
+		class Async extends PageObject<Paths> {
+			constructor(
+				page: Page,
+				private readonly fail = false,
+			) {
+				super(page, BASE, "/login", { label: "Async" });
+			}
+			// TypeScript accepts a Promise where the base method returns void
+			protected async defineLocators() {
+				this.add("main").locator("main");
+				await Promise.resolve();
+				if (this.fail) {
+					throw new Error("after the first await");
+				}
+				this.add("main.button").getByRole("button");
+			}
+		}
+
+		it("fails the check with the labeled message, before verify()", () => {
+			const error = caught(construct(() => new Async(createStubPage().page)).runCheck);
+			expect(error.message).toBe(ASYNC);
+			expect(error.cause).toBeUndefined();
+			expect(verifySpy).not.toHaveBeenCalled();
+		});
+
+		it("is kept: later calls throw the same error, also after the rest of the definition has run", async () => {
+			const { instance, runCheck } = construct(() => new Async(createStubPage().page));
+			const first = caught(runCheck);
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			expect(caught(() => instance.getLocator("main"))).toBe(first);
+			expect(caught(() => instance.getNestedLocator("main.button"))).toBe(first);
+		});
+
+		it("leaves no unhandled rejection when the rest of the definition throws", async () => {
+			const unhandled: unknown[] = [];
+			const record = (reason: unknown) => unhandled.push(reason);
+			process.on("unhandledRejection", record);
+			try {
+				const error = caught(construct(() => new Async(createStubPage().page, true)).runCheck);
+				expect(error.message).toBe(ASYNC);
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			} finally {
+				process.off("unhandledRejection", record);
+			}
+			expect(unhandled).toEqual([]);
+		});
 	});
 
 	it("a failure at a first use is thrown there, and the check then does nothing", () => {
@@ -375,7 +429,7 @@ describe("failures", () => {
 		expect(runCheck).not.toThrow();
 	});
 
-	it("a subclass constructor that throws after super(): a second, labelled error when the definition reads a field it never set (documented)", () => {
+	it("a subclass constructor that throws after super(): a second, labeled error when the definition reads a field it never set (documented)", () => {
 		class Strict extends PageObject<Paths> {
 			private readonly title: string;
 			constructor(page: Page, heading: string) {
@@ -425,7 +479,7 @@ describe("a registration kept by a page object", () => {
 		const { instance, runCheck } = construct(() => new Keeping(page));
 		runCheck();
 		expect(() => instance.narrow()).toThrowError(
-			'filter() cannot apply to "main.button": its registration has ended; give a registration all its steps in its add(…) chain, or query the path for one use.',
+			'filter() cannot apply to "main.button": its registration was ended by verify(); give a registration all its steps in its add(…) chain, or query the path for one use.',
 		);
 		calls.length = 0;
 		instance.getNestedLocator("main.button");
@@ -443,7 +497,7 @@ describe("the locators option", () => {
 		}
 	}
 
-	it("strictChains reaches the registry: a sparse definition fails the scheduled check with the labelled message", () => {
+	it("strictChains reaches the registry: a sparse definition fails the scheduled check with the labeled message", () => {
 		const { page } = createStubPage();
 		const { runCheck } = construct(() => new Sparse(page, true));
 		expect(runCheck).toThrowError(

@@ -26,7 +26,14 @@ test.describe("the published package", () => {
 		expect(() => require.resolve("pomwright/package.json")).not.toThrow();
 	});
 
-	test("the manifest declares the Node floor and the SPDX licence", () => {
+	test("the root entry maps import, require and, last, default, the CommonJS build, as @playwright/test does", () => {
+		const manifest = require("pomwright/package.json") as { exports: Record<string, Record<string, unknown>> };
+		const root = manifest.exports["."] ?? {};
+		expect(Object.keys(root)).toEqual(["import", "require", "default"]);
+		expect(root.default).toEqual({ types: "./dist/index.d.ts", default: "./dist/index.js" });
+	});
+
+	test("the manifest declares the Node floor and the SPDX license", () => {
 		const manifest = require("pomwright/package.json") as { engines?: { node?: string }; license?: string };
 		expect(manifest.engines?.node).toBe(">=20");
 		expect(manifest.license).toBe("Apache-2.0");

@@ -43,7 +43,9 @@ export class OrderPage extends PageObject<"main", { urlPathType: RegExp; storage
 [SessionStorageSchema](/POMWright/api/class-sessionstorage/#sessionstorageschema) *(optional)*
 
 The type of the session storage schema, `typeof schema`, so `sessionStorage.set`, `get` and `seed` are typed per key.
-The schema itself goes in the constructor's `sessionStorage` option.
+The schema itself goes in the constructor's `sessionStorage` option. Pass both: without the value, the declared keys
+are stored and read without their codecs (see
+[through a page object](/POMWright/docs/session-storage/#through-a-page-object)).
 
 ### urlPathType
 
@@ -117,7 +119,15 @@ Defaults for every navigation method (`waitUntil`, `timeout`); a call's own opti
 
 `{ schema?: SessionStorageSchema }` *(optional)*
 
-The codecs of the session storage keys that hold structured values, typed by `Options["storage"]`.
+The codecs of the session storage keys that hold structured values: the value of the type `Options["storage"]`
+declares, with a codec for every declared key, optional ones included. Take the type from the value,
+`PageObject<Paths, { storage: typeof schema }>`, or, for a subclass of a base class of your own, the base class's options
+type parameter (see [a base class for your site](/POMWright/docs/organizing-a-project/#a-base-class-for-your-site)).
+Without declared keys no codec may be passed, a compile error:
+
+```text
+Type '{ user: Codec<{ name: string; }>; }' is not assignable to type 'Record<string, "declare the schema's type in the page object's type options: PageObject<Paths, { storage: typeof schema }>, or a base class's options type parameter">'.
+```
 
 ---
 
@@ -177,14 +187,18 @@ and a number goes to `nth()` as given, `-1` being the last element.
 ## LocatorSchemaPathFormat
 
 `LocatorSchemaPathFormat<Path>`: the path rules as a type. It is `Path` itself when the path is well formed (not
-empty, no leading, trailing or consecutive `.`, no whitespace), and otherwise a tuple naming the rule it breaks, which
-TypeScript shows in the error:
+empty, no leading, trailing or consecutive `.`, no whitespace), and otherwise a tuple naming the rules it breaks, every
+one, in the order the runtime names them, which TypeScript shows in the error. A literal of any length is checked:
 
 ```text
 Argument of type 'string' is not assignable to parameter of type 'LocatorSchemaPathError<"main..list", "String can't contain consecutive '.'">'.
+Argument of type 'string' is not assignable to parameter of type 'LocatorSchemaPathError<".main list", "String can't contain whitespace chars; String can't start with '.'">'.
 ```
 
-A wide `string` is not checked by the type; the same rules are checked at run time for every path. See
+A wide `string` is not checked by the type; the same rules are checked at run time for every path. A registry typed
+`<string>` gives up completions, the check that a path is in the union and sub-paths, and still checks a literal path
+for these rules; it is best kept to paths known only at run time (see
+[the registry](/POMWright/docs/locator-paths/#the-registry)). See
 [the rules of a path](/POMWright/docs/locator-paths/#the-rules-of-a-path).
 
 ## LocatorSchemaPathArgument

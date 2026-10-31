@@ -1,8 +1,8 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
 import type { Page } from "@playwright/test";
-import { LocatorRegistryInternal } from "../../../src/locators";
+import { createRegistryWithAccessors } from "pomwright";
 
-const createTestRegistry = <Paths extends string>(page: Page) => new LocatorRegistryInternal<Paths>(page);
+const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 
 test("filter cycle detection throws on direct self-reference", async ({ page }) => {
 	type LocatorSchemaPaths = "main.h1";

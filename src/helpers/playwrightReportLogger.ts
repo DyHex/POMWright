@@ -5,7 +5,7 @@ import type { TestInfo } from "@playwright/test";
  * A log level, lowest first: `"debug"`, `"info"`, `"warn"`, `"error"`. A logger records an entry at its current level
  * or above.
  *
- * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#loglevel
+ * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#loglevel-1
  */
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -272,16 +272,20 @@ export class PlaywrightReportLogger {
 	}
 
 	/**
-	 * Attaches the recorded entries to the test, one attachment per entry in call order, each body exactly as logged:
-	 * `application/json` when the message is a JSON object or array, `text/plain` otherwise. Each name is the time, the
-	 * date, the level and the logger's name (`11:39:57 PM 10/16/2026 - WARN : [TestCase]`). The `log` fixture calls it
-	 * when the test ends; call it in a fixture of your own.
+	 * Attaches every recorded entry, a child logger's included, one attachment per entry in call order, each body exactly
+	 * as logged: `application/json` when the message is a JSON object or array, `text/plain` otherwise. Each name is the
+	 * time, the date, the level and the logger's name (`11:39:57 PM 10/16/2026 - WARN : [TestCase]`). Call it once, at
+	 * the end of the test, in your own `log` fixture, which replaces POMWright's. With POMWright's `test`, the `log`
+	 * fixture calls it; don't call it yourself, or every entry is attached twice.
 	 *
 	 * @param testInfo The test's `TestInfo`.
 	 * @param format `{ locale, timeZone }` for the time and date in the names; the `log` fixture passes Playwright's
 	 * `locale` and `timezoneId`. Each one left out is the project's `use.locale` or `use.timezoneId` from the config
-	 * (`testInfo.project.use`), and the machine's where the config sets none. A value set with `test.use()` reaches
-	 * only the fixtures, so a fixture of your own passes them to honour it.
+	 * (`testInfo.project.use`), and the machine's where the config sets none or `""`. A value set with `test.use()` reaches
+	 * only the fixtures, so a fixture of your own passes them to honor it.
+	 * @throws Before attaching anything, when the locale is not a BCP 47 language tag or the time zone is one Node's `Intl`
+	 * does not know: `attachLogsToTest: locale "en_US" is not a BCP 47 language tag; write it with hyphens, such as
+	 * "en-US"`, `attachLogsToTest: timeZone "Invalid/Zone" is not a time zone Node's Intl knows`.
 	 *
 	 * @example
 	 * ```ts
@@ -291,8 +295,11 @@ export class PlaywrightReportLogger {
 	 * @see https://dyhex.github.io/POMWright/api/class-playwrightreportlogger/#attachlogstotest
 	 */
 	attachLogsToTest(testInfo: TestInfo, format?: { locale?: string; timeZone?: string }) {
-		const locale = format?.locale ?? testInfo.project?.use?.locale;
-		const timeZone = format?.timeZone ?? testInfo.project?.use?.timezoneId;
+		const { locale, timeZone } = checkDateFormat(
+			format?.locale ?? testInfo.project?.use?.locale,
+			format?.timeZone ?? testInfo.project?.use?.timezoneId,
+			"attachLogsToTest",
+		);
 		// the entries are in call order already
 		for (const log of this.sharedLogEntry) {
 			const printTime = log.timestamp.toLocaleTimeString(locale, {
@@ -318,6 +325,60 @@ export class PlaywrightReportLogger {
 		}
 	}
 }
+
+/**
+ * The hint for a locale written with underscores, as a POSIX name is (`en_US.UTF-8`, as `LANG` holds it): the tag with
+ * hyphens, without the codeset (`.…`), an encoding a tag has no place for. A modifier (`@…`) can change the script
+ * (`sr_RS@latin` is `sr-Latn-RS`), so a value with one gets no hint, and neither does one whose hint `Intl` rejects too.
+ */
+const localeHint = (locale: string): string => {
+	if (!locale.includes("_") || locale.includes("@")) {
+		return "";
+	}
+	const tag = locale.replace(/\..*$/, "").replaceAll("_", "-");
+	try {
+		Intl.getCanonicalLocales(tag);
+	} catch {
+		return "";
+	}
+	return `; write it with hyphens, such as ${JSON.stringify(tag)}`;
+};
+
+/** Who checks a locale and a time zone: the `log` fixture names Playwright's options, `attachLogsToTest` its own. */
+type DateFormatSource = "log fixture" | "attachLogsToTest";
+
+/**
+ * Checks a locale and a time zone with Node's `Intl`, which formats the attachments' names: `""` and `undefined` are no
+ * value, and the machine's is used; any other locale must be a BCP 47 language tag and any other time zone one `Intl`
+ * knows. Playwright passes `locale` to the browser unchecked, and an underscore form such as `en_US` works in Chromium
+ * only. Returns the values to format with, `""` as `undefined`.
+ */
+export const checkDateFormat = (
+	locale: string | undefined,
+	timeZone: string | undefined,
+	source: DateFormatSource,
+): { locale: string | undefined; timeZone: string | undefined } => {
+	const checkedLocale = locale === "" ? undefined : locale;
+	const checkedTimeZone = timeZone === "" ? undefined : timeZone;
+	if (checkedLocale !== undefined) {
+		try {
+			Intl.getCanonicalLocales(checkedLocale);
+		} catch {
+			throw new Error(
+				`${source}: locale ${JSON.stringify(checkedLocale)} is not a BCP 47 language tag${localeHint(checkedLocale)}`,
+			);
+		}
+	}
+	if (checkedTimeZone !== undefined) {
+		try {
+			new Intl.DateTimeFormat(undefined, { timeZone: checkedTimeZone });
+		} catch {
+			const option = source === "log fixture" ? "timezoneId" : "timeZone";
+			throw new Error(`${source}: ${option} ${JSON.stringify(checkedTimeZone)} is not a time zone Node's Intl knows`);
+		}
+	}
+	return { locale: checkedLocale, timeZone: checkedTimeZone };
+};
 
 const isJsonDocument = (text: string): boolean => {
 	try {

@@ -64,7 +64,8 @@ export const test = base.extend<PageObjects>({
 ```
 
 Each page object is a fixture of its own. The file also re-exports Playwright's `expect`, so a test that asserts imports
-both from one place. A test imports `test` from that file and asks for the fixtures it uses:
+both from one place; under pnpm with `declaration: true`, that import also lets TypeScript name the Playwright types in
+`test`'s type (see [`declaration: true`](/POMWright/docs/typescript/#declaration-true)). A test imports `test` from that file and asks for the fixtures it uses:
 
 ```ts title="login.spec.ts"
 import { test } from "./fixtures";
@@ -108,8 +109,8 @@ export const test = mergeTests(pomwright, pageObjects);
 
 A page object registers its locators and checks them right after it is constructed, so a mistake that TypeScript
 cannot see, such as a path in the union that was never registered but is used in a filter, fails in the fixture. The
-test fails before its body runs, with the page object's name, every path that failed, and the line of `super(...)` in
-the stack. Here `LoginPage` finds its form as the one that contains the login heading,
+test fails before its body runs, with the page object's name, every path that failed, and the line that created the
+page object, the fixture's `new`, in the stack. Here `LoginPage` finds its form as the one that contains the login heading,
 `locator("form").filter({ has: "main.form@login.heading" })`, and the heading's path is in its union, but
 `defineLocators()` never registers it:
 
@@ -123,6 +124,6 @@ Error: LoginPage: Locator registry verification failed for 1 of 5 paths:
 
 ## What's next
 
-- [Organising a project](/POMWright/docs/organising-a-project/): a base class for your page objects, and locator
+- [Organizing a project](/POMWright/docs/organizing-a-project/): a base class for your page objects, and locator
   modules
 - [Principles](/POMWright/docs/principles/): the ideas POMWright is built on

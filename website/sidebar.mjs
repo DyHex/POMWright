@@ -12,7 +12,7 @@ export const topics = [
 					"docs/installation",
 					"docs/first-page-object",
 					"docs/page-objects-in-tests",
-					"docs/organising-a-project",
+					"docs/organizing-a-project",
 				],
 			},
 			"docs/principles",

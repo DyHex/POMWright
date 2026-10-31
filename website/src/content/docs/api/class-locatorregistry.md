@@ -86,8 +86,10 @@ registry.add("main.list.item@last", { reuse: "main.list.items" }).nth("last");
 
 **Throws**
 
-The locator method throws when the path is registered already, when the first argument is missing or is an empty
-string where Playwright cannot use one, and, from JavaScript, when the path breaks the path rules:
+`add` throws when the path breaks the path rules (from JavaScript or a path built at run time; a literal is a compile
+error), naming every rule it breaks. The locator method throws when the path is registered already (with `{ reuse }`,
+`add` itself throws, since it registers at once), and when the first argument is missing or is an empty string where
+Playwright cannot use one:
 
 ```text
 A locator schema with the path "main" already exists.
@@ -96,11 +98,22 @@ LocatorSchemaPath string cannot contain consecutive dots: main..list
 ```
 
 The duplicate message goes on with the existing and the attempted locator. `add` with `{ reuse }` throws when the
-reused path is not registered, or when the value is neither a path nor a seed (from JavaScript):
+reused path is not registered, when it is the registration path itself (through a variable; one literal reusing itself
+is a compile error), or when the value is neither a path nor a seed (from JavaScript):
 
 ```text
 No locator schema registered for path "main.list.items".
+Locator reuse path cannot be the same as registration path: "main.heading".
 reuse requires a registered path or a seed from createReusable for "main.list.item@last".
+```
+
+It throws, too, for a seed object made by hand (from JavaScript) whose first argument is missing, of the wrong type or
+empty where Playwright cannot use one, and `filter`, `nth` and `describe` throw on a copy of an any-frame path, which
+has no element:
+
+```text
+reuse requires a role value for "main.button@save".
+nth() cannot apply to "frames": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
 ```
 
 ### getLocator()
@@ -241,6 +254,12 @@ Locator registry verification failed for 1 of 2 paths:
   "list.items": No locator schema registered for path "list.items.title".
 ```
 
+An `add(path)` that never got a locator method, which registers nothing:
+
+```text
+"main.form@login": add("main.form@login") ended without a locator method (at add("main.form@login.button@login")); give it one or remove it
+```
+
 ---
 
 ## Properties
@@ -264,7 +283,8 @@ registry.add("main.heading@orders", { reuse: heading.filter({ hasText: "Orders" 
 
 **Type**
 
-- the ten locator methods, each returning a [ReusableLocator](/POMWright/api/class-reusablelocator/)
+- [ReusableLocatorFactory](/POMWright/api/class-reusablelocator/#reusablelocatorfactory)\<Paths\>: the ten locator
+  methods, each returning a [ReusableLocator](/POMWright/api/class-reusablelocator/)
 
 ---
 
@@ -273,6 +293,16 @@ registry.add("main.heading@orders", { reuse: heading.filter({ hasText: "Orders" 
 `createRegistryWithAccessors<Paths>(page, options?)` creates a registry on a page, without a page object, and returns
 it with its `add`, `getLocator`, `getNestedLocator` and `getLocatorSchema` as functions of their own. Call
 `registry.verify()` once the locators are registered. See [the registry](/POMWright/docs/locator-paths/#the-registry).
+
+The path union is a required type argument. Without it, the registry takes no path, and the first path is a compile
+error:
+
+```text
+Argument of type '"main"' is not assignable to parameter of type '"createRegistryWithAccessors needs its paths as a type argument: createRegistryWithAccessors<Paths>(page)"'.
+```
+
+`<string>` is accepted, and gives up completions, the check that a path is in the union and sub-paths, which the
+runtime still makes; a literal path is still checked for the rules of a path at compile time.
 
 **Usage**
 

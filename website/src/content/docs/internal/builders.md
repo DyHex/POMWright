@@ -53,12 +53,41 @@ kept in a variable; `getNestedLocator()` and `getLocator()` hand the maps to the
 `skip` is a flag in the set, so `unskip` restores a segment exactly as it was. A change to a skipped segment throws
 until `unskip`, because a change nobody would see in the resolved chain is more likely a mistake than an intent.
 
+## Path parameters are generic
+
+Every method that takes a path takes it as a type parameter, `<Path extends Paths>(path: LocatorSchemaPathArgument<Path>)`,
+not as the union itself: the path's own type decides what follows it. It is what lets `getLocatorSchema` accept only
+the path's own segments as sub-paths, and what checks the format of a literal or template literal path where it is
+passed.
+
+An editor's rename follows from this. TypeScript's language service treats two string literals as one when they have
+the same text and the same contextual type. A member of `Paths` has the union as its type, and a use has the path's own
+literal type, so a rename from the member reaches only the member, and one from a use reaches every use, sub-path
+arguments included (see [one path gets a new name](/POMWright/docs/locator-paths/#one-path-gets-a-new-name)). A
+parameter typed as the union would link the member to its uses, but only in the methods typed that way:
+`getLocatorSchema` and the sub-path arguments must stay generic, so a plain overload on `getNestedLocator` would split
+its uses from theirs and make a rename reach fewer places than today. Probed against the TypeScript 6.0.3 language
+service; not adopted.
+
+A `has` or `hasNot` path is a third group. Its contextual type is the filter's, which includes `Locator`, so its
+literals link only to each other: a rename from one renames every `has` and `hasNot` path, and neither the uses nor the
+member. A type change cannot merge the groups: typing `has` by its own literal, as the methods type a path, still left
+it apart from the uses, and split a `has` written beside a `hasNot` into a group of one (probed). So the editor's
+rename takes three steps, and a find and replace, which reaches every group at once, is the page's first advice.
+
+The format check, `LocatorSchemaPathFormat`, is a set of template-literal patterns, one per rule: whitespace, a leading
+dot, a trailing dot and consecutive dots, with an empty path as an error of its own. Every broken rule is named, in the
+order the runtime's `validateLocatorSchemaPath` checks them, so TypeScript and the runtime name the same rules for a
+path. The walk it replaced in 3.0.2 read the path one character at a time and recursed once per character: TypeScript
+refused a path of 999 characters or more (TS2589, its limit of 1,000 levels), and for 300 paths it took about ten times
+the type instantiations.
+
 ## The update builder
 
 `update(subPath?)` and `replace(subPath?)` return a `LocatorUpdateBuilderInternal`
 (`src/locators/locatorUpdateBuilder.ts`) with a type parameter `Mode`, `"update"` or `"replace"`. The same ten methods
-take different argument lists per mode: in `replace` mode Playwright's own (the first argument required, Playwright's
-option types), in `update` mode the patch shapes (the first argument optional, `null` deleting options). The builder
+take different argument lists per mode: in `replace` mode Playwright's own (the first argument required but
+`frameLocator`'s, whose absence is the any-frame form, and Playwright's option types), in `update` mode the patch shapes (the first argument optional, `null` deleting options). The builder
 applies the call to the query through a callback and returns the query: `update` merges into the segment's definition
 and requires its strategy, `replace` builds a complete definition of any strategy.
 

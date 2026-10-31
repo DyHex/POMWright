@@ -1,7 +1,18 @@
 import { expect, test } from "@fixtures/testApp.fixtures.js";
 import type { Page } from "@playwright/test";
 import { createRegistryWithAccessors } from "pomwright";
-import { formatLocatorSchemaPathForError } from "../../../../src/locators/utils.js";
+
+/**
+ * A path as an error message shows it: JSON's escapes, and every other whitespace character as \uXXXX, a space
+ * excepted (the rule of POMWright's internal formatLocatorSchemaPathForError, which a unit test holds).
+ */
+const formatLocatorSchemaPathForError = (path: string): string =>
+	JSON.stringify(path)
+		.slice(1, -1)
+		.replace(
+			/[\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/gu,
+			(char) => `\\u${char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0")}`,
+		);
 
 const createTestRegistry = <Paths extends string>(page: Page) => createRegistryWithAccessors<Paths>(page).registry;
 

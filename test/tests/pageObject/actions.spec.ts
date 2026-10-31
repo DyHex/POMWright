@@ -95,6 +95,30 @@ class EmptyNav extends PageObject<"body"> {
 	}
 }
 
+class RejectingNav extends PageObject<"body"> {
+	actionRuns: string[] = [];
+
+	constructor(page: Page) {
+		super(page, BASE, "/testnav", { label: "RejectingNav" });
+	}
+
+	protected defineLocators() {
+		this.add("body").locator("body");
+	}
+
+	protected pageActionsToPerformAfterNavigation() {
+		return [
+			async () => {
+				this.actionRuns.push("first");
+				throw new Error("the spinner never went away");
+			},
+			async () => {
+				this.actionRuns.push("second");
+			},
+		];
+	}
+}
+
 test("a page object without the hook navigates with goto() and expectThisPage()", async ({ page }) => {
 	const nav = new NoHookNav(page);
 	await nav.navigation.goto();
@@ -149,4 +173,15 @@ test("return null and return [] behave identically", async ({ page }) => {
 		await nav.navigation.expectThisPage();
 		expect(page.url(), nav.label).toBe(`${BASE}/testnav`);
 	}
+});
+
+test("an action that rejects rejects goto() and expectThisPage() with its error, and the actions after it do not run", async ({
+	page,
+}) => {
+	const nav = new RejectingNav(page);
+	await expect(nav.navigation.goto()).rejects.toThrow(new Error("the spinner never went away"));
+	expect(page.url()).toBe(`${BASE}/testnav`);
+	expect(nav.actionRuns).toEqual(["first"]);
+	await expect(nav.navigation.expectThisPage()).rejects.toThrow(new Error("the spinner never went away"));
+	expect(nav.actionRuns).toEqual(["first", "first"]);
 });

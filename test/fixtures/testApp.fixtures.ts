@@ -1,5 +1,6 @@
 import IframePage from "@page-object-models/testApp/pages/iframe/iframe.page";
 import TestFilters from "@page-object-models/testApp/pages/testfilters/testfilters.page";
+import TestGetBy from "@page-object-models/testApp/pages/testgetby/testgetby.page";
 import TestIds from "@page-object-models/testApp/pages/testids/testids.page";
 import TestNav from "@page-object-models/testApp/pages/testnav/testnav.page";
 import TestNavItem from "@page-object-models/testApp/pages/testnav/testnav-item.page";
@@ -17,6 +18,7 @@ type Fixtures = {
 	testPath: TestPath;
 	color: Color;
 	testFilters: TestFilters;
+	testGetBy: TestGetBy;
 	testIds: TestIds;
 	testNav: TestNav;
 	testNavItem: TestNavItem;
@@ -48,6 +50,10 @@ const test = base.extend<Fixtures>({
 	testFilters: async ({ page }, use) => {
 		const testFilters = new TestFilters(page);
 		await use(testFilters);
+	},
+
+	testGetBy: async ({ page }, use) => {
+		await use(new TestGetBy(page));
 	},
 
 	testIds: async ({ page }, use) => {

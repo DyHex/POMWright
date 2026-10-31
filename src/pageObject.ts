@@ -1,7 +1,8 @@
 import type { Page } from "@playwright/test";
 import { atCallSite, captureCallSite } from "./helpers/callSite";
 import { createNavigation, type NavigationFor, type NavigationOptions } from "./helpers/navigation";
-import { SessionStorage, type SessionStorageSchema } from "./helpers/sessionStorage";
+import { SessionStorage, type SessionStorageOptions, type SessionStorageSchema } from "./helpers/sessionStorage";
+import { isThenable } from "./helpers/thenable";
 import { assertBaseUrl, assertUrlPart, assertUrlPath, composeFullUrl, type UrlMatcher } from "./helpers/url";
 import {
 	type AddAccessor,
@@ -21,7 +22,9 @@ import {
  * @example
  * ```ts
  * const orderStorage = { cart: json<{ items: string[] }>() };
- * class OrderPage extends PageObject<Paths, { urlPathType: RegExp; storage: typeof orderStorage }> {}
+ * class OrderPage extends PageObject<Paths, { urlPathType: RegExp; storage: typeof orderStorage }> {
+ *   protected defineLocators(): void {}
+ * }
  * ```
  *
  * @see https://dyhex.github.io/POMWright/api/types/#pageobjecttypeoptions
@@ -76,6 +79,18 @@ export type StorageTypeFromOptions<T extends PageObjectTypeOptions> = T extends 
 	? S
 	: Record<never, never>;
 
+/** What a schema value is checked against where the type options declare no keys: no codec may be passed. */
+type SchemaNeedsStorageType =
+	"declare the schema's type in the page object's type options: PageObject<Paths, { storage: typeof schema }>, or a base class's options type parameter";
+
+/**
+ * The schema value a page object takes: with declared keys, a codec for every one of them; without, none at all, so a
+ * value cannot be passed without its type.
+ */
+type SchemaOptionFor<S extends SessionStorageSchema> = [keyof S] extends [never]
+	? Record<string, SchemaNeedsStorageType>
+	: Required<S>;
+
 /**
  * The options of the `PageObject` constructor, for a base class of your own that forwards them. `Options` is the page
  * object's `PageObjectTypeOptions`, which types the session storage schema.
@@ -96,8 +111,12 @@ export type PageObjectOptions<Options extends PageObjectTypeOptions = { baseUrlT
 	label?: string;
 	/** Defaults for every navigation method of `navigation` (`waitUntil`, `timeout`); a call's own options win. */
 	navOptions?: NavigationOptions;
-	/** `{ schema }`: the codecs of the session storage keys that hold structured values, typed by `Options["storage"]`. */
-	sessionStorage?: { schema?: StorageTypeFromOptions<Options> };
+	/**
+	 * `{ schema }`: the codecs of the session storage keys that hold structured values, the value of the type
+	 * `Options["storage"]` declares, with a codec for every declared key. Take the type from the value:
+	 * `PageObject<Paths, { storage: typeof schema }>`.
+	 */
+	sessionStorage?: { schema?: SchemaOptionFor<StorageTypeFromOptions<Options>> };
 	/**
 	 * The registry's options: `strictChains: true` makes the check after `defineLocators()` require every ancestor of
 	 * every registered path to be registered as well; set it once in a base class of your own.
@@ -111,7 +130,7 @@ export type PageObjectOptions<Options extends PageObjectTypeOptions = { baseUrlT
  * constructor with its URL, and registers its locators in `defineLocators()`.
  *
  * `defineLocators()` runs once, followed by a check of every registered path, right after the code that called `new`
- * has finished, or at the first locator call if that comes earlier. A mistake fails there, labelled with the page
+ * has finished, or at the first locator call if that comes earlier. A mistake fails there, labeled with the page
  * object's name.
  *
  * @typeParam LocatorSchemaPathType - `Paths`: the union of the page object's locator paths, checked against the path
@@ -160,9 +179,12 @@ export abstract class PageObject<
 	 */
 	readonly urlPath: UrlPathTypeFromOptions<Options>;
 	/**
-	 * The page object's URL. For a string `baseUrl` and `urlPath` it is `new URL(urlPath, baseUrl).href`, the form the
-	 * browser reports (`https://shop.example/` for an empty path). When either part is a RegExp it is a `UrlMatcher`,
-	 * which Playwright's `waitForURL`, `toHaveURL` and `route` take as a URL predicate.
+	 * The page object's URL. For a string `baseUrl` and `urlPath` it is `new URL(urlPath, baseUrl).href`, with a `^` in
+	 * the path written as `%5E`: the form the browser reports (`https://shop.example/` for an empty path), but for
+	 * Chromium's `%7C` for a `|`, where `expectThisPage()` matches on every browser. It is exact in Playwright's
+	 * `toHaveURL`, which never matches it for a base with credentials (it compares the page's `location.href`, which
+	 * browsers give without them), and a glob in `waitForURL` and `route`. When either part is a RegExp it is a `UrlMatcher`, which Playwright's
+	 * `waitForURL`, `toHaveURL` and `route` take as a URL predicate.
 	 *
 	 * @example
 	 * ```ts
@@ -179,8 +201,9 @@ export abstract class PageObject<
 	 */
 	readonly label: string;
 	/**
-	 * The session storage helper, labelled with `label` and typed by the `sessionStorage.schema` option. With a string
-	 * `baseUrl` it touches only that origin's storage, and `seed()` needs no origin.
+	 * The session storage helper, labeled with `label` and typed by the `sessionStorage.schema` option. With a string
+	 * `baseUrl` it touches only that origin's storage, and `seed()` needs no origin. With a RegExp `baseUrl` it has no
+	 * origin: it works on the origin the page is on, and `seed()` needs `{ origin }`.
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#sessionstorage
 	 */
@@ -248,8 +271,9 @@ export abstract class PageObject<
 	 * @param page The page the page object works on.
 	 * @param baseUrl The origin: a string `scheme://host[:port]` with nothing after it (a trailing slash is allowed), or
 	 * a RegExp tested against the URL's origin (declare `baseUrlType: RegExp` in `Options`).
-	 * @param urlPath The page's path: `""` for the origin itself, a string that starts with exactly one `/`, or a RegExp
-	 * tested against the rest of the URL, path, query and hash (declare `urlPathType: RegExp` in `Options`).
+	 * @param urlPath The page's path: `""` for the origin itself, a string that starts with exactly one `/` and stays on
+	 * the base's origin, or a RegExp tested against the rest of the URL, path, query and hash (declare
+	 * `urlPathType: RegExp` in `Options`).
 	 * @param options Optional settings.
 	 * @param options.label The name in step titles and error messages. Defaults to the class name.
 	 * @param options.navOptions Defaults for every navigation method (`waitUntil`, `timeout`); a call's own options win.
@@ -277,7 +301,7 @@ export abstract class PageObject<
 			assertBaseUrl(baseUrl, label);
 		}
 		if (typeof urlPath === "string") {
-			assertUrlPath(urlPath, label);
+			assertUrlPath(urlPath, baseUrl, label);
 		}
 		this.baseUrl = baseUrl;
 		this.urlPath = urlPath;
@@ -308,10 +332,16 @@ export abstract class PageObject<
 		this.getLocator = this.locatorRegistry.getLocator;
 		this.getLocatorSchema = this.locatorRegistry.getLocatorSchema;
 		this.getNestedLocator = this.locatorRegistry.getNestedLocator;
-		this.sessionStorage = new SessionStorage<StorageTypeFromOptions<Options>>(page, {
+		// the schema's type and value were checked where the options were written (SchemaOptionFor); with the schema type
+		// still generic here, SessionStorage's constructor cannot tell whether it has keys, so it is called as untyped
+		const PageSessionStorage = SessionStorage as new (
+			page: Page,
+			options: SessionStorageOptions<SessionStorageSchema>,
+		) => SessionStorage<StorageTypeFromOptions<Options>>;
+		this.sessionStorage = new PageSessionStorage(page, {
 			label,
 			origin: typeof baseUrl === "string" ? new URL(baseUrl).origin : undefined,
-			schema: options?.sessionStorage?.schema,
+			schema: options?.sessionStorage?.schema as StorageTypeFromOptions<Options> | undefined,
 		});
 		this.navigation = createNavigation(
 			this.page,
@@ -323,8 +353,9 @@ export abstract class PageObject<
 			options?.navOptions,
 		);
 
-		// last, after everything above that can throw: define and verify once the code that called `new` is done
-		const site = captureCallSite(PageObject);
+		// last, after everything above that can throw: define and verify once the code that called `new` is done. The site
+		// is cut at the class the code constructed, so it starts at the `new` line, not at a base class's `super(…)`
+		const site = captureCallSite(new.target);
 		queueMicrotask(() => {
 			if (this.#locators !== "pending") {
 				return;
@@ -347,12 +378,15 @@ export abstract class PageObject<
 		}
 		this.#locators = "defining";
 		let step: "define" | "verify" = "define";
+		let returned: unknown;
 		try {
-			this.defineLocators();
-			step = "verify";
-			registry.verify();
-			this.#locators = "defined";
-			return true;
+			returned = this.defineLocators();
+			if (!isThenable(returned)) {
+				step = "verify";
+				registry.verify();
+				this.#locators = "defined";
+				return true;
+			}
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			const failure = new Error(
@@ -362,13 +396,24 @@ export abstract class PageObject<
 			this.#locators = { failure };
 			throw failure;
 		}
+		// an async definition would be verified before the rest of it ran, and an error after its first await would escape
+		// unlabeled; its own rejection is handled here, since the failure below already reports it
+		returned.then(undefined, () => {});
+		const failure = new Error(
+			`${this.label}: defineLocators() must register its locators synchronously; it returned a Promise. Read what it needs in the constructor or a fixture, and pass it in.`,
+		);
+		this.#locators = { failure };
+		throw failure;
 	}
 
 	/**
 	 * Registers the page object's locators with `this.add(path)`. Every page object implements it. Runs once, right after
 	 * the constructor, so it can use the subclass's constructor arguments and fields; the registry is verified after it,
-	 * and an error in either is labelled with the page object (`LoginPage: defineLocators() failed: …`) and thrown again
-	 * by every later locator call.
+	 * and an error in either is labeled with the page object (`LoginPage: defineLocators() failed: …`) and thrown again
+	 * by every later locator call. It registers synchronously: read what it needs in the constructor or a fixture.
+	 *
+	 * @throws When it returns a Promise, as an `async` method does: `LoginPage: defineLocators() must register its locators
+	 * synchronously; it returned a Promise. Read what it needs in the constructor or a fixture, and pass it in.`
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-pageobject/#definelocators
 	 *

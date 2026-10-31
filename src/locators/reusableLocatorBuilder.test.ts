@@ -4,7 +4,8 @@ import { createFakePage, type FakeLocator } from "./fakePage";
 import { LocatorRegistryInternal } from "./locatorRegistry";
 
 // Seeds from createReusable: what the factory accepts, and a seed as a value. Registering a seed never touches the
-// page, so a bare object is enough there; the variants are resolved on the fake page, which records each chain.
+// page, so a bare object is enough there; the variants are resolved on the fake page, which records each chain
+// (fakePage.ts says what it stands in for and could hide). add.reuseReusable.spec.ts reuses seeds for real.
 type Paths = "a" | "a.b" | "seeded" | "anyFrame" | "anyFrame.button";
 const stubPage = {} as Page;
 const createRegistry = () => new LocatorRegistryInternal<Paths>(stubPage);

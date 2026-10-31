@@ -56,9 +56,10 @@ const log = new PlaywrightReportLogger({ current: "warn", initial: "warn" }, ent
 
 ### attachLogsToTest()
 
-Attaches the recorded entries to the test, one attachment per entry in call order, named with the time, the date, the
-level and the logger's name. The `log` fixture calls it when the test ends; call it in a fixture of your own. See
-[your own fixture](/POMWright/docs/logging/#your-own-fixture).
+Attaches every recorded entry, a child logger's included, one attachment per entry in call order, named with the time,
+the date, the level and the logger's name. Call it once, at the end of the test, in your own `log` fixture, which
+replaces POMWright's. With POMWright's `test`, the `log` fixture calls it; don't call it yourself, or every entry is
+attached twice. See [your own fixture](/POMWright/docs/logging/#your-own-fixture).
 
 **Usage**
 
@@ -85,12 +86,22 @@ export const test = base.extend<{ log: PlaywrightReportLogger }>({
   The locale and time zone of the time and date in the names, as `toLocaleTimeString` takes them; the `log` fixture
   passes Playwright's [`locale`](https://playwright.dev/docs/api/class-testoptions#test-options-locale) and
   [`timezoneId`](https://playwright.dev/docs/api/class-testoptions#test-options-timezone-id). Each one left out is the
-  project's `use.locale` or `use.timezoneId` from the config, or the machine's where the config sets none; a value set
-  with `test.use()` reaches only the fixtures.
+  project's `use.locale` or `use.timezoneId` from the config, or the machine's where the config sets none or `""`; a
+  value set with `test.use()` reaches only the fixtures.
 
 **Returns**
 
 - void
+
+**Throws**
+
+Before attaching anything, when the locale is not a BCP 47 language tag or the time zone is one Node's `Intl` does not
+know:
+
+```text
+attachLogsToTest: locale "en_US" is not a BCP 47 language tag; write it with hyphens, such as "en-US"
+attachLogsToTest: timeZone "Invalid/Zone" is not a time zone Node's Intl knows
+```
 
 ### debug()
 

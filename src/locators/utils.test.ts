@@ -6,6 +6,8 @@ import type {
 	IdDefinition,
 	IndexSelector,
 	LocatorBuilderTarget,
+	LocatorSchemaPathError,
+	LocatorSchemaPathFormat,
 	LocatorStep,
 	UnicodeWhitespaceChar,
 } from "./types";
@@ -28,6 +30,7 @@ import {
 	isLocatorInstance,
 	isReusableLocator,
 	LOCATOR_SCHEMA_PATH_WHITESPACE,
+	mergeOptions,
 	methodForStrategy,
 	normalizeSteps,
 	STRATEGIES,
@@ -72,25 +75,57 @@ describe("escapeRegExpForSelector", () => {
 		expect(escapeRegExpForSelector(/^panel-\d+$/i)).toBe("/^panel-\\d+$/i");
 	});
 
-	it("escapes unescaped quotes and backticks", () => {
-		expect(escapeRegExpForSelector(/say"hi/)).toBe('/say\\"hi/');
-		expect(escapeRegExpForSelector(/it's/)).toBe("/it\\'s/");
-		expect(escapeRegExpForSelector(/a`b/)).toBe("/a\\`b/");
-	});
+	/** The RegExp a serialized form describes, compiled again from its source and flags. */
+	const reparsed = (serialized: string) => {
+		const end = serialized.lastIndexOf("/");
+		return new RegExp(serialized.slice(1, end), serialized.slice(end + 1));
+	};
+	/** What Playwright's chain parser reads as unescaped: it skips the character after a backslash. */
+	const unescaped = (serialized: string) => serialized.replace(/\\[\s\S]/g, "__");
 
-	it("leaves an already escaped quote alone", () => {
-		// source is  say\"hi  (one backslash before the quote); no second backslash is added
-		expect(escapeRegExpForSelector(/say"hi/)).toBe('/say\\"hi/');
-	});
+	// [the RegExp, its selector text, strings it matches, strings it does not]
+	const cases: [RegExp, string, string[], string[]][] = [
+		// outside unicode mode, a quote or a backtick gets a backslash, as in Playwright's helper
+		[/say"hi/, '/say\\"hi/', ['say"hi'], ["sayhi"]],
+		[/it's/, "/it\\'s/", ["it's"], ["its"]],
+		[/a`b/, "/a\\`b/", ["a`b"], ["ab"]],
+		// biome-ignore lint/complexity/useRegexLiterals: biome's fix for the literal deletes the escape this case is about
+		[new RegExp('say\\"hi'), '/say\\"hi/', ['say"hi'], ['say\\"hi']],
+		[/say["']hi/, "/say[\\\"\\']hi/", ['say"hi', "say'hi"], ["sayhi"]],
+		[/a""b/, '/a\\"\\"b/', ['a""b'], ['a"b']],
+		[/x\\"/, '/x\\\\\\"/', ['x\\"'], ['x"']],
+		[/a>>b/, "/a>\\>b/", ["a>>b"], ["a>b"]],
+		[/a>>>b/, "/a>\\>>b/", ["a>>>b"], ["a>>b"]],
+		// biome-ignore lint/complexity/useRegexLiterals: biome's fix for the literal deletes the escape this case is about
+		[new RegExp("a\\>>b"), "/a\\>>b/", ["a>>b"], ["a\\>>b"]],
+		[/(?<g>>b)/, "/(?<g>\\>b)/", [">b"], ["b"]],
+		// unicode mode rejects that identity escape, so the character is written by its code
+		[/say"hi/u, "/say\\x22hi/u", ['say"hi'], ["sayhi"]],
+		[/it's/v, "/it\\x27s/v", ["it's"], ["its"]],
+		[/a`b/u, "/a\\x60b/u", ["a`b"], ["ab"]],
+		[/a>>b/u, "/a>\\x3eb/u", ["a>>b"], ["a>b"]],
+		[/a>>>b/u, "/a>\\x3e>b/u", ["a>>>b"], ["a>>b"]],
+		[/["'`]/u, "/[\\x22\\x27\\x60]/u", ['"', "'", "`"], ["a"]],
+		[/[\q{a"b|c}]/v, "/[\\q{a\\x22b|c}]/v", ['a"b', "c"], ["ab"]],
+		[/(?<g>>b)/u, "/(?<g>\\x3eb)/u", [">b"], ["b"]],
+		[/x\\"/u, "/x\\\\\\x22/u", ['x\\"'], ['x"']],
+		[/[\`]/v, "/[\\x60]/v", ["`"], ["x", "\\"]],
+		[/[\\`]/v, "/[\\\\\\x60]/v", ["`", "\\"], ["x"]],
+		[/[\>>]/v, "/[\\>>]/v", [">"], ["x"]],
+	];
 
-	it("escapes Playwright's chain separator", () => {
-		expect(escapeRegExpForSelector(/a>>b/)).toBe("/a\\>\\>b/");
-	});
-
-	it("passes unicode-mode regexes through untouched", () => {
-		expect(escapeRegExpForSelector(/say"hi/u)).toBe('/say"hi/u');
-		expect(escapeRegExpForSelector(/say"hi/v)).toBe('/say"hi/v');
-	});
+	it.each(cases)(
+		"%s is written without an unescaped quote, backtick or >>, and stays the same RegExp",
+		(re, text, yes, no) => {
+			const serialized = escapeRegExpForSelector(re);
+			expect(serialized).toBe(text);
+			expect(unescaped(serialized)).not.toMatch(/["'`]|>>/);
+			const again = reparsed(serialized);
+			expect(again.flags).toBe(re.flags);
+			for (const value of yes) expect(again.test(value), value).toBe(true);
+			for (const value of no) expect(again.test(value), value).toBe(false);
+		},
+	);
 
 	it("keeps every flag, including sticky", () => {
 		expect(escapeRegExpForSelector(/x/gimsy)).toBe("/x/gimsy");
@@ -111,7 +146,7 @@ describe("buildIdSelector", () => {
 			"internal:attr=[id=/^button\\.submit\\.[a-z0-9]{4}$/]",
 		);
 		expect(buildIdSelector(/settings/i)).toBe("internal:attr=[id=/settings/i]");
-		expect(buildIdSelector(/a>>b/)).toBe("internal:attr=[id=/a\\>\\>b/]");
+		expect(buildIdSelector(/a>>b/)).toBe("internal:attr=[id=/a>\\>b/]");
 		expect(buildIdSelector(/\/slash/)).toBe("internal:attr=[id=/\\/slash/]");
 		expect(buildIdSelector(/x/u)).toBe("internal:attr=[id=/x/u]");
 	});
@@ -272,7 +307,7 @@ describe("createLocator, frame case", () => {
 });
 
 describe("frame definitions without a selector", () => {
-	it("are recognised by isAnyFrameDefinition", () => {
+	it("are recognized by isAnyFrameDefinition", () => {
 		expect(isAnyFrameDefinition({ type: "frameLocator" })).toBe(true);
 		expect(isAnyFrameDefinition({ type: "frameLocator", selector: "iframe" })).toBe(false);
 		expect(isAnyFrameDefinition({ type: "locator", selector: "iframe" })).toBe(false);
@@ -370,6 +405,86 @@ describe("path whitespace", () => {
 	});
 });
 
+// Paths built from template literals, so the type test holds literals of any length without writing them out.
+type Ten = "abcdefghij";
+type Hundred = `${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}`;
+type Characters999 =
+	`${Hundred}${Hundred}${Hundred}${Hundred}${Hundred}${Hundred}${Hundred}${Hundred}${Hundred}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}${Ten}abcdefghi`;
+type FiftySegments =
+	"s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s.";
+type Segments2501 =
+	`${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}${FiftySegments}end`;
+
+describe("path rules, at compile time and at run time", () => {
+	it("compile for a well-formed literal of any length", () => {
+		expectTypeOf<Characters999>().toExtend<string>();
+		expectTypeOf<LocatorSchemaPathFormat<Characters999>>().toEqualTypeOf<Characters999>();
+		expectTypeOf<LocatorSchemaPathFormat<Segments2501>>().toEqualTypeOf<Segments2501>();
+	});
+
+	it("reject each of the listed whitespace characters, and only those", () => {
+		type Rejected = {
+			[C in UnicodeWhitespaceChar]: LocatorSchemaPathFormat<`main${C}form`> extends `main${C}form` ? false : true;
+		}[UnicodeWhitespaceChar];
+		expectTypeOf<Rejected>().toEqualTypeOf<true>();
+		// zero-width and joiner characters are not White_Space
+		expectTypeOf<LocatorSchemaPathFormat<"main\u200Bform">>().toEqualTypeOf<"main\u200Bform">();
+		expectTypeOf<LocatorSchemaPathFormat<"main\u180Eform">>().toEqualTypeOf<"main\u180Eform">();
+		expectTypeOf<LocatorSchemaPathFormat<"main\u2060form">>().toEqualTypeOf<"main\u2060form">();
+	});
+
+	it("name every broken rule, in the same order at compile time and at run time", () => {
+		expectTypeOf<LocatorSchemaPathFormat<".a b">>().toEqualTypeOf<
+			LocatorSchemaPathError<".a b", "String can't contain whitespace chars; String can't start with '.'">
+		>();
+		expectTypeOf<LocatorSchemaPathFormat<"..">>().toEqualTypeOf<
+			LocatorSchemaPathError<
+				"..",
+				"String can't start with '.'; String can't end with '.'; String can't contain consecutive '.'"
+			>
+		>();
+		expectTypeOf<LocatorSchemaPathFormat<".a..b c.">>().toEqualTypeOf<
+			LocatorSchemaPathError<
+				".a..b c.",
+				"String can't contain whitespace chars; String can't start with '.'; String can't end with '.'; String can't contain consecutive '.'"
+			>
+		>();
+		expectTypeOf<LocatorSchemaPathFormat<"a..b.">>().toEqualTypeOf<
+			LocatorSchemaPathError<"a..b.", "String can't end with '.'; String can't contain consecutive '.'">
+		>();
+		expect(() => validateLocatorSchemaPath(".a b")).toThrowError(
+			"LocatorSchemaPath string cannot contain whitespace chars and cannot start with a dot: .a b",
+		);
+		expect(() => validateLocatorSchemaPath("..")).toThrowError(
+			"LocatorSchemaPath string cannot start with a dot, cannot end with a dot and cannot contain consecutive dots: ..",
+		);
+		expect(() => validateLocatorSchemaPath(".a..b c.")).toThrowError(
+			"LocatorSchemaPath string cannot contain whitespace chars, cannot start with a dot, cannot end with a dot and cannot contain consecutive dots: .a..b c.",
+		);
+		expect(() => validateLocatorSchemaPath("a..b.")).toThrowError(
+			"LocatorSchemaPath string cannot end with a dot and cannot contain consecutive dots: a..b.",
+		);
+	});
+
+	it("keep the message of a single broken rule", () => {
+		expect(() => validateLocatorSchemaPath("main..list")).toThrowError(
+			"LocatorSchemaPath string cannot contain consecutive dots: main..list",
+		);
+		expect(() => validateLocatorSchemaPath(".main")).toThrowError(
+			"LocatorSchemaPath string cannot start with a dot: .main",
+		);
+		expect(() => validateLocatorSchemaPath("main.")).toThrowError(
+			"LocatorSchemaPath string cannot end with a dot: main.",
+		);
+		expect(() => validateLocatorSchemaPath("main.form button")).toThrowError(
+			"LocatorSchemaPath string cannot contain whitespace chars: main.form button",
+		);
+	});
+});
+
+// A FakeLocator stands in for Playwright's Locator here and in stringifyForLog below (fakePage.ts says what it could
+// hide): Playwright's own locators are passed as has in add.filter.spec.ts and getLocatorSchema.filter.spec.ts, and
+// rendered in the duplicate-path error in add.spec.ts.
 describe("isLocatorInstance", () => {
 	const fn = () => undefined;
 	it("accepts an object with filter, nth and locator methods, as a Playwright Locator has", () => {
@@ -468,6 +583,61 @@ describe("copyValue and copyFields", () => {
 		expect(copy.name).not.toBe(name);
 		expect(copy.name).toEqual(/Save/);
 		expect(copy.has).toBe(has);
+	});
+
+	it("reads an object as Playwright does: getters on a class, inherited values, not methods", () => {
+		class SaveButton {
+			level = 2;
+			get name() {
+				return "Save";
+			}
+			describe() {
+				return "a method";
+			}
+		}
+		expect(copyFields(new SaveButton() as object)).toEqual({ level: 2, name: "Save" });
+
+		class ExactSaveButton extends SaveButton {
+			get exact() {
+				return true;
+			}
+		}
+		expect(copyFields(new ExactSaveButton() as object)).toEqual({ level: 2, exact: true, name: "Save" });
+
+		const withDefaults = Object.assign(Object.create({ exact: true }), { name: "Save" });
+		expect(copyFields(withDefaults)).toEqual({ name: "Save", exact: true });
+
+		const bare = Object.assign(Object.create(null), { name: "Save" });
+		expect(copyFields(bare)).toEqual({ name: "Save" });
+	});
+
+	it("an own property shadows the prototype's, and keeps its place", () => {
+		const options = Object.assign(Object.create({ name: "Inherited", exact: true }), { name: "Own" });
+		expect(Object.entries(copyFields(options))).toEqual([
+			["name", "Own"],
+			["exact", true],
+		]);
+	});
+
+	it("merges a patch read the same way", () => {
+		class Patch {
+			get name() {
+				return "Cancel";
+			}
+		}
+		expect(mergeOptions({ name: "Save", exact: true }, new Patch() as object)).toEqual({ name: "Cancel", exact: true });
+	});
+
+	it("reads own properties that are not enumerable, a value and a getter, and leaves out an own method", () => {
+		const options = { exact: true };
+		Object.defineProperty(options, "name", { value: "Save", enumerable: false });
+		Object.defineProperty(options, "level", { get: () => 2, enumerable: false });
+		Object.defineProperty(options, "describe", { value: () => "a method", enumerable: false });
+		expect(copyFields(options)).toEqual({ exact: true, name: "Save", level: 2 });
+
+		const patch = {};
+		Object.defineProperty(patch, "name", { value: "Cancel", enumerable: false });
+		expect(mergeOptions({ name: "Save", exact: true }, patch)).toEqual({ name: "Cancel", exact: true });
 	});
 });
 

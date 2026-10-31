@@ -1,4 +1,5 @@
 import { expect, test } from "@fixtures/testApp.fixtures";
+import { createRegistryWithAccessors } from "pomwright";
 
 const terminalPath = "body.section.button" as const;
 
@@ -105,4 +106,27 @@ test("clearSteps rejects a skipped segment and names unskip", async ({ testFilte
 		'clearSteps() cannot apply to "body.section": it is skipped in this query; call unskip("body.section") first.',
 	);
 	expect(`${query.clearSteps().getNestedLocator().describe("")}`).toEqual("locator('body').getByRole('button')");
+});
+
+test("without a path, update(), replace() and clearSteps() act on the query's own path, as with it written out", async ({
+	page,
+}) => {
+	type Paths = "main" | "main.list@orders";
+	const { add, getLocatorSchema } = createRegistryWithAccessors<Paths>(page);
+	add("main").locator("main");
+	add("main.list@orders").getByRole("list", { name: "Orders" }).filter({ hasText: "Shipped" }).nth(0);
+	const query = () => getLocatorSchema("main.list@orders");
+	const chain = (locator: { describe(description: string): unknown }) => `${locator.describe("")}`;
+
+	const updated = chain(query().update().getByRole({ name: "Archive" }).getNestedLocator());
+	expect(updated).toBe(chain(query().update("main.list@orders").getByRole({ name: "Archive" }).getNestedLocator()));
+	expect(updated).toBe("locator('main').getByRole('list', { name: 'Archive' }).filter({ hasText: 'Shipped' }).first()");
+
+	const replaced = chain(query().replace().locator("ol").getNestedLocator());
+	expect(replaced).toBe(chain(query().replace("main.list@orders").locator("ol").getNestedLocator()));
+	expect(replaced).toBe("locator('main').locator('ol').filter({ hasText: 'Shipped' }).first()");
+
+	const cleared = chain(query().clearSteps().getNestedLocator());
+	expect(cleared).toBe(chain(query().clearSteps("main.list@orders").getNestedLocator()));
+	expect(cleared).toBe("locator('main').getByRole('list', { name: 'Orders' })");
 });

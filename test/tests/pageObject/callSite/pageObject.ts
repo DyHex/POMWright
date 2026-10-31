@@ -9,9 +9,12 @@ export class BrokenPage extends PageObject<"list" | "list.item"> {
 
 	protected defineLocators(): void {
 		this.add("list").locator("ul");
-		// a misspelt has reference: the check right after construction fails
+		// a misspelled has reference: the check right after construction fails
 		this.add("list.item")
 			.locator("li")
 			.filter({ has: "list.titel" as "list" });
 	}
 }
+
+// the `new` the check's error points at, in this file named like POMWright's own
+export const openBrokenPage = (page: Page) => new BrokenPage(page);

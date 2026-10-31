@@ -14,7 +14,7 @@ export type Paths =
 	| "topMenu.myAccount";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-	registry.add("topMenu").locator(".w3-top");
+	registry.add("topMenu").locator(".top");
 
 	registry.add("topMenu.logo").getByRole("link", { name: /Logo/ });
 
@@ -22,11 +22,11 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 	registry.add("topMenu.accountSettings").getByTitle("Account Settings");
 	registry.add("topMenu.messages").getByTitle("Messages");
 
-	registry.add("topMenu.notifications").locator(".w3-dropdown-hover");
+	registry.add("topMenu.notifications").locator(".dropdown-hover");
 	registry.add("topMenu.notifications.button").getByRole("button");
-	registry.add("topMenu.notifications.button.countBadge").locator(".w3-badge");
-	registry.add("topMenu.notifications.dropdown").locator(".w3-dropdown-content");
-	registry.add("topMenu.notifications.dropdown.item").locator(".w3-bar-item");
+	registry.add("topMenu.notifications.button.countBadge").locator(".badge");
+	registry.add("topMenu.notifications.dropdown").locator(".dropdown-content");
+	registry.add("topMenu.notifications.dropdown.item").locator(".bar-item");
 
 	registry.add("topMenu.myAccount").getByTitle("My Account");
 }

@@ -81,7 +81,23 @@ export class ReusableLocatorBuilder<
 	}
 }
 
-export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
+/**
+ * The type of `registry.createReusable`: one method per locator strategy, each making a seed to register with
+ * `add(path, { reuse: seed })`.
+ *
+ * @example
+ * ```ts
+ * function seedsOf(registry: LocatorRegistry<Paths>): ReusableLocatorFactory<Paths> {
+ *   return registry.createReusable;
+ * }
+ * ```
+ *
+ * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#reusablelocatorfactory
+ */
+export type ReusableLocatorFactory<LocatorSchemaPathType extends string> =
+	ReusableLocatorFactoryInternal<LocatorSchemaPathType>;
+
+export class ReusableLocatorFactoryInternal<LocatorSchemaPathType extends string> {
 	/**
 	 * Makes a seed whose locator is Playwright's `page.getByRole()`. Returns a seed: register it with `add(path, { reuse:
 	 * seed })`, and derive others with its `filter`, `nth` and `describe`.
@@ -97,7 +113,7 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	 * registry.createReusable.getByRole("heading", { level: 2 });
 	 * ```
 	 *
-	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#createreusable
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#getbyrole
 	 */
 	getByRole(
 		role: RoleDefinition["role"],
@@ -122,7 +138,7 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	 * registry.createReusable.getByText(/Total/);
 	 * ```
 	 *
-	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#createreusable
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#getbytext
 	 */
 	getByText(
 		text: Parameters<Page["getByText"]>[0],
@@ -147,7 +163,7 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	 * registry.createReusable.getByLabel("Quantity");
 	 * ```
 	 *
-	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#createreusable
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#getbylabel
 	 */
 	getByLabel(
 		text: Parameters<Page["getByLabel"]>[0],
@@ -172,7 +188,7 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	 * registry.createReusable.getByPlaceholder("Search");
 	 * ```
 	 *
-	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#createreusable
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#getbyplaceholder
 	 */
 	getByPlaceholder(
 		text: Parameters<Page["getByPlaceholder"]>[0],
@@ -199,7 +215,7 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	 * registry.createReusable.getByAltText("Product photo");
 	 * ```
 	 *
-	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#createreusable
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#getbyalttext
 	 */
 	getByAltText(
 		text: Parameters<Page["getByAltText"]>[0],
@@ -224,7 +240,7 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	 * registry.createReusable.getByTitle("Remove");
 	 * ```
 	 *
-	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#createreusable
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#getbytitle
 	 */
 	getByTitle(
 		text: Parameters<Page["getByTitle"]>[0],
@@ -250,7 +266,7 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	 * registry.createReusable.locator("tr");
 	 * ```
 	 *
-	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#createreusable
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#locator
 	 */
 	locator(
 		selector: Parameters<Page["locator"]>[0],
@@ -275,7 +291,7 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	 * registry.createReusable.frameLocator("iframe.checkout");
 	 * ```
 	 *
-	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#createreusable
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#framelocator
 	 */
 	frameLocator(selector: Parameters<Page["locator"]>[0]): ReusableLocator<LocatorSchemaPathType, "frameLocator"> {
 		return this.create("frameLocator", selector);
@@ -295,7 +311,7 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	 * registry.createReusable.getByTestId("order-row");
 	 * ```
 	 *
-	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#createreusable
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#getbytestid
 	 */
 	getByTestId(testId: Parameters<Page["getByTestId"]>[0]): ReusableLocator<LocatorSchemaPathType, "testId"> {
 		return this.create("testId", testId);
@@ -315,7 +331,7 @@ export class ReusableLocatorFactory<LocatorSchemaPathType extends string> {
 	 * registry.createReusable.getById(/^order-\d+$/);
 	 * ```
 	 *
-	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#createreusable
+	 * @see https://dyhex.github.io/POMWright/api/class-reusablelocator/#getbyid
 	 */
 	getById(id: string | RegExp): ReusableLocator<LocatorSchemaPathType, "id"> {
 		return this.create("id", id);

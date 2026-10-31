@@ -22,12 +22,34 @@ checked like a literal:
 ```text
 LoginPage: baseUrl must be an origin such as "https://example.com" or "http://localhost:9000" (scheme, host, optional port, no path, query or hash); received "shop.example".
 LoginPage: urlPath must be "" or start with exactly one "/"; received "login".
+LoginPage: urlPath must be a path on the page object's origin; received "/\\login.example/account", which names the host "login.example" instead. A "/" followed by another "/" or a "\", also with a tab or line break between them, starts a host.
 LoginPage: baseUrl must be a string or a RegExp; received undefined.
 ```
 
 `localhost:9000` without a scheme and a base with a path are rejected: Playwright could not resolve paths against the
-first, and would drop the path of the second for every path that starts with `/`. A path that starts with `//` would
-name another host.
+first, and would drop the path of the second for every path that starts with `/`. A base that ends in a bare `?` or
+`#` is rejected too, and so is a scheme without an origin in the URL standard, such as `chrome-extension://…/` or
+`file://…/`: there is no origin to resolve paths against or compare URLs with. A path that starts with `//` names another host, and so does one whose first `/` is followed by a
+backslash, or by a tab or line break and then `/` or a backslash: the URL standard reads a backslash as `/` and drops
+tabs and line breaks. The constructor resolves the path and rejects it when it leaves the base's origin.
+
+:::note
+A base with credentials, `http://user:secret@shop.example`, is accepted and works: browsers send them when the server
+asks. But the credentials are part of every URL the page object shows, `fullUrl`, step titles and error messages, so
+they reach reports and traces:
+
+```text
+AccountPage: expected to have left "http://user:secret@shop.example/account"; found "http://user:secret@shop.example/account" (page.waitForURL: Timeout 500ms exceeded.)
+```
+
+And Playwright's `expect(page).toHaveURL(fullUrl)` fails with them on every browser, which POMWright cannot change: it
+compares the page's `location.href`, which browsers give without credentials, where `page.url()`, `page.waitForURL()`
+and POMWright's navigation methods keep them.
+
+Give them to Playwright instead, with the `httpCredentials` option
+([HTTP authentication](https://playwright.dev/docs/network#http-authentication)), and keep the base an origin without
+them.
+:::
 
 ## `fullUrl`
 
@@ -39,6 +61,18 @@ For two strings, `fullUrl` is `new URL(urlPath, baseUrl).href`, the URL in the f
 | `"https://shop.example/"` | `"/login"` | `https://shop.example/login` |
 | `"https://shop.example"` | `"/søk"` | `https://shop.example/s%C3%B8k` |
 | `"http://localhost:9000"` | `"/orders?tab=1"` | `http://localhost:9000/orders?tab=1` |
+
+Every browser writes a `^` in the path as `%5E`, as `new URL` does on Node 24 while Node 20 and 22 keep it, so
+`fullUrl` writes `%5E` on every Node version. One character is reported differently by the browsers: Chromium writes a
+`|` in the path as `%7C`, where Firefox, WebKit and `fullUrl` keep it. So for a path with `|`,
+`expect(page).toHaveURL(fullUrl)` fails on Chromium; `expectThisPage()` treats `|` and `%7C` as one and matches on
+every browser, as it does `^` and `%5E`.
+
+A string `fullUrl` is exact in Playwright's `expect(page).toHaveURL()`, which never matches it for a base with
+credentials (see
+[`baseUrl` and `urlPath`](/POMWright/docs/urls-and-navigation/#baseurl-and-urlpath)). In `page.waitForURL()` and `page.route()` Playwright reads a
+string as a glob, where `*`, `**` and a `{a,b}` group are patterns; the navigation helper's own waits use a matcher
+instead.
 
 ## Navigating
 
@@ -66,9 +100,11 @@ As with `page.goto`, a complete URL is used as it is, so `goto(target)` also lea
 `loginPage.navigation.goto("https://help.example/faq")` goes from `https://shop.example` to the help site.
 
 A page's identity is its exact URL: `/orders?tab=1` is not `/orders` for `expectThisPage`, and counts as another page
-for `expectAnotherPage`. When the URL is already right, `page.waitForURL` returns at once, after the requested load
-state, so calling `expectThisPage()` after a navigation that has already landed is fine. A `goto(target)` whose target
-happens to equal `fullUrl` is ordinary navigation and does not run the actions.
+for `expectAnotherPage`. The same holds for an empty query or fragment, `/orders?` or `/orders#`, as it does for
+Playwright's `toHaveURL`; a page that may carry one has a RegExp path such as `/^\/orders\??$/`. When the URL is
+already right, `page.waitForURL` returns at once, after the requested load state, so calling `expectThisPage()` after
+a navigation that has already landed is fine. A `goto(target)` whose target happens to equal `fullUrl` is ordinary
+navigation and does not run the actions.
 
 Each call is a step of the report (`LoginPage: Navigate to this Page`, `LoginPage: Expect this Page`, …), shown at the
 line that called it.
@@ -111,6 +147,14 @@ A wait that times out names the page object, what it expected and the URL found,
 OrdersPage: expected URL "https://shop.example/orders"; found "https://shop.example/orders?tab=1" (page.waitForURL: Timeout 15000ms exceeded.)
 OrdersPage: expected to have left "https://shop.example/orders"; found "https://shop.example/orders" (page.waitForURL: Timeout 15000ms exceeded.)
 OrdersPage: left "https://shop.example/orders" but returned to it; found "https://shop.example/orders"
+```
+
+`page.waitForURL` also waits for the load state. When the URL is right and that state does not come in time, as on a
+page whose images are still loading, the message says so and names the state:
+
+```text
+OrdersPage: reached "https://shop.example/orders", but its "load" state did not come in time (page.waitForURL: Timeout 15000ms exceeded.)
+OrdersPage: left "https://shop.example/orders" for "https://shop.example/login", but its "load" state did not come in time (page.waitForURL: Timeout 15000ms exceeded.)
 ```
 
 ## Pages whose URL varies
@@ -159,7 +203,8 @@ So `^` and `$` on a base refer to the origin, a path prefix belongs in `urlPath`
 
 Such a page has no single URL to go to, so `goto()` without a target is not available (a compile error, and from
 JavaScript: `AccountPage: goto() without a URL needs a string fullUrl; this page object has a RegExp URL. Pass an
-absolute URL instead.`). `goto(target)` still works; on a RegExp `baseUrl` the target must be absolute.
+absolute URL instead.`). `goto(target)` still works; on a RegExp `baseUrl` the target must be absolute, and its type
+requires a scheme: a `string` that holds a URL narrows with a cast, `` goto(url as `https://${string}`) ``.
 
 A page whose query varies, `/orders?tab=2` and `/orders?tab=3` alike, is such a page too:
 `urlPath: /^\/orders\?tab=\d+$/`. A page with one fixed query is a string: `urlPath: "/orders?tab=2"`.

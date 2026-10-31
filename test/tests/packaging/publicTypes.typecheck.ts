@@ -5,9 +5,11 @@ import type { Locator, Page } from "@playwright/test";
 import type { UrlTypeOptions } from "pomwright";
 import {
 	type AddAccessor,
+	type AllEntries,
 	type BaseUrlTypeFromOptions,
 	type Codec,
 	createRegistryWithAccessors,
+	type Decoded,
 	type FilterDefinition,
 	type FullUrlTypeFromOptions,
 	type GetLocatorAccessor,
@@ -30,8 +32,12 @@ import {
 	type PageObjectTypeOptions,
 	PlaywrightReportLogger,
 	type ReusableLocator,
+	type ReusableLocatorFactory,
+	type SeedOptions,
 	SessionStorage,
+	type SessionStorageOptions,
 	type SessionStorageSchema,
+	type StepDecorator,
 	type StorageTypeFromOptions,
 	step,
 	type ThisPageOptions,
@@ -55,7 +61,14 @@ const typedRegistry: LocatorRegistry<Paths> = registry;
 type Options = { urlPathType: RegExp; storage: { token: Codec<string> } };
 const options: PageObjectTypeOptions = {} as Options;
 type Urls = [BaseUrlTypeFromOptions<Options>, UrlPathTypeFromOptions<Options>, FullUrlTypeFromOptions<Options>];
-type Storage = [StorageTypeFromOptions<Options>, SessionStorageSchema];
+type Storage = [
+	StorageTypeFromOptions<Options>,
+	SessionStorageSchema,
+	SessionStorageOptions<Options["storage"]>,
+	SeedOptions,
+	Decoded<Options["storage"], "token">,
+	AllEntries<Options["storage"]>,
+];
 type Navigation = [NavigationFor<string, string>, NavigationOptions, ThisPageOptions, UrlMatcher];
 type Logging = [LogEntry, LogLevel];
 const values = [json, PageObject, PlaywrightReportLogger, SessionStorage, step, test];
@@ -75,6 +88,7 @@ const afterReplace: LocatorQueryBuilder<Paths, "list.item"> = replacement.locato
 // replace takes Playwright's arguments
 getLocatorSchema("list.item").replace().getByRole("listitem");
 getLocatorSchema("list.item").replace().getByRole("listitem", undefined);
+// compiles, and throws at run time: the query's own path cannot take the any-frame form (an ancestor can)
 getLocatorSchema("list").replace().frameLocator();
 // @ts-expect-error the role is required
 getLocatorSchema("list.item").replace().getByRole();
@@ -85,6 +99,16 @@ getLocatorSchema("list.item").replace().getByRole("listitem", { name: null });
 // @ts-expect-error the test id is required
 getLocatorSchema("list.item").replace().getByTestId();
 getLocatorSchema("list.item").update().getByRole({ name: null });
+// undefined as update's primary keeps the registered one, also from a variable that may be undefined
+declare const maybeRole: "listitem" | undefined;
+getLocatorSchema("list.item").update().getByRole(undefined, { name: "x" });
+getLocatorSchema("list.item").update().getByRole(maybeRole, { name: "x" });
+getLocatorSchema("list.item").update().getByText(undefined);
+getLocatorSchema("list.item").update().getByTestId(undefined);
+// @ts-expect-error replace takes Playwright's arguments: the role is required
+getLocatorSchema("list.item").replace().getByRole(undefined, { name: "x" });
+// @ts-expect-error a registration's first argument is required
+add("main").getByRole(undefined, { name: "x" });
 
 // the internals are not reachable through any step
 // @ts-expect-error private
@@ -95,6 +119,12 @@ getLocatorSchema("list.item").update().getByRole("listitem").applyUpdate("list.i
 // type-only names are not values
 // @ts-expect-error a type, not a value
 const notAValue = LocatorQueryBuilder;
+// @ts-expect-error the seed factory's class is not exported, only its type
+type FactoryValue = typeof import("pomwright")["ReusableLocatorFactory"];
+const seeds: ReusableLocatorFactory<Paths> = registry.createReusable;
+// @ts-expect-error step()'s decorator type is a type, not a value
+type DecoratorValue = typeof import("pomwright")["StepDecorator"];
+const decorator: StepDecorator = step("x");
 
 // seeds: narrow and wide
 const roleSeed: ReusableLocator<Paths, "role"> = registry.createReusable.getByRole("heading", { level: 2 });
@@ -108,8 +138,8 @@ add("main.heading", { reuse: wideSeed }).getByText("x");
 
 // filters, indices and the path rules
 const filter: FilterDefinition<Paths> = { has: "list.item", hasText: "x" };
-// @ts-expect-error a misspelt path reference
-const misspelt: FilterDefinition<Paths> = { has: "list.itme" };
+// @ts-expect-error a misspelled path reference
+const misspelled: FilterDefinition<Paths> = { has: "list.itme" };
 const index: IndexSelector = "last";
 getLocatorSchema("list.item").filter(filter).nth(index);
 const wellFormed: LocatorSchemaPathFormat<"main.heading"> = "main.heading";
@@ -172,6 +202,10 @@ class Steps {
 	promised(): Promise<number> {
 		return Promise.resolve(1);
 	}
+	@step({ box: true })
+	async generic<T extends string>(value: T): Promise<T> {
+		return value;
+	}
 	// @ts-expect-error "@step decorates methods that return a Promise: make the method async"
 	@step()
 	sync(): number {
@@ -230,6 +264,9 @@ add("main", { reuse: locatorSeed }).locator(null);
 add("main", { reuse: locatorSeed }).locator({ hasText: null });
 add("main", { reuse: locatorSeed }).locator("a", null);
 add("main", { reuse: testIdSeed }).getByTestId(undefined);
+add("main", { reuse: roleSeed }).getByRole(undefined, { name: "x" });
+add("main", { reuse: textSeed }).getByText(undefined, { exact: false });
+add("main", { reuse: locatorSeed }).locator(undefined);
 add("main", { reuse: frameSeed }).frameLocator();
 // @ts-expect-error a primary is never null: with two arguments the first is the primary
 add("main", { reuse: roleSeed }).getByRole(null, null);
@@ -282,8 +319,449 @@ const held = add("main", { reuse: roleSeed });
 held.nth(0);
 held.getByRole({ name: "Cancel" });
 
-export type Probe = [Urls, Storage, Navigation, Logging, UrlTypeOptions];
+export type Probe = [Urls, Storage, Navigation, Logging, UrlTypeOptions, FactoryValue, DecoratorValue];
 void [DomainLogin, wrongOptions];
-void [accessors, typedRegistry, options, values, afterUpdate, afterReplace, notAValue, wrongSeed, misspelt];
+void [
+	accessors,
+	typedRegistry,
+	options,
+	values,
+	afterUpdate,
+	afterReplace,
+	notAValue,
+	seeds,
+	decorator,
+	wrongSeed,
+	misspelled,
+];
 void [wellFormed, malformed, ListPage, arrayHas, Steps];
 void [copy, voidCopy, narrowed, strictRegistry, StrictPage];
+
+// a session storage key typed string, not a literal, may be any key: its value is a string or any declared codec's type
+declare const storageWithCodecs: SessionStorage<{ user: Codec<{ name: string }> }>;
+declare const anyKey: string;
+const widenedValue: Promise<string | { name: string } | null> = storageWithCodecs.get(anyKey);
+// @ts-expect-error a declared codec's type may come back, so the value is not known to be a string
+const narrowedValue: Promise<string | null> = storageWithCodecs.get(anyKey);
+const literalValue: Promise<{ name: string } | null> = storageWithCodecs.get("user");
+// @ts-expect-error the key's type comes from the key alone: a declared key keeps its codec's type
+storageWithCodecs.set("user", "a string");
+void [widenedValue, narrowedValue, literalValue];
+
+// a key typed as a pattern may be any declared key it matches, so its value may be that key's codec type
+type UserSchema = { user: Codec<{ name: string }>; attempts: Codec<number> };
+const patternValue: Decoded<UserSchema, `u${string}`> = { name: "Ada" };
+// @ts-expect-error a pattern that only "user" matches does not take "attempts"' type
+const notMatched: Decoded<UserSchema, `u${string}`> = 3;
+void [patternValue, notMatched];
+
+// sub-path arguments, typed per member of the path union
+// a literal member: a segment of the chain; a namespace that is not a declared path is never accepted
+const shop = createRegistryWithAccessors<"main" | "main.form.submit" | "footer">(page);
+shop.getLocatorSchema("main.form.submit").nth("main", 0);
+shop.getLocatorSchema("main.form.submit").nth("main.form.submit", 0);
+// @ts-expect-error "main.form" is a namespace, not a declared path
+shop.getLocatorSchema("main.form.submit").nth("main.form", 0);
+// @ts-expect-error "footer" is not in the chain
+shop.getLocatorSchema("main.form.submit").nth("footer", 0);
+shop.getLocatorSchema("main.form.submit").skip("main");
+// @ts-expect-error the query's own path cannot be skipped
+shop.getLocatorSchema("main.form.submit").skip("main.form.submit");
+// a template member: the query's own path, and a literal ancestor
+const orders = createRegistryWithAccessors<"main" | "main.orders" | `main.orders.row@${string}`>(page);
+orders.getLocatorSchema("main.orders.row@1042").nth("main.orders", 0);
+orders.getLocatorSchema("main.orders.row@1042").nth("main.orders.row@1042", 0);
+orders.getLocatorSchema("main.orders.row@1042").update("main.orders.row@1042");
+orders.getLocatorSchema("main.orders.row@1042").filter("main.orders.row@1042", { hasText: "Open" });
+// @ts-expect-error another row is not in the chain
+orders.getLocatorSchema("main.orders.row@1042").nth("main.orders.row@1043", 0);
+// @ts-expect-error the query's own path cannot be skipped
+orders.getLocatorSchema("main.orders.row@1042").skip("main.orders.row@1042");
+// a template ancestor
+const tabs = createRegistryWithAccessors<"main" | `main.tab@${string}`>(page);
+tabs.getLocatorSchema("main.tab@open.title").nth("main.tab@open", 0);
+tabs.getLocatorSchema("main.tab@open.title").skip("main.tab@open");
+// @ts-expect-error another tab is not in the chain
+tabs.getLocatorSchema("main.tab@open.title").nth("main.tab@closed", 0);
+// a finite template union, registered in a loop and used through a method over the union
+const actions = ["confirm", "cancel"] as const;
+type Action = (typeof actions)[number];
+const dialog = createRegistryWithAccessors<"dialog" | `dialog.button@${Action}`>(page);
+for (const action of actions) dialog.add(`dialog.button@${action}`).getByRole("button", { name: action });
+dialog.getLocatorSchema("dialog.button@confirm").nth("dialog", 0);
+// @ts-expect-error another button is not in the chain
+dialog.getLocatorSchema("dialog.button@confirm").nth("dialog.button@cancel", 0);
+// @ts-expect-error not declared
+dialog.getNestedLocator("dialog.button@delete");
+// <string>: any sub-path compiles, and the runtime checks it
+const untypedPaths = createRegistryWithAccessors<string>(page);
+untypedPaths.getLocatorSchema("main.list.item").nth("main.list", 0);
+untypedPaths.getLocatorSchema("main.list.item").update("main.list.item");
+untypedPaths.getLocatorSchema("main.list.item").skip("main.list");
+untypedPaths.getLocatorSchema("main.list.item").nth("footer", 0);
+// a registry created without its paths takes none
+const noPaths = createRegistryWithAccessors(page);
+noPaths.registry.verify();
+// @ts-expect-error createRegistryWithAccessors needs its paths as a type argument
+noPaths.add("main").locator("main");
+// @ts-expect-error createRegistryWithAccessors needs its paths as a type argument
+noPaths.getNestedLocator("main");
+// a generic wrapper passes its own paths
+const registryFor = <P extends string>(target: Page) => createRegistryWithAccessors<P>(target);
+registryFor<"main">(page).getNestedLocator("main");
+// a generic base that adds common paths: sub-paths on the common paths compile in its methods
+type CommonPaths = "header" | "dialog@consent" | "dialog@consent.button@accept";
+abstract class SitePage<PagePaths extends string> extends PageObject<PagePaths | CommonPaths> {
+	acceptCookies() {
+		this.getLocatorSchema("dialog@consent.button@accept").filter("dialog@consent", { hasText: "Cookies" });
+		this.getLocatorSchema("dialog@consent.button@accept").nth("dialog@consent.button@accept", 0);
+		this.getLocatorSchema("dialog@consent.button@accept").skip("dialog@consent");
+		this.getLocatorSchema("dialog@consent.button@accept").clearSteps("dialog@consent");
+		// @ts-expect-error "header" is not in the chain
+		this.getLocatorSchema("dialog@consent.button@accept").filter("header", { hasText: "x" });
+		// @ts-expect-error "dialog@consent.button" is a namespace
+		this.getLocatorSchema("dialog@consent.button@accept").nth("dialog@consent.button", 0);
+		// @ts-expect-error the query's own path cannot be skipped
+		this.getLocatorSchema("dialog@consent.button@accept").skip("dialog@consent.button@accept");
+		// @ts-expect-error a descendant is not a sub-path
+		this.getLocatorSchema("dialog@consent").nth("dialog@consent.button@accept", 0);
+	}
+}
+abstract class OrdersListPage extends SitePage<"main.list@orders" | "main.list@orders.row"> {
+	firstRow() {
+		this.getLocatorSchema("main.list@orders.row").nth("main.list@orders", 0);
+		this.getLocatorSchema("dialog@consent.button@accept").filter("dialog@consent", { hasText: "Cookies" });
+	}
+}
+void [OrdersListPage];
+
+// reuse by path: a self-reuse is a compile error only for one and the same literal; variables are checked at run time
+const publicToolbarButtons = ["save", "publish", "cancel"] as const;
+type PublicToolbarButton = (typeof publicToolbarButtons)[number];
+type PublicReusePaths =
+	| "shared.button"
+	| "main"
+	| `main.toolbar.button@${PublicToolbarButton}`
+	| `dialog.button@${PublicToolbarButton}`
+	| "main.heading"
+	| "dialog.heading";
+const publicReuse = createRegistryWithAccessors<PublicReusePaths>(page).registry;
+publicReuse.add("main.toolbar.button@save", { reuse: "shared.button" });
+// @ts-expect-error a literal path that reuses itself
+publicReuse.add("main.heading", { reuse: "main.heading" });
+for (const button of publicToolbarButtons) publicReuse.add(`main.toolbar.button@${button}`, { reuse: "shared.button" });
+for (const button of publicToolbarButtons) {
+	publicReuse.add(`dialog.button@${button}`, { reuse: `main.toolbar.button@${button}` });
+}
+const publicHeadingCopies: ReadonlyArray<{ target: PublicReusePaths; source: PublicReusePaths }> = [
+	{ target: "dialog.heading", source: "main.heading" },
+];
+for (const { target, source } of publicHeadingCopies) publicReuse.add(target, { reuse: source });
+declare const publicEitherHeading: "main.heading" | "dialog.heading";
+publicReuse.add(publicEitherHeading, { reuse: publicEitherHeading });
+publicReuse.add("main.toolbar.button@cancel", { reuse: "shared.button" }).filter({ hasText: "Cancel" });
+const publicUntypedReuse = createRegistryWithAccessors<string>(page).registry;
+declare const publicAnyTarget: string;
+declare const publicAnySource: string;
+publicUntypedReuse.add(publicAnyTarget, { reuse: publicAnySource });
+// @ts-expect-error a literal path that reuses itself, on a registry typed <string> too
+publicUntypedReuse.add("main.heading", { reuse: "main.heading" });
+const publicListRegistry = createRegistryWithAccessors<"list" | "list.item@first" | `list.item@${string}`>(
+	page,
+).registry;
+declare const publicItemId: string;
+publicListRegistry.add(`list.item@${publicItemId}`, { reuse: "list.item@first" });
+// @ts-expect-error a literal matching a template member, reusing itself
+publicListRegistry.add("list.item@first", { reuse: "list.item@first" });
+
+// a storage schema's type and value must agree: written once as a value, with its type taken from it
+const schemaUrl = "https://shop.example";
+const userCodec = json<{ name: string }>();
+const tokenCodec = json<string>();
+const accountSchema = { user: userCodec };
+const withTokenSchema = { user: userCodec, token: tokenCodec };
+type OptionalTokenSchema = { user: Codec<{ name: string }>; token?: Codec<string> };
+
+// page objects without a base class
+export class TypeAndValuePage extends PageObject<"main", { storage: typeof accountSchema }> {
+	constructor() {
+		super(page, schemaUrl, "/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export class NeitherPage extends PageObject<"main"> {
+	constructor() {
+		super(page, schemaUrl, "/");
+	}
+	protected defineLocators() {}
+}
+export class EmptyValuePage extends PageObject<"main"> {
+	constructor() {
+		super(page, schemaUrl, "/", { sessionStorage: { schema: {} } });
+	}
+	protected defineLocators() {}
+}
+export class ValueWithoutTypePage extends PageObject<"main"> {
+	constructor() {
+		// @ts-expect-error a value without its type
+		super(page, schemaUrl, "/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+// a type without its value still compiles (the runtime hints at it on a non-string write)
+export class TypeWithoutValuePage extends PageObject<"main", { storage: typeof accountSchema }> {
+	constructor() {
+		super(page, schemaUrl, "/");
+	}
+	protected defineLocators() {}
+}
+export class MissingKeyPage extends PageObject<"main", { storage: typeof withTokenSchema }> {
+	constructor() {
+		// @ts-expect-error the value misses a declared key
+		super(page, schemaUrl, "/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export class InlineExtraKeyPage extends PageObject<"main", { storage: typeof accountSchema }> {
+	constructor() {
+		// @ts-expect-error an inline value with a key the type does not declare
+		super(page, schemaUrl, "/", { sessionStorage: { schema: { user: userCodec, token: tokenCodec } } });
+	}
+	protected defineLocators() {}
+}
+// a variable with an extra key still compiles, as TypeScript's excess property check covers literals only
+export class VariableExtraKeyPage extends PageObject<"main", { storage: typeof accountSchema }> {
+	constructor() {
+		super(page, schemaUrl, "/", { sessionStorage: { schema: withTokenSchema } });
+	}
+	protected defineLocators() {}
+}
+export class OtherCodecPage extends PageObject<"main", { storage: { user: Codec<number> } }> {
+	constructor() {
+		// @ts-expect-error a codec of another type
+		super(page, schemaUrl, "/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export class OptionalKeyWithoutCodecPage extends PageObject<"main", { storage: OptionalTokenSchema }> {
+	constructor() {
+		// @ts-expect-error an optional declared key without its codec
+		super(page, schemaUrl, "/", { sessionStorage: { schema: { user: userCodec } } });
+	}
+	protected defineLocators() {}
+}
+export class OptionalKeyWithCodecPage extends PageObject<"main", { storage: OptionalTokenSchema }> {
+	constructor() {
+		super(page, schemaUrl, "/", { sessionStorage: { schema: { user: userCodec, token: tokenCodec } } });
+	}
+	protected defineLocators() {}
+}
+
+// standalone helpers
+export const inferredStorage = new SessionStorage(page, { schema: accountSchema });
+export const plainStorage = new SessionStorage(page);
+export const explicitStorage = new SessionStorage<typeof accountSchema>(page, { schema: accountSchema });
+// @ts-expect-error an explicit type without its value
+export const explicitWithoutValue = new SessionStorage<typeof accountSchema>(page);
+// @ts-expect-error an explicit type, options without the schema
+export const explicitWithoutSchema = new SessionStorage<typeof accountSchema>(page, { label: "Shop" });
+// a variable with an extra key still compiles, as above
+export const explicitVariableExtra = new SessionStorage<typeof accountSchema>(page, { schema: withTokenSchema });
+// @ts-expect-error an optional declared key without its codec
+export const optionalWithoutCodec = new SessionStorage<OptionalTokenSchema>(page, { schema: { user: userCodec } });
+
+// the documented base class that forwards the options and declares no storage
+export abstract class ForwardingShop<Paths extends string> extends PageObject<Paths> {
+	protected constructor(urlPath: string, options?: PageObjectOptions) {
+		super(page, schemaUrl, urlPath, { navOptions: { waitUntil: "load" }, ...options });
+	}
+}
+export class ForwardingWithValue extends ForwardingShop<"main"> {
+	constructor() {
+		// @ts-expect-error a value the base class cannot type: use the generic base class below (ForwardingWayOut)
+		super("/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export class ForwardingWithout extends ForwardingShop<"main"> {
+	constructor() {
+		super("/");
+	}
+	protected defineLocators() {}
+}
+
+// the documented generic base class, which passes the storage type through
+type GenericShopOptions<O extends PageObjectTypeOptions> = {
+	baseUrlType: string;
+	urlPathType: UrlPathTypeFromOptions<O>;
+	storage: StorageTypeFromOptions<O>;
+};
+export abstract class GenericShop<
+	Paths extends string,
+	O extends PageObjectTypeOptions = { urlPathType: string },
+> extends PageObject<Paths, GenericShopOptions<O>> {
+	protected constructor(
+		urlPath: UrlPathTypeFromOptions<GenericShopOptions<O>>,
+		options?: PageObjectOptions<GenericShopOptions<O>>,
+	) {
+		super(page, schemaUrl, urlPath, options);
+	}
+}
+export class GenericWithTypeAndValue extends GenericShop<
+	"main",
+	{ urlPathType: string; storage: typeof accountSchema }
+> {
+	constructor() {
+		super("/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export class GenericValueWithoutType extends GenericShop<"main"> {
+	constructor() {
+		// @ts-expect-error a value without its type
+		super("/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export class GenericNeither extends GenericShop<"main"> {
+	constructor() {
+		super("/");
+	}
+	protected defineLocators() {}
+}
+// the way out the message names for the forwarding base class's subclass above: the same subclass on the generic base
+// class, its storage declared in the base class's options type parameter
+export class ForwardingWayOut extends GenericShop<"main", { storage: typeof accountSchema }> {
+	constructor() {
+		super("/", { sessionStorage: { schema: accountSchema } });
+	}
+	protected defineLocators() {}
+}
+export const wayOutReads = async (page: ForwardingWayOut) => {
+	const name: string | undefined = (await page.sessionStorage.get("user"))?.name;
+	return name;
+};
+// a type without its value still compiles
+export class GenericTypeWithoutValue extends GenericShop<
+	"main",
+	{ urlPathType: string; storage: typeof accountSchema }
+> {
+	constructor() {
+		super("/");
+	}
+	protected defineLocators() {}
+}
+
+// a base class with one schema for the whole site: its type and value written together
+type SiteOptions = { baseUrlType: string; urlPathType: string; storage: typeof accountSchema };
+export abstract class SiteWidePage<Paths extends string> extends PageObject<Paths, SiteOptions> {
+	protected constructor(urlPath: string) {
+		super(page, schemaUrl, urlPath, { sessionStorage: { schema: accountSchema } });
+	}
+}
+
+// what the agreeing forms type each key as
+export const schemaReads = async (withToken: OptionalKeyWithCodecPage, typed: TypeAndValuePage) => {
+	const name: string | undefined = (await typed.sessionStorage.get("user"))?.name;
+	const token: string | null = await withToken.sessionStorage.get("token");
+	return { name, token };
+};
+
+// NavigationFor: a RegExp page's helper is not a string page's, and every page's helper fits the type for any page
+export class StringUrlPage extends PageObject<"main"> {
+	constructor() {
+		super(page, schemaUrl, "/orders");
+	}
+	protected defineLocators() {}
+}
+export class RegExpPathPage extends PageObject<"main", { baseUrlType: string; urlPathType: RegExp }> {
+	constructor() {
+		super(page, schemaUrl, /^\/orders\/\d+$/);
+	}
+	protected defineLocators() {}
+}
+export class RegExpBasePage extends PageObject<"main", { baseUrlType: RegExp; urlPathType: string }> {
+	constructor() {
+		super(page, /shop\.example/, "/orders");
+	}
+	protected defineLocators() {}
+}
+export class RegExpBothPage extends PageObject<"main", { baseUrlType: RegExp; urlPathType: RegExp }> {
+	constructor() {
+		super(page, /shop\.example/, /^\/orders\/\d+$/);
+	}
+	protected defineLocators() {}
+}
+declare const stringUrlPage: StringUrlPage;
+declare const regExpBothPage: RegExpBothPage;
+declare const regExpPathPage: RegExpPathPage;
+declare const regExpBasePage: RegExpBasePage;
+// every page kind's helper as every page kind's type: accepted exactly where it has everything that type promises
+// (goto() without a target, from a string fullUrl; goto with any string, from a string baseUrl)
+export const helperMatrix = () => {
+	const stringAsString: NavigationFor<string, string> = stringUrlPage.navigation;
+	const stringAsRegExpPath: NavigationFor<string, UrlMatcher> = stringUrlPage.navigation;
+	const stringAsAny: NavigationFor<RegExp, UrlMatcher> = stringUrlPage.navigation;
+	// @ts-expect-error a RegExp path's helper has no goto() without a target
+	const regExpPathAsString: NavigationFor<string, string> = regExpPathPage.navigation;
+	const regExpPathAsRegExpPath: NavigationFor<string, UrlMatcher> = regExpPathPage.navigation;
+	const regExpPathAsAny: NavigationFor<RegExp, UrlMatcher> = regExpPathPage.navigation;
+	// @ts-expect-error a RegExp base's helper takes only absolute URLs and has no goto() without a target
+	const regExpBaseAsString: NavigationFor<string, string> = regExpBasePage.navigation;
+	// @ts-expect-error a RegExp base's helper takes only absolute URLs
+	const regExpBaseAsRegExpPath: NavigationFor<string, UrlMatcher> = regExpBasePage.navigation;
+	const regExpBaseAsAny: NavigationFor<RegExp, UrlMatcher> = regExpBasePage.navigation;
+	// a RegExp base and a RegExp path: the same helper type as a RegExp base alone
+	// @ts-expect-error takes only absolute URLs and has no goto() without a target
+	const regExpBothAsString: NavigationFor<string, string> = regExpBothPage.navigation;
+	// @ts-expect-error takes only absolute URLs
+	const regExpBothAsRegExpPath: NavigationFor<string, UrlMatcher> = regExpBothPage.navigation;
+	const regExpBothAsAny: NavigationFor<RegExp, UrlMatcher> = regExpBothPage.navigation;
+	return [
+		stringAsString,
+		stringAsRegExpPath,
+		stringAsAny,
+		regExpPathAsString,
+		regExpPathAsRegExpPath,
+		regExpPathAsAny,
+		regExpBaseAsString,
+		regExpBaseAsRegExpPath,
+		regExpBaseAsAny,
+		regExpBothAsString,
+		regExpBothAsRegExpPath,
+		regExpBothAsAny,
+	];
+};
+export const navigationCalls = async () => {
+	await stringUrlPage.navigation.goto();
+	await stringUrlPage.navigation.goto({ waitUntil: "commit" });
+	await stringUrlPage.navigation.goto("/account", { timeout: 1_000 });
+	await regExpPathPage.navigation.goto("/orders/7");
+	await regExpBasePage.navigation.goto("https://shop.example/orders");
+	await regExpBothPage.navigation.goto("https://shop.example/orders/7");
+	// @ts-expect-error no goto() without a target on a RegExp page
+	await regExpBothPage.navigation.goto();
+	// @ts-expect-error no goto() without a target on a RegExp page
+	await regExpPathPage.navigation.goto();
+	// @ts-expect-error a RegExp base takes only an absolute URL
+	await regExpBasePage.navigation.goto("/orders");
+	// a relative target holding a colon is no URL with a scheme, which starts with a letter
+	// @ts-expect-error a path with a colon in its query
+	await regExpBasePage.navigation.goto("/orders?at=12:00");
+	// @ts-expect-error a query alone
+	await regExpBasePage.navigation.goto("?at=12:00");
+	// @ts-expect-error a digit before the colon
+	await regExpBasePage.navigation.goto("1:2");
+	const anyPageNavigation: NavigationFor<RegExp, UrlMatcher> = regExpBasePage.navigation;
+	// @ts-expect-error a path with a colon in its query, through NavigationFor
+	await anyPageNavigation.goto("/orders?at=12:00");
+	// @ts-expect-error a query alone, through NavigationFor
+	await anyPageNavigation.goto("?at=12:00");
+	// @ts-expect-error a digit before the colon, through NavigationFor
+	await anyPageNavigation.goto("1:2");
+	// a scheme in either case, and a template with one
+	await regExpBasePage.navigation.goto("HTTPS://shop.example/x");
+	await regExpBasePage.navigation.goto(`https://${host}/x`);
+	await anyPageNavigation.goto(`https://${host}/x`);
+};
+declare const host: string;

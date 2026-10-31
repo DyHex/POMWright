@@ -1,5 +1,6 @@
 import { test as base } from "@playwright/test";
 import {
+	checkDateFormat,
 	initialLogLevel,
 	type LogEntry,
 	type LogLevel,
@@ -12,7 +13,8 @@ type BaseFixtures = {
 
 /**
  * Playwright's `test` with one more fixture, `log`: a `PlaywrightReportLogger` named `TestCase`, whose entries are
- * attached to the test's report when it ends, named in Playwright's `locale` and `timezoneId`. It records `warn` and
+ * attached to the test's report when it ends, named in Playwright's `locale` and `timezoneId`, which it checks when the
+ * test starts (`log fixture: locale "en_US" is not a BCP 47 language tag; …`). It records `warn` and
  * `error` on a test's first run and every level on a retry. Extend it, or combine it with `mergeTests`, to add page
  * objects as fixtures.
  *
@@ -31,6 +33,8 @@ type BaseFixtures = {
  */
 export const test = base.extend<BaseFixtures>({
 	log: async ({ locale, timezoneId }, use, testInfo) => {
+		// checked when the test starts, not when its entries are named at the end, and only if something was logged
+		checkDateFormat(locale, timezoneId, "log fixture");
 		const contextName = "TestCase";
 		const sharedLogEntry: LogEntry[] = [];
 

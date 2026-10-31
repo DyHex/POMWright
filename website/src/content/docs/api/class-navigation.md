@@ -4,8 +4,8 @@ description: "A page object's navigation helper, of the type NavigationFor: goto
 ---
 
 Every page object has a navigation helper, `navigation`, built from its `baseUrl` and `urlPath`. Its type,
-[`NavigationFor<BaseUrl, FullUrl>`](#navigationfor), follows the page object's URL types: `goto()` without a target
-exists only when `fullUrl` is a string, and on a RegExp `baseUrl` `goto(target)` takes an absolute URL only. Each method
+[`NavigationFor<BaseUrl, FullUrl>`](#navigationfor), takes the type of `baseUrl`, then of `fullUrl`: `goto()` without a
+target exists only when `fullUrl` is a string, and on a RegExp `baseUrl` `goto(target)` takes an absolute URL only. Each method
 is one Playwright call, with Playwright's waits and timeouts, and a step of the report at the line that called it.
 
 ```ts
@@ -25,20 +25,36 @@ Guide: [URLs and navigation](/POMWright/docs/urls-and-navigation/).
 
 ## NavigationFor
 
-The type of a page object's `navigation`, from its `baseUrl` type and its `fullUrl` type. A page object with string
-URLs has a `NavigationFor<string, string>`. Name the type to take the helper as a parameter:
+The type of a page object's `navigation`, from its `baseUrl` type and its `fullUrl` type:
+
+| page object | its helper | takes |
+| --- | --- | --- |
+| string `baseUrl` and `urlPath` | `NavigationFor<string, string>` | `goto()`, `goto(target)` |
+| string `baseUrl`, RegExp `urlPath` | `NavigationFor<string, UrlMatcher>` | `goto(target)` |
+| RegExp `baseUrl` | `NavigationFor<RegExp, UrlMatcher>` | `goto(absoluteUrl)` |
+
+A parameter of one of these types takes the helpers that have everything it uses: `NavigationFor<string, string>` only
+a page object with string URLs, `NavigationFor<RegExp, UrlMatcher>` any page object's. Name the type to take the
+helper as a parameter:
 
 ```ts
-import type { NavigationFor } from "pomwright";
+import type { NavigationFor, UrlMatcher } from "pomwright";
 import { test } from "./fixtures";
 
+// a page object with string URLs: goto() without a target
 async function openAndLeave(navigation: NavigationFor<string, string>) {
   await navigation.goto();
   await navigation.expectAnotherPage();
 }
 
+// any page object's helper
+async function leave(navigation: NavigationFor<RegExp, UrlMatcher>) {
+  await navigation.expectAnotherPage();
+}
+
 test("the login page redirects", async ({ loginPage }) => {
   await openAndLeave(loginPage.navigation);
+  await leave(loginPage.navigation);
 });
 ```
 
@@ -71,6 +87,7 @@ await loginPage.navigation.expectAnotherPage({ timeout: 10_000 });
 ```text
 OrdersPage: expected to have left "https://shop.example/orders"; found "https://shop.example/orders" (page.waitForURL: Timeout 15000ms exceeded.)
 OrdersPage: left "https://shop.example/orders" but returned to it; found "https://shop.example/orders"
+OrdersPage: left "https://shop.example/orders" for "https://shop.example/login", but its "load" state did not come in time (page.waitForURL: Timeout 15000ms exceeded.)
 ```
 
 ### expectThisPage()
@@ -102,6 +119,7 @@ await loginPage.navigation.expectThisPage({ runPostNavigationActions: false, wai
 
 ```text
 OrdersPage: expected URL "https://shop.example/orders"; found "https://shop.example/orders?tab=1" (page.waitForURL: Timeout 15000ms exceeded.)
+OrdersPage: reached "https://shop.example/orders", but its "load" state did not come in time (page.waitForURL: Timeout 15000ms exceeded.)
 ```
 
 Playwright's error is the `cause`.
@@ -142,11 +160,16 @@ await loginPage.navigation.goto("https://help.shop.example/");
 
 **Throws**
 
-What `page.goto()` throws. From JavaScript, on a page object whose URL is a RegExp:
+What `page.goto()` throws. For a target that cannot be resolved against a string `baseUrl`, before `page.goto()` runs,
+with the URL parser's error as `cause`; on a page object whose URL is a RegExp, from JavaScript, or for a relative
+path the type cannot tell apart (one that starts with a letter and holds a colon, `a/b:c`); and from JavaScript for a
+first argument that is neither a URL string nor options, which `page.goto()` rejects too:
 
 ```text
+LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.example"
 AccountPage: goto() without a URL needs a string fullUrl; this page object has a RegExp URL. Pass an absolute URL instead.
 AccountPage: goto("/account") needs an absolute URL because baseUrl is a RegExp.
+LoginPage: goto() takes a URL string or options; received a URL object; pass its href.
 ```
 
 ---
@@ -229,7 +252,7 @@ Tests a URL, as the predicate does.
 
 ### toString()
 
-A readable form, used in step titles and error messages: `origin "https://shop.example" + path /^\/account\/\d+$/`.
+A readable form, used in error messages: `origin "https://shop.example" + path /^\/account\/\d+$/`.
 
 **Returns**
 

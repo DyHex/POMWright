@@ -7,7 +7,8 @@ import { PageObject } from "pomwright";
 // A page object with a given number of paths, set up as a fixture: POMWright's, which registers its paths in
 // defineLocators(), against one written with Playwright alone, which builds one Locator field per path in its
 // constructor, each from its parent's field. Run by `pnpm bench` with playwright.bench.config.ts; each fixture appends
-// what its setup took, in time and heap, to the file POMWRIGHT_BENCH_OUT names.
+// what its setup took, in time and heap, to the file POMWRIGHT_BENCH_OUT names. It runs at rest, on one worker with
+// nothing else running (playwright.bench.config.ts): a declared condition, not what a loaded test run sees.
 
 v8.setFlagsFromString("--expose-gc");
 const gc = vm.runInNewContext("gc") as () => void;

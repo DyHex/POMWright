@@ -1,13 +1,15 @@
 import type { Page } from "@playwright/test";
 import { describe, expect, expectTypeOf, it } from "vitest";
+import { createFakePage } from "./fakePage";
 import type { LocatorRegistrationPreDefinitionBuilder } from "./locatorRegistrationBuilder";
 import { type LocatorRegistry, LocatorRegistryInternal } from "./locatorRegistry";
-import type { ReusableLocatorFactory } from "./reusableLocatorBuilder";
+import type { ReusableLocatorFactoryInternal } from "./reusableLocatorBuilder";
 import type { ReusableLocator } from "./types";
 import type { StrategyMethod } from "./utils";
 
-// Registration never touches the page, so a bare object is enough; resolution is covered by the
-// integration specs against the real page.
+// Registration never touches the page, so a bare object stands in for it, and hides nothing registration does; the
+// chains are read on the fake page (fakePage.ts says what it stands in for and could hide), and
+// test/tests/locatorRegistry/add/ registers and resolves for real, through the packed package.
 type Paths = "a" | "a.b" | "seeded" | "anyFrame" | "anyFrame.button";
 const stubPage = {} as Page;
 const createRegistry = () => new LocatorRegistryInternal<Paths>(stubPage);
@@ -162,8 +164,15 @@ describe("add with a seed", () => {
 
 		const other = createRegistry();
 		const roleSeed = other.createReusable.getByRole("button", { name: "Submit" });
-		other.add("a", { reuse: roleSeed }).getByRole(undefined as never);
+		other.add("a", { reuse: roleSeed }).getByRole(undefined);
 		expect(other.get("a").definition).toEqual({ type: "role", role: "button", options: { name: "Submit" } });
+		const withOptions = createRegistry();
+		withOptions.add("a", { reuse: roleSeed }).getByRole(undefined, { exact: true });
+		expect(withOptions.get("a").definition).toEqual({
+			type: "role",
+			role: "button",
+			options: { name: "Submit", exact: true },
+		});
 		expect(() => other.add("a.b", { reuse: roleSeed }).getByRole("" as never)).toThrowError(
 			'getByRole requires a non-empty role for "a.b".',
 		);
@@ -254,6 +263,41 @@ describe("a throwing DSL call changes nothing", () => {
 		expect(() => builder.locator("x")).toThrowError("only one locator type can be set for a registration");
 		expect(registry.get("a").definition).toEqual({ type: "role", role: "button" });
 	});
+
+	it("leaves a registration as it was when its path is registered already, so a second call says the same", () => {
+		const registry = createRegistry();
+		registry.add("a").locator("main");
+		const duplicate = registry.add("a");
+		expect(() => duplicate.getByRole("button")).toThrowError('A locator schema with the path "a" already exists.');
+		expect(() => duplicate.getByRole("button")).toThrowError('A locator schema with the path "a" already exists.');
+		expect(registry.get("a").definition).toEqual({ type: "locator", selector: "main" });
+	});
+
+	it("does the same for the any-frame frameLocator()", () => {
+		const registry = createRegistry();
+		registry.add("anyFrame").frameLocator();
+		const duplicate = registry.add("anyFrame");
+		expect(() => duplicate.frameLocator()).toThrowError('A locator schema with the path "anyFrame" already exists.');
+		expect(() => duplicate.frameLocator()).toThrowError('A locator schema with the path "anyFrame" already exists.');
+	});
+
+	it("keeps a seeded registration's one override when the registry refuses it", () => {
+		const registry = createRegistry();
+		const seed = registry.createReusable.getByRole("button", { name: "Submit" });
+		const builder = registry.add("seeded", { reuse: seed });
+		const replace = registry.replace.bind(registry);
+		let refuse = true;
+		registry.replace = ((...args: Parameters<typeof replace>) => {
+			if (refuse) {
+				refuse = false;
+				throw new Error("refused");
+			}
+			return replace(...args);
+		}) as typeof registry.replace;
+		expect(() => builder.getByRole({ name: "First" })).toThrowError("refused");
+		builder.getByRole({ name: "Second" });
+		expect(registry.get("seeded").definition).toEqual({ type: "role", role: "button", options: { name: "Second" } });
+	});
 });
 
 describe("types", () => {
@@ -276,7 +320,7 @@ describe("types", () => {
 	it("the pre-definition builder and the seed factory have exactly the table's methods", () => {
 		// a strategy added to STRATEGIES without its method on either builder fails here
 		expectTypeOf<keyof LocatorRegistrationPreDefinitionBuilder<Paths, "a">>().toEqualTypeOf<StrategyMethod>();
-		expectTypeOf<keyof ReusableLocatorFactory<Paths>>().toEqualTypeOf<StrategyMethod>();
+		expectTypeOf<keyof ReusableLocatorFactoryInternal<Paths>>().toEqualTypeOf<StrategyMethod>();
 	});
 });
 
@@ -379,3 +423,70 @@ const noArgumentContract = (registry: LocatorRegistryInternal<Paths>) => {
 	registry.add("a").getById();
 };
 void noArgumentContract;
+
+describe("an ended registration's hint, for a registry call in filter() arguments or locator() options", () => {
+	const create = () => {
+		const registry = new LocatorRegistryInternal<Paths>(createFakePage());
+		registry.add("a").locator("main");
+		return registry;
+	};
+	const otherwise = "Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.";
+
+	it("filter(), ended by a resolving call in its arguments: resolve first, or pass a path", () => {
+		const registry = create();
+		expect(() =>
+			registry
+				.add("a.b")
+				.getByRole("button")
+				.filter({ has: registry.getLocator("a") }),
+		).toThrowError(
+			`filter() cannot apply to "a.b": its registration was ended by getLocator("a"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "a" }). ${otherwise}`,
+		);
+	});
+
+	it("locator(), ended by a resolving call in its options: resolve first, or filter by a path in a step", () => {
+		const registry = create();
+		expect(() => registry.add("a.b").locator("button", { has: registry.getNestedLocator("a") })).toThrowError(
+			`locator() cannot apply to "a.b": its registration was ended by getNestedLocator("a"). If that call is in this locator's options, which run first, resolve the locator before add(…), or filter by a path in a step: .filter({ has: "a" }). ${otherwise}`,
+		);
+	});
+
+	it("filter(), ended by a query in its arguments: resolve it first, without the path alternative", () => {
+		const registry = create();
+		expect(() =>
+			registry
+				.add("a.b")
+				.getByRole("button")
+				.filter({ has: registry.getLocatorSchema("a").nth(0).getNestedLocator() }),
+		).toThrowError(
+			`filter() cannot apply to "a.b": its registration was ended by getLocatorSchema("a"). If that query is in this filter's arguments, which run first, resolve it before add(…). ${otherwise}`,
+		);
+	});
+
+	it("locator(), ended by a query in its options, a query that resolves there too", () => {
+		const registry = create();
+		expect(() =>
+			registry.add("a.b").locator("button", { has: registry.getLocatorSchema("a").getLocator() }),
+		).toThrowError(
+			`locator() cannot apply to "a.b": its registration was ended by getLocatorSchema("a"). If that query is in this locator's options, which run first, resolve it before add(…). ${otherwise}`,
+		);
+	});
+
+	it("a query resolved after it was taken ends a registration by its resolution", () => {
+		const registry = create();
+		const query = registry.getLocatorSchema("a");
+		const registration = registry.add("a.b");
+		expect(() => registration.locator("button", { has: query.getLocator() })).toThrowError(
+			`locator() cannot apply to "a.b": its registration was ended by a query's resolution of "a". If that query is in this locator's options, which run first, resolve it before add(…). ${otherwise}`,
+		);
+	});
+
+	it("every other method keeps the plain message", () => {
+		const registry = create();
+		const registration = registry.add("a.b");
+		registry.getLocator("a");
+		expect(() => registration.getByRole("button")).toThrowError(
+			'getByRole() cannot apply to "a.b": its registration was ended by getLocator("a"); give a registration all its steps in its add(…) chain, or query the path for one use.',
+		);
+	});
+});

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// test.step is replaced by a recorder; the steps in a real report are covered by the integration specs.
+// test.step is replaced by a recorder, a stand-in for Playwright's runner, so a test reads the title and options each
+// call passes without a run. It could hide what the runner does with them: the step in the report, its location, an
+// error inside it, boxing. test/tests/step/step.spec.ts and test/step-locations/ check those through the runner.
 const recorded: { title: string; options: unknown }[] = [];
 vi.mock("@playwright/test", () => ({
 	test: {
@@ -39,16 +41,78 @@ describe("@step, stage-3 decorators", () => {
 		expect(recorded.map((entry) => entry.title)).toEqual(["Account.create"]);
 	});
 
-	it("passes an explicit title and the options through", async () => {
+	it("titles a method by the class of the object it runs on: an inherited method shows the subclass", async () => {
+		class Base {}
+		class Derived extends Base {}
+		const inherited = stage3(step(), async () => undefined, context("open", false));
+		await inherited.call(new Derived());
+		await inherited.call(new Base());
+		expect(recorded.map((entry) => entry.title)).toEqual(["Derived.open", "Base.open"]);
+	});
+
+	it("gives an override that calls super two steps with one title", async () => {
+		class Base {}
+		class Derived extends Base {}
+		const baseOpen = stage3(step(), async () => "base", context("open", false));
+		const derivedOpen = stage3(
+			step(),
+			async function (this: unknown) {
+				return baseOpen.call(this); // super.open(), as the compiler calls it
+			},
+			context("open", false),
+		);
+		await expect(derivedOpen.call(new Derived())).resolves.toBe("base");
+		expect(recorded.map((entry) => entry.title)).toEqual(["Derived.open", "Derived.open"]);
+	});
+
+	it("passes an explicit title and the options through, a boxed step with its caller's line", async () => {
 		const wrapped = stage3(step("Open settings", { box: true }), async () => undefined, context("open", false));
 		await wrapped.call(new Account());
-		expect(recorded).toEqual([{ title: "Open settings", options: { box: true } }]);
+		const location = expect.objectContaining({ file: expect.stringMatching(/stepDecorator\.test\.ts$/) });
+		expect(recorded).toEqual([{ title: "Open settings", options: { box: true, location } }]);
+	});
+
+	it("keeps a location the caller passes", async () => {
+		const location = { file: "/suite/checkout.ts", line: 3, column: 5 };
+		const wrapped = stage3(step({ box: true, location }), async () => undefined, context("pay", false));
+		await wrapped.call(new Account());
+		expect(recorded).toEqual([{ title: "Account.pay", options: { box: true, location } }]);
+	});
+
+	it("runs a method called without its object, with its own title or as Anonymous.method", async () => {
+		const titled = stage3(step("Add an item"), async () => "added", context("addItem", false));
+		const untitled = stage3(step(), async () => "added", context("addItem", false));
+		for (const method of [titled, untitled]) {
+			await expect(method.call(undefined)).resolves.toBe("added");
+		}
+		const boxed = stage3(step({ box: true }), async () => "added", context("addItem", false));
+		await expect(boxed.call(undefined)).resolves.toBe("added");
+		expect(recorded.map((entry) => entry.title)).toEqual(["Add an item", "Anonymous.addItem", "Anonymous.addItem"]);
 	});
 
 	it("works as a bare decorator", async () => {
 		const wrapped = stage3(step, async () => undefined, context("bare", false));
 		await wrapped.call(new Account());
 		expect(recorded.map((entry) => entry.title)).toEqual(["Account.bare"]);
+	});
+
+	it("rejects, in the step, a method that returns a plain value, boxed or not, with the compile error's text", async () => {
+		const message = "@step decorates methods that return a Promise: make the method async";
+		for (const decorator of [step(), step({ box: true })]) {
+			const plain = stage3(decorator, () => 42, context("total", false));
+			const error = await (plain.call(new Account()) as Promise<unknown>).catch((thrown: unknown) => thrown);
+			expect(error).toBeInstanceOf(TypeError);
+			expect((error as TypeError).message).toBe(message);
+		}
+		// the step opened, and the error is its body's
+		expect(recorded.map((entry) => entry.title)).toEqual(["Account.total", "Account.total"]);
+	});
+
+	it("accepts a method that returns a thenable that is not a Promise", async () => {
+		// biome-ignore lint/suspicious/noThenProperty: the test needs a thenable that is not a Promise
+		const thenable = { then: (resolve: (value: number) => void) => resolve(7) };
+		const wrapped = stage3(step(), () => thenable, context("later", false));
+		await expect(wrapped.call(new Account())).resolves.toBe(7);
 	});
 
 	it("rejects anything that is not a method", () => {
@@ -82,6 +146,13 @@ describe("@step, legacy decorators (experimentalDecorators)", () => {
 			"Account.create",
 			"Account.createBare",
 		]);
+	});
+
+	it("rejects, in the step, a method that returns a plain value", async () => {
+		const plain = legacy(step(), Account.prototype, "total", () => 42);
+		const error = await (plain.call(new Account()) as Promise<unknown>).catch((thrown: unknown) => thrown);
+		expect(error).toBeInstanceOf(TypeError);
+		expect((error as TypeError).message).toBe("@step decorates methods that return a Promise: make the method async");
 	});
 
 	it("rejects a descriptor without a function", () => {

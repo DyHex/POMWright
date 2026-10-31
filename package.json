@@ -1,7 +1,7 @@
 {
 	"name": "pomwright",
 	"version": "3.0.1",
-	"description": "A TypeScript library for Playwright Test that organises a suite's locators and page objects.",
+	"description": "A TypeScript library for Playwright Test that organizes a suite's locators and page objects.",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/DyHex/POMWright.git"
@@ -25,6 +25,10 @@
 			"require": {
 				"types": "./dist/index.d.ts",
 				"default": "./dist/index.js"
+			},
+			"default": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
 			}
 		},
 		"./package.json": "./package.json"
@@ -36,20 +40,24 @@
 		"CHANGELOG.md"
 	],
 	"scripts": {
-		"build": "tsup index.ts --format cjs --dts && node scripts/write-esm-entry.mjs",
+		"build": "tsup index.ts --format cjs --dts --clean && node scripts/write-esm-entry.mjs",
 		"release": "pnpm run build && changeset publish",
 		"lint": "biome check --error-on-warnings .",
+		"lint:workflows": "bash scripts/lint-workflows.sh",
+		"lint:guide": "node scripts/check-guide-links.mjs",
 		"format": "biome format --write .",
 		"harness:install": "bash pack-build.sh && pnpm -C test install --frozen-lockfile",
-		"typecheck": "tsc --noEmit -p test && tsc -p test/tsconfig.declarations.json && node scripts/check-doc-snippets.mjs && node scripts/check-api-coverage.mjs",
+		"typecheck": "tsc --noEmit -p test && node scripts/generate-emit-members.mjs && tsc -p test/tsconfig.declarations.json && tsc -p test/tsconfig.legacyDecorators.json && tsc -p test/tsconfig.legacyDecorators.emit.json && node scripts/check-doc-snippets.mjs && node scripts/check-api-coverage.mjs && node scripts/check-error-messages.mjs && node scripts/check-playwright-retries.mjs",
 		"pack-test": "bash pack-test.sh",
 		"pack:version": "bash scripts/pack-version.sh",
 		"test:unit": "vitest run",
 		"bench": "node --expose-gc --max-old-space-size=8192 scripts/benchmark.mjs",
 		"test": "pnpm test:unit && pnpm pack-test",
+		"test:constrained": "taskset -c 0-3 pnpm test --workers=8",
 		"docs:dev": "pnpm -C website install --frozen-lockfile && pnpm -C website dev",
 		"docs:build": "pnpm -C website install --frozen-lockfile && pnpm -C website build",
-		"docs:preview": "pnpm docs:build && pnpm -C website preview"
+		"docs:preview": "pnpm docs:build && pnpm -C website preview",
+		"docs:diagrams": "pnpm docs:build && node scripts/check-diagrams.mjs"
 	},
 	"keywords": [
 		"Playwright",
@@ -73,8 +81,8 @@
 	],
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.15",
-		"@changesets/changelog-github": "^0.7.0",
-		"@changesets/cli": "^2.29.7",
+		"@changesets/changelog-github": "^1.0.1",
+		"@changesets/cli": "^3.0.3",
 		"@playwright/test": "1.64.0",
 		"@types/node": "^24.19.2",
 		"tsup": "^9.0.0",
