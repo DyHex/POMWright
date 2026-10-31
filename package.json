@@ -1,6 +1,6 @@
 {
 	"name": "pomwright",
-	"version": "3.0.1",
+	"version": "3.0.2",
 	"description": "A TypeScript library for Playwright Test that organizes a suite's locators and page objects.",
 	"repository": {
 		"type": "git",
