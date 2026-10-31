@@ -1,5 +1,422 @@
 # pomwright
 
+## 3.0.2
+
+### Patch Changes
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`e231dc2`](https://github.com/DyHex/POMWright/commit/e231dc2166ffcc224b3c899239795279b6bb19f5) - Overlapping session storage calls on an `about:blank` page that inherited an origin, such as a popup from `window.open()`, act in the order they were made, also when one comes from a page object's helper and another from a standalone one; before, the earlier value could win.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`80cb5ea`](https://github.com/DyHex/POMWright/commit/80cb5eaeaca0f3d681dddb51bda4c745ff950be3) - A page object whose `defineLocators()` returns a Promise, as an `async` one does, fails with a labeled error saying it must register synchronously; before, it was verified before the rest of its definition ran, and an error after its first `await` escaped unlabeled. Move awaited work into the fixture and pass the result to the constructor.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`e8831b8`](https://github.com/DyHex/POMWright/commit/e8831b8a511e0aaf22b9e5a27c49a20f43381f77) - Every session storage call checks the page's origin before and after each storage call it makes, and after each that the page's document is still the one it started in: a batch (`set`, `clear` with several keys, a `seed` on the origin already), a single call, and each read of `get`. When the page has left for another origin, or its document was replaced during the call (a reload or a redirect within the origin, during one of its storage calls or between two), the call fails with the helper's label, says where the page went (its origin and path, without the query or fragment), and names the keys already done, which stay, and the one in flight, which may have reached the new document:
+  `Shop.SessionStorage.set: the page navigated to https://shop.example/home while set() was writing to https://shop.example; 2 of 60 keys were written ("k0", "k1"); "k2" was being written and may have reached the new document`.
+  A `get` fails rather than return what it may have read from the new document. Before, a navigation between two calls that both succeeded let the rest of a batch write into, or remove from, the other origin's storage, and a call the navigation interrupted failed with Playwright's raw `Execution context was destroyed`. Any other error from Playwright now gets the helper's label in front of its message, with the original as `cause`.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`333a928`](https://github.com/DyHex/POMWright/commit/333a9282580d7c7f7336f5c9cc18abced2818ac8) - `@step({ box: true })` reports the step, and an error thrown inside it, at the line that called the method, as the docs
+  said. Before, a boxed step called from a test had no location and its error lost every stack frame, and one called from
+  another method was reported one frame too far out. A boxed step inside another boxed step, a boxed `@step` or
+  a test's own boxed `test.step`, was reported inside POMWright's bundle; boxed `@step` methods and the navigation and
+  session storage helpers now pass `test.step` the line that called them as its `location`, so they are reported there
+  however they are nested. An error in a nested boxed step keeps Playwright's rule: it is reported at the outermost boxed
+  call. `@step` without `box` was right and is unchanged, and so is how `@step` is written.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`b1ee8dc`](https://github.com/DyHex/POMWright/commit/b1ee8dcc42e62fc3e2f72f0f03ef9ffd727d7a41) - An `update()` or `replace()` builder taken before `skip()` now throws when it applies its change to the skipped segment,
+  as `update()` and `replace()` on a skipped segment already did. A skipped segment is never changed until `unskip()`:
+  
+  ```ts
+  const query = getLocatorSchema("main.list.item");
+  const pending = query.update("main.list");
+  query.skip("main.list");
+  pending.locator("ol"); // update() cannot apply to "main.list": it is skipped in this query; call unskip("main.list") first.
+  ```
+  
+  Before, the change went through silently and appeared after `unskip()`.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`27f8d12`](https://github.com/DyHex/POMWright/commit/27f8d1231d578330deea1528e67d3f39ff30419e) - `goto(target)` names the page object when the target cannot be resolved against its `baseUrl`, as every other navigation message does: `LoginPage: goto("http://") cannot be resolved against baseUrl "https://shop.example"`, with the URL parser's error as `cause`. Before, the message had no label.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`54cdada`](https://github.com/DyHex/POMWright/commit/54cdada37cd50c0b1759f6bfc6e10111507e2056) - On Node 20 and 22, a string `urlPath` containing `^` matches the page: `expectThisPage()` finds it, and
+  `expectAnotherPage()` no longer passes while the browser is still on it. Every browser reports a `^` in the path as
+  `%5E`, as `new URL` does on Node 24, but Node 20 and 22's `new URL` keeps it, so the two never compared equal there.
+  A string path now treats `^` and `%5E` in its path part as one, as it already did `|` and `%7C`, and a string `fullUrl`
+  writes a `^` in its path as `%5E`, so `expect(page).toHaveURL(fullUrl)` matches on every Node version. For a path with
+  `|`, which Chromium reports as `%7C`, use `expectThisPage()`, which matches on every browser.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`7f90436`](https://github.com/DyHex/POMWright/commit/7f90436f125b6e8cab3a1f0206017f3e06595fc9) - A function that returns `createRegistryWithAccessors()`'s result, its `add`, a page object's `add`, `registry.add` or `registry.createReusable` can be exported from a project built with `declaration: true`; before, the emit failed with TS4023 and TS4094. `createReusable`'s type is exported as `ReusableLocatorFactory`.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`ea330ef`](https://github.com/DyHex/POMWright/commit/ea330ef47a19b48b6b52fcf34a0f6ef64354a6fd) - A stored value that its codec cannot decode makes `get` fail with the codec's reason in the message, then the value's
+  length and the whole value, quoted, so an empty or whitespace value shows:
+  `Shop.SessionStorage.get: value for "user" could not be decoded (SyntaxError: …); stored value, 9 characters: "{not json"`.
+  Before, the reason was only in the error's `cause`, and the value followed unquoted.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`c75ab43`](https://github.com/DyHex/POMWright/commit/c75ab43f1c6ad27e2c97e70890d47b54d0f17917) - `expectThisPage()` and `expectAnotherPage()` treat a URL with an empty query or fragment (`/orders?`, `/orders#`) as a
+  different URL from `/orders`, as Playwright's `toHaveURL` and `waitForURL` do and as the docs said ("a page's identity
+  is its exact URL").
+  
+  The matcher compared the path against `pathname + search + hash`, where the URL API reports an empty query or fragment
+  as `""`, so `expectThisPage()` passed on `/orders?` while `expect(page).toHaveURL(ordersPage.fullUrl)` failed. A RegExp
+  path is now tested against the same rest of the URL, the empty `?` or `#` included.
+  
+  If a page of yours may land with an empty query or fragment, give it a RegExp path that allows one, for example
+  `/^\/orders\??$/`.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`a6ecacf`](https://github.com/DyHex/POMWright/commit/a6ecacfb50a6edad7b0ef79250bddf34b634a252) - `seed({})`, for example from entries that turn out to be empty at run time, does nothing, as `get([])` and `clear([])`
+  with an empty list already did. Before, it registered a seed without keys, and a test that never went to that origin
+  failed at close with "the seed for … (keys: ) was never applied".
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`2accf34`](https://github.com/DyHex/POMWright/commit/2accf3492b48d072a8629c04d69bc98371ed18aa) - The error for a registration that has ended names the registry call that ended it. When that call may have run in the
+  arguments of `filter` or the options of `locator`, the two methods that take a `has` locator, the message also shows how
+  to write it.
+  
+  A registration ends at the next call on its registry, and JavaScript runs a call's arguments before the call, so a
+  `getLocator` inside a filter's arguments ends the registration the filter belongs to:
+  
+  ```ts
+  add("list.item@open").getByRole("listitem").filter({ has: getLocator("badge") });
+  ```
+  
+  ```text
+  filter() cannot apply to "list.item@open": its registration was ended by getLocator("badge"). If that call is in this filter's arguments, which run first, resolve the locator before add(…), or pass a path, which resolves to that path's own locator: filter({ has: "badge" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+  ```
+  
+  In `locator()`'s options the path goes in a `filter` step, and a query in the arguments (`getLocatorSchema(…)`) gets
+  the advice to resolve it before `add(…)`, without the path, which would drop the query's changes:
+  
+  ```text
+  locator() cannot apply to "section@inline": its registration was ended by getLocator("heading@explorer"). If that call is in this locator's options, which run first, resolve the locator before add(…), or filter by a path in a step: .filter({ has: "heading@explorer" }). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+  filter() cannot apply to "section@inline": its registration was ended by getLocatorSchema("heading@explorer"). If that query is in this filter's arguments, which run first, resolve it before add(…). Otherwise, give a registration all its steps in its add(…) chain, or query the path for one use.
+  ```
+  
+  Before, the message said only that the registration had ended and to give it all its steps in its `add(…)` chain,
+  which is what that line does. Every other ended registration now names its call too, for example
+  `its registration was ended by add("main.list.item")`. The rule itself is unchanged. *Filters and indices* has a new
+  section on passing a path, a locator or a chain to `has`.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`7447754`](https://github.com/DyHex/POMWright/commit/744775468eb8b43498ec9cb798a730163bf6b98e) - `AllEntries`, `Decoded`, `SeedOptions` and `SessionStorageOptions` are exported from `pomwright`, so a consumer can name
+  what `get` returns and the options of `seed` and of `new SessionStorage()`. The docs say every type is imported from
+  `pomwright`; these four were used in public signatures but not exported. Each has a section on the `SessionStorage` API
+  page, marked as added in 3.0.2.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`2bab383`](https://github.com/DyHex/POMWright/commit/2bab38388245f9e4de83f434271e8a33f3e228e9) - The package's `exports` map has a `default` condition after `import` and `require`, pointing at the CommonJS build, as
+  `@playwright/test`'s map does. Node and TypeScript always matched `import` or `require`, so nothing changes for them; a
+  resolver that matches neither now finds the package instead of failing.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`f46b982`](https://github.com/DyHex/POMWright/commit/f46b9824db95f0476814d7413901336ba50fd1e7) - A locator method that throws because its path is registered already leaves the registration as it was, so calling it
+  again reports the same error, not "has already been provided":
+  
+  ```text
+  A locator schema with the path "main" already exists.
+  ```
+  
+  Before, the registration took the definition before the registry refused it, so a second call said
+  `A locator definition for "main" has already been provided; only one locator type can be set for a registration.`
+  for a locator that was never registered.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`4e3a361`](https://github.com/DyHex/POMWright/commit/4e3a361c7ee0ee441c001db28c77e4884b11b5f0) - `getById` with a `u` or `v` RegExp that holds a quote, an apostrophe, a backtick or `>>` finds its element; before, it
+  failed with Playwright's selector parse error. The selector writes those characters by their code (`\x22`, `\x27`,
+  `\x60`, and `\x3e` for the second `>`), and the pattern stays the same. Without `u` or `v`, a RegExp with two quotes in
+  a row (`/say["']hi/`) or a named group closed right before a `>` (`/(?<g>>)>/`) failed the same way, and one with `\>`
+  before a `>` (`/a\>>b/`) was turned into another pattern: the pattern is now read whole, its escapes included. The
+  locators Playwright builds itself (`getByRole`'s `name`, the text methods, `getByTestId`, `filter`'s `hasText`) keep
+  Playwright's limitations, which every POMWright locator meets because its description follows it: write the character
+  by its code (`/don\x27t save/iu`, `/don["\x27]t save/i`), or leave out `u`
+  ([microsoft/playwright#40446](https://github.com/microsoft/playwright/issues/40446)); *Registering locators* lists them.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`088f46c`](https://github.com/DyHex/POMWright/commit/088f46ce98f009cfc0476ade090f65247d1fb836) - On a page object whose `baseUrl` is a RegExp, `goto(target)` no longer compiles for a relative target that holds a
+  colon (`"/orders?at=12:00"`, `"?at=12:00"`, `"1:2"`), which it always rejected at run time: the target's type now
+  requires a scheme that starts with a letter. A `string` that holds a URL narrows with a cast,
+  ``goto(url as `https://${string}`)``.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`fa424ad`](https://github.com/DyHex/POMWright/commit/fa424ad1d537449d40fcee7eb34c9d647f8c5d34) - From JavaScript, `navigation.goto()` with a `URL` object, or any first argument that is neither a URL string nor
+  options, throws as Playwright's `page.goto()` does:
+  
+  ```text
+  LoginPage: goto() takes a URL string or options; received a URL object; pass its href.
+  ```
+  
+  Before, it took the `URL` object for the options of the this-page form and navigated to the page object's own URL,
+  running its actions after navigation. TypeScript already rejected the call.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`d4cffbb`](https://github.com/DyHex/POMWright/commit/d4cffbb2e4889918433824226f44f646bc323798) - A `SessionStorage` with an origin (every page object's) now also refuses to touch another origin on a page at
+  `about:blank` whose document inherited that origin, as a popup from `window.open()` does:
+  `… the page (about:blank) is on https://login.example, not on this page object's origin https://shop.example; …`.
+  Before, the check saw no origin in the URL and let the helper write into the inherited origin's storage.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`9bcf72e`](https://github.com/DyHex/POMWright/commit/9bcf72eeab868e068b268b025d926e9eaea9dca5) - A query kept while an ancestor of its path is registered says that the ancestor was registered after the query was
+  taken, and how to see it, instead of that it has no locator schema:
+  
+  ```text
+  "shell.list" is not a valid sub-path of "shell.list.item". It is a segment of that path, and it was registered after this query was taken; take a new query with getLocatorSchema("shell.list.item") to use it.
+  ```
+  
+  The query's behavior is unchanged: it reads its own copy of the chain, taken at `getLocatorSchema`.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`4f80b37`](https://github.com/DyHex/POMWright/commit/4f80b371e619f9eafd86a602fd47b7f605847cf2) - Bare `@step` compiles with `experimentalDecorators: true`, as `@step()` already did and as the docs promised. Before, it
+  failed with TS1241 and TS1270, although it worked at runtime. A method that does not return a Promise still gets the
+  readable error, `@step decorates methods that return a Promise: make the method async`, in both decorator modes.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`b28686b`](https://github.com/DyHex/POMWright/commit/b28686bc60f0449c9d7b2378ed165805a43ebd14) - The `log` fixture checks Playwright's `locale` and `timezoneId` when a test starts and fails with a message naming the value, such as `log fixture: locale "en_US" is not a BCP 47 language tag; write it with hyphens, such as "en-US"`, instead of a `RangeError` at teardown once something was logged. `attachLogsToTest` checks the same before it attaches anything. A test that requests `log`, never logs and runs with `locale: "en_US"` now fails too: write the tag with hyphens, which every browser accepts. A POSIX name such as `en_US.UTF-8`, as `LANG` holds it, gets the hint `"en-US"`; one with a modifier, such as `sr_RS@latin`, gets none, since the modifier can change the script.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`2d2c504`](https://github.com/DyHex/POMWright/commit/2d2c504f93392d12e876e0cb71d719389a9fc4cc) - A path literal of any length compiles; one of 999 characters or more failed with TS2589. A path that breaks several
+  rules now names all of them, in the same order at compile time and at run time, and checking path types is faster.
+  `add(path)` throws for a path that breaks a rule, where its locator method threw before:
+  
+  ```text
+  LocatorSchemaPath string cannot contain whitespace chars and cannot start with a dot: .main list
+  ```
+  
+  A path that breaks one rule keeps its message.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`bfbc00f`](https://github.com/DyHex/POMWright/commit/bfbc00f5cd2a3ed4fa5f695110fa2f210fee2e26) - An app that declares its own global `navigation` (`var navigation = …`) no longer makes `seed` fail with
+  "seed() needs the Navigation API … and this browser has none". The check now tests the `NavigationActivation`
+  interface, which such a declaration does not hide.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`8c8d8fb`](https://github.com/DyHex/POMWright/commit/8c8d8fb7be9ce5858c81d65862bcea7e6baf5d3a) - A RegExp page object's `navigation` is no longer accepted as `NavigationFor<string, string>`, so `goto()` without a target is a compile error there too, as the docs say; before, a function typed for a string page's helper took it, and `goto()` threw at run time. `NavigationFor` checks `goto` strictly now. A function that takes any page object's helper types its parameter `NavigationFor<RegExp, UrlMatcher>`, which every page object's helper fits.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`aa70821`](https://github.com/DyHex/POMWright/commit/aa708219844d106e43e14489d7d1f6bfdd47222a) - `expectThisPage()` and `expectAnotherPage()` say when they time out on the load state of the right URL:
+  `OrdersPage: reached "https://shop.example/orders", but its "load" state did not come in time (…)`, and
+  `OrdersPage: left "https://shop.example/orders" for "https://shop.example/login", but its "load" state did not come in time (…)`.
+  Before, the message named the URL it found as the one it did not expect: `expected URL "…/orders"; found "…/orders"`.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`c35eae4`](https://github.com/DyHex/POMWright/commit/c35eae4af73ba37fd1b6438620ac9fcf3cd33c7f) - When seeds for several origins are never applied, the failure says "were never applied" and lists each seed with its helper and the line that called it, such as `Pay.SessionStorage.seed at tests/checkout.spec.ts:12:5, for https://pay.example (keys: "orderId")`; before, it named and pointed at the first seed only.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`9dc8048`](https://github.com/DyHex/POMWright/commit/9dc8048960b4c684e6d6d6bf6e76426bdd2e7bae) - Options, filters and `update()` patches given as a class instance, or as an object with a prototype, keep the values
+  Playwright would read from them: a getter on the class, or a value the object inherits. Before, the copy POMWright
+  stores took only the object's own enumerable properties and dropped those values without an error, so the locator could match
+  more than Playwright's own call with the same object:
+  
+  ```ts
+  class SaveButton {
+    get name() {
+      return "Save";
+    }
+  }
+  
+  page.getByRole("button", new SaveButton());     // the Save button
+  add("save").getByRole("button", new SaveButton()); // was every button; now the Save button
+  ```
+  
+  The same holds for an own property that is not enumerable, as `Object.defineProperty` makes one: Playwright reads it,
+  and the copy keeps it.
+  
+  A plain object behaves exactly as before. Methods on a prototype are not copied.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`0028097`](https://github.com/DyHex/POMWright/commit/00280978b1707fb63aa9b2332a1efffaed992a2f) - A URL whose scheme has no origin in the URL standard, such as `chrome-extension://abcdef/`, `app://foo/` or
+  `file://host/`, is rejected as a page object's `baseUrl` and as `SessionStorage`'s `origin`, with the origin message
+  and the reason (`…; received "chrome-extension://abcdef/", whose scheme has no URL origin`). Before, `SessionStorage`
+  accepted it as the origin `"null"`, so its origin check never matched and a seed for it never applied, and a page
+  object failed with a message about its `urlPath`.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`445fc71`](https://github.com/DyHex/POMWright/commit/445fc7175563795ed52b2b66f7ebfd8f39abea97) - A page object's failed locator check points the report at the line that created the page object, also when it extends a base class of your own; before, it pointed at the first `super(…)` of the class chain, with a shared base class the same line for every page object.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`d710c12`](https://github.com/DyHex/POMWright/commit/d710c120cb5a364807af658a32b2797efd152736) - On Chromium, a page object whose string `urlPath` contains `|` matches its page. Chromium reports a `|` in the path as
+  `%7C`, where Firefox, WebKit and `new URL` keep it, so `expectThisPage()` timed out on the page and `expectAnotherPage()`
+  passed while the browser was still on it. A string path now compares the two forms as one; a RegExp path sees the URL
+  as the browser reports it, as before.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`7131d3d`](https://github.com/DyHex/POMWright/commit/7131d3d32263292e63b2af320cba466424943047) - `set` and `seed` store an entry whose key is `__proto__`. Before, the entry was dropped without an error: `set` and
+  `seed` resolved, and nothing was stored.
+  
+  ```ts
+  await storage.set("__proto__", "x");          // now stored, as page.sessionStorage.setItem stores it
+  await storage.set(JSON.parse(savedSnapshot)); // a snapshot with that key keeps it
+  await storage.seed("__proto__", "x");         // written on arrival
+  ```
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`8bdcd35`](https://github.com/DyHex/POMWright/commit/8bdcd35838a2e55e292e7e1f5715808970194c81) - A query's `describe()` on a path registered as `frameLocator()` without a selector throws at the call, as its
+  `filter()` and `nth()` do; replace the path first:
+  
+  ```text
+  describe() cannot apply to "anyFrame": frameLocator() without a selector has no element to filter, index or describe; resolve a path inside it.
+  ```
+  
+  Before, `describe()` then `replace()` worked while `filter()` then `replace()` threw, so the query's behavior depended
+  on the order of its calls.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`e37a039`](https://github.com/DyHex/POMWright/commit/e37a039e305e147e1cb5cc1f07102a313c6ba0a8) - Session storage messages quote the keys they name, as `get`'s messages always did: `(keys: "orderId")` instead of
+  `(keys: orderId)`, so an empty key, or one holding `, `, reads as itself. Of the released messages, those of a seed whose
+  write the browser refused and of a seed that was never applied change.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`49454c6`](https://github.com/DyHex/POMWright/commit/49454c60ec050a6ee70289bd2f29ad17230436a9) - `createRegistryWithAccessors` requires its paths as a type argument. Without one, the first path is a compile error that
+  says so:
+  
+  ```text
+  Argument of type '"main"' is not assignable to parameter of type '"createRegistryWithAccessors needs its paths as a type argument: createRegistryWithAccessors<Paths>(page)"'.
+  ```
+  
+  Before, the paths were inferred as `string`, so no path was checked and no sub-path compiled. Pass the path union,
+  `createRegistryWithAccessors<Paths>(page)`, or `<string>` for paths known only at run time, which gives up completions,
+  the union check and sub-paths (a literal path is still checked for the rules of a path).
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`ff6495e`](https://github.com/DyHex/POMWright/commit/ff6495eac8a3d11423cbb1c012925355ef721c49) - `add(path, { reuse })` compiles when the paths are variables: of the path union, of a template union in a loop, or wide
+  strings. A literal path that reuses itself is still a compile error, and any self-reuse still throws at the call:
+  
+  ```ts
+  for (const action of actions) {
+    registry.add(`dialog.button@${action}`, { reuse: `main.toolbar.button@${action}` }); // compiles now
+  }
+  ```
+  
+  Before, a reuse was refused as "the same as registration path" whenever the registration path's type covered the reuse
+  path's, whatever the values, and a union-typed `reuse` matched none of the options.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`17426a5`](https://github.com/DyHex/POMWright/commit/17426a55db46ac8ee8beb3629796a16879700df2) - On a document whose own origin is opaque, such as one served with `Content-Security-Policy: sandbox` without
+  `allow-same-origin`, or the error page Firefox shows at the origin's URL after a failed navigation, `set`, `get`,
+  `clear` and an on-origin `seed` fail with
+  `Shop.SessionStorage.set: the document at … cannot use sessionStorage: its origin is opaque (the browser's error page after a failed navigation, or a sandboxed document: Content-Security-Policy: sandbox without allow-same-origin)`
+  on every browser, also when the document's own script declares a global `origin`. Before, Chromium and WebKit said
+  "the page has no origin yet … or use seed()", also from `seed`, and Firefox gave the browser's error without the
+  helper's label. `seed` on a page without an origin no longer suggests `seed()`. On an `about:blank` popup whose
+  document inherited its opener's origin, and once such a popup has closed, a call that fails gets Playwright's error
+  with the helper's label, where it said "the page has no origin yet", for example
+  `Shop.SessionStorage.set: webStorage.setItem: QuotaExceededError: The quota has been exceeded.`
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`e05b84d`](https://github.com/DyHex/POMWright/commit/e05b84d34f8544a4a5f5a5ccda9aa82eb92b1cb7) - A page object that passes `sessionStorage.schema` must declare its type, a `SessionStorage` given an explicit schema type must be given the schema value, and the value must hold a codec for every declared key, optional ones included, as the docs say. Before, each compiled, and the helper's types and codecs disagreed: `get` could be typed `string | null` and return an object, or the reverse.
+  
+  Take the type from the value, and pass that value: `PageObject<Paths, { storage: typeof schema }>` with `{ sessionStorage: { schema } }`, or `new SessionStorage(page, { schema })`, whose type comes from the value. A subclass of a base class of your own that forwards `PageObjectOptions` and has no options type parameter (`ShopPage<Paths> extends PageObject<Paths>`) cannot declare the type where the error is reported: make the base class take the options as a type parameter and pass them to `PageObject`, as *Organizing a project* shows (https://dyhex.github.io/POMWright/docs/organizing-a-project/#a-base-class-for-your-site), and declare `{ storage: typeof schema }` in the subclass.
+  
+  Two cases still compile: a page object that declares `storage` and passes no schema, and a schema passed through a variable with a codec its type does not declare, since TypeScript checks extra keys on object literals only; that key is then decoded by its codec while its type says a string.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`d12966a`](https://github.com/DyHex/POMWright/commit/d12966a9059bf3a0d767a11a4f3f2cd0d6b253c8) - When the page closes while `seed` is still registering (an un-awaited `seed` at the end of a test, or a page closed
+  right after it), `seed` fails with its label, the origin and the keys, and the stack starts at the `seed` line:
+  `Shop.SessionStorage.seed: the page closed while seed() was registering the seed for https://pay.example (keys: "orderId"); await seed() before the test ends`.
+  Before, it failed with Playwright's raw `page.evaluate: Target page, context or browser has been closed` and no frame of
+  the test. Any other error from the page while a seed registers also gets the label and the call site.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`5ceb13c`](https://github.com/DyHex/POMWright/commit/5ceb13c3b91e240753d33f1a963f6d4ee02475bf) - With Playwright's step overlay (`video: { show: { test } }`), a `seed` raced by a navigation to its origin (not awaited,
+  or called while a `goto` is under way) fails at the call, as it does without the overlay, instead of resolving while the
+  app started without the entries. `seed` now reads the page and watches for a commit from the moment it is called; the
+  overlay's update ran before `seed`'s step and hid such a commit.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`819c477`](https://github.com/DyHex/POMWright/commit/819c477efee183e9122d4b7267f00d860d8d52d0) - A seed's failure found in a page listener (a refused write, a seed the arriving document skipped, a seed never applied
+  when the page closes) no longer stops the page's other `console` or `close` listeners: the error is rethrown from a
+  microtask, which still fails the test at once, with the `seed` line in its stack. Before, it was thrown inside
+  POMWright's listener, so a listener the test added after the `seed` did not run.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`52f2d4c`](https://github.com/DyHex/POMWright/commit/52f2d4c0b1ae7e260dc09d1c18bdc0e9b88265e2) - `seed` on a popup at `about:blank` that inherited the seeded origin writes at once, as `set` does there; a later `set` is no longer overwritten when the popup navigates to the origin, and Firefox no longer fails the test. When a seed is not applied because the browser counted the arrival as a return, the message now says why: `… (navigation.activation.from is set): the document before it was already on the origin, as after a failed navigation to it`.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`a23aa0d`](https://github.com/DyHex/POMWright/commit/a23aa0d67eba4c266488ec13d9cb0f9c14fa249a) - A seed that the document arriving at its origin does not write now fails the test at the `seed` line instead of
+  passing silently. After a navigation to the origin that failed (a refused connection, offline, `route.abort()`),
+  Chromium counts the retry as a return to the origin, so the app started without the entries and the test went on;
+  it now fails with `… was not applied: the browser counted the page's arrival on … as a return there …`. Firefox shows
+  its error page at the origin's URL and failed with a refused-write message although no app had loaded; it now fails
+  with `… was not applied: the document that arrived on … has an opaque origin …`. The seed script never writes into a
+  browser's error page. WebKit applies the seed on the next arrival, as before. A retry is not attempted: a failed
+  navigation to a seeded origin fails the test.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`53f571f`](https://github.com/DyHex/POMWright/commit/53f571f3290fc085e642900c9dc8d51b51c45178) - `seed` no longer fails when the page replaces its document more than once during its first seed's Navigation API
+  check, as an app that redirects itself by script on load does (`/` to `/login` to `/login/start`). Before, such a seed
+  failed with Playwright's `Execution context was destroyed`. The check is now repeated while the page replaces its
+  document, up to 20 times (the default of Playwright's `maxRedirects`), each after the pause Playwright makes before a
+  retry of its own actions (20 ms, rising to 500 ms); past that, Playwright's error goes through with the helper's
+  label.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`b4fee4a`](https://github.com/DyHex/POMWright/commit/b4fee4a45bc3896d4d146708429bd0ffdc279fe3) - `step()` with a title or options returns a decorator whose type is exported from `pomwright`, `StepDecorator`. A module can export a preconfigured decorator, such as `export const boxedStep = step({ box: true })`, and still build with `declaration: true`; before, the emit failed with TS4023.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`ea94410`](https://github.com/DyHex/POMWright/commit/ea944101f2dc5ca1535731db8ad5f7e7d52d502c) - `@step` compiles on generic `async` methods, with standard decorators and with `experimentalDecorators`, and the method keeps its type parameters; before, TypeScript refused them, and under `experimentalDecorators` asked to make the already `async` method `async`. A generic method that does not return a Promise is still refused with `@step decorates methods that return a Promise: make the method async`.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`2e15291`](https://github.com/DyHex/POMWright/commit/2e15291fd0feacf361b0d6106d7b3933a2abc735) - `@step` on a method that returns a plain value now throws at run time too (from JavaScript), with the compile error's message, `@step decorates methods that return a Promise: make the method async`; before, the method silently returned a Promise.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`d807acb`](https://github.com/DyHex/POMWright/commit/d807acbf725a691bec76230ecd3d9e4cf11a5ffa) - A `@step` method called without its object, for example passed as a callback (`items.map(cart.addItem)`), runs as an
+  undecorated method does: titled with its own title, or `Anonymous.<method>` without one. Before, it threw
+  `TypeError: Cannot read properties of undefined (reading 'constructor')` before the method ran, even with a title of
+  its own.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`34c2ec0`](https://github.com/DyHex/POMWright/commit/34c2ec0d0c03d51b6471ffaeb7eb1e558a4428ec) - Session storage calls for one origin act in the order they were made, also when they overlap: on the origin the page is
+  on as well as before a hop, and for `set`, `get` and `clear` as well as `seed`.
+  
+  3.0.1 made overlapping `seed` calls for an origin the page is not on merge in call order. On the origin the page is
+  already on, `seed` still wrote key by key, and two overlapping calls interleaved, so an earlier value could win:
+  
+  ```ts
+  await page.goto("https://shop.example/account");
+  await Promise.all([storage.seed({ first: "1", shared: "earlier" }), storage.seed({ shared: "later" })]);
+  // shared was "earlier"; it is now "later"
+  ```
+  
+  `set`, `get` and `clear` interleaved the same way. Every call now takes its turn per page and origin, across every
+  helper on the page (a page object's and a standalone one), so overlapping calls end exactly as awaited ones do. A call
+  that waited checks the origin again when its turn comes. A helper with an origin throws the usual origin message if the
+  page has left it; a helper without one fails, and does nothing, if the page has left the origin the call was made on,
+  rather than act on an origin it was not called on:
+  `Shop.SessionStorage.set: the page left https://shop.example for https://login.example while set() waited for its turn; the call did nothing`.
+  A call takes its arguments when it is made, as Playwright's calls do: before, `set` and `seed` encoded their values in
+  their step, and `get` and `clear` read their key lists in their turn, so a value or a list changed after the call, while
+  it waited, changed what it did. Awaited calls behave as before.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`adffd1e`](https://github.com/DyHex/POMWright/commit/adffd1e68eeb269f4a6db3be3d766977b2f6c664) - Writing a value that is not a string to a key without a codec now says where codecs are declared:
+  
+  ```text
+  Shop.SessionStorage.set: value for "user" is not a string and no codec is declared for it; declare one in the schema (a page object's sessionStorage.schema option)
+  ```
+  
+  A page object declares its storage schema twice: the type under `storage` in its type options, and the value in the
+  constructor's `sessionStorage.schema` option. The compiler now checks that a value comes with its type, but not that a
+  declared type comes with its value. Without the value, the declared keys are stored and read as raw strings, and this
+  message is the one place where that fails loudly. The *Session storage* page now says so.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`64cd0b7`](https://github.com/DyHex/POMWright/commit/64cd0b714e7b58f36388abc913a912717fa70864) - A session storage key whose type is not a literal is now typed by what it can be, as the docs say ("a declared key as its codec's type"): a key typed `string` or a branded string (`string & { … }`) as `string` or any declared codec's type, and a pattern such as `` `user:${string}` `` as `string` or the codecs' types of the declared keys it matches. `get(key)` and `get([key])` return that, and `set` and `seed` accept it; a union is typed member by member. Before, such a key was typed as a plain string, although a declared key returned its decoded value at run time. Literal keys, unions of literals, `get()` and a schema without codecs keep their types.
+  
+  Code that used such a value as a string, with a schema that has codecs, stops compiling only where the key can match a declared key: pass the literal key, type the variable as the schema's keys (`keyof typeof schema`), or narrow the value (`typeof value === "string"`).
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`49454c6`](https://github.com/DyHex/POMWright/commit/49454c60ec050a6ee70289bd2f29ad17230436a9) - A query's sub-path arguments accept template-literal members of the path union (the query's own path and template
+  ancestors), compile on a registry typed `<string>`, where the runtime checks them, and compile again in a generic base
+  class on the paths it adds: this worked in 1.x and broke in 2.0.0, and is now restored.
+  
+  ```ts
+  type Paths = "main" | "main.orders" | `main.orders.row@${string}`;
+  registry.getLocatorSchema("main.orders.row@1042").filter("main.orders.row@1042", { hasText: "Open" }); // compiles now
+  
+  abstract class SitePage<PagePaths extends string> extends PageObject<PagePaths | CommonPaths> {
+    acceptCookiesFor(vendor: string) {
+      // a sub-path on the common paths compiles in the base class again
+      return this.getLocatorSchema("dialog@consent.button@accept").filter("dialog@consent", { hasText: vendor });
+    }
+  }
+  ```
+  
+  A path written out stays a sub-path only where it is a segment of the chain, and a namespace that is not a declared path
+  is still a compile error.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`3284aa4`](https://github.com/DyHex/POMWright/commit/3284aa4d5f143f48b1419a89747cf186fa0dee60) - Releases are published with npm Trusted Publishing: npm authenticates the GitHub Actions workflow that publishes, so the
+  workflow uses no npm token, and records the provenance of each version from that workflow.
+  
+  3.0.0 and 3.0.1 were published without a provenance attestation, although the 3.0.0 entry said releases are published
+  with npm provenance. `npm view pomwright@<version> dist --json` shows whether a version has one.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`db26390`](https://github.com/DyHex/POMWright/commit/db26390b4ead49946c09f4fde486640449e762ca) - `update()` and a seeded registration (`add(path, { reuse: seed })`) accept `undefined` as the first argument in their
+  types, as they already did at runtime: it keeps the registered value, as an omitted argument does. A value that may be
+  undefined can now be passed through:
+  
+  ```ts
+  declare const role: "button" | "link" | undefined;
+  getLocatorSchema("main.button@save").update().getByRole(role, { name: "Cancel" }); // compiles; undefined keeps the role
+  ```
+  
+  A registration and `replace()` still require the first argument, as Playwright's methods do, but `frameLocator()`'s,
+  whose absence is Playwright's any-frame form.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`c9c8f34`](https://github.com/DyHex/POMWright/commit/c9c8f349c83234c338c8fd5f31a38bf7557264d0) - A page object's `urlPath` must stay on its base's origin, and a `baseUrl` may not end in a bare `?` or `#`.
+  
+  The constructor rejected a `urlPath` that starts with `//`, which names another host, but accepted others that do the
+  same once the URL standard has read them: a backslash after the first `/` (`"/\\other.example/x"`), or a tab or line
+  break followed by `/` or a backslash. With such a path, `fullUrl` and `goto()` went to the other host, and
+  `expectThisPage()` then failed there with a message that named the same URL as expected and found. The constructor now
+  resolves the path and throws when it leaves the base's origin:
+  
+  ```text
+  LoginPage: urlPath must be a path on the page object's origin; received "/\\login.example/account", which names the host "login.example" instead. A "/" followed by another "/" or a "\", also with a tab or line break between them, starts a host.
+  ```
+  
+  A `baseUrl` such as `"https://shop.example?"` passed the origin check, and every `fullUrl` built on it carried the `?`.
+  It is now rejected with the existing `baseUrl must be an origin …` message. A base with credentials
+  (`https://user:secret@shop.example`) is accepted as before.
+
+- [#60](https://github.com/DyHex/POMWright/pull/60) [`1dc488f`](https://github.com/DyHex/POMWright/commit/1dc488f1f6fcd99d2bbba4229addaf3b25cf957a) - `verify()` reports an `add(path)` that never got a locator method, such as `add("main.form@login");` written as a
+  statement: `"main.form@login": add("main.form@login") ended without a locator method (at add("main.form@login.button@login")); give it one or remove it`.
+  Before, such an `add` registered nothing, every chain below the path left the segment out, and `verify()` passed. A
+  registry with such an `add` now fails its check, in a page object at its first use: give the `add` its locator method,
+  or remove it.
+
 ## 3.0.1
 
 ### Patch Changes
