@@ -11,6 +11,11 @@ it before working there. Read it before running these commands, probing a claim,
 - `test/` depends on `file:../.pack/pomwright`, a directory, so a frozen install always installs the current
   extraction and `test/pnpm-lock.yaml` does not change with builds. `pnpm harness:install` packs and installs without
   running anything, for `pnpm typecheck` or a quick `pnpm -C test exec playwright test …` of one spec.
+- `test/`'s dependencies move by hand, since Dependabot cannot resolve `test/` without `.pack/`
+  ([.github/AGENTS.md](../.github/AGENTS.md#the-workflows)): with each month's Dependabot pull request for the root,
+  `pnpm harness:install`, then `pnpm -C test outdated`, then `pnpm -C test update <name>` for each it lists, except
+  `@playwright/test` (the peer floor, by decision) and `pomwright`, and `@types/node` within its major (it follows the
+  Node line); then `pnpm pack-test`.
 - `pnpm typecheck` runs `tsc --noEmit -p test` against the installed package: specs, page objects, fixtures,
   `playwright.base.ts`, and the compile-only probes; then `scripts/generate-emit-members.mjs`, which writes
   `test/.emit-members/members.ts` (git-ignored) from `tests/packaging/emitSeeds.ts` and the installed declarations:
