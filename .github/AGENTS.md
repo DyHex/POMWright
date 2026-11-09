@@ -3,7 +3,7 @@
 The workflows, Dependabot, how Publish and Pages run, and the packaging probes. Claude Code loads this file when its
 Read tool opens a file under `.github/`; otherwise (the shell, another client), read it before working there. Read it
 before changing a script only CI runs (`scripts/consumer-check.sh`, `scripts/ci-playwright-version.sh`,
-`scripts/release-check.sh`) or the packaging probes too. Part of the contributor guide that the root
+`scripts/ci-daily-targets.sh`, `scripts/release-check.sh`) or the packaging probes too. Part of the contributor guide that the root
 [AGENTS.md](../AGENTS.md) indexes; its rules apply here too.
 
 ## The workflows
@@ -11,7 +11,8 @@ before changing a script only CI runs (`scripts/consumer-check.sh`, `scripts/ci-
 `checks.yaml` (reusable), every job on every run, whatever changed, so a run always tests what it reports on (on a pull
 request, GitHub's merge commit): `lint` (biome; then `scripts/lint-workflows.sh`, which `pnpm lint:workflows` runs
 locally too: actionlint with ShellCheck for the `run:` scripts, each pinned by version and SHA-256 in the script and
-moved by hand, and that ShellCheck over the scripts the workflows run instead; then `scripts/check-guide-links.mjs`,
+moved by hand, and that ShellCheck over every shell script the repository tracks, read from `git ls-files`, since
+actionlint sees a script a `run:` block calls as that one line; then `scripts/check-guide-links.mjs`,
 `pnpm lint:guide`, every relative link and anchor of the contributor guide; then `scripts/release-check.test.sh`, every
 path of the release checks in throwaway repositories with a fake npm), `package` (unit tests, build and pack once, the
 tarball as a run artifact) and `harness` (the browsers the caller passes, each at the Playwright pin and at the latest
@@ -45,6 +46,28 @@ when a version has no provenance attestation. `pages.yaml` builds `website/` and
 (`https://dyhex.github.io/POMWright/`) after `CI` succeeds on a push to `main`, guarded as `publish.yaml` is and
 building the commit that run tested, only while that commit is `main`'s tip (a re-run of an older run deploys nothing),
 or by `workflow_dispatch`, which builds the commit it was started on.
+
+`daily.yaml` (`Daily`) tests the release users install today, every morning at 06:17 UTC and from its *Run workflow*
+button: `scripts/ci-daily-targets.sh` reads the version npm's `latest` tag names, the commit it was published from (its
+npm provenance attestation, SLSA v1) and the second Playwright version (Playwright's `next` alpha while its release is
+ahead of `latest`, or the version or dist-tag the button's `playwright` input names), and the job `pomwright <version>`
+calls `checks.yaml` with them as `release`, `release-commit` and `playwright-extra`. With `release` set, `package`
+downloads the published tarball (`npm pack`) under the same artifact instead of building; `harness` and `consumer`
+check out `release-commit` and run its tests and scripts; the harness rows are `latest` (run even when it is the pin)
+and the extra version, named after it, with no `pin` row; every setup-node step checks for the newest patch; pnpm comes
+from that commit's `packageManager`; `lint`, `test-server` and `site` are skipped, and `harness-node` too, since `Daily`
+does not set `older-node-lines`. It has no concurrency group, publishes, deploys and gates nothing, and GitHub mails a
+failed scheduled run to whoever created the workflow or last changed its cron line.
+
+## The latest release's tree
+
+`Daily` runs `main`'s `checks.yaml` against the files of the latest release's commit, so what `checks.yaml` calls there
+must keep working with that commit until the next release: `pack-test.sh` and its switches (`POMWRIGHT_TARBALL`,
+`PLAYWRIGHT_VERSION`, `PLAYWRIGHT_INSTALL_ARGS`, `CI`, the arguments it passes on), `scripts/ci-playwright-version.sh
+pin|latest` and its output lines, `scripts/consumer-check.sh [--node-floor] <tarball>`, and the lockfiles the Node cache
+reads. A change that breaks one turns `Daily` red from the next morning until the next release: before merging it, run
+`Daily` on its branch (the *Run workflow* button's branch menu), and make it compatible or merge it knowing that. pnpm's version is the one exception handled in `checks.yaml`: with `release` set it passes no `version` to
+`pnpm/action-setup`, which fails when one differs from the checkout's `packageManager`.
 
 ## Publish and Pages
 
@@ -104,8 +127,8 @@ changeset, waits for the release. When `build` itself is broken and something mu
   in a CommonJS and a `"type": "module"` project; TypeScript 5.0 to the latest release in both decorator modes; and
   Node 20 loading `index.js` for `require` and `index.mjs` for `import` with one shared `PageObject`. Only one stays
   manual, before a release that changes `engines`: npm's `EBADENGINE` warning on a Node version below the new floor.
-- Considered and not planned: a scheduled workflow that tests the latest release against each new Playwright
-  release (GitHub has no event for another repository's releases).
+- The latest release meets each new Playwright release, and Playwright's `next` alpha, in `Daily` (*The workflows*),
+  every morning rather than on an event, since GitHub has no event for another repository's releases.
 
 ## Rules held elsewhere
 
@@ -126,3 +149,5 @@ changeset, waits for the release. When `build` itself is broken and something mu
   release window would let a merge with a changeset in before a release is on npm, and that version would be skipped.
 - Deploy the site from anything but a green `CI` run on `main` or a manual run, or give the released site a
   pre-release banner or a `noindex` meta.
+- Name `Daily` `CI`, put it in `CI`'s concurrency group, or give it a job named `build`: Publish and Pages listen to
+  `CI`, a scheduled run in that group would cancel a waiting push run, and `build` is `main`'s required check.

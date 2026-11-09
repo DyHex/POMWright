@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# actionlint over .github/workflows, with ShellCheck over their run: scripts, then ShellCheck over the scripts the
-# workflows run instead of a run: block. Both tools are pinned here, each version with its SHA-256 (ShellCheck's
+# actionlint over .github/workflows, with ShellCheck over their run: scripts, then ShellCheck over every shell script the
+# repository tracks (actionlint sees a script a run: block calls as that one line). Both tools are pinned here, each version with its SHA-256 (ShellCheck's
 # releases publish none: computed from the release archive), so CI and a local run use the same versions whatever the
 # machine has; they move by hand, since Dependabot does not see them. Linux x86_64, as CI's runners.
 #
@@ -42,7 +42,8 @@ PATH="$TOOLS:$PATH" "$TOOLS/actionlint" -color
 # actionlint prints nothing when it finds nothing
 echo "actionlint ${ACTIONLINT_VERSION}: no problems in $(cd .github/workflows && echo *.yaml)"
 echo "run: scripts checked with ShellCheck $("$TOOLS/shellcheck" --version | sed -n 's/^version: //p')"
-# the scripts the workflows run instead of a run: block (pr.yaml's release window, publish.yaml's guard, the lint job's
-# test of them, and this one)
-"$TOOLS/shellcheck" scripts/release-check.sh scripts/release-check.test.sh scripts/lint-workflows.sh
-echo "scripts/release-check.sh, its test and scripts/lint-workflows.sh checked with ShellCheck"
+# every tracked shell script: those the workflows run instead of a run: block, those run by hand, and this one, read
+# from git, so a new script is checked without a list to keep
+mapfile -t scripts < <(git ls-files '*.sh')
+"$TOOLS/shellcheck" "${scripts[@]}"
+echo "${#scripts[@]} shell scripts checked with ShellCheck: ${scripts[*]}"
