@@ -1,6 +1,6 @@
 # Plan: a daily run of the latest release
 
-Status: **steps 0 to 4 executed** 2026-11-09 (one commit, not pushed); step 5 waits for the pull request's `Daily` run.
+Status: **executed**, steps 0 to 5, 2026-11-09; the folder's audit and deletion before the merge are left.
 On the branch `test/daily-workflow`, beside [PLAN-node-26.md](PLAN-node-26.md). CI only: no consumer-facing change, no
 changeset, no release. See *Execution notes* at the end.
 
@@ -402,3 +402,16 @@ Nothing open. The ShellCheck gap became D15; the stale browsers after an OS upgr
   here changes; the Node 26 plan's commit runs `pnpm test`.
 - **Left:** step 5 after your push, once the pull request's `Daily` is green; the checks after the merge (*Tests*); this
   folder's audit and deletion before the merge.
+- **Afterwards** (your `da076c5`): *Tests and checks* and `daily.yaml`'s header say "Playwright's latest release (a
+  minor or a patch) and its `next` alpha": the `latest` row is the newest stable version in the release's peer range
+  (npm resolves `>=1.64.0 <2.0.0` to 1.64.0, 1.64.1 and 1.65.0, no prerelease), so a patch runs from the first morning
+  after it is published; every alpha on npm is `x.y.0-alpha-…`, so `next` is always the coming minor.
+- **The pull request's runs** on `da076c5` (#67), all green: `PR` (chromium on 26 at the pin and `latest`,
+  `harness-node` on 20, 22 and 24); `Daily` through the temporary trigger: `Download pomwright 3.0.2`, the harness on
+  chromium, firefox and webkit at `latest` and at `1.66.0-alpha-1793916328000`, `Consumer installs`; `Lint`, the site,
+  the test server and `harness-node` skipped. Not read: the jobs' logs (which commit each checked out, which Node patch
+  it set up), which the API gives only with a token.
+- **Step 5**, a commit of its own: the `pull_request` trigger and its comment removed from `daily.yaml`; actionlint
+  passes. From the merge on, `Daily` runs on its schedule and from the *Run workflow* button only.
+- **The audit's search** (docs/releases.md, rule 7) outside this folder: no plan, decision or folder reference; its hits
+  are the script name `ci-daily-targets.sh` and the guide's own words about plans.

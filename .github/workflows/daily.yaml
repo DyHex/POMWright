@@ -19,12 +19,6 @@ on:
         type: string
         required: false
         default: ""
-  # Until this workflow is on main, the only way to run it; removed before the merge
-  pull_request:
-    paths:
-      - .github/workflows/checks.yaml
-      - .github/workflows/daily.yaml
-      - scripts/ci-daily-targets.sh
 
 permissions:
   contents: read
