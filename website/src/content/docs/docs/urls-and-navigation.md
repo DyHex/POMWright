@@ -62,7 +62,7 @@ For two strings, `fullUrl` is `new URL(urlPath, baseUrl).href`, the URL in the f
 | `"https://shop.example"` | `"/søk"` | `https://shop.example/s%C3%B8k` |
 | `"http://localhost:9000"` | `"/orders?tab=1"` | `http://localhost:9000/orders?tab=1` |
 
-Every browser writes a `^` in the path as `%5E`, as `new URL` does on Node 24 while Node 20 and 22 keep it, so
+Every browser writes a `^` in the path as `%5E`, as `new URL` does on Node 24 and 26 while Node 20 and 22 keep it, so
 `fullUrl` writes `%5E` on every Node version. One character is reported differently by the browsers: Chromium writes a
 `|` in the path as `%7C`, where Firefox, WebKit and `fullUrl` keep it. So for a path with `|`,
 `expect(page).toHaveURL(fullUrl)` fails on Chromium; `expectThisPage()` treats `|` and `%7C` as one and matches on

@@ -64,7 +64,7 @@ parent covers its subfolders.
 
 ## Toolchain
 
-- Node 24 and pnpm 12.14.0 for contributors (the `packageManager` field of the root, `test/` and `website/`; CI's
+- Node 26 and pnpm 12.14.0 for contributors (the `packageManager` field of the root, `test/` and `website/`; CI's
   `pnpm/action-setup` steps name the same version; vitest needs Node 22.12 or later). Use pnpm only; pnpm 9.7 and later
   switch to the version the field names. pnpm runs no dependency's install script unless the root
   `pnpm-workspace.yaml` allows it (`allowBuilds`: esbuild, for tsup); a new one fails the install until it is allowed

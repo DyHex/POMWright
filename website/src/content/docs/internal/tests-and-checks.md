@@ -97,8 +97,8 @@ untested merge.
   path of a release in throwaway repositories with a fake npm.
 - **package**: the unit tests, then one build and one tarball, kept as an artifact.
 - **harness**: that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs
-  chromium, `main` all three, on Node 24; one more job per older LTS Node line, from the `engines` floor (20 and 22),
-  runs chromium at the pinned Playwright, on pull requests and `main` alike.
+  chromium, `main` all three, on Node 26; one more job per older LTS Node line, from the `engines` floor (20, 22 and
+  24), runs chromium at the pinned Playwright, on pull requests and `main` alike.
 - **test-server**: once per run, on chromium: every page of the test server opened, every request and WebSocket
   checked, and the server's source and test data scanned, so no page loads anything from another host (a slow host
   once stalled a page's load and made two tests flaky). `test-server-check.sh` runs it, and `pnpm pack-test` runs that
@@ -106,7 +106,11 @@ untested merge.
 - **consumer**: that tarball installed with npm into projects of their own, as consumers install it
   (`scripts/consumer-check.sh`): TypeScript under each module resolution (`node10`, `node16` and `nodenext` from
   CommonJS and ESM, `bundler`), attw, Playwright's runner in a CommonJS and a `"type": "module"` project, and TypeScript
-  5.0 to the latest release in both decorator modes; then, on Node 20, `import` and `require` sharing one copy.
+  5.0 to the latest release in both decorator modes; then, on Node 20, `import` and `require` sharing one copy. Every
+  compile runs without `skipLibCheck`, which would hide an error in POMWright's declarations too, so they are checked
+  from 5.0 on, as [Installation](/POMWright/docs/installation/#typescript-settings) promises. TypeScript 5.0 and 5.1
+  report errors in Node's and Playwright's declarations, which the `@types/node` in use supports from 5.6 only; on
+  those two the check leaves out an error in another package's declarations, and any other fails it.
 - **site**: that tarball installed into `test/`, the documentation's examples compiled, the API reference and the doc
   comments checked, the site built, which fails on a link or an anchor that does not exist, and every diagram rendered
   in Chromium, light and dark.

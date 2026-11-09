@@ -16,18 +16,20 @@ actionlint sees a script a `run:` block calls as that one line; then `scripts/ch
 `pnpm lint:guide`, every relative link and anchor of the contributor guide; then `scripts/release-check.test.sh`, every
 path of the release checks in throwaway repositories with a fake npm), `package` (unit tests, build and pack once, the
 tarball as a run artifact) and `harness` (the browsers the caller passes, each at the Playwright pin and at the latest
-1.x, each testing that tarball), on Node 24, the default, and with the `older-node-lines` input, which `pr.yaml` and
-`main.yaml` set, `harness-node` (chromium at the pin on every LTS Node line below the default, from the `engines` floor:
-a matrix of 20 and 22 in `checks.yaml`, which moves with Node's schedule; issue #55 makes 26 the default and moves 24
-into it); every third-party action is pinned to a commit with its version in a comment, kept current by
+1.x, each testing that tarball), on Node 26, the default (`checks.yaml`'s `NODE_VERSION`, every job's line in one place;
+`publish.yaml` and `pages.yaml` name the same), and with the `older-node-lines` input, which `pr.yaml` and `main.yaml`
+set, `harness-node` (chromium at the pin on every LTS Node line below the default, from the `engines` floor: a matrix
+of 20, 22 and 24 in `checks.yaml`, which moves with Node's schedule: when a newer line is LTS it becomes the default
+and the old default joins the matrix); every third-party action is pinned to a commit with its version in a comment, kept current by
 `.github/dependabot.yml` (monthly, minor and patch updates grouped, each major as a pull request of its own), which also
 proposes the npm versions of the root, `test/` and `website/`, never `@playwright/test`, and holds the majors of
-`typescript` (issue #54) and `@types/node` (issue #55); `test-server` (`test-server-check.sh`), once per run, on
+`typescript` (issue #54) and `@types/node` (it follows the Node line of contributors and CI, by hand); `test-server` (`test-server-check.sh`), once per run, on
 chromium: no page of the test server loads anything from another host; `consumer` (`scripts/consumer-check.sh`): the
 tarball installed with npm into projects of its own, TypeScript under each module resolution, attw, Playwright's runner
-in a CommonJS and a `"type": "module"` project, TypeScript 5.0 to the latest release in both decorator modes, then on
-Node 20 `import` and `require` sharing one copy; `site`: the tarball installed into `test/`, the snippet and coverage
-checks, the site's frozen install and build on Node 24, and every diagram rendered (`scripts/check-diagrams.mjs`).
+in a CommonJS and a `"type": "module"` project, TypeScript 5.0 to the latest release in both decorator modes, without
+`skipLibCheck` (on 5.0 and 5.1 the errors in other packages' declarations, Node's and Playwright's, are left out, and any
+other fails it), then on Node 20 `import` and `require` sharing one copy; `site`: the tarball installed into `test/`, the
+snippet and coverage checks, the site's frozen install and build on Node 26, and every diagram rendered (`scripts/check-diagrams.mjs`).
 `pr.yaml` (`PR`) runs it for every pull request, draft or not, with the harness on chromium only, and for a pull request
 into `main` the job `release` (*Release window*, `scripts/release-check.sh pull-request`, see *The rulesets on `main`*);
 `main.yaml` (`CI`) for pushes to `main` only, on chromium, firefox and webkit, one run at a time (a `concurrency` group
