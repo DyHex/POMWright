@@ -169,10 +169,11 @@ root, `test/` and `website/` once a month, grouped, except `@playwright/test`, w
 ## The daily run
 
 `daily.yaml` (`Daily`) tests the release users install today against what moves beneath it without a change in the
-repository: a new Playwright 1.x, Playwright's next minor, the newest TypeScript and Node patch, and the runner image.
-It runs every morning at 06:17 UTC, an hour after Playwright publishes its nightly alpha, and from its *Run workflow*
-button. `scripts/ci-daily-targets.sh` reads the version npm's `latest` tag names, the commit it was published from, out
-of its provenance attestation, and Playwright's `next` alpha, kept while its release is ahead of Playwright's `latest`.
+repository: Playwright's latest release (a minor or a patch) and its `next` alpha, the newest TypeScript and Node
+patch, and the runner image. It runs every morning at 06:17 UTC, an hour after Playwright publishes its nightly alpha,
+and from its *Run workflow* button.
+`scripts/ci-daily-targets.sh` reads the version npm's `latest` tag names, the commit it was published from, out of its
+provenance attestation, and Playwright's `next` alpha, kept while its release is ahead of Playwright's `latest`.
 `checks.yaml` then runs with that version as `release`: the `package` job downloads the published tarball in place of
 the build, under the same artifact, and the harness and the consumer check check out that commit and run its tests and
 scripts against the tarball; the harness on chromium, firefox and webkit at the latest 1.x and at the alpha, every Node

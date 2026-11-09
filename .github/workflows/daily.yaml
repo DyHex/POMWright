@@ -1,7 +1,7 @@
 name: Daily
 
 # Every morning, the pomwright release users install today (npm's latest), its published tarball, against what moves
-# beneath it without a change here: a new Playwright 1.x, Playwright's next minor (its nightly next alpha), the newest
+# beneath it without a change here: Playwright's latest release (a minor or a patch) and its next alpha, the newest
 # TypeScript and Node patch, and the runner image. checks.yaml runs it with release set: the harness at the latest 1.x
 # and the second version on every browser, and the consumer check, both from the commit the release was published
 # from (scripts/ci-daily-targets.sh reads it from the release's provenance attestation). The Playwright pin is not run:
