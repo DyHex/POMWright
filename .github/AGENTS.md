@@ -22,7 +22,9 @@ set, `harness-node` (chromium at the pin on every LTS Node line below the defaul
 of 20, 22 and 24 in `checks.yaml`, which moves with Node's schedule: when a newer line is LTS it becomes the default
 and the old default joins the matrix); every third-party action is pinned to a commit with its version in a comment, kept current by
 `.github/dependabot.yml` (monthly, minor and patch updates grouped, each major as a pull request of its own), which also
-proposes the npm versions of the root, `test/` and `website/`, never `@playwright/test`, and holds the majors of
+proposes the npm versions of the root and `website/`, never `@playwright/test`, and not `test/`'s (its `pomwright` is
+`file:../.pack/pomwright`, the packed build a checkout does not have, so Dependabot cannot resolve `test/` and has no
+option to build it first; they move by hand, see [test/AGENTS.md](../test/AGENTS.md#commands)), and holds the majors of
 `typescript` (issue #54) and `@types/node` (it follows the Node line of contributors and CI, by hand); `test-server` (`test-server-check.sh`), once per run, on
 chromium: no page of the test server loads anything from another host; `consumer` (`scripts/consumer-check.sh`): the
 tarball installed with npm into projects of its own, TypeScript under each module resolution, attw, Playwright's runner

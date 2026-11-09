@@ -164,7 +164,11 @@ too was rejected: the changesets action would then run on a detached head, and w
 still works there cannot be tried without a release.
 
 Third-party actions are pinned to commits and kept current by Dependabot, which also proposes the npm versions of the
-root, `test/` and `website/` once a month, grouped, except `@playwright/test`, which moves by decision.
+root and `website/` once a month, grouped, except `@playwright/test`, which moves by decision. `test/`'s move by hand:
+its `pomwright` is the packed build in `.pack/`, which a checkout does not have, so Dependabot cannot resolve `test/`
+at all, and it has no option to build the package first. Rejected: installing `pomwright` from npm when `.pack/` is
+missing, since one committed lockfile can record only one of the two, and a run without the build would quietly test
+the published release instead of the change.
 
 ## The daily run
 

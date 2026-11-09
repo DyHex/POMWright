@@ -1,10 +1,12 @@
-# Keeps the commit pins of the GitHub Actions in .github/workflows and the npm dev dependencies of the root, test/ and
-# website/ current: once a month, one grouped pull request of minor and patch updates each, which CI checks like any
-# other. A major update comes as a pull request of its own, so a failing major never holds the routine updates.
-# @playwright/test is left alone: its root and test/ pins are the peer floor, which moves only by decision, together
-# with peerDependencies. Held majors: typescript (issue #54: version 7 has no compiler API yet, which the declaration
-# build and two of the doc checks use) and @types/node (it follows the Node line of contributors and CI, 26, and moves
-# with it by hand).
+# Keeps the commit pins of the GitHub Actions in .github/workflows and the npm dev dependencies of the root and website/
+# current: once a month, one grouped pull request of minor and patch updates each, which CI checks like any other. A
+# major update comes as a pull request of its own, so a failing major never holds the routine updates. test/ has no
+# entry: its pomwright is file:../.pack/pomwright, the packed build, which a checkout does not have, so Dependabot
+# cannot resolve test/ at all (and has no option to build it first); test/'s dependencies move by hand with each
+# month's pull request for the root (test/AGENTS.md). @playwright/test is left alone: its root and test/ pins are the
+# peer floor, which moves only by decision, together with peerDependencies. Held majors: typescript (issue #54: version
+# 7 has no compiler API yet, which the declaration build and two of the doc checks use) and @types/node (it follows the
+# Node line of contributors and CI, 26, and moves with it by hand).
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -41,22 +43,6 @@ updates:
         update-types: ["version-update:semver-major"]
     groups:
       root:
-        patterns:
-          - "*"
-        update-types:
-          - minor
-          - patch
-  - package-ecosystem: npm
-    directory: /test
-    schedule:
-      interval: monthly
-    ignore:
-      - dependency-name: "@playwright/test"
-      - dependency-name: pomwright
-      - dependency-name: "@types/node" # follows the Node line of contributors and CI
-        update-types: ["version-update:semver-major"]
-    groups:
-      harness:
         patterns:
           - "*"
         update-types:
