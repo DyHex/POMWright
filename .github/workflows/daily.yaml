@@ -1,0 +1,53 @@
+name: Daily
+
+# Every morning, the pomwright release users install today (npm's latest), its published tarball, against what moves
+# beneath it without a change here: Playwright's latest release (a minor or a patch) and its next alpha, the newest
+# TypeScript and Node patch, and the runner image. checks.yaml runs it with release set: the harness at the latest 1.x
+# and the second version on every browser, and the consumer check, both from the commit the release was published
+# from (scripts/ci-daily-targets.sh reads it from the release's provenance attestation). The Playwright pin is not run:
+# CI tested the release there before it was published. It publishes, deploys and gates nothing; GitHub mails a failed
+# scheduled run to whoever created this workflow or last changed the cron line. Run workflow in the Actions tab runs it
+# on demand, on the branch picked there, optionally with another Playwright version for the second row.
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # an hour after Playwright publishes its nightly alpha, off the hour
+  workflow_dispatch:
+    inputs:
+      playwright:
+        description: Playwright for the second harness row, a version or a dist-tag (beta, next-pending); empty, next
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve the release and Playwright
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.targets.outputs.release }}
+      commit: ${{ steps.targets.outputs.commit }}
+      playwright-extra: ${{ steps.targets.outputs.playwright-extra }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # the runner's own Node and npm: the script only reads npm and an attestation
+      - id: targets
+        name: Resolve the release, its commit and the second Playwright version
+        env:
+          PLAYWRIGHT_REQUEST: ${{ inputs.playwright }}
+        run: bash scripts/ci-daily-targets.sh
+
+  # Named after the release, so its checks read "pomwright 3.0.2 / Harness (…)", apart from PR's and CI's "checks / …";
+  # no job here is named build, the check main requires.
+  release:
+    name: pomwright ${{ needs.resolve.outputs.release }}
+    needs: resolve
+    uses: ./.github/workflows/checks.yaml
+    with:
+      browsers: '["chromium", "firefox", "webkit"]'
+      release: ${{ needs.resolve.outputs.release }}
+      release-commit: ${{ needs.resolve.outputs.commit }}
+      playwright-extra: ${{ needs.resolve.outputs.playwright-extra }}

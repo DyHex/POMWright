@@ -77,7 +77,7 @@ The harness installs the tarball `pnpm pack` produced, extracted, so it tests wh
   [tests and checks](/POMWright/internal/tests-and-checks/#type-checks)).
 
 CI's `consumer` job installs the same tarball with npm into projects of their own: TypeScript under every module
-resolution and from 5.0 to the latest release, attw, Playwright's runner in a CommonJS and an ESM project, and Node 20
+resolution and from 5.0 to the latest release, without `skipLibCheck`, attw, Playwright's runner in a CommonJS and an ESM project, and Node 20
 loading both entries (see [CI](/POMWright/internal/tests-and-checks/#ci)).
 
 ## A build for testing before a release

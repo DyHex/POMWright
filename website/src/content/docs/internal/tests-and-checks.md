@@ -91,14 +91,14 @@ the jobs tested the merge commit, so after the base moved a documentation-only p
 untested merge.
 
 - **lint**: biome over the whole repository, warnings failing; actionlint over the workflows, with shellcheck over
-  their scripts and the scripts they run instead, both pinned by version and checksum in `scripts/lint-workflows.sh`,
+  their scripts and over every shell script the repository tracks, both pinned by version and checksum in `scripts/lint-workflows.sh`,
   which `pnpm lint:workflows` runs locally too; every relative link and anchor of the contributor guide
   (`scripts/check-guide-links.mjs`); then the release checks' test (`scripts/release-check.test.sh`), which runs every
   path of a release in throwaway repositories with a fake npm.
 - **package**: the unit tests, then one build and one tarball, kept as an artifact.
 - **harness**: that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs
-  chromium, `main` all three, on Node 24; one more job per older LTS Node line, from the `engines` floor (20 and 22),
-  runs chromium at the pinned Playwright, on pull requests and `main` alike.
+  chromium, `main` all three, on Node 26; one more job per older LTS Node line, from the `engines` floor (20, 22 and
+  24), runs chromium at the pinned Playwright, on pull requests and `main` alike.
 - **test-server**: once per run, on chromium: every page of the test server opened, every request and WebSocket
   checked, and the server's source and test data scanned, so no page loads anything from another host (a slow host
   once stalled a page's load and made two tests flaky). `test-server-check.sh` runs it, and `pnpm pack-test` runs that
@@ -106,7 +106,11 @@ untested merge.
 - **consumer**: that tarball installed with npm into projects of their own, as consumers install it
   (`scripts/consumer-check.sh`): TypeScript under each module resolution (`node10`, `node16` and `nodenext` from
   CommonJS and ESM, `bundler`), attw, Playwright's runner in a CommonJS and a `"type": "module"` project, and TypeScript
-  5.0 to the latest release in both decorator modes; then, on Node 20, `import` and `require` sharing one copy.
+  5.0 to the latest release in both decorator modes; then, on Node 20, `import` and `require` sharing one copy. Every
+  compile runs without `skipLibCheck`, which would hide an error in POMWright's declarations too, so they are checked
+  from 5.0 on, as [Installation](/POMWright/docs/installation/#typescript-settings) promises. TypeScript 5.0 and 5.1
+  report errors in Node's and Playwright's declarations, which the `@types/node` in use supports from 5.6 only; on
+  those two the check leaves out an error in another package's declarations, and any other fails it.
 - **site**: that tarball installed into `test/`, the documentation's examples compiled, the API reference and the doc
   comments checked, the site built, which fails on a link or an anchor that does not exist, and every diagram rendered
   in Chromium, light and dark.
@@ -161,3 +165,28 @@ still works there cannot be tried without a release.
 
 Third-party actions are pinned to commits and kept current by Dependabot, which also proposes the npm versions of the
 root, `test/` and `website/` once a month, grouped, except `@playwright/test`, which moves by decision.
+
+## The daily run
+
+`daily.yaml` (`Daily`) tests the release users install today against what moves beneath it without a change in the
+repository: Playwright's latest release (a minor or a patch) and its `next` alpha, the newest TypeScript and Node
+patch, and the runner image. It runs every morning at 06:17 UTC, an hour after Playwright publishes its nightly alpha,
+and from its *Run workflow* button.
+`scripts/ci-daily-targets.sh` reads the version npm's `latest` tag names, the commit it was published from, out of its
+provenance attestation, and Playwright's `next` alpha, kept while its release is ahead of Playwright's `latest`.
+`checks.yaml` then runs with that version as `release`: the `package` job downloads the published tarball in place of
+the build, under the same artifact, and the harness and the consumer check check out that commit and run its tests and
+scripts against the tarball; the harness on chromium, firefox and webkit at the latest 1.x and at the alpha, every Node
+set up at its newest patch. The button's `playwright` input runs another version or dist-tag in place of the alpha, a
+`beta` the day before a release, say. Not run: the Playwright pin, `lint`, `test-server` and `site`, since `CI` tested
+the release there before it was published and a published commit with frozen lockfiles gives them nothing new. A
+failure fails the run, a failing alpha included, so it is the early warning; `Daily` publishes, deploys and gates
+nothing. What it needs from the release's scripts is listed in
+[`.github/AGENTS.md`](https://github.com/DyHex/POMWright/blob/main/.github/AGENTS.md).
+
+Rejected: a schedule in `main.yaml`, whose concurrency group a scheduled run would share with pushes, so it could cancel
+a waiting push run whose commit Publish and Pages then never act on; `main`'s tip in place of the release, which is not
+what users install; the `v<version>` tag in place of the attestation's commit, since the tag can follow the publish late
+or not at all; Playwright's `beta` in place of `next`, since a beta is ahead of `latest` only a day or two before a
+release, and its fixes reach the alphas first; and a run only when Playwright publishes a release, which GitHub has no
+event for, in place of a run every day.

@@ -32,6 +32,8 @@ pnpm build
 # Pack as npm would publish, then set the version in the packed manifest only and pack the same files again.
 PACKED_FILE="$(pnpm pack --pack-destination "$WORK_DIR" | tail -n 1)"
 tar -xzf "$PACKED_FILE" -C "$WORK_DIR"
+# The single-quoted text is the JavaScript program node runs; its ${…} is a template literal, not a shell expansion.
+# shellcheck disable=SC2016
 node -e '
 	const fs = require("node:fs");
 	const [file, version] = process.argv.slice(1);

@@ -2,9 +2,9 @@
 # website/ current: once a month, one grouped pull request of minor and patch updates each, which CI checks like any
 # other. A major update comes as a pull request of its own, so a failing major never holds the routine updates.
 # @playwright/test is left alone: its root and test/ pins are the peer floor, which moves only by decision, together
-# with peerDependencies. Held majors, each tracked by an issue: typescript (#54: version 7 has no compiler API yet, which
-# the declaration build and two of the doc checks use) and @types/node (#55: it follows the Node version of contributors and
-# CI, 24).
+# with peerDependencies. Held majors: typescript (issue #54: version 7 has no compiler API yet, which the declaration
+# build and two of the doc checks use) and @types/node (it follows the Node line of contributors and CI, 26, and moves
+# with it by hand).
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -37,7 +37,7 @@ updates:
       - dependency-name: "@playwright/test"
       - dependency-name: typescript # issue #54
         update-types: ["version-update:semver-major"]
-      - dependency-name: "@types/node" # issue #55
+      - dependency-name: "@types/node" # follows the Node line of contributors and CI
         update-types: ["version-update:semver-major"]
     groups:
       root:
@@ -53,7 +53,7 @@ updates:
     ignore:
       - dependency-name: "@playwright/test"
       - dependency-name: pomwright
-      - dependency-name: "@types/node" # issue #55
+      - dependency-name: "@types/node" # follows the Node line of contributors and CI
         update-types: ["version-update:semver-major"]
     groups:
       harness:

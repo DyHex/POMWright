@@ -188,7 +188,8 @@ it before working there. Read it before running these commands, probing a claim,
   export also gets a seed in `emitSeeds.ts`, which the generator asks for.
 - The harness runs on chromium, firefox and webkit (`pnpm pack-test` and CI on `main`; pull requests run chromium
   only, so a firefox- or webkit-only failure shows in `CI` after the merge and blocks Publish until fixed), in CI at
-  the Playwright pin and at the latest 1.x in the peer range. A real behavior difference between browsers on one Playwright version uses the `browserName` fixture (as
+  the Playwright pin and at the latest 1.x in the peer range; `Daily` runs the latest release's harness every morning
+  at the latest 1.x and at Playwright's `next` alpha ([.github/AGENTS.md](../.github/AGENTS.md#the-workflows)). A real behavior difference between browsers on one Playwright version uses the `browserName` fixture (as
   `sessionStorage.spec.ts` does for WebKit's iframe storage). Rendered locator strings depend on the Playwright
   version, not the browser.
 - When changing locator behavior: add focused specs next to the existing ones, keep the existing coverage (add,

@@ -4,13 +4,20 @@ name: Checks
 # run, whatever changed, so a run always tests what it reports on (on a pull request, GitHub's merge commit); skipping
 # jobs by what changed saved minutes on docs-only pushes only. Lint runs biome and actionlint.
 # The package job builds and packs once; every harness job, the consumer job and the site job test that tarball. The harness runs on the
-# browsers the caller asks for, each at the Playwright pin and at the latest 1.x, on Node 24, the default; with
-# older-node-lines (set by pr.yaml and main.yaml) also on chromium at the pin on every LTS Node line below the default,
-# from the engines floor: 20 and 22. The list moves with Node's schedule: a line joins when it is LTS, the floor's line
-# leaves when engines moves, and issue #55 makes 26 the default and moves 24 here (the unit tests stay on the default:
-# vitest needs 22.12). The test-server job checks, once per run, that no page of the test server loads anything from
-# another host. Third-party actions are pinned to commits, the version in a comment; Dependabot
-# (.github/dependabot.yml) proposes updates.
+# browsers the caller asks for, each at the Playwright pin and at the latest 1.x, on Node 26, the default (NODE_VERSION
+# below, every job's line in one place); with older-node-lines (set by pr.yaml and main.yaml) also on chromium at the pin
+# on every LTS Node line below the default, from the engines floor: 20, 22 and 24. The list moves with Node's schedule:
+# when a newer line is LTS it becomes the default and the old default joins the list, and the floor's line leaves when
+# engines moves (the unit tests stay on the default: vitest needs 22.12). The test-server job checks, once per run, that
+# no page of the test server loads anything from another host. Third-party actions are pinned to commits, the version in
+# a comment; Dependabot (.github/dependabot.yml) proposes updates.
+# With release set (daily.yaml, the Daily workflow), the run tests a published version instead of the checkout: the
+# package job downloads its tarball from npm in place of the build, under the same artifact; harness and consumer check
+# out release-commit, the commit it was published from, and run its tests and scripts; the harness runs the latest 1.x,
+# even when it is the pin, and playwright-extra when set, with no pin row; every setup-node checks for the newest patch;
+# lint, test-server and site are skipped, since a published commit gives them nothing new. pnpm's version then comes
+# from that commit's packageManager, since pnpm/action-setup fails when an explicit version differs from it. With
+# release empty, as pr.yaml and main.yaml call it, every job is as described above.
 
 on:
   workflow_call:
@@ -23,13 +30,29 @@ on:
         description: Also run the chromium harness at the pin on each older LTS Node line, from the engines floor
         type: boolean
         default: false
+      release:
+        description: A pomwright version on npm to test in place of the checkout (daily.yaml); empty, the checkout
+        type: string
+        default: ""
+      release-commit:
+        description: With release, the commit it was published from, whose tests and scripts run against it
+        type: string
+        default: ""
+      playwright-extra:
+        description: With release, a second Playwright version for the harness beside the latest 1.x; empty, none
+        type: string
+        default: ""
 
 permissions:
   contents: read
 
+env:
+  NODE_VERSION: 26.x # the default line of every job; publish.yaml and pages.yaml name the same
+
 jobs:
   lint:
     name: Lint
+    if: inputs.release == ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -38,7 +61,7 @@ jobs:
           version: 12.14.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.x
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
@@ -54,21 +77,45 @@ jobs:
         run: bash scripts/release-check.test.sh
 
   package:
-    name: Unit tests and package
+    name: ${{ inputs.release == '' && 'Unit tests and package' || format('Download pomwright {0}', inputs.release) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - if: inputs.release == ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: inputs.release == ''
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           version: 12.14.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - if: inputs.release == ''
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.x
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test:unit
-      - name: Build and pack
+      - if: inputs.release == ''
+        run: pnpm install --frozen-lockfile
+      - if: inputs.release == ''
+        run: pnpm test:unit
+      - if: inputs.release == ''
+        name: Build and pack
         run: bash pack-build.sh pomwright-test-build.tgz
+      # With release: the published tarball itself, which npm checks against the registry's integrity on the way in;
+      # no checkout, so no lockfile for a cache
+      - if: inputs.release != ''
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          check-latest: true
+      - if: inputs.release != ''
+        name: Download the published tarball
+        env:
+          RELEASE: ${{ inputs.release }}
+        shell: bash # with pipefail, so a failing npm pack fails here
+        run: |
+          file="$(npm pack "pomwright@$RELEASE" | tail -n 1)"
+          mv "$file" pomwright-test-build.tgz
+          packed="$(tar -xzOf pomwright-test-build.tgz package/package.json | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).version')"
+          echo "$file holds pomwright $packed"
+          test "$packed" = "$RELEASE"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pomwright-package
@@ -84,27 +131,46 @@ jobs:
       fail-fast: false
       matrix:
         browser: ${{ fromJSON(inputs.browsers) }}
-        playwright: [pin, latest]
+        # pin and latest; with release, latest and, when set, playwright-extra, the row named after its version
+        playwright: ${{ fromJSON(inputs.release == '' && '["pin", "latest"]' || (inputs.playwright-extra == '' && '["latest"]' || format('["latest", "{0}"]', inputs.playwright-extra))) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release-commit }} # empty: the commit of the event
       # First, with the runner's own Node: a skipped job must not set up the pnpm cache, because setup-node's post
       # step fails when the store it should save does not exist.
       - id: playwright
         name: Resolve the Playwright version
         env:
           ROW: ${{ matrix.playwright }}
-        run: bash scripts/ci-playwright-version.sh "$ROW"
+          RELEASE: ${{ inputs.release }}
+        run: |
+          if [[ "$ROW" != pin && "$ROW" != latest ]]; then
+            echo "playwright-extra: $ROW"
+            { echo "version=$ROW"; echo "skip=false"; } >>"$GITHUB_OUTPUT"
+          elif [[ -z "$RELEASE" ]]; then
+            bash scripts/ci-playwright-version.sh "$ROW"
+          else
+            # No pin row with release: latest runs even when it is the pin, as the pin. The checked-out script writes
+            # its own outputs when GITHUB_OUTPUT is set, so it runs without and this step writes them.
+            resolved="$(GITHUB_OUTPUT='' bash scripts/ci-playwright-version.sh "$ROW")"
+            echo "$resolved"
+            version="$(sed -n 's/^version=//p' <<<"$resolved")"
+            if grep -qx 'skip=true' <<<"$resolved"; then version=""; fi
+            { echo "version=$version"; echo "skip=false"; } >>"$GITHUB_OUTPUT"
+          fi
       - if: steps.playwright.outputs.skip == 'true'
         name: The latest Playwright is the pin; the pin row runs it
         run: echo "Nothing to run."
       - if: steps.playwright.outputs.skip != 'true'
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
-          version: 12.14.0
+          version: ${{ inputs.release == '' && '12.14.0' || '' }} # with release, the commit's packageManager
       - if: steps.playwright.outputs.skip != 'true'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.x
+          node-version: ${{ env.NODE_VERSION }}
+          check-latest: ${{ inputs.release != '' }}
           cache: pnpm
           cache-dependency-path: |
             pnpm-lock.yaml
@@ -130,7 +196,7 @@ jobs:
           path: test/playwright-report
           retention-days: 30
 
-  # The chromium harness at the pin on each LTS Node line below the default (Node 24), from the engines floor.
+  # The chromium harness at the pin on each LTS Node line below the default (Node 26), from the engines floor.
   harness-node:
     name: Harness (chromium, Playwright pin, Node ${{ matrix.node }})
     needs: package
@@ -139,7 +205,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ["20", "22"]
+        node: ["20", "22", "24"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -175,6 +241,7 @@ jobs:
   test-server:
     name: "Test server: no external requests"
     needs: package
+    if: inputs.release == ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -183,7 +250,7 @@ jobs:
           version: 12.14.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.x
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: test/pnpm-lock.yaml
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -213,9 +280,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release-commit }} # empty: the commit of the event
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.x
+          node-version: ${{ env.NODE_VERSION }}
+          check-latest: ${{ inputs.release != '' }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: pomwright-package
@@ -226,6 +296,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 20.x
+          check-latest: ${{ inputs.release != '' }}
       - name: import and require share one copy on Node 20
         shell: bash
         run: bash scripts/consumer-check.sh --node-floor "$RUNNER_TEMP/package/pomwright-test-build.tgz"
@@ -236,6 +307,7 @@ jobs:
   site:
     name: Documentation and site
     needs: package
+    if: inputs.release == ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -244,7 +316,7 @@ jobs:
           version: 12.14.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.x
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: |
             pnpm-lock.yaml
