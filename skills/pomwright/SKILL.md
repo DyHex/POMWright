@@ -187,8 +187,8 @@ way a user finds it.
 | task | read |
 | --- | --- |
 | register locators: the ten methods, `filter`, `nth`, `describe`, `getById`, frames | [references/registering.md](references/registering.md) |
-| paths, their rules, the registry, `createRegistryWithAccessors`, `verify`, `strictChains` | [Paths and the registry](https://dyhex.github.io/POMWright/docs/locator-paths/) |
-| `getNestedLocator`, `getLocator`, queries (`getLocatorSchema`, `update`, `replace`, `skip`) | [Resolving locators](https://dyhex.github.io/POMWright/docs/resolving-locators/), [Queries](https://dyhex.github.io/POMWright/docs/queries/) |
+| paths, their rules, the registry, `createRegistryWithAccessors`, `verify`, `strictChains`, when the page changes | [references/paths-and-registry.md](references/paths-and-registry.md) |
+| `getNestedLocator`, `getLocator`, several matches, queries (`getLocatorSchema`, `update`, `replace`, `skip`), one row or card among several | [references/resolving-and-queries.md](references/resolving-and-queries.md) |
 | share a locator (reuse by path) or make variants (`createReusable`) | [Reusing locators](https://dyhex.github.io/POMWright/docs/reusing-locators/) |
 | write a page object, its lifecycle, actions after navigation | [Page objects](https://dyhex.github.io/POMWright/docs/page-objects/) |
 | URLs and the navigation helper | [URLs and navigation](https://dyhex.github.io/POMWright/docs/urls-and-navigation/) |

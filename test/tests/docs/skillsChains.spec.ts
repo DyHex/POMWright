@@ -131,6 +131,76 @@ skillTest("skills/pomwright/references/registering.md", async ({ page }) => {
 	);
 });
 
+skillTest("skills/pomwright/references/paths-and-registry.md", async ({ page }) => {
+	// segments without a locator
+	const { registry } = createRegistryWithAccessors<"main.form@login" | "main.form@login.button.submit">(page);
+	registry.add("main.form@login").getByRole("form", { name: "Log in" });
+	registry.add("main.form@login.button.submit").getByRole("button", { name: "Log in" });
+	shows(chain(registry.getNestedLocator("main.form@login.button.submit"))).toBe(
+		"getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })",
+	);
+});
+
+skillTest("skills/pomwright/references/resolving-and-queries.md", async ({ page }) => {
+	// a row by its text
+	const orders = createRegistryWithAccessors<
+		"main" | "main.table@orders" | "main.table@orders.row" | "main.table@orders.row.button@cancel"
+	>(page).registry;
+	orders.add("main").locator("main");
+	orders.add("main.table@orders").getByRole("table", { name: "Orders" });
+	orders.add("main.table@orders.row").getByRole("row");
+	orders.add("main.table@orders.row.button@cancel").getByRole("button", { name: "Cancel" });
+	shows(
+		chain(
+			orders
+				.getLocatorSchema("main.table@orders.row.button@cancel")
+				.filter("main.table@orders.row", { hasText: "ORD-1042" })
+				.getNestedLocator(),
+		),
+	).toBe(
+		"locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })",
+	);
+
+	// a card by its heading's exact name
+	const products = createRegistryWithAccessors<
+		| "main.list@products"
+		| "main.list@products.card"
+		| "main.list@products.card.heading"
+		| "main.list@products.card.button@addToCart"
+	>(page).registry;
+	products.add("main.list@products").getByRole("list", { name: "Products" });
+	products.add("main.list@products.card").getByRole("listitem");
+	products.add("main.list@products.card.heading").getByRole("heading");
+	products.add("main.list@products.card.button@addToCart").getByRole("button", { name: "Add to cart" });
+	const heading = products
+		.getLocatorSchema("main.list@products.card.heading")
+		.update()
+		.getByRole({ name: "Lamp", exact: true })
+		.getLocator();
+	const addToCart = products
+		.getLocatorSchema("main.list@products.card.button@addToCart")
+		.filter("main.list@products.card", { has: heading })
+		.getNestedLocator();
+	shows(chain(addToCart)).toBe(
+		"getByRole('list', { name: 'Products' }).getByRole('listitem').filter({ has: getByRole('heading', { name: 'Lamp', exact: true }) }).getByRole('button', { name: 'Add to cart' })",
+	);
+	// what the file says the two filters match. setContent stands in for a page the test server serves: which elements
+	// a chain matches depends on the DOM alone, so the stand-in hides nothing a served page would add
+	await page.setContent(
+		`<ul aria-label="Products">
+			<li><h2>Desk lamp</h2><button>Add to cart</button></li>
+			<li><h2>Lamp</h2><button data-card="lamp">Add to cart</button></li>
+		</ul>`,
+	);
+	const byText = products
+		.getLocatorSchema("main.list@products.card.button@addToCart")
+		.filter("main.list@products.card", { hasText: "Lamp" })
+		.getNestedLocator();
+	await expect(byText).toHaveCount(2);
+	await expect(addToCart).toHaveCount(1);
+	await expect(addToCart).toHaveAttribute("data-card", "lamp");
+});
+
 /** Every Markdown file under skills/, as paths from the repository root. */
 const skillFiles = (dir: string): string[] =>
 	readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
