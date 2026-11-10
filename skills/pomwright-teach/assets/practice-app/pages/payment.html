@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Payment | Practice shop</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header>
+    <nav aria-label="Main">
+      <a href="/">Shop</a>
+      <a href="/products">Products</a>
+      <a href="/cart">Cart</a>
+      <a href="/login">Log in</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Payment</h1>
+    <section aria-label="Card details">
+      <iframe title="Card form" src="/payment/card"></iframe>
+    </section>
+  </main>
+  <div role="dialog" aria-label="Cookies" hidden>
+    <p>We use cookies to remember your cart.</p>
+    <button type="button">Accept all</button>
+    <button type="button">Reject all</button>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

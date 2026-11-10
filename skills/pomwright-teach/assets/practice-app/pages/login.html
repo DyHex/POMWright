@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Log in | Practice shop</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header>
+    <nav aria-label="Main">
+      <a href="/">Shop</a>
+      <a href="/products">Products</a>
+      <a href="/cart">Cart</a>
+      <a href="/login">Log in</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Log in</h1>
+    <form aria-label="Log in">
+      <label>Email <input type="email" name="email"></label>
+      <label>Password <input type="password" name="password"></label>
+      <button type="submit">Log in</button>
+    </form>
+  </main>
+  <div role="dialog" aria-label="Cookies" hidden>
+    <p>We use cookies to remember your cart.</p>
+    <button type="button">Accept all</button>
+    <button type="button">Reject all</button>
+  </div>
+  <script src="/app.js"></script>
+  <script>
+    document.querySelector('form[aria-label="Log in"]').addEventListener("submit", (event) => {
+      event.preventDefault();
+      location.assign("/account/42");
+    });
+  </script>
+</body>
+</html>

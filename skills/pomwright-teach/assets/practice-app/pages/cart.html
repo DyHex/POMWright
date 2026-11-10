@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Cart | Practice shop</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header>
+    <nav aria-label="Main">
+      <a href="/">Shop</a>
+      <a href="/products">Products</a>
+      <a href="/cart">Cart</a>
+      <a href="/login">Log in</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Cart</h1>
+    <table aria-label="Cart">
+      <thead><tr><th>Product</th><th>Quantity</th><th>Remove</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="empty" hidden>Your cart is empty</p>
+    <a href="/payment">Checkout</a>
+  </main>
+  <div role="dialog" aria-label="Cookies" hidden>
+    <p>We use cookies to remember your cart.</p>
+    <button type="button">Accept all</button>
+    <button type="button">Reject all</button>
+  </div>
+  <script src="/app.js"></script>
+  <script>
+    const render = () => {
+      const cart = practiceShop.cart();
+      const body = document.querySelector('table[aria-label="Cart"] tbody');
+      body.replaceChildren();
+      for (const item of cart.items) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${item.name}</td><td>${item.quantity}</td><td><button type="button">Remove</button></td>`;
+        row.querySelector("button").addEventListener("click", () => {
+          practiceShop.removeFromCart(item.name);
+          render();
+        });
+        body.append(row);
+      }
+      document.querySelector(".empty").hidden = cart.items.length > 0;
+    };
+    render();
+  </script>
+</body>
+</html>
