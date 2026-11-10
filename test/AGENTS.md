@@ -151,7 +151,8 @@ it before working there. Read it before running these commands, probing a claim,
   lines in its `cause`), `logging/` (the `log` fixture's attachments, read by an auto fixture torn
   down after it), `step/`, `testApp/`, `docs/` (`docsChains.spec.ts`: every chain the site and the README show in a
   `text` block, a code comment or the running text, rebuilt through the packed package, one test per page, which also
-  checks that its page shows every chain, selector and message it compares), `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
+  checks that its page shows every chain, selector and message it compares; its helpers and that page check are in
+  `chains.ts`, for every chain spec), `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
   published entries, one shared copy, closed deep imports, the manifest; `packageFiles.spec.ts`, the installed
   package's exact file list; `publicTypes.typecheck.ts`, `publicTypes.emit.ts` and `stepLegacyDecorators.typecheck.ts`,
   compile-only, the last also under `experimentalDecorators`; `emitSeeds.ts`, a value of every export, from which the

@@ -1,109 +1,20 @@
-import { readFileSync } from "node:fs";
 import path from "node:path";
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { createRegistryWithAccessors, PageObject } from "pomwright";
+import { chain, checkThatPagesShow, errorLines, errorMessage, nested, selector, shows } from "./chains";
 
 // Every locator chain the documentation shows, in a `text` block, a code comment or the running text, rebuilt here
-// through the packed package and compared, one test per page (its path under website/src/content/docs, or README.md). A page's examples
-// are copied as written; a chain is the locator as Playwright prints it without a description, which a resolved
-// locator otherwise prints instead (`describe("")`). A selector the page shows on its own is compared through
-// `page.locator(selector)`, which Playwright prints as it prints the registry's. Each test also reads its page and
-// checks that it shows every chain, selector and message compared here, so a change on either side fails here until
-// the page and this spec change together. Where a test needs a document, it sets the page's example with
-// page.setContent, a stand-in for a page the test server serves: a chain, and the strict mode error Playwright gives
-// for it, depend on the DOM alone, however the document arrived, so it could hide only what loading a page brings
-// (scripts, frames, another origin), which no page's message here depends on.
-
-const chain = (locator: Locator) => `${locator.describe("")}`;
+// through the packed package and compared, one test per page (its path under website/src/content/docs, or README.md),
+// with the helpers and the page check of ./chains.ts. A page's examples are copied as written. Where a test needs a
+// document, it sets the page's example with page.setContent, a stand-in for a page the test server serves: a chain, and
+// the strict mode error Playwright gives for it, depend on the DOM alone, however the document arrived, so it could hide
+// only what loading a page brings (scripts, frames, another origin), which no page's message here depends on.
 
 const root = path.join(__dirname, "../../..");
-/** What the page a test is named after must show, gathered as its comparisons run. */
-const shownOnPage: string[] = [];
-/** Renderings compared in place of a selector the page shows: the selector is what the page must hold. */
-const renderings = new Set<string>();
-const onPage = (shown: string) => {
-	if (!renderings.has(shown)) {
-		shownOnPage.push(shown);
-	}
-};
-/** A selector the page shows, rendered as Playwright prints a locator built from it. */
-const selector = (page: Page, shown: string) => {
-	onPage(shown);
-	const rendered = `${page.locator(shown)}`;
-	renderings.add(rendered);
-	return rendered;
-};
-/** A selector the page shows under `main`, rendered as Playwright prints the nested locator. */
-const nested = (page: Page, shown: string) => {
-	onPage(shown);
-	const rendered = `${page.locator("main").locator(shown)}`;
-	renderings.add(rendered);
-	return rendered;
-};
-// A line of Playwright's strict mode error, as the page shows it: without the numbering and the call's prefix.
-const asShown = (line: string) => line.replace(/^\s+\d\) /, "").replace(/^locator\.click: Error: /, "");
-// Firefox names two elements and then "...", which the page leaves out on purpose: it shows Chromium's and WebKit's.
-const FIREFOX_ELLIPSIS = "    ...";
 
-/** `expect.soft`, which also records what the page must show. */
-const shows = (actual: unknown) => ({
-	toBe: (expected: string) => {
-		expect.soft(actual).toBe(expected);
-		onPage(expected);
-	},
-	toContain: (expected: string) => {
-		expect.soft(actual).toContain(expected);
-		onPage(expected);
-	},
-	toEqual: (expected: string[]) => {
-		expect.soft(actual).toEqual(expected);
-		for (const line of expected) {
-			if (line !== FIREFOX_ELLIPSIS) {
-				onPage(asShown(line));
-			}
-		}
-	},
-	toMatch: (expected: RegExp) => expect.soft(actual).toMatch(expected),
-});
-
-// a page may break a chain over lines, in a comment or a `text` block: compared without line breaks, indentation and
-// comment markers too
-const flatten = (text: string) => text.replace(/\n\s*(\/\/|#)?\s*/g, "");
-
-test.beforeEach(() => {
-	shownOnPage.length = 0;
-	renderings.clear();
-});
-
-test.afterEach(() => {
-	const title = test.info().title;
-	const text = readFileSync(
-		title === "README.md" ? path.join(root, "README.md") : path.join(root, "website/src/content/docs", title),
-		"utf8",
-	);
-	const flat = flatten(text);
-	for (const shown of shownOnPage) {
-		expect.soft(text.includes(shown) || flat.includes(shown), `${title} shows ${JSON.stringify(shown)}`).toBe(true);
-	}
-});
-
-/** The error message an action throws on the blank page, whose call log shows the chain Playwright waited for. */
-const errorMessage = async (action: Promise<unknown>) =>
-	(
-		await action.then(
-			() => new Error("no error"),
-			(caught: Error) => caught,
-		)
-	).message;
-
-/** The first lines of the error an action throws, for Playwright's strict mode message. */
-const errorLines = async (action: Promise<unknown>, count: number) => {
-	const error = await action.then(
-		() => new Error("no error"),
-		(caught: Error) => caught,
-	);
-	return error.message.split("\n").slice(0, count);
-};
+checkThatPagesShow((title) =>
+	title === "README.md" ? path.join(root, "README.md") : path.join(root, "website/src/content/docs", title),
+);
 
 // the registry of orders.locators.ts on Queries and on the LocatorQueryBuilder page
 type OrdersPaths = "main" | "main.list" | "main.list.item" | "main.button@save";
