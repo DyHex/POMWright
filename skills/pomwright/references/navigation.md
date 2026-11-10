@@ -14,7 +14,8 @@ A page object's `baseUrl` and `urlPath`, the `fullUrl` they make, and its `navig
 
 Every page object has its own origin, `baseUrl`, and its own path, `urlPath`, so one Playwright project tests several
 sites without a shared `baseURL`. The origin comes from the app's base class, read from the environment; a page object
-passes only its path.
+passes only its path. Playwright's `baseURL` works beside it: with one origin, a config whose `baseURL` reads the same
+value makes Playwright's relative URLs reach the page objects' origin.
 
 - A string `baseUrl` is an origin: scheme, host, optional port, nothing after it (`https://shop.example`,
   `http://localhost:9000`).

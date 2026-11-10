@@ -2,7 +2,7 @@
 name: pomwright
 description: >-
   Writes, reviews and refactors Playwright tests that use POMWright (the pomwright package): page objects
-  (PageObject), dot-delimited locator paths and locator modules (add, getNestedLocator, getLocator, getLocatorSchema,
+  (PageObject, or the project's own classes, functions or fixtures over a registry), dot-delimited locator paths and locator modules (add, getNestedLocator, getLocator, getLocatorSchema,
   createReusable, createRegistryWithAccessors), fixtures and test data, navigation, session storage (SessionStorage,
   seed), the log fixture and the @step decorator. Use it whenever code imports from "pomwright", when a project's tests
   use page objects with locator paths such as "main.form@login.button@login", when setting up or restructuring a
@@ -30,15 +30,33 @@ Read the version in `node_modules/pomwright/package.json`.
 
 ## What POMWright adds, and what stays Playwright
 
-| Playwright's, used as Playwright documents it | POMWright's |
+| Playwright's, used as playwright.dev documents it | what POMWright adds on it |
 | --- | --- |
-| the test runner, `test`, fixtures, `expect`, configuration, projects | a path per locator, a registry that holds one locator per path, and the chain built from a path |
-| locators, auto-waiting, actions, web-first assertions | `PageObject`: a page's paths, its URL, a navigation helper, a check of its registry at construction |
-| `baseURL`, `storageState`, tracing, reports | `SessionStorage`: `page.sessionStorage` with codecs, report steps, and `seed` before an app's first script |
-| `test.step` | `@step()`, a method as a report step; the `log` fixture, report attachments |
+| locators, `filter`, `nth`, chaining | a path per locator, a registry with one locator per path, the chain built from a path, queries for one use |
+| page object classes, `page.goto`, `page.waitForURL`, `baseURL` | `PageObject`, a base class to extend or not: a page's origin and path, a navigation helper, its registry checked at construction |
+| `page.sessionStorage` | `SessionStorage`: codecs, report steps, and `seed` before an app's first script |
+| `test.step` | `@step()`, an async method as a report step |
+| the test runner, `test`, fixtures, configuration, projects | `test` with a `log` fixture, whose entries go into the report |
+| actions, auto-waiting, `expect`, `storageState`, tracing, reports | nothing: a resolved path is an ordinary `Locator` |
 
-Use Playwright for everything in the first column, as playwright.dev documents it. POMWright changes none of it: a
-resolved path is an ordinary `Locator`.
+Use Playwright for everything in the first column, as playwright.dev documents it; POMWright changes none of it. Each
+part in the second column works without the others.
+
+## The user's choices
+
+POMWright leaves these to the project. In a project with tests, follow what it chose; for a new project, or code that
+has not chosen yet, ask the user, saying what each option gives.
+
+- **The shape of the page code**: `PageObject` subclasses, the user's own page object classes, functions, or fixtures.
+  The last three create a registry with `createRegistryWithAccessors<Paths>(page)`, call `registry.verify()` themselves
+  and navigate with Playwright; every shape uses the same locator modules. Each shape, written out, and what it does
+  for you: [guides/choosing-a-shape.md](guides/choosing-a-shape.md).
+- **Playwright's `baseURL`**: a page object has its own origin, and `baseURL` works beside it. With one origin, the
+  config and the base class can read the same value from `env.ts`, so Playwright's relative URLs (`page.goto("/cart")`,
+  `expect(page).toHaveURL("/cart")`, the `request` fixture) reach the page objects' origin. Or the config sets none,
+  and every origin comes from `env.ts`, for one origin or several.
+
+The rules below hold in every shape; the example after them is a `PageObject`.
 
 ## Where facts come from
 
@@ -65,23 +83,26 @@ resolved path is an ordinary `Locator`.
    table), only as many as make the chain unique; each segment names its kind and which one, `kind@which`, the kind
    being the element's role (`button@save`, `dialog@consent`); a path that matches several elements is plural
    (`main.list@orders.items`).
-5. **Page objects reach tests as Playwright fixtures**, every page object of one app extends that app's base class, and
-   a test reads as steps on page objects.
-6. **Actions and checks are `@step()` methods** of the page object; one with two or more parameters takes one options
-   object.
+5. **Page code reaches tests as Playwright fixtures**; what every page of one app shares (its origin, its common
+   locators) is in one place, such as the app's base class; a test reads as steps on the page code.
+6. **The page code's actions and checks are report steps**: `@step()` methods in a class, `test.step` in a function;
+   one with two or more parameters takes one options object.
 7. **A variation for one use is a query**, `getLocatorSchema(path)`, changed and resolved; `update` before `replace`.
    Registered locators never change.
-8. **`defineLocators()` registers synchronously** and runs right after the constructor, so it may read constructor
-   arguments and fields; resolve a locator in a getter or a method, never in a field initializer.
+8. **A `PageObject`'s `defineLocators()` registers synchronously** and runs right after the constructor, so it may read
+   constructor arguments and fields; resolve a locator in a getter or a method, never in a field initializer. A
+   registry you create yourself is checked when you call `registry.verify()`, after the last registration.
 9. **Resolution is synchronous**: `getNestedLocator`, `getLocator` and `getLocatorSchema` return at once; await the
    action or the assertion, never the resolution.
 10. **Test data comes from one test-data fixture**, by dot paths (`testData.orders.open`); page objects take data as
     arguments.
-11. **Wait as Playwright waits**: web-first assertions, `navigation.expectThisPage()` after a navigation; no sleeps.
+11. **Wait as Playwright waits**: web-first assertions, `navigation.expectThisPage()` or `page.waitForURL()` after a
+    navigation; no sleeps.
 
 ## One complete example
 
-An orders page: its locator module, its page object, the fixtures that hand it and the test data to tests, and a test.
+An orders page as a `PageObject`: its locator module, its page object, the fixtures that hand it and the test data to
+tests, and a test.
 
 ```ts title="orders.locators.ts"
 import type { LocatorRegistry } from "pomwright";
@@ -190,10 +211,11 @@ way a user finds it.
 | `getNestedLocator`, `getLocator`, several matches, queries (`getLocatorSchema`, `update`, `replace`, `skip`), one row or card among several | [references/resolving-and-queries.md](references/resolving-and-queries.md) |
 | share a locator (reuse by path) or make variants (`createReusable`) | [references/reusing.md](references/reusing.md) |
 | a page object: its parts, when `defineLocators()` runs, actions after navigation, how a mistake is reported | [references/page-objects.md](references/page-objects.md) |
-| URLs, the navigation helper, pages whose URL varies | [references/navigation.md](references/navigation.md) |
+| URLs, the navigation helper, `baseURL` beside it, pages whose URL varies | [references/navigation.md](references/navigation.md) |
 | session storage, codecs, `seed` | [references/session-storage.md](references/session-storage.md) |
 | the `log` fixture, child loggers, `@step` | [references/reports.md](references/reports.md) |
 | the exported types, generic base classes, `declaration: true` | [references/typescript.md](references/typescript.md) |
+| choose the shape: `PageObject`, your own classes, functions or fixtures over a registry | [guides/choosing-a-shape.md](guides/choosing-a-shape.md) |
 | choose a locator, the segments of a path, its name | [guides/choosing-locators-and-paths.md](guides/choosing-locators-and-paths.md) |
 | write a page object for a page, with its locator module and fixture | [guides/writing-page-objects.md](guides/writing-page-objects.md) |
 | locator modules: composing, common locators in the base class, slots | [guides/locator-modules.md](guides/locator-modules.md) |

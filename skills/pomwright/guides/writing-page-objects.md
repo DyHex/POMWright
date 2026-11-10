@@ -2,6 +2,9 @@
 
 From a page to its locator module, its page object and its fixture, step by step. It applies
 `guides/choosing-locators-and-paths.md`; the API is in `references/page-objects.md` and `references/registering.md`.
+It writes a `PageObject` subclass; in a project whose page code is its own classes, functions or fixtures, steps 1, 2
+and 5 are the same (its registry is checked where it calls `registry.verify()`), and `guides/choosing-a-shape.md`
+shows the page code and the fixture in each shape.
 
 ## Contents
 

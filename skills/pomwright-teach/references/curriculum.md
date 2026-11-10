@@ -26,13 +26,14 @@ fixtures. The practice shop serves for these exercises too, with `page.getByRole
 | 4. Test data | give tests their data through one fixture | `guides/fixtures-and-test-data.md` | login |
 | 5. One among several | find a card by its heading, a row by its text, with queries | `references/resolving-and-queries.md`; *Queries* | products, cart |
 | 6. Sharing locators | a header module every page uses, a base class with the common locators, reuse by path | `guides/locator-modules.md`, `references/reusing.md` | every page's header and cookie dialog |
-| 7. Frames | reach inside an iframe | `references/registering.md` (Frames); *Frames* | payment |
-| 8. URLs and navigation | a page whose URL varies, wait for the page a test arrives at | `references/navigation.md` | login to `/account/42` |
-| 9. Session storage | declare a codec, read the cart, seed it before the app loads | `references/session-storage.md` | cart |
-| 10. Reports | log from a page object with child loggers, configure `@step` | `references/reports.md` | any |
-| 11. A project | lay out a suite for one app or several, start it from the templates | `guides/project-structure.md` | the whole shop |
-| 12. Review and refactor | review a suite, refactor a messy test into page objects without changing what it checks | `guides/reviewing.md` | a messy spec the lesson provides |
-| 13. Mapping a real site | map the learner's own app into page objects | the `pomwright-map-site` skill | the learner's app |
+| 7. Without PageObject | put the same locator module in an own class, functions or a fixture, check the registry, navigate with Playwright | `guides/choosing-a-shape.md`; *Locator paths* (The registry) | products |
+| 8. Frames | reach inside an iframe | `references/registering.md` (Frames); *Frames* | payment |
+| 9. URLs and navigation | a page whose URL varies, wait for the page a test arrives at, `baseURL` beside a page object's origin | `references/navigation.md` | login to `/account/42` |
+| 10. Session storage | declare a codec, read the cart, seed it before the app loads | `references/session-storage.md` | cart |
+| 11. Reports | log from a page object with child loggers, configure `@step` | `references/reports.md` | any |
+| 12. A project | lay out a suite for one app or several, choose its shape and whether it sets `baseURL`, start it from the templates | `guides/project-structure.md` | the whole shop |
+| 13. Review and refactor | review a suite, refactor a messy test into page code without changing what it checks | `guides/reviewing.md` | a messy spec the lesson provides |
+| 14. Mapping a real site | map the learner's own app into page code | the `pomwright-map-site` skill | the learner's app |
 
 The names in italics are pages of the site's Docs section, which starts at
 [Installation](https://dyhex.github.io/POMWright/docs/installation/).

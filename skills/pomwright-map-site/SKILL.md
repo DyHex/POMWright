@@ -30,7 +30,8 @@ each page, designs its paths, generates the files, and checks every path against
 
 1. **Scope.** Ask for the origin (and any other origin the flow crosses), the start path, the environment, and whether
    pages need a login; for a login, a Playwright `storageState` file the user saves, or credentials the user types for
-   a setup step. Confirm before the first navigation.
+   a setup step. In a project without page code yet, ask the shape too (the `pomwright` skill's *The user's choices*).
+   Confirm before the first navigation.
 2. **Crawl** from the project's root:
    `node <this skill>/scripts/map.mjs crawl https://shop.example/ --depth 2 --limit 40`. It prints the pages found on
    the origin, grouped by path pattern (`/orders/[id]`), with their titles. Show the list; **the user picks the pages**.
@@ -38,10 +39,11 @@ each page, designs its paths, generates the files, and checks every path against
    [references/from-snapshot-to-paths.md](references/from-snapshot-to-paths.md) says: containers become segments,
    elements become paths, the suggested locators are evidence.
 4. **Design** each page's path tree before writing code; for a large page, show it to the user first.
-5. **Generate**, following the `pomwright` skill: the app's base class with its origin from `env.ts` (once per origin),
-   then per page a locator module, a page object that extends the base class (with what "loaded" means in
-   `pageActionsToPerformAfterNavigation()`, and methods only for the actions the user names), and its fixture.
-   Parts every page has (header, footer, dialogs) become composed modules registered by the base class.
+5. **Generate**, following the `pomwright` skill, in the project's shape: the app's origin in `env.ts` (once per
+   origin), then per page a locator module, its page code and its fixture. For `PageObject`, that is a page object that
+   extends the app's base class, with what "loaded" means in `pageActionsToPerformAfterNavigation()`; in any shape,
+   methods only for the actions the user names. Parts every page has (header, footer, dialogs) become composed modules,
+   registered once for every page (by the base class, for `PageObject`).
 6. **Verify**: `npx tsc --noEmit`, then a starter spec per page that opens it and checks every path (below); run it,
    fix a path that matches nothing or too much, and run it again until it passes.
 7. **Report** what was generated, the pages and elements left out and why, and the paths that needed a test id, an id
@@ -96,7 +98,8 @@ test("every path of OrdersPage matches the page", async ({ ordersPage }) => {
 });
 ```
 
-In the project, the spec imports `test` from the project's fixtures instead of defining its own.
+In the project, the spec imports `test` from the project's fixtures instead of defining its own. In another shape,
+it resolves the same lists through the registry its fixture hands the test.
 
 ## Other ways to explore
 

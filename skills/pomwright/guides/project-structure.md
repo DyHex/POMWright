@@ -18,7 +18,7 @@ second app is a sibling folder, not a move:
 
 ```text
 env.ts                                  the origins, from the environment
-playwright.config.ts                    projects for the browsers; no baseURL
+playwright.config.ts                    projects for the browsers; baseURL from env.ts, or none
 fixtures/
   fixtures.ts                           the test every spec imports: the fixture files, merged
   shop.fixtures.ts                      the shop's page objects, one fixture each
@@ -78,8 +78,12 @@ The templates import each other by relative paths, which work in any project. A 
   locator modules of shared widgets, a base Playwright config), with `pomwright` and `@playwright/test` as peer
   dependencies, and each app's package has its own page objects, test data and tests on top of it.
 
-Each app's origin lives in `env.ts`, which both the Playwright config and the base classes read; page objects never
-import the Playwright config.
+Each app's origin lives in `env.ts`, which the base classes read. The template's config sets `baseURL` from the same
+value, so Playwright's relative URLs reach its one app; with several apps, `baseURL` can serve one of them, or the
+config sets none.
+
+The layout holds any shape of page code (`guides/choosing-a-shape.md`): an own class or a function sits where a page
+object would, in `<name>.page.ts` beside `<name>.locators.ts`.
 
 ## The direction of imports
 

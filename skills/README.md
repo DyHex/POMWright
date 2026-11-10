@@ -8,7 +8,7 @@ applies, and the files it reads as it needs them.
 
 | skill | starts | what it does |
 | --- | --- | --- |
-| [pomwright](pomwright/SKILL.md) | by itself, when code uses POMWright or the user mentions it | writes, reviews and refactors tests, page objects, locator modules, fixtures and test data the way the POMWright docs recommend; says what POMWright adds to Playwright and leaves the rest to Playwright; reads exact signatures from your installed POMWright |
+| [pomwright](pomwright/SKILL.md) | by itself, when code uses POMWright or the user mentions it | writes, reviews and refactors tests, page code (`PageObject`, or the project's own classes, functions or fixtures), locator modules, fixtures and test data the way the POMWright docs recommend; says what POMWright adds to Playwright and leaves the rest to Playwright; reads exact signatures from your installed POMWright |
 | [pomwright-map-site](pomwright-map-site/SKILL.md) | when you ask it to generate page objects from a running site | crawls the origin you name, you pick the pages, it reads each page's accessibility snapshot and generates the base class, locator modules, page objects, fixtures and a starter spec that checks every path against the live page; it only navigates |
 | [pomwright-teach](pomwright-teach/SKILL.md) | only when you run it: `/pomwright-teach` in Claude Code, `$pomwright-teach` in Codex | teaches POMWright over several sessions in a learning workspace: short lessons with quizzes and exercises against a practice shop it provides, progress kept in files |
 | [defect-review](defect-review/SKILL.md) | when you ask for a defect review | an evidence-based review of a project, a change set or an area; not specific to POMWright |

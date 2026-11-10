@@ -1,7 +1,7 @@
 # Reviewing and refactoring
 
-How to review a Playwright project that uses POMWright, and refactor it toward the shape the other guides describe,
-without changing what its tests check.
+How to review a Playwright project that uses POMWright, and refactor it toward what the other guides describe, in the
+shape of page code the project chose, without changing what its tests check.
 
 ## Contents
 
@@ -15,8 +15,10 @@ without changing what its tests check.
 1. **The version**: `node_modules/pomwright/package.json`. A 2.x project is an upgrade first
    (`guides/upgrading-from-2x.md`).
 2. **The map**: the Playwright config, the env module, each app's base class, the fixtures files and how they merge,
-   the locator modules and page objects, the test data, the specs. Note the project's own conventions (file names,
-   aliases, path style): where the docs leave a choice and the project made one consistently, keep it.
+   the locator modules and the page code, the test data, the specs. Note the project's own choices: the shape of its
+   page code (`PageObject` subclasses, its own classes, functions or fixtures over a registry,
+   `guides/choosing-a-shape.md`), whether the config sets `baseURL`, file names, aliases, path style. Where the docs
+   leave a choice and the project made one consistently, keep it, and review the code within it.
 3. **Each area** below, against the guide it names.
 4. **The report**, then the refactoring the maintainers choose.
 
@@ -24,16 +26,16 @@ without changing what its tests check.
 
 | area | good | guide |
 | --- | --- | --- |
-| structure | each app has a base class with its origin from the environment; imports flow tests -> fixtures -> page objects -> locator modules; nothing imports the Playwright config or the fixtures from a page object | `guides/project-structure.md` |
-| fixtures | one `test` every spec imports, merged from fixture files that extend POMWright's `test`; a fixture body is one line that builds a page object; no hand-written copy of the `log` fixture | `guides/fixtures-and-test-data.md` |
-| test data | one read-only `testData` fixture by app, page and case; page objects take data as arguments | `guides/fixtures-and-test-data.md` |
-| page objects | constructors take the page (and a logger only when they log); `defineLocators()` registers synchronously; locators resolved in getters or methods; actions and checks are `@step()` methods named in the user's words, one options object for two or more parameters; "loaded" defined in `pageActionsToPerformAfterNavigation()` | `guides/writing-page-objects.md` |
+| structure | each app's origin comes from the environment, in one place; imports flow tests -> fixtures -> page code -> locator modules; no page code imports the fixtures | `guides/project-structure.md` |
+| fixtures | one `test` every spec imports, merged from fixture files that extend POMWright's `test`; a fixture body builds what it hands the test and nothing else; no hand-written copy of the `log` fixture | `guides/fixtures-and-test-data.md` |
+| test data | one read-only `testData` fixture by app, page and case; page code takes data as arguments | `guides/fixtures-and-test-data.md` |
+| page code | constructors take the page (and a logger only when they log); a `PageObject`'s `defineLocators()` registers synchronously and its "loaded" is defined in `pageActionsToPerformAfterNavigation()`; a registry created by hand is checked with `registry.verify()`; locators resolved in getters, methods or functions; actions and checks are report steps named in the user's words, one options object for two or more parameters | `guides/writing-page-objects.md`, `guides/choosing-a-shape.md` |
 | locators | Playwright's order of preference, accessible names given; test ids and ids where nothing user-facing identifies an element; CSS for the segments the app gives nothing else | `guides/choosing-locators-and-paths.md` |
 | paths | `kind@which` names, plural for several matches, the segments a user would recognize and no more; shared parts named one way across the project | `guides/choosing-locators-and-paths.md` |
 | resolution | `getNestedLocator` for what tests act on; `getLocator` only inside filters or for whole-page counts; no `await` on a resolution | `references/resolving-and-queries.md` |
 | variations | one-use variations as queries (a row by its text, a card by its heading), not extra registrations or hand-built chains | `references/resolving-and-queries.md` |
 | modules | shared parts as composed modules with the overload; common locators registered by the base class; sharing by reuse of a path | `guides/locator-modules.md` |
-| specs | read as steps on page objects; web-first assertions; no sleeps, no `networkidle`; random overlays handled by `page.addLocatorHandler()`, predictable ones by a step or a precondition | `guides/writing-tests.md` |
+| specs | read as steps on the page code; web-first assertions; no sleeps, no `networkidle`; random overlays handled by `page.addLocatorHandler()`, predictable ones by a step or a precondition | `guides/writing-tests.md` |
 | session storage | a schema declared once, as a value with its type; `seed` awaited before the navigation, never in a fixture some tests do not use | `references/session-storage.md` |
 
 ## Reporting
@@ -61,12 +63,14 @@ const cancel = registry
 ## Refactoring safely
 
 - **One kind of change per step**, each a commit of its own: move files, then rename paths, then change locators, then
-  move logic from specs into page objects. A refactor keeps what every test checks.
+  move logic from specs into the page code. A refactor keeps what every test checks, and the project's shape unless
+  the maintainers choose another.
 - **Compile and run after each step**: `npx tsc --noEmit`, then the tests the step touches on one browser, then the
-  suite. A registry mistake fails the page object's fixture, naming every path at fault.
+  suite. A registry mistake fails where the registry is checked: a page object's fixture, or the `registry.verify()`
+  call, naming every path at fault.
 - **Paths**: rename with the find-and-replace patterns of `references/paths-and-registry.md`; once the `Paths` union
   changes, every leftover use is a compile error.
 - **Locators**: change one registration and every chain through it follows; check the new one finds exactly one element
   where the test acts on one.
-- **Logic out of specs**: a sequence several specs repeat becomes a `@step()` method; an assertion several specs repeat
-  becomes an `expect…` method; the specs then call them.
+- **Logic out of specs**: a sequence several specs repeat becomes a step, a `@step()` method or a function with
+  `test.step`; an assertion several specs repeat becomes an `expect…` step; the specs then call them.
