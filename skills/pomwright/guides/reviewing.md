@@ -51,13 +51,23 @@ A rewrite, shown as the right way to do it:
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-type Paths = "main" | "main.table@orders" | "main.table@orders.rows" | "main.table@orders.rows.button@cancel";
+type Paths =
+  | "main"
+  | "main.table@orders"
+  | "main.table@orders.rows"
+  | "main.table@orders.rows.rowheader"
+  | "main.table@orders.rows.button@cancel";
 declare const registry: LocatorRegistry<Paths>;
 
-// one row found by its text, then the button inside it, as one query of the button's path
+// one row found by its header's exact name, then the button inside it, as one query of the button's path
+const orderNumber = registry
+  .getLocatorSchema("main.table@orders.rows.rowheader")
+  .update()
+  .getByRole({ name: "ORD-1042", exact: true })
+  .getLocator();
 const cancel = registry
   .getLocatorSchema("main.table@orders.rows.button@cancel")
-  .filter("main.table@orders.rows", { hasText: "ORD-1042" })
+  .filter("main.table@orders.rows", { has: orderNumber })
   .getNestedLocator();
 ```
 

@@ -49,25 +49,32 @@ test.afterEach(() => {
 });
 
 skillTest("skills/pomwright/SKILL.md", async ({ page }) => {
-	// orders.locators.ts and the cancel method of orders.page.ts
+	// orders.locators.ts, and the orderNumber and cancel methods of orders.page.ts
 	type Paths =
 		| "main"
 		| "main.table@orders"
 		| "main.table@orders.rows"
+		| "main.table@orders.rows.rowheader"
 		| "main.table@orders.rows.button@cancel"
 		| "main.table@orders.rows.cell@status";
 	const { registry } = createRegistryWithAccessors<Paths>(page);
 	registry.add("main").locator("main");
 	registry.add("main.table@orders").getByRole("table", { name: "Orders" });
 	registry.add("main.table@orders.rows").getByRole("row");
+	registry.add("main.table@orders.rows.rowheader").getByRole("rowheader");
 	registry.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
 	registry.add("main.table@orders.rows.cell@status").getByTestId("order-status");
+	const orderNumber = registry
+		.getLocatorSchema("main.table@orders.rows.rowheader")
+		.update()
+		.getByRole({ name: "ORD-1042", exact: true })
+		.getLocator();
 	const cancel = registry
 		.getLocatorSchema("main.table@orders.rows.button@cancel")
-		.filter("main.table@orders.rows", { hasText: "ORD-1042" })
+		.filter("main.table@orders.rows", { has: orderNumber })
 		.getNestedLocator();
 	shows(chain(cancel)).toBe(
-		"locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })",
+		"locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ has: getByRole('rowheader', { name: 'ORD-1042', exact: true }) }).getByRole('button', { name: 'Cancel' })",
 	);
 	shows(cancel.description()).toBe("main.table@orders.rows.button@cancel");
 });

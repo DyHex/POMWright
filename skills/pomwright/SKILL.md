@@ -39,11 +39,11 @@ concerns, then in each folder above it, up to the repository root.
   the guides); how POMWright and Playwright behave is not a decision. Where it names another model or effort for the
   task than the session's, say so before starting; the session does the task unless the file or the user hands it to
   a subagent. When the user states a new preference, or changes one, update the file.
-- **Missing**: creating it is the first task in the project, before any other, also when the project has tests and
-  page code and when the request asks for code: ask the user each decision, showing what the project does now beside
-  the default, then stop and write no code until they answer; write the answers into a copy
-  of [assets/templates/POMWRIGHT.md](assets/templates/POMWRIGHT.md), and offer a line in the agent instructions the
-  project uses (`AGENTS.md`, `CLAUDE.md`) that points to it. The decisions, their options and how to ask them:
+- **Missing**: creating it is the first task in the project, before any other, also when the project has tests and page
+  code and when the request asks for code: ask the user each decision, showing what the project does now beside the
+  default, then stop and write no code until they answer; write the answers into a copy of
+  [assets/templates/POMWRIGHT.md](assets/templates/POMWRIGHT.md), and offer a line in the agent instructions the project
+  uses (`AGENTS.md`, `CLAUDE.md`) that points to it. The decisions, their options and how to ask them:
   [guides/project-decisions.md](guides/project-decisions.md).
 - A question about POMWright that works on no project's code needs no file.
 
@@ -58,16 +58,14 @@ concerns, then in each folder above it, up to the repository root.
 | the test runner, `test`, fixtures, configuration, projects | `test` with a `log` fixture, whose entries go into the report |
 | actions, auto-waiting, `expect`, `storageState`, tracing, reports | nothing: a resolved path is an ordinary `Locator` |
 
-Use Playwright for everything in the first column, as playwright.dev documents it; POMWright changes none of it. Each
-part in the second column works without the others.
+Use the first column as playwright.dev documents it; POMWright changes none of it. Each part of the second stands alone.
 
 ## Where facts come from
 
 - **Signatures, options, error messages**: the installed declarations, `node_modules/pomwright/dist/index.d.ts`, which
   carry every doc comment with an example and a link to its API page. The file is large: search it for the name you
   need, do not read it whole. Never write a signature or a message from memory.
-- **Concepts and the full rules**: the site page each section of this skill links, under
-  `https://dyhex.github.io/POMWright/`.
+- **Concepts and the full rules**: the site page each section links, under `https://dyhex.github.io/POMWright/`.
 - **Playwright itself**: playwright.dev.
 
 ## The rules for every task
@@ -87,7 +85,8 @@ are defaults: where the project's `POMWRIGHT.md` decides otherwise, follow it.
    last; never XPath. One that matches several is narrowed before the next is tried: by the method's own options,
    each for its situation (`getByRole`'s `name`, `exact`, `description`, `level`, `checked`, `pressed`, `selected`,
    `expanded`, `disabled`, `includeHidden`; `exact` on the text methods), then `filter()` (`hasText`, `hasNotText`,
-   `has`, `hasNot`, `visible`); `nth` last.
+   `has`, `hasNot`, `visible`); `nth` last. `hasText` matches part of a text, ignoring case ("Lamp" passes "Desk
+   lamp"): one item of several is picked by the element inside that names it, with its exact name, through `has`.
 4. **Paths from the outside in**, one segment per element a user would recognize (a landmark, a form, a dialog, a
    table), only as many as make the chain unique; each segment names its kind and which one, `kind@which`, the kind
    being the element's role (`button@save`, `dialog@consent`); a segment that matches several elements in its scope
@@ -121,6 +120,7 @@ export type Paths =
   | "main"
   | "main.table@orders"
   | "main.table@orders.rows"
+  | "main.table@orders.rows.rowheader"
   | "main.table@orders.rows.button@cancel"
   | "main.table@orders.rows.cell@status";
 
@@ -128,6 +128,7 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").locator("main");
   registry.add("main.table@orders").getByRole("table", { name: "Orders" });
   registry.add("main.table@orders.rows").getByRole("row");
+  registry.add("main.table@orders.rows.rowheader").getByRole("rowheader");
   registry.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
   registry.add("main.table@orders.rows.cell@status").getByTestId("order-status");
 }
@@ -149,10 +150,17 @@ export class OrdersPage extends PageObject<Paths> {
     defineLocators(this.locatorRegistry);
   }
 
+  private orderNumber(order: string) {
+    return this.getLocatorSchema("main.table@orders.rows.rowheader")
+      .update()
+      .getByRole({ name: order, exact: true })
+      .getLocator();
+  }
+
   @step()
   async cancel(options: { order: string }) {
     await this.getLocatorSchema("main.table@orders.rows.button@cancel")
-      .filter("main.table@orders.rows", { hasText: options.order })
+      .filter("main.table@orders.rows", { has: this.orderNumber(options.order) })
       .getNestedLocator()
       .click();
   }
@@ -160,7 +168,7 @@ export class OrdersPage extends PageObject<Paths> {
   @step()
   async expectStatus(options: { order: string; status: OrderStatus }) {
     const cell = this.getLocatorSchema("main.table@orders.rows.cell@status")
-      .filter("main.table@orders.rows", { hasText: options.order })
+      .filter("main.table@orders.rows", { has: this.orderNumber(options.order) })
       .getNestedLocator();
     await expect(cell).toHaveText(options.status);
   }
@@ -168,11 +176,7 @@ export class OrdersPage extends PageObject<Paths> {
 ```
 
 ```ts title="test-data.ts"
-export const testData = {
-  orders: {
-    open: { id: "ORD-1042" },
-  },
-} as const;
+export const testData = { orders: { open: { id: "ORD-1042" } } } as const;
 ```
 
 ```ts title="fixtures.ts"
@@ -206,11 +210,11 @@ test("a customer cancels an open order", async ({ ordersPage, testData }) => {
 Canceling `ORD-1042` clicks this chain, which the report shows as `main.table@orders.rows.button@cancel`:
 
 ```text
-locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })
+locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ has: getByRole('rowheader', { name: 'ORD-1042', exact: true }) }).getByRole('button', { name: 'Cancel' })
 ```
 
-The status cell uses a test id because a cell has no name of its own to find it by; every other segment is found the
-way a user finds it.
+The row is found by its header's exact name; `hasText` would match part of a text, `ORD-10420` too. The status cell
+uses a test id because a cell has no name of its own to find it by; every other segment is found the way a user does.
 
 ## Which file to read for which task
 
