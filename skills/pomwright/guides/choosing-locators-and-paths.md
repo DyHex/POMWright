@@ -32,11 +32,25 @@ user does not see, then the page's structure.
 8. POMWright's **`getById(id)`**, for an id that is the element's stable contract, where the app has no test id.
 9. **`locator(css)`**, last, for a segment the app gives none of these, written as short as it can be.
 
-When the locator matches several elements in its scope, narrow it before moving down the list: by its own options
-(`name`, `exact`), then by `filter()`: `hasText` and `hasNotText` by the text inside, `has` and `hasNot` by an element
-inside (a locator or a registered path), `visible`. A product card is `getByRole("listitem")` filtered by its heading,
-not `getByText` on the heading, which finds the heading. `nth` is the last resort
-([Several matches](#several-matches-and-one-among-them)).
+When the locator matches several elements in its scope, narrow it before moving down the list, first by the method's
+own options. Each is for a situation; the installed declarations list them all:
+
+- `getByRole`: `name`, with `exact` or a RegExp; `description`, for elements with one name told apart by their
+  accessible description (a "Delete" button for each product); `level`, for a heading's level (`level: 1`, the page's
+  title); `checked`, `pressed`, `selected`, `expanded` and `disabled`, for the element in a state: the selected tab, the
+  expanded menu button, the checked option (`disabled` is inherited from a disabled `fieldset` or an `aria-disabled`
+  ancestor); `includeHidden: true`, which also matches an element ARIA hides, such as a closed dialog with the `hidden`
+  attribute, for a test that reads it while it is hidden.
+- `getByLabel`, `getByPlaceholder`, `getByText`, `getByAltText`, `getByTitle`: `exact`, or a RegExp.
+- `locator(css, options)`: `hasText`, `hasNotText`, `has` and `hasNot`, as `filter()` takes them.
+
+Then by `filter()`: `hasText` and `hasNotText` by the text inside, `has` and `hasNot` by an element inside (a locator
+or a registered path), `visible`. A product card is `getByRole("listitem")` filtered by its heading, not `getByText` on
+the heading, which finds the heading. `nth` is the last resort ([Several matches](#several-matches-and-one-among-them)).
+
+A state option matches only while the element is in that state: a path with `pressed: false` matches nothing once the
+toggle is pressed. Use one to find whichever element is in the state (the selected tab); to check the state of an
+element, find it by its name and assert the state (`toBeChecked()`, `toBeDisabled()`).
 
 XPath is not used. It does not reach into shadow DOM, where CSS and the `getBy` methods do; an absolute XPath in a path
 matches nothing, since each segment is searched inside the one before it; and what it is used for has a Playwright

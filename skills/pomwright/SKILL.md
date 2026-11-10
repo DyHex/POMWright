@@ -82,8 +82,10 @@ are defaults: where the project's `POMWRIGHT.md` decides otherwise, follow it.
    accessible name (interactive elements, and landmarks, forms, dialogs, tables), `getByLabel` (form fields),
    `getByPlaceholder` (a field without a label), `getByText` (non-interactive text), `getByAltText`, `getByTitle`,
    then `getByTestId` and POMWright's `getById` when nothing user-facing identifies the element, and `locator(css)`
-   last; never XPath. One that matches several is narrowed before the next is tried: by its options (`name`,
-   `exact`), then `filter()` (`hasText`, `hasNotText`, `has`, `hasNot`, `visible`); `nth` last.
+   last; never XPath. One that matches several is narrowed before the next is tried: by the method's own options,
+   each for its situation (`getByRole`'s `name`, `exact`, `description`, `level`, `checked`, `pressed`, `selected`,
+   `expanded`, `disabled`, `includeHidden`; `exact` on the text methods), then `filter()` (`hasText`, `hasNotText`,
+   `has`, `hasNot`, `visible`); `nth` last.
 4. **Paths from the outside in**, one segment per element a user would recognize (a landmark, a form, a dialog, a
    table), only as many as make the chain unique; each segment names its kind and which one, `kind@which`, the kind
    being the element's role (`button@save`, `dialog@consent`); a segment that matches several elements in its scope
