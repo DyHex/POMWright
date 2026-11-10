@@ -13,7 +13,7 @@
 //   `agents/openai.yaml` with `allow_implicit_invocation: false` (Codex's way to say the same).
 // - Sizes: a SKILL.md of at most SKILL_LINES lines (more for a skill listed there), any other Markdown file at most
 //   FILE_LINES; a file other than SKILL.md over CONTENTS_FROM lines links every one of its `##` headings before the
-//   first, a contents list an agent reads first.
+//   first, or under a first `## Contents`: a contents list an agent reads first.
 // - One level deep: every other Markdown file of a skill is linked from its SKILL.md, and links to no Markdown file of the
 //   skill but SKILL.md, so an agent never follows a chain of references.
 // - A relative link stays inside its skill's folder, since a skill is installed alone; check-guide-links.mjs checks that
@@ -220,7 +220,10 @@ for (const skill of skills) {
 		const limit = file === skillFile ? (SKILL_LINES.get(skill) ?? DEFAULT_SKILL_LINES) : FILE_LINES;
 		if (!exempt && lines > limit) report(file, `${lines} lines; at most ${limit}`);
 		if (!exempt && file !== skillFile && lines > CONTENTS_FROM) {
-			const headings = sectionHeadings(text);
+			const all = sectionHeadings(text);
+			// the list stands before the first `##` heading, or under a first heading named Contents
+			const titled = all[0]?.anchor === "contents";
+			const headings = titled ? all.slice(1) : all;
 			const before = headings.length === 0 ? "" : text.slice(0, headings[0].offset);
 			const missing = headings.map(({ anchor }) => anchor).filter((anchor) => !before.includes(`(#${anchor})`));
 			if (missing.length > 0) {

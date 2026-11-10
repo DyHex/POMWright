@@ -1,0 +1,204 @@
+---
+name: pomwright
+description: >-
+  Writes, reviews and refactors Playwright tests that use POMWright (the pomwright package): page objects
+  (PageObject), dot-delimited locator paths and locator modules (add, getNestedLocator, getLocator, getLocatorSchema,
+  createReusable, createRegistryWithAccessors), fixtures and test data, navigation, session storage (SessionStorage,
+  seed), the log fixture and the @step decorator. Use it whenever code imports from "pomwright", when a project's tests
+  use page objects with locator paths such as "main.form@login.button@login", when setting up or restructuring a
+  Playwright project with page objects, or when the user mentions POMWright. It says what POMWright adds to Playwright
+  and leaves everything else to Playwright.
+license: Apache-2.0
+compatibility: POMWright 3.x, @playwright/test >=1.64.0 <2.0.0, Node 20 or later, TypeScript.
+---
+
+# POMWright
+
+POMWright is a library for Playwright Test. It names every locator with a dot-delimited path, registers one locator per
+path, and builds the Playwright locator chain from the path; page objects, session storage, a report logger and test
+steps build on that. Your tests stay Playwright tests.
+
+## First, the installed version
+
+Read the version in `node_modules/pomwright/package.json`.
+
+- **3.x**: follow this skill.
+- **2.x or 1.x**: say so before changing anything; the upgrade is its own task, on the site's
+  [Upgrading from 2.x](https://dyhex.github.io/POMWright/docs/upgrading-from-2x/) page.
+- **Not installed**: `npm install --save-dev pomwright` (or `pnpm add --save-dev pomwright`) in a project that has
+  `@playwright/test` 1.64 or later; see [Installation](https://dyhex.github.io/POMWright/docs/installation/).
+
+## What POMWright adds, and what stays Playwright
+
+| Playwright's, used as Playwright documents it | POMWright's |
+| --- | --- |
+| the test runner, `test`, fixtures, `expect`, configuration, projects | a path per locator, a registry that holds one locator per path, and the chain built from a path |
+| locators, auto-waiting, actions, web-first assertions | `PageObject`: a page's paths, its URL, a navigation helper, a check of its registry at construction |
+| `baseURL`, `storageState`, tracing, reports | `SessionStorage`: `page.sessionStorage` with codecs, report steps, and `seed` before an app's first script |
+| `test.step` | `@step()`, a method as a report step; the `log` fixture, report attachments |
+
+Use Playwright for everything in the first column, as playwright.dev documents it. POMWright changes none of it: a
+resolved path is an ordinary `Locator`.
+
+## Where facts come from
+
+- **Signatures, options, error messages**: the installed declarations, `node_modules/pomwright/dist/index.d.ts`, which
+  carry every doc comment with an example and a link to its API page. The file is large: search it for the name you
+  need, do not read it whole. Never write a signature or a message from memory.
+- **Concepts and the full rules**: the site page each section of this skill links, under
+  `https://dyhex.github.io/POMWright/`.
+- **Playwright itself**: playwright.dev.
+
+## The rules for every task
+
+1. **Act on and assert against `getNestedLocator(path)`**: the chain of the path's registered segments. Use
+   `getLocator(path)`, the path's own locator without its ancestors, only to build a chain yourself, inside a filter, or
+   to count every match on the page.
+2. **One locator per path, registered once**, in `defineLocators()` or a locator module. A change to the page is an
+   edit in one place.
+3. **Locators in Playwright's order of preference**: `getByRole` with the accessible name (interactive elements, and
+   landmarks, forms, dialogs, tables), `getByText` (non-interactive text), `getByLabel` (form fields),
+   `getByPlaceholder` (a field without a label), `getByAltText`, `getByTitle`, then `getByTestId`, and POMWright's
+   `getById` beside it, when nothing user-facing identifies the element; `locator(css)` last, for a segment the app
+   gives no role, label or text.
+4. **Paths from the outside in**, one segment per element a user would recognize (a landmark, a form, a dialog, a
+   table), only as many as make the chain unique; each segment names its kind and which one, `kind@which`, the kind
+   being the element's role (`button@save`, `dialog@consent`); a path that matches several elements is plural
+   (`main.list@orders.items`).
+5. **Page objects reach tests as Playwright fixtures**, every page object of one app extends that app's base class, and
+   a test reads as steps on page objects.
+6. **Actions and checks are `@step()` methods** of the page object; one with two or more parameters takes one options
+   object.
+7. **A variation for one use is a query**, `getLocatorSchema(path)`, changed and resolved; `update` before `replace`.
+   Registered locators never change.
+8. **`defineLocators()` registers synchronously** and runs right after the constructor, so it may read constructor
+   arguments and fields; resolve a locator in a getter or a method, never in a field initializer.
+9. **Resolution is synchronous**: `getNestedLocator`, `getLocator` and `getLocatorSchema` return at once; await the
+   action or the assertion, never the resolution.
+10. **Test data comes from one test-data fixture**, by dot paths (`testData.orders.open`); page objects take data as
+    arguments.
+11. **Wait as Playwright waits**: web-first assertions, `navigation.expectThisPage()` after a navigation; no sleeps.
+
+## One complete example
+
+An orders page: its locator module, its page object, the fixtures that hand it and the test data to tests, and a test.
+
+```ts title="orders.locators.ts"
+import type { LocatorRegistry } from "pomwright";
+
+export type Paths =
+  | "main"
+  | "main.table@orders"
+  | "main.table@orders.row"
+  | "main.table@orders.row.button@cancel"
+  | "main.table@orders.row.cell@status";
+
+export function defineLocators(registry: LocatorRegistry<Paths>) {
+  registry.add("main").locator("main");
+  registry.add("main.table@orders").getByRole("table", { name: "Orders" });
+  registry.add("main.table@orders.row").getByRole("row");
+  registry.add("main.table@orders.row.button@cancel").getByRole("button", { name: "Cancel" });
+  registry.add("main.table@orders.row.cell@status").getByTestId("order-status");
+}
+```
+
+```ts title="orders.page.ts"
+import { expect, type Page } from "@playwright/test";
+import { PageObject, step } from "pomwright";
+import { defineLocators, type Paths } from "./orders.locators";
+
+export type OrderStatus = "Open" | "Cancelled";
+
+export class OrdersPage extends PageObject<Paths> {
+  constructor(page: Page) {
+    super(page, "https://shop.example", "/orders");
+  }
+
+  protected defineLocators(): void {
+    defineLocators(this.locatorRegistry);
+  }
+
+  @step()
+  async cancel(options: { order: string }) {
+    await this.getLocatorSchema("main.table@orders.row.button@cancel")
+      .filter("main.table@orders.row", { hasText: options.order })
+      .getNestedLocator()
+      .click();
+  }
+
+  @step()
+  async expectStatus(options: { order: string; status: OrderStatus }) {
+    const cell = this.getLocatorSchema("main.table@orders.row.cell@status")
+      .filter("main.table@orders.row", { hasText: options.order })
+      .getNestedLocator();
+    await expect(cell).toHaveText(options.status);
+  }
+}
+```
+
+```ts title="test-data.ts"
+export const testData = {
+  orders: {
+    open: { id: "ORD-1042" },
+  },
+};
+```
+
+```ts title="fixtures.ts"
+import { test as base } from "pomwright";
+import { OrdersPage } from "./orders.page";
+import { testData } from "./test-data";
+
+export { expect } from "@playwright/test";
+
+export const test = base.extend<{ ordersPage: OrdersPage; testData: typeof testData }>({
+  ordersPage: async ({ page }, use) => {
+    await use(new OrdersPage(page));
+  },
+  testData: async ({}, use) => {
+    await use(testData);
+  },
+});
+```
+
+```ts title="orders.spec.ts"
+import { test } from "./fixtures";
+
+test("a customer cancels an open order", async ({ ordersPage, testData }) => {
+  const order = testData.orders.open.id;
+  await ordersPage.navigation.goto();
+  await ordersPage.expectStatus({ order, status: "Open" });
+  await ordersPage.cancel({ order });
+  await ordersPage.expectStatus({ order, status: "Cancelled" });
+});
+```
+
+Canceling `ORD-1042` clicks this chain, which the report shows as `main.table@orders.row.button@cancel`:
+
+```text
+locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })
+```
+
+The status cell uses a test id because a cell has no name of its own to find it by; every other segment is found the
+way a user finds it.
+
+## Which file to read for which task
+
+| task | read |
+| --- | --- |
+| register locators: the ten methods, `filter`, `nth`, `describe`, `getById`, frames | [references/registering.md](references/registering.md) |
+| paths, their rules, the registry, `createRegistryWithAccessors`, `verify`, `strictChains` | [Paths and the registry](https://dyhex.github.io/POMWright/docs/locator-paths/) |
+| `getNestedLocator`, `getLocator`, queries (`getLocatorSchema`, `update`, `replace`, `skip`) | [Resolving locators](https://dyhex.github.io/POMWright/docs/resolving-locators/), [Queries](https://dyhex.github.io/POMWright/docs/queries/) |
+| share a locator (reuse by path) or make variants (`createReusable`) | [Reusing locators](https://dyhex.github.io/POMWright/docs/reusing-locators/) |
+| write a page object, its lifecycle, actions after navigation | [Page objects](https://dyhex.github.io/POMWright/docs/page-objects/) |
+| URLs and the navigation helper | [URLs and navigation](https://dyhex.github.io/POMWright/docs/urls-and-navigation/) |
+| session storage and `seed` | [Session storage](https://dyhex.github.io/POMWright/docs/session-storage/) |
+| the `log` fixture, child loggers, `@step` | [Logging](https://dyhex.github.io/POMWright/docs/logging/), [Test steps](https://dyhex.github.io/POMWright/docs/test-steps/) |
+| locator modules, a base class, a project's layout | [Organizing a project](https://dyhex.github.io/POMWright/docs/organizing-a-project/), [Locator modules](https://dyhex.github.io/POMWright/docs/locator-modules/) |
+
+## When something fails
+
+POMWright's messages name the page object and the path, and most say the fix. A page object checks its registry right
+after it is constructed, so a registry mistake fails the test in the fixture, before its body runs, listing every
+failing path. Search the message in the installed declarations or on the site's
+[Error messages](https://dyhex.github.io/POMWright/api/errors/) page before changing code.
