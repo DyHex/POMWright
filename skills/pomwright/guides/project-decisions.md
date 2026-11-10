@@ -9,6 +9,7 @@ and says how to ask them and keep the file current.
 - [Where the file lives](#where-the-file-lives)
 - [Creating it](#creating-it)
 - [The decisions](#the-decisions)
+- [Models and effort](#models-and-effort)
 - [Keeping it current](#keeping-it-current)
 
 ## Where the file lives
@@ -60,11 +61,19 @@ The default comes first; the others are what projects choose instead.
 | test data | one `testData` fixture, by `testData.<app>.<page>.<case>`; page code takes data as arguments | data modules each spec imports; values in the specs |
 | logging | page code takes a child of the `log` fixture only where it logs | always, or never |
 | `strictChains` | off | on: `verify()` requires every ancestor of every path to be registered |
+| agents' model and effort | the agent session's own, for every task | a model and effort level the project names as its default, and the tasks that use another: more effort or a larger model for mapping a site or a review, less for a small edit |
 
 Why the defaults: they are the forms the site's guides use. The probes behind the `baseURL` row ran on Playwright 1.64:
 with `baseURL` set from the page object's own origin, the relative `page.goto("/products")` reached the page object's
 URL, and so did `toHaveURL("/products")` and `request.get("/products")`; without `baseURL`, the relative `page.goto`
 threw `Cannot navigate to invalid URL`, and the page object still navigated.
+
+## Models and effort
+
+The file can name the model and effort level agents use, as a default and per task. A skill does not change the model
+or effort of the session it runs in, so before a task the file names another for, the agent says which model and effort
+the file names. Where the agent can start a subagent with a model and effort (Claude Code's Agent tool takes both), it
+hands the task to one; otherwise it asks the user to switch, or to go on as it is.
 
 ## Keeping it current
 

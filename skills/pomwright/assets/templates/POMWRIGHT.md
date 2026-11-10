@@ -30,6 +30,11 @@ the code when a decision changes. A decision here replaces the default of the `p
 - **One of several**: a query where it is used; a path of its own when many tests use it, named by what it matches
   (`main.list@products.card@lamp` for one lamp, `main.list@products.cards@lamp` for several); `nth` last.
 
+## Agents
+
+- **Model and effort**: the agent session's own, for every task.
+- **Tasks with another model or effort**: none.
+
 ## Tests
 
 - **Page code in tests**: as fixtures, from one `test` in `fixtures/fixtures.ts` that every spec imports.
