@@ -20,6 +20,8 @@ export const onPage = (shown: string) => {
 		shownOnPage.push(shown);
 	}
 };
+/** What the current test has recorded so far: the values its page must show. */
+export const recordedOnPage = () => [...shownOnPage];
 /** A selector the page shows, rendered as Playwright prints a locator built from it. */
 export const selector = (page: Page, shown: string) => {
 	onPage(shown);
@@ -67,9 +69,10 @@ export const flatten = (text: string) => text.replace(/\n\s*(\/\/|#)?\s*/g, "");
 /**
  * Registers the hooks of a chain spec, in the spec file that calls it (hooks registered in this shared module itself
  * would belong to whichever spec loaded it first): before each test the record is cleared, and after it the page the
- * test is named after, read from `fileOf(title)`, must show everything the test recorded.
+ * test is named after, read from `fileOf(title)`, must show everything the test recorded. A test whose title names no
+ * page (`fileOf` returns undefined) is not checked.
  */
-export function checkThatPagesShow(fileOf: (title: string) => string) {
+export function checkThatPagesShow(fileOf: (title: string) => string | undefined) {
 	test.beforeEach(() => {
 		shownOnPage.length = 0;
 		renderings.clear();
@@ -77,7 +80,11 @@ export function checkThatPagesShow(fileOf: (title: string) => string) {
 
 	test.afterEach(() => {
 		const title = test.info().title;
-		const text = readFileSync(fileOf(title), "utf8");
+		const file = fileOf(title);
+		if (file === undefined) {
+			return;
+		}
+		const text = readFileSync(file, "utf8");
 		const flat = flatten(text);
 		for (const shown of shownOnPage) {
 			expect.soft(text.includes(shown) || flat.includes(shown), `${title} shows ${JSON.stringify(shown)}`).toBe(true);

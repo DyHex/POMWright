@@ -54,7 +54,9 @@ page).
   probe against the build (see [test/AGENTS.md](../test/AGENTS.md#probing)); where a rendered string hides an option, the stored record is read instead.
   `test/tests/docs/docsChains.spec.ts` rebuilds every chain a page or the README shows in a `text` block, a code
   comment or the running text, one test per page, compares it, and checks that the page still shows it: a change to a
-  chain, on the page or in the code, fails until the spec and the page change together. A change to a message, a rendering or a mechanism greps `website/` for the old text and updates the pages with it,
+  chain, on the page or in the code, fails until the spec and the page change together. `skillsChains.spec.ts` does the
+  same for the agent skills in `skills/`, one test per skill file, and also fails when a skill file shows a rendering
+  its test does not compare, or has no test. A change to a message, a rendering or a mechanism greps `website/` for the old text and updates the pages with it,
   and a consumer-facing change updates the page that describes it.
 - Page shapes follow playwright.dev. Getting started pages: *Introduction*, "You will learn", short sections whose
   example grows from the last, *What's next*; one page, one outcome. Concept pages open with the Playwright concept

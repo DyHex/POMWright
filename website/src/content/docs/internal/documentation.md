@@ -16,7 +16,9 @@ the same facts as the API pages.
   it is written, never written from memory. A change to a message, a rendering or a mechanism updates the pages that
   show it in the same change. `test/tests/docs/docsChains.spec.ts` keeps the chains so: it rebuilds every chain a page
   or the README shows in a `text` block, a code comment or the running text through the packed package, one test per page, and compares
-  it, so a chain that changes fails the harness until the page changes with it.
+  it, so a chain that changes fails the harness until the page changes with it. `skillsChains.spec.ts` does the same for
+  the agent skills, and fails as well for a rendering a skill shows that no comparison covers, or a skill file with a
+  rendering and no test of its own.
 - **Examples compile.** `scripts/check-doc-snippets.mjs` takes every `ts` block, one small project per page, and
   compiles it against the installed package with the harness's options and `declaration: true`. A block with
   `title="name.ts"` is that file, which the page's other blocks import; lines up to `// ---cut---` are compiled but not

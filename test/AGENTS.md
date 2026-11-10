@@ -153,7 +153,9 @@ it before working there. Read it before running these commands, probing a claim,
   down after it), `step/`, `testApp/`, `docs/` (`docsChains.spec.ts`: every chain the site and the README show in a
   `text` block, a code comment or the running text, rebuilt through the packed package, one test per page, which also
   checks that its page shows every chain, selector and message it compares; its helpers and that page check are in
-  `chains.ts`, for every chain spec), `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
+  `chains.ts`, for every chain spec; `skillsChains.spec.ts`: the same for the skills in `skills/`, one test per skill
+  file, failing as well for a rendering its test does not compare and for a skill file with a rendering and no test),
+  `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
   published entries, one shared copy, closed deep imports, the manifest; `packageFiles.spec.ts`, the installed
   package's exact file list; `publicTypes.typecheck.ts`, `publicTypes.emit.ts` and `stepLegacyDecorators.typecheck.ts`,
   compile-only, the last also under `experimentalDecorators`; `emitSeeds.ts`, a value of every export, from which the

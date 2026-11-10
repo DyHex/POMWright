@@ -36,7 +36,10 @@ with the table in [Page objects](/POMWright/docs/page-objects/#how-a-mistake-is-
 
 `docs/docsChains.spec.ts` rebuilds every locator chain the documentation and the README show, in a `text` block, a
 code comment or the running text, from the page's own example, and compares it with what the packed package resolves: one test per page,
-so a chain that a change to the code or to the page made stale names its page. The latest-1.x CI rows run it too, so
+so a chain that a change to the code or to the page made stale names its page. `docs/skillsChains.spec.ts` does the same
+for the agent skills in the repository's `skills/` folder, one test per skill file; since a skill's code is written in
+double quotes, every single-quoted locator call in a skill is a rendering, and the spec fails for one no comparison
+covers, or for a skill file with a rendering and no test. The latest-1.x CI rows run them too, so
 a Playwright release that prints a locator differently shows there first.
 
 After the harness, `pack-test` runs `test/playwright.steps.config.ts`: where the report places a step and its error,
