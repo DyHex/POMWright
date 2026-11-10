@@ -46,20 +46,28 @@ The default comes first; the others are what projects choose instead.
 | --- | --- | --- |
 | shape of the page code | `PageObject` subclasses, one base class per app | own classes, functions or fixtures over `createRegistryWithAccessors` (`guides/choosing-a-shape.md`) |
 | origins | in `env.ts`, one environment variable per app, read by each app's base class | another config module the project has |
+| environments | each origin's variable set per environment (locally, in CI) | one variable (`TEST_ENV`) that picks every origin from a map in `env.ts` |
 | Playwright's `baseURL` | not set: page code takes its origins from `env.ts` | set from the same `env.ts` value, for one app, so that Playwright's relative URLs (`page.goto("/cart")`, `expect(page).toHaveURL("/cart")`, the `request` fixture) reach it |
 | layout | a folder per app in `page-objects/`, `fixtures/`, `test-data/`, `tests/` (`guides/project-structure.md`) | the project's own layout |
 | file names | `<name>.locators.ts` beside `<name>.page.ts` | the project's own names |
 | imports | relative paths | path aliases (`@page-objects/*`) in `tsconfig.json` |
 | where locators are registered | a locator module per page, shared parts as composed modules | inline, in `defineLocators()` |
+| test id attribute | Playwright's, `data-testid` | the app's own, set with `testIdAttribute` in the config's `use`; `getByTestId` follows it |
 | locator preference | Playwright's order: role, text, label, placeholder, alt text, title, then test id or id, CSS last | test ids first, where the app gives every element a stable one |
 | segment names | `kind@which`, the kind being the element's role (`button@save`) | the project's own style, applied the same way everywhere |
 | plural and singular | by what a segment matches in its scope: `main.list@products.cards` for several, `main.list@products.card` for one | always singular |
 | one of several | a query where it is used; a path of its own when many tests use it, named by what it matches: `main.list@products.card@lamp` for one lamp, `main.list@products.cards@lamp` for several; `nth` last | queries only, no narrowed paths |
 | page code in tests | as fixtures, from one `test` that every spec imports | built in each test |
 | steps | every action and check of the page code is a report step: `@step()`, or `test.step` in a function | only the methods the project names |
+| step titles | `@step()`'s own, `ClassName.methodName` | a title per method, `@step("Log in")` |
+| assertions | web-first, in specs, and as `expect…` steps of the page code for a check several specs repeat | only in specs |
 | parameters | one options object for two or more | positional parameters |
 | test data | one `testData` fixture, by `testData.<app>.<page>.<case>`; page code takes data as arguments | data modules each spec imports; values in the specs |
+| state a test needs and does not test | set up directly: a login saved by Playwright's setup project as `storageState`, session storage seeded with `seed` before the app loads | through the UI, as a user would |
+| overlays | one that is predictable (a dialog on a first visit) handled by a step or a precondition; one that appears at random by `page.addLocatorHandler()` | the project's own helper |
 | logging | page code takes a child of the `log` fixture only where it logs | always, or never |
+| checks while working | `npx tsc --noEmit`, then the specs the change touches on one browser project, then every project | the project's own commands |
+| lint and format | the project's own commands, if it has them | none |
 | `strictChains` | off | on: `verify()` requires every ancestor of every path to be registered |
 | agents' model and effort | the agent session's own, for every task | a model and effort level the project names as its default, and the tasks that use another: more effort or a larger model for mapping a site or a review, less for a small edit |
 
