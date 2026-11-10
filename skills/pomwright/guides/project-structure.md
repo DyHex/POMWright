@@ -18,7 +18,8 @@ second app is a sibling folder, not a move:
 
 ```text
 env.ts                                  the origins, from the environment
-playwright.config.ts                    projects for the browsers; baseURL from env.ts, or none
+POMWRIGHT.md                            the project's decisions (guides/project-decisions.md)
+playwright.config.ts                    projects for the browsers; no baseURL unless POMWRIGHT.md opts in
 fixtures/
   fixtures.ts                           the test every spec imports: the fixture files, merged
   shop.fixtures.ts                      the shop's page objects, one fixture each
@@ -56,12 +57,14 @@ POMWright 3.x. To start a project:
 
 1. Start from a Playwright project (`npm init playwright@latest`), then add POMWright
    (`npm install --save-dev pomwright`).
-2. Copy the templates into the project, keeping their paths, and rename the app: `shop` in folder and file names,
+2. Write `POMWRIGHT.md` from the template, with the user's decisions (`guides/project-decisions.md`). The templates
+   follow the defaults; where a decision differs, adapt them to it as you copy them.
+3. Copy the templates into the project, keeping their paths, and rename the app: `shop` in folder and file names,
    `ShopPage`, `shopUrl` and `SHOP_URL` in [env.ts](../assets/templates/env.ts) and the base class.
-3. Set the origin in the environment, or the fallback in `env.ts`.
-4. Replace the home page with the app's own pages, one at a time (`guides/writing-page-objects.md`), and the common
+4. Set the origin in the environment, or the fallback in `env.ts`.
+5. Replace the home page with the app's own pages, one at a time (`guides/writing-page-objects.md`), and the common
    locators with the app's header, footer and dialogs (`guides/locator-modules.md`).
-5. Run `npx tsc --noEmit`, then `npx playwright test`.
+6. Run `npx tsc --noEmit`, then `npx playwright test`.
 
 The templates import each other by relative paths, which work in any project. A project that prefers path aliases
 (`@page-objects/*`, `@fixtures/*`) adds them to its `tsconfig.json` and rewrites the imports.
@@ -78,9 +81,8 @@ The templates import each other by relative paths, which work in any project. A 
   locator modules of shared widgets, a base Playwright config), with `pomwright` and `@playwright/test` as peer
   dependencies, and each app's package has its own page objects, test data and tests on top of it.
 
-Each app's origin lives in `env.ts`, which the base classes read. The template's config sets `baseURL` from the same
-value, so Playwright's relative URLs reach its one app; with several apps, `baseURL` can serve one of them, or the
-config sets none.
+Each app's origin lives in `env.ts`, which the base classes read. A project that opts in to Playwright's `baseURL`
+sets it from the same value, for one app (`guides/project-decisions.md`).
 
 The layout holds any shape of page code (`guides/choosing-a-shape.md`): an own class or a function sits where a page
 object would, in `<name>.page.ts` beside `<name>.locators.ts`.

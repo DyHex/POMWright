@@ -53,23 +53,23 @@ skillTest("skills/pomwright/SKILL.md", async ({ page }) => {
 	type Paths =
 		| "main"
 		| "main.table@orders"
-		| "main.table@orders.row"
-		| "main.table@orders.row.button@cancel"
-		| "main.table@orders.row.cell@status";
+		| "main.table@orders.rows"
+		| "main.table@orders.rows.button@cancel"
+		| "main.table@orders.rows.cell@status";
 	const { registry } = createRegistryWithAccessors<Paths>(page);
 	registry.add("main").locator("main");
 	registry.add("main.table@orders").getByRole("table", { name: "Orders" });
-	registry.add("main.table@orders.row").getByRole("row");
-	registry.add("main.table@orders.row.button@cancel").getByRole("button", { name: "Cancel" });
-	registry.add("main.table@orders.row.cell@status").getByTestId("order-status");
+	registry.add("main.table@orders.rows").getByRole("row");
+	registry.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
+	registry.add("main.table@orders.rows.cell@status").getByTestId("order-status");
 	const cancel = registry
-		.getLocatorSchema("main.table@orders.row.button@cancel")
-		.filter("main.table@orders.row", { hasText: "ORD-1042" })
+		.getLocatorSchema("main.table@orders.rows.button@cancel")
+		.filter("main.table@orders.rows", { hasText: "ORD-1042" })
 		.getNestedLocator();
 	shows(chain(cancel)).toBe(
 		"locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })",
 	);
-	shows(cancel.description()).toBe("main.table@orders.row.button@cancel");
+	shows(cancel.description()).toBe("main.table@orders.rows.button@cancel");
 });
 
 skillTest("skills/pomwright/references/registering.md", async ({ page }) => {
@@ -144,17 +144,17 @@ skillTest("skills/pomwright/references/paths-and-registry.md", async ({ page }) 
 skillTest("skills/pomwright/references/resolving-and-queries.md", async ({ page }) => {
 	// a row by its text
 	const orders = createRegistryWithAccessors<
-		"main" | "main.table@orders" | "main.table@orders.row" | "main.table@orders.row.button@cancel"
+		"main" | "main.table@orders" | "main.table@orders.rows" | "main.table@orders.rows.button@cancel"
 	>(page).registry;
 	orders.add("main").locator("main");
 	orders.add("main.table@orders").getByRole("table", { name: "Orders" });
-	orders.add("main.table@orders.row").getByRole("row");
-	orders.add("main.table@orders.row.button@cancel").getByRole("button", { name: "Cancel" });
+	orders.add("main.table@orders.rows").getByRole("row");
+	orders.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
 	shows(
 		chain(
 			orders
-				.getLocatorSchema("main.table@orders.row.button@cancel")
-				.filter("main.table@orders.row", { hasText: "ORD-1042" })
+				.getLocatorSchema("main.table@orders.rows.button@cancel")
+				.filter("main.table@orders.rows", { hasText: "ORD-1042" })
 				.getNestedLocator(),
 		),
 	).toBe(
@@ -164,22 +164,22 @@ skillTest("skills/pomwright/references/resolving-and-queries.md", async ({ page 
 	// a card by its heading's exact name
 	const products = createRegistryWithAccessors<
 		| "main.list@products"
-		| "main.list@products.card"
-		| "main.list@products.card.heading"
-		| "main.list@products.card.button@addToCart"
+		| "main.list@products.cards"
+		| "main.list@products.cards.heading"
+		| "main.list@products.cards.button@addToCart"
 	>(page).registry;
 	products.add("main.list@products").getByRole("list", { name: "Products" });
-	products.add("main.list@products.card").getByRole("listitem");
-	products.add("main.list@products.card.heading").getByRole("heading");
-	products.add("main.list@products.card.button@addToCart").getByRole("button", { name: "Add to cart" });
+	products.add("main.list@products.cards").getByRole("listitem");
+	products.add("main.list@products.cards.heading").getByRole("heading");
+	products.add("main.list@products.cards.button@addToCart").getByRole("button", { name: "Add to cart" });
 	const heading = products
-		.getLocatorSchema("main.list@products.card.heading")
+		.getLocatorSchema("main.list@products.cards.heading")
 		.update()
 		.getByRole({ name: "Lamp", exact: true })
 		.getLocator();
 	const addToCart = products
-		.getLocatorSchema("main.list@products.card.button@addToCart")
-		.filter("main.list@products.card", { has: heading })
+		.getLocatorSchema("main.list@products.cards.button@addToCart")
+		.filter("main.list@products.cards", { has: heading })
 		.getNestedLocator();
 	shows(chain(addToCart)).toBe(
 		"getByRole('list', { name: 'Products' }).getByRole('listitem').filter({ has: getByRole('heading', { name: 'Lamp', exact: true }) }).getByRole('button', { name: 'Add to cart' })",
@@ -193,8 +193,8 @@ skillTest("skills/pomwright/references/resolving-and-queries.md", async ({ page 
 		</ul>`,
 	);
 	const byText = products
-		.getLocatorSchema("main.list@products.card.button@addToCart")
-		.filter("main.list@products.card", { hasText: "Lamp" })
+		.getLocatorSchema("main.list@products.cards.button@addToCart")
+		.filter("main.list@products.cards", { hasText: "Lamp" })
 		.getNestedLocator();
 	await expect(byText).toHaveCount(2);
 	await expect(addToCart).toHaveCount(1);

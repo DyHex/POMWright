@@ -5,7 +5,7 @@ description: >-
   (PageObject, or the project's own classes, functions or fixtures over a registry), dot-delimited locator paths and locator modules (add, getNestedLocator, getLocator, getLocatorSchema,
   createReusable, createRegistryWithAccessors), fixtures and test data, navigation, session storage (SessionStorage,
   seed), the log fixture and the @step decorator. Use it whenever code imports from "pomwright", when a project's tests
-  use page objects with locator paths such as "main.form@login.button@login", when setting up or restructuring a
+  use page objects with locator paths such as "main.form@login.button@login", when a project has a POMWRIGHT.md, when setting up or restructuring a
   Playwright project with page objects, or when the user mentions POMWright. It says what POMWright adds to Playwright
   and leaves everything else to Playwright.
 license: Apache-2.0
@@ -28,6 +28,22 @@ Read the version in `node_modules/pomwright/package.json`.
 - **Not installed**: `npm install --save-dev pomwright` (or `pnpm add --save-dev pomwright`) in a project that has
   `@playwright/test` 1.64 or later; see [Installation](https://dyhex.github.io/POMWright/docs/installation/).
 
+## Then, the project's POMWRIGHT.md
+
+A project keeps its POMWright decisions in `POMWRIGHT.md`: the shape of its page code, Playwright's `baseURL`, path
+names, test data, and the other choices POMWright leaves open. Look for it beside the Playwright config the task
+concerns, then in each folder above it, up to the repository root.
+
+- **Found**: follow it. Its decisions replace this skill's defaults (rules 3 to 6 and 10 below, and the conventions
+  in the guides); how POMWright and Playwright behave is not a decision. When the user states a new preference, or
+  changes one, update the file.
+- **Missing**: creating it is the first task in the project, before any other, also when the project has tests and
+  page code: ask the user each decision, showing what the project's code already does, write the answers into a copy
+  of [assets/templates/POMWRIGHT.md](assets/templates/POMWRIGHT.md), and offer a line in the agent instructions the
+  project uses (`AGENTS.md`, `CLAUDE.md`) that points to it. The decisions, their options and how to ask them:
+  [guides/project-decisions.md](guides/project-decisions.md).
+- A question about POMWright that works on no project's code needs no file.
+
 ## What POMWright adds, and what stays Playwright
 
 | Playwright's, used as playwright.dev documents it | what POMWright adds on it |
@@ -42,22 +58,6 @@ Read the version in `node_modules/pomwright/package.json`.
 Use Playwright for everything in the first column, as playwright.dev documents it; POMWright changes none of it. Each
 part in the second column works without the others.
 
-## The user's choices
-
-POMWright leaves these to the project. In a project with tests, follow what it chose; for a new project, or code that
-has not chosen yet, ask the user, saying what each option gives.
-
-- **The shape of the page code**: `PageObject` subclasses, the user's own page object classes, functions, or fixtures.
-  The last three create a registry with `createRegistryWithAccessors<Paths>(page)`, call `registry.verify()` themselves
-  and navigate with Playwright; every shape uses the same locator modules. Each shape, written out, and what it does
-  for you: [guides/choosing-a-shape.md](guides/choosing-a-shape.md).
-- **Playwright's `baseURL`**: a page object has its own origin, and `baseURL` works beside it. With one origin, the
-  config and the base class can read the same value from `env.ts`, so Playwright's relative URLs (`page.goto("/cart")`,
-  `expect(page).toHaveURL("/cart")`, the `request` fixture) reach the page objects' origin. Or the config sets none,
-  and every origin comes from `env.ts`, for one origin or several.
-
-The rules below hold in every shape; the example after them is a `PageObject`.
-
 ## Where facts come from
 
 - **Signatures, options, error messages**: the installed declarations, `node_modules/pomwright/dist/index.d.ts`, which
@@ -68,6 +68,9 @@ The rules below hold in every shape; the example after them is a `PageObject`.
 - **Playwright itself**: playwright.dev.
 
 ## The rules for every task
+
+They hold in every shape of page code ([guides/choosing-a-shape.md](guides/choosing-a-shape.md)). Rules 3 to 6 and 10
+are defaults: where the project's `POMWRIGHT.md` decides otherwise, follow it.
 
 1. **Act on and assert against `getNestedLocator(path)`**: the chain of the path's registered segments. Use
    `getLocator(path)`, the path's own locator without its ancestors, only to build a chain yourself, inside a filter, or
@@ -81,8 +84,8 @@ The rules below hold in every shape; the example after them is a `PageObject`.
    gives no role, label or text.
 4. **Paths from the outside in**, one segment per element a user would recognize (a landmark, a form, a dialog, a
    table), only as many as make the chain unique; each segment names its kind and which one, `kind@which`, the kind
-   being the element's role (`button@save`, `dialog@consent`); a path that matches several elements is plural
-   (`main.list@orders.items`).
+   being the element's role (`button@save`, `dialog@consent`); a segment that matches several elements in its scope
+   is plural (`main.list@products.cards`), one that matches one is singular (`main.list@products.card`).
 5. **Page code reaches tests as Playwright fixtures**; what every page of one app shares (its origin, its common
    locators) is in one place, such as the app's base class; a test reads as steps on the page code.
 6. **The page code's actions and checks are report steps**: `@step()` methods in a class, `test.step` in a function;
@@ -94,7 +97,7 @@ The rules below hold in every shape; the example after them is a `PageObject`.
    registry you create yourself is checked when you call `registry.verify()`, after the last registration.
 9. **Resolution is synchronous**: `getNestedLocator`, `getLocator` and `getLocatorSchema` return at once; await the
    action or the assertion, never the resolution.
-10. **Test data comes from one test-data fixture**, by dot paths (`testData.orders.open`); page objects take data as
+10. **Test data comes from one test-data fixture**, by dot paths (`testData.orders.open`); page code takes data as
     arguments.
 11. **Wait as Playwright waits**: web-first assertions, `navigation.expectThisPage()` or `page.waitForURL()` after a
     navigation; no sleeps.
@@ -110,16 +113,16 @@ import type { LocatorRegistry } from "pomwright";
 export type Paths =
   | "main"
   | "main.table@orders"
-  | "main.table@orders.row"
-  | "main.table@orders.row.button@cancel"
-  | "main.table@orders.row.cell@status";
+  | "main.table@orders.rows"
+  | "main.table@orders.rows.button@cancel"
+  | "main.table@orders.rows.cell@status";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").locator("main");
   registry.add("main.table@orders").getByRole("table", { name: "Orders" });
-  registry.add("main.table@orders.row").getByRole("row");
-  registry.add("main.table@orders.row.button@cancel").getByRole("button", { name: "Cancel" });
-  registry.add("main.table@orders.row.cell@status").getByTestId("order-status");
+  registry.add("main.table@orders.rows").getByRole("row");
+  registry.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
+  registry.add("main.table@orders.rows.cell@status").getByTestId("order-status");
 }
 ```
 
@@ -141,16 +144,16 @@ export class OrdersPage extends PageObject<Paths> {
 
   @step()
   async cancel(options: { order: string }) {
-    await this.getLocatorSchema("main.table@orders.row.button@cancel")
-      .filter("main.table@orders.row", { hasText: options.order })
+    await this.getLocatorSchema("main.table@orders.rows.button@cancel")
+      .filter("main.table@orders.rows", { hasText: options.order })
       .getNestedLocator()
       .click();
   }
 
   @step()
   async expectStatus(options: { order: string; status: OrderStatus }) {
-    const cell = this.getLocatorSchema("main.table@orders.row.cell@status")
-      .filter("main.table@orders.row", { hasText: options.order })
+    const cell = this.getLocatorSchema("main.table@orders.rows.cell@status")
+      .filter("main.table@orders.rows", { hasText: options.order })
       .getNestedLocator();
     await expect(cell).toHaveText(options.status);
   }
@@ -193,7 +196,7 @@ test("a customer cancels an open order", async ({ ordersPage, testData }) => {
 });
 ```
 
-Canceling `ORD-1042` clicks this chain, which the report shows as `main.table@orders.row.button@cancel`:
+Canceling `ORD-1042` clicks this chain, which the report shows as `main.table@orders.rows.button@cancel`:
 
 ```text
 locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })
@@ -215,6 +218,7 @@ way a user finds it.
 | session storage, codecs, `seed` | [references/session-storage.md](references/session-storage.md) |
 | the `log` fixture, child loggers, `@step` | [references/reports.md](references/reports.md) |
 | the exported types, generic base classes, `declaration: true` | [references/typescript.md](references/typescript.md) |
+| a project's decisions: asking them, writing and keeping `POMWRIGHT.md` | [guides/project-decisions.md](guides/project-decisions.md) |
 | choose the shape: `PageObject`, your own classes, functions or fixtures over a registry | [guides/choosing-a-shape.md](guides/choosing-a-shape.md) |
 | choose a locator, the segments of a path, its name | [guides/choosing-locators-and-paths.md](guides/choosing-locators-and-paths.md) |
 | write a page object for a page, with its locator module and fixture | [guides/writing-page-objects.md](guides/writing-page-objects.md) |

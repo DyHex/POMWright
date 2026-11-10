@@ -23,6 +23,7 @@ the workspace folder.
 | `learning-records/NNNN-slug.md` | what the learner has shown they can do, or already knew |
 | `assets/` | the shared stylesheet and the components lessons are built from (a quiz, a code block with a copy button) |
 | `practice-app/` | the practice shop, copied from the skill |
+| `POMWRIGHT.md` | the workspace's POMWright decisions, from the `pomwright` skill's template with its defaults, which the lessons follow; unit 12 has the learner write one for a project of their own |
 | `playwright.config.ts` | runs `exercises/` against the practice shop, which it starts |
 | `NOTES.md` | the learner's preferences for how they are taught, and working notes |
 

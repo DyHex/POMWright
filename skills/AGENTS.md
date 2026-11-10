@@ -36,13 +36,17 @@ user installed. Write for that reader:
   (`getByRole` first, `getByTestId` last, CSS and XPath not recommended) is the skills' too, with `getById` beside
   `getByTestId`.
 - **Lead by example.** A skill shows the right way in its examples and says why; it does not catalogue mistakes.
-- **Conventions where the docs leave a choice**, taught the same way in every skill: a path segment names its kind and
-  which one, `kind@which`, the kind being the element's role (`button@save`, `dialog@consent`); new projects name files
-  `<name>.locators.ts` and `<name>.page.ts`, and an existing project keeps its own names; a page-object method with two
-  or more parameters takes one options object, as the README's example does; test data reaches tests through one
-  fixture, by dot paths such as `testData.checkout.feedback.happyForm`, and page objects take data as arguments;
-  logging from a page object is an option, with a child logger for each page object or helper so the report shows
-  where an entry came from; `testInfo` is Playwright's and not taught.
+- **Where the docs leave a choice, the user decides**, and a project records its decisions in `POMWRIGHT.md`, which
+  the `pomwright` skill reads first and, when it is missing, writes first, asking the user
+  (`pomwright/guides/project-decisions.md`, its template `pomwright/assets/templates/POMWRIGHT.md`). The skills teach
+  the same defaults everywhere: `PageObject` subclasses, origins from `env.ts` and no `baseURL`; a path segment names
+  its kind and which one, `kind@which`, the kind being the element's role (`button@save`, `dialog@consent`), plural
+  for several in its scope (`main.list@products.cards`), singular for one; files `<name>.locators.ts` and
+  `<name>.page.ts`; a method with two or more parameters takes one options object, as the README's example does; test
+  data reaches tests through one fixture, by dot paths such as `testData.checkout.feedback.happyForm`, and page code
+  takes data as arguments; logging from page code is an option, with a child logger for each page object or helper
+  so the report shows where an entry came from. A new default changes the guide, the template and every skill that
+  teaches it together. `testInfo` is Playwright's and not taught.
 
 ## Format (`pnpm lint:skills`, `scripts/check-skills.mjs`)
 

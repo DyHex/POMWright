@@ -31,7 +31,7 @@ fixtures. The practice shop serves for these exercises too, with `page.getByRole
 | 9. URLs and navigation | a page whose URL varies, wait for the page a test arrives at, `baseURL` beside a page object's origin | `references/navigation.md` | login to `/account/42` |
 | 10. Session storage | declare a codec, read the cart, seed it before the app loads | `references/session-storage.md` | cart |
 | 11. Reports | log from a page object with child loggers, configure `@step` | `references/reports.md` | any |
-| 12. A project | lay out a suite for one app or several, choose its shape and whether it sets `baseURL`, start it from the templates | `guides/project-structure.md` | the whole shop |
+| 12. A project | lay out a suite for one app or several, record its decisions in `POMWRIGHT.md`, start it from the templates | `guides/project-structure.md` | the whole shop |
 | 13. Review and refactor | review a suite, refactor a messy test into page code without changing what it checks | `guides/reviewing.md` | a messy spec the lesson provides |
 | 14. Mapping a real site | map the learner's own app into page code | the `pomwright-map-site` skill | the learner's app |
 

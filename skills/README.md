@@ -15,6 +15,11 @@ applies, and the files it reads as it needs them.
 
 `pomwright-map-site` and `pomwright-teach` build on `pomwright`: install it with them.
 
+`pomwright` keeps a project's choices in `POMWRIGHT.md`, beside the Playwright config: the shape of the page code,
+origins and `baseURL`, path names, test data and the rest of what POMWright leaves open. When the file is missing, the
+skill asks you each decision and writes it before any other work, so every agent and person follows the same
+decisions and nobody is asked twice.
+
 ## Requirements
 
 POMWright 3.x, `@playwright/test` 1.64 or later, Node 20 or later. The skills check the installed POMWright version

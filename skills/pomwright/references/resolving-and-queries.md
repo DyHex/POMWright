@@ -85,17 +85,17 @@ then an element inside that row:
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-type Paths = "main" | "main.table@orders" | "main.table@orders.row" | "main.table@orders.row.button@cancel";
+type Paths = "main" | "main.table@orders" | "main.table@orders.rows" | "main.table@orders.rows.button@cancel";
 declare const registry: LocatorRegistry<Paths>;
 
 registry.add("main").locator("main");
 registry.add("main.table@orders").getByRole("table", { name: "Orders" });
-registry.add("main.table@orders.row").getByRole("row");
-registry.add("main.table@orders.row.button@cancel").getByRole("button", { name: "Cancel" });
+registry.add("main.table@orders.rows").getByRole("row");
+registry.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
 
 const cancel = registry
-  .getLocatorSchema("main.table@orders.row.button@cancel")
-  .filter("main.table@orders.row", { hasText: "ORD-1042" })
+  .getLocatorSchema("main.table@orders.rows.button@cancel")
+  .filter("main.table@orders.rows", { hasText: "ORD-1042" })
   .getNestedLocator();
 // locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })
 ```
@@ -109,24 +109,24 @@ import type { LocatorRegistry } from "pomwright";
 
 type Paths =
   | "main.list@products"
-  | "main.list@products.card"
-  | "main.list@products.card.heading"
-  | "main.list@products.card.button@addToCart";
+  | "main.list@products.cards"
+  | "main.list@products.cards.heading"
+  | "main.list@products.cards.button@addToCart";
 declare const registry: LocatorRegistry<Paths>;
 
 registry.add("main.list@products").getByRole("list", { name: "Products" });
-registry.add("main.list@products.card").getByRole("listitem");
-registry.add("main.list@products.card.heading").getByRole("heading");
-registry.add("main.list@products.card.button@addToCart").getByRole("button", { name: "Add to cart" });
+registry.add("main.list@products.cards").getByRole("listitem");
+registry.add("main.list@products.cards.heading").getByRole("heading");
+registry.add("main.list@products.cards.button@addToCart").getByRole("button", { name: "Add to cart" });
 
 const heading = registry
-  .getLocatorSchema("main.list@products.card.heading")
+  .getLocatorSchema("main.list@products.cards.heading")
   .update()
   .getByRole({ name: "Lamp", exact: true })
   .getLocator();
 const addToCart = registry
-  .getLocatorSchema("main.list@products.card.button@addToCart")
-  .filter("main.list@products.card", { has: heading })
+  .getLocatorSchema("main.list@products.cards.button@addToCart")
+  .filter("main.list@products.cards", { has: heading })
   .getNestedLocator();
 // getByRole('list', { name: 'Products' }).getByRole('listitem').filter({ has: getByRole('heading', { name: 'Lamp', exact: true }) }).getByRole('button', { name: 'Add to cart' })
 ```

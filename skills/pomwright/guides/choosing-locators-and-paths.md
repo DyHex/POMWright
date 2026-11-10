@@ -45,9 +45,13 @@ groups paths.
   element without one the plain kind (`card`, `badge`).
 - `which` is what the element means to a user, in camelCase: `button@addToCart`, not `button@primary` or
   `button@btn3`.
-- A segment that is the only one of its kind where it stands needs no `@which`: `main`, `header`, `main.table@orders.row`.
-- A path that matches several elements is plural: `main.list@orders.items`; one of them has its own path only when many
-  tests use it.
+- A segment that is the only one of its kind where it stands needs no `@which`: `main`, `header`,
+  `main.table@orders.caption`.
+- Plural or singular by what the segment matches in its scope: several cards in the list, `main.list@products.cards`;
+  one, `main.list@products.card`. A segment below a plural one names what each of them holds:
+  `main.list@products.cards.button@addToCart`, one button per card.
+- One of several gets a path of its own only when many tests use it: a filter or `nth` on a path that reuses the plural
+  one (`main.list@products.card@lamp`); otherwise a query picks it where it is used.
 - Shared parts get one form across the project: every dialog `dialog@<name>`, every page's heading `main.heading`.
 - Write paths in full; compose them from a `const` array only for an element repeated for several known values.
 

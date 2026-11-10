@@ -17,7 +17,7 @@ A test with POMWright is a Playwright test whose steps are page-object calls. Pl
 import { expect, type Page } from "@playwright/test";
 import { PageObject, step } from "pomwright";
 
-type Paths = "main" | "main.table@orders" | "main.table@orders.row" | "main.table@orders.row.button@cancel";
+type Paths = "main" | "main.table@orders" | "main.table@orders.rows" | "main.table@orders.rows.button@cancel";
 
 export class OrdersPage extends PageObject<Paths> {
   constructor(page: Page) {
@@ -27,21 +27,21 @@ export class OrdersPage extends PageObject<Paths> {
   protected defineLocators(): void {
     this.add("main").locator("main");
     this.add("main.table@orders").getByRole("table", { name: "Orders" });
-    this.add("main.table@orders.row").getByRole("row");
-    this.add("main.table@orders.row.button@cancel").getByRole("button", { name: "Cancel" });
+    this.add("main.table@orders.rows").getByRole("row");
+    this.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
   }
 
   @step()
   async cancel(options: { order: string }) {
-    await this.getLocatorSchema("main.table@orders.row.button@cancel")
-      .filter("main.table@orders.row", { hasText: options.order })
+    await this.getLocatorSchema("main.table@orders.rows.button@cancel")
+      .filter("main.table@orders.rows", { hasText: options.order })
       .getNestedLocator()
       .click();
   }
 
   @step()
   async expectOpenOrders(count: number) {
-    await expect(this.getNestedLocator("main.table@orders.row.button@cancel")).toHaveCount(count);
+    await expect(this.getNestedLocator("main.table@orders.rows.button@cancel")).toHaveCount(count);
   }
 }
 ```

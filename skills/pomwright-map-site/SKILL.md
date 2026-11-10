@@ -30,7 +30,7 @@ each page, designs its paths, generates the files, and checks every path against
 
 1. **Scope.** Ask for the origin (and any other origin the flow crosses), the start path, the environment, and whether
    pages need a login; for a login, a Playwright `storageState` file the user saves, or credentials the user types for
-   a setup step. In a project without page code yet, ask the shape too (the `pomwright` skill's *The user's choices*).
+   a setup step. The project's `POMWRIGHT.md` holds its decisions; without one, the `pomwright` skill writes it first.
    Confirm before the first navigation.
 2. **Crawl** from the project's root:
    `node <this skill>/scripts/map.mjs crawl https://shop.example/ --depth 2 --limit 40`. It prints the pages found on
@@ -39,7 +39,7 @@ each page, designs its paths, generates the files, and checks every path against
    [references/from-snapshot-to-paths.md](references/from-snapshot-to-paths.md) says: containers become segments,
    elements become paths, the suggested locators are evidence.
 4. **Design** each page's path tree before writing code; for a large page, show it to the user first.
-5. **Generate**, following the `pomwright` skill, in the project's shape: the app's origin in `env.ts` (once per
+5. **Generate**, following the `pomwright` skill and the project's `POMWRIGHT.md`: the app's origin in `env.ts` (once per
    origin), then per page a locator module, its page code and its fixture. For `PageObject`, that is a page object that
    extends the app's base class, with what "loaded" means in `pageActionsToPerformAfterNavigation()`; in any shape,
    methods only for the actions the user names. Parts every page has (header, footer, dialogs) become composed modules,

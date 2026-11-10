@@ -14,13 +14,13 @@ shape of page code the project chose, without changing what its tests check.
 
 1. **The version**: `node_modules/pomwright/package.json`. A 2.x project is an upgrade first
    (`guides/upgrading-from-2x.md`).
-2. **The map**: the Playwright config, the env module, each app's base class, the fixtures files and how they merge,
-   the locator modules and the page code, the test data, the specs. Note the project's own choices: the shape of its
-   page code (`PageObject` subclasses, its own classes, functions or fixtures over a registry,
-   `guides/choosing-a-shape.md`), whether the config sets `baseURL`, file names, aliases, path style. Where the docs
-   leave a choice and the project made one consistently, keep it, and review the code within it.
-3. **Each area** below, against the guide it names.
-4. **The report**, then the refactoring the maintainers choose.
+2. **The decisions**: the project's `POMWRIGHT.md`. Without one, writing it comes first (`guides/project-decisions.md`):
+   the maintainers confirm what the code does for each decision, or choose. The review then measures the code against
+   the file, not against this skill's defaults.
+3. **The map**: the Playwright config, the env module, each app's base class, the fixtures files and how they merge,
+   the locator modules and the page code, the test data, the specs.
+4. **Each area** below, against the guide it names and the project's decisions.
+5. **The report**, then the refactoring the maintainers choose.
 
 ## What good looks like, area by area
 
@@ -42,21 +42,22 @@ shape of page code the project chose, without changing what its tests check.
 
 For each finding: the file and line, what good looks like for it, the rewrite (a short before-and-after), and what the
 change would touch. Group findings by area, most valuable first: a structural change (imports, fixtures, test data)
-pays off across every test, a locator change across every test of one page. Say what is already sound. A choice the
-docs leave open and the project made consistently is not a finding.
+pays off across every test, a locator change across every test of one page. Say what is already sound. Code that
+follows a decision in `POMWRIGHT.md` is not a finding; code that departs from one is, and so is a decision the code
+shows the project has outgrown, raised as a question.
 
 A rewrite, shown as the right way to do it:
 
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-type Paths = "main" | "main.table@orders" | "main.table@orders.row" | "main.table@orders.row.button@cancel";
+type Paths = "main" | "main.table@orders" | "main.table@orders.rows" | "main.table@orders.rows.button@cancel";
 declare const registry: LocatorRegistry<Paths>;
 
 // one row found by its text, then the button inside it, as one query of the button's path
 const cancel = registry
-  .getLocatorSchema("main.table@orders.row.button@cancel")
-  .filter("main.table@orders.row", { hasText: "ORD-1042" })
+  .getLocatorSchema("main.table@orders.rows.button@cancel")
+  .filter("main.table@orders.rows", { hasText: "ORD-1042" })
   .getNestedLocator();
 ```
 
