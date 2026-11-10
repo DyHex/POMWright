@@ -53,7 +53,7 @@ The default comes first; the others are what projects choose instead.
 | locator preference | Playwright's order: role, text, label, placeholder, alt text, title, then test id or id, CSS last | test ids first, where the app gives every element a stable one |
 | segment names | `kind@which`, the kind being the element's role (`button@save`) | the project's own style, applied the same way everywhere |
 | plural and singular | by what a segment matches in its scope: `main.list@products.cards` for several, `main.list@products.card` for one | always singular |
-| one of several | a query where it is used; a path of its own when many tests use it, singular (`main.list@products.card@lamp`); `nth` last | a path of its own named plural (`main.list@products.cards@lamp`) |
+| one of several | a query where it is used; a path of its own when many tests use it, named by what it matches: `main.list@products.card@lamp` for one lamp, `main.list@products.cards@lamp` for several; `nth` last | queries only, no narrowed paths |
 | page code in tests | as fixtures, from one `test` that every spec imports | built in each test |
 | steps | every action and check of the page code is a report step: `@step()`, or `test.step` in a function | only the methods the project names |
 | parameters | one options object for two or more | positional parameters |

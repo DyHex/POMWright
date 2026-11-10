@@ -51,7 +51,8 @@ groups paths.
   one, `main.list@products.card`. A segment below a plural one names what each of them holds:
   `main.list@products.cards.button@addToCart`, one button per card.
 - One of several gets a path of its own only when many tests use it: a filter or `nth` on a path that reuses the plural
-  one (`main.list@products.card@lamp`); otherwise a query picks it where it is used.
+  one, named by what it matches (`main.list@products.card@lamp` for one lamp, `main.list@products.cards@lamp` for
+  several); otherwise a query picks it where it is used.
 - Shared parts get one form across the project: every dialog `dialog@<name>`, every page's heading `main.heading`.
 - Write paths in full; compose them from a `const` array only for an element repeated for several known values.
 

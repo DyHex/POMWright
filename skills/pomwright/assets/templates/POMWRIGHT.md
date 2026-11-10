@@ -27,8 +27,8 @@ the code when a decision changes. A decision here replaces the default of the `p
 - **Segment names**: `kind@which`, the kind being the element's role (`button@save`, `dialog@consent`).
 - **Plural and singular**: by what a segment matches in its scope: `main.list@products.cards` for several,
   `main.list@products.card` for one.
-- **One of several**: a query where it is used; a path of its own when many tests use it, singular
-  (`main.list@products.card@lamp`); `nth` last.
+- **One of several**: a query where it is used; a path of its own when many tests use it, named by what it matches
+  (`main.list@products.card@lamp` for one lamp, `main.list@products.cards@lamp` for several); `nth` last.
 
 ## Tests
 
