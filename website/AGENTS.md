@@ -85,7 +85,11 @@ page).
   error is shown with `// @ts-expect-error`, which the check enforces. A block's language is the fence's first word,
   after any spaces, as CommonMark reads it; a TypeScript block the check would not compile, in a `~~~` fence, labeled
   `tsx`, `mts` or `cts`, or with `ts` written otherwise (a space before it, upper case), fails it with the fix, and so
-  does a `tsc` that fails without reporting a type error. It also compiles the doc comments' `@example` blocks, in a
+  does a `tsc` that fails without reporting a type error. The agent skills in `skills/` are compiled the same way, one
+  project per Markdown file, with three rules of their own, since an agent reads a skill's raw Markdown: no
+  `// ---cut---`, no `nocheck`, and code in double quotes, so that a single-quoted locator call in a skill is always a
+  rendering of a chain; no example app is copied in; and the `.ts` templates under `skills/<skill>/assets/` are compiled
+  at their paths. It also compiles the doc comments' `@example` blocks, in a
   project of their own (`test/.doc-examples/`): each as a fragment of a consumer's file, with an import of the exports
   and Playwright types it names and the instances it assumes declared once in the script (a new one goes there); an
   error points at the source line, and `nocheck` after the fence skips an example that cannot stand alone and lists

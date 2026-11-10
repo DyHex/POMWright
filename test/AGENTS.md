@@ -26,8 +26,9 @@ it before working there. Read it before running these commands, probing a claim,
   `experimentalDecorators` (`tests/packaging/stepLegacyDecorators.typecheck.ts`, also compiled under the standard
   decorators by the first `tsc`); then `tsc -p test/tsconfig.legacyDecorators.emit.json`, which emits
   `step-locations/legacy/legacyWidget.ts` with `experimentalDecorators`, as CommonJS, into `test/.legacy-decorators/` for
-  the step-location check; then `scripts/check-doc-snippets.mjs`, every `ts` block of `website/src/content/docs` and the
-  README, and the doc comments' examples, against the installed package; `scripts/check-api-coverage.mjs`, the API
+  the step-location check; then `scripts/check-doc-snippets.mjs`, every `ts` block of `website/src/content/docs`, the
+  README and the skills in `skills/`, the skills' templates, and the doc comments' examples, against the installed
+  package; `scripts/check-api-coverage.mjs`, the API
   reference and the doc comments against the installed declarations; `scripts/check-error-messages.mjs`,
   *Error messages* against the messages `src/` throws and the compile-error messages its types define (see
   [website/AGENTS.md](../website/AGENTS.md)); and `scripts/check-playwright-retries.mjs`, `RETRY_PAUSES` against the

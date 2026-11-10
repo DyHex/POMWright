@@ -24,10 +24,14 @@ the same facts as the API pages.
   deliberate error is shown with `// @ts-expect-error`, which the check enforces. The example app in
   `website/snippets/`, four page objects on `shop.example` and their fixtures, can be imported from every page. The
   README's examples are compiled as one more page, their blocks titled in the fence (`title="orders.page.ts"`), which
-  GitHub and npm do not show. The doc comments' `@example` blocks are compiled too, in a project of their own: each is
-  a fragment of a consumer's file, so the check imports the exports and Playwright types it names and declares the
-  instances it assumes (`page`, `registry`, a login page object, …) once in the script; an error points at the source
-  line, and `nocheck` after the fence skips an example that cannot stand alone and lists it.
+  GitHub and npm do not show. The agent skills in the repository's `skills/` folder are compiled as pages too, one per
+  Markdown file, without the example app and with three rules of their own, since an agent reads a skill's Markdown
+  raw: no `// ---cut---` (an agent would copy the marker), no `nocheck`, and code in double quotes, so a single-quoted
+  locator call is always a rendering of a chain; the templates a skill copies into a project, the `.ts` files under its
+  `assets/`, are compiled at their paths. The doc comments' `@example` blocks are compiled too, in a project of their
+  own: each is a fragment of a consumer's file, so the check imports the exports and Playwright types it names and
+  declares the instances it assumes (`page`, `registry`, a login page object, …) once in the script; an error points at
+  the source line, and `nocheck` after the fence skips an example that cannot stand alone and lists it.
 - **Nothing is skipped silently.** A block's language is the fence's first word, after any spaces, as CommonMark and the
   site read it. A TypeScript block the check would not compile fails it, with the fix in the message: one in a `~~~`
   fence (write it as a ` ```ts ` block), one labeled `tsx`, `mts` or `cts` (write it as `ts`), one labeled `ts` written
