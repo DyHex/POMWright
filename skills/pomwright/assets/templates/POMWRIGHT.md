@@ -52,3 +52,4 @@ decide follows the skill's defaults.
 
 - **Model and effort**: the agent session's own, for every task.
 - **Tasks with another model or effort**: none.
+- **Tasks done by a subagent**: none; the session does every task itself.

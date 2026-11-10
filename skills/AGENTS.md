@@ -45,9 +45,9 @@ user installed. Write for that reader:
   `<name>.page.ts`; a method with two or more parameters takes one options object, as the README's example does; test
   data reaches tests through one fixture, by dot paths such as `testData.checkout.feedback.happyForm`, and page code
   takes data as arguments; logging from page code is an option, with a child logger for each page object or helper
-  so the report shows where an entry came from; agents use the session's own model and effort unless the file names
-others. A new default changes the guide, the template and every skill that
-  teaches it together. `testInfo` is Playwright's and not taught.
+  so the report shows where an entry came from; the session does every task at its own model and effort, says so where
+  the file recommends others, and hands a task to a subagent only where the file or the user says so. A new default
+  changes the guide, the template and every skill that teaches it together. `testInfo` is Playwright's and not taught.
 
 ## Format (`pnpm lint:skills`, `scripts/check-skills.mjs`)
 

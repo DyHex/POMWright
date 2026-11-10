@@ -16,10 +16,9 @@ applies, and the files it reads as it needs them.
 `pomwright-map-site` and `pomwright-teach` build on `pomwright`: install it with them.
 
 `pomwright` keeps a project's choices in `POMWRIGHT.md`, beside the Playwright config: the shape of the page code,
-origins and `baseURL`, path names, test data, the model and effort agents use for which task, and the rest of what
-POMWright leaves open. When the file is missing, the
-skill asks you each decision and writes it before any other work, so every agent and person follows the same
-decisions and nobody is asked twice.
+origins and `baseURL`, path names, test data, the model and effort recommended for which task, and the rest of what
+POMWright leaves open. When the file is missing, the skill asks you each decision and writes it before any other work,
+so every agent and person follows the same decisions and nobody is asked twice.
 
 ## Requirements
 

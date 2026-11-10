@@ -69,7 +69,7 @@ The default comes first; the others are what projects choose instead.
 | checks while working | `npx tsc --noEmit`, then the specs the change touches on one browser project, then every project | the project's own commands |
 | lint and format | the project's own commands, if it has them | none |
 | `strictChains` | off | on: `verify()` requires every ancestor of every path to be registered |
-| agents' model and effort | the agent session's own, for every task | a model and effort level the project names as its default, and the tasks that use another: more effort or a larger model for mapping a site or a review, less for a small edit |
+| agents' model and effort | the agent session's own, for every task, each done in the session | a model and effort level the project recommends as its default, and the tasks that use another: more effort or a larger model for mapping a site or a review, less for a small edit; the tasks a subagent does, at their model and effort |
 
 Why the defaults: they are the forms the site's guides use. The probes behind the `baseURL` row ran on Playwright 1.64:
 with `baseURL` set from the page object's own origin, the relative `page.goto("/products")` reached the page object's
@@ -78,10 +78,15 @@ threw `Cannot navigate to invalid URL`, and the page object still navigated.
 
 ## Models and effort
 
-The file can name the model and effort level agents use, as a default and per task. A skill does not change the model
-or effort of the session it runs in, so before a task the file names another for, the agent says which model and effort
-the file names. Where the agent can start a subagent with a model and effort (Claude Code's Agent tool takes both), it
-hands the task to one; otherwise it asks the user to switch, or to go on as it is.
+The file can name a model and effort level for the project's tasks, as a default and per task. A skill does not change
+the model or effort of the session it runs in, so they are a recommendation, and the session does every task itself:
+before a task the file names another model or effort for than the session's, the agent says so once, and the user
+switches (in Claude Code, `/model` and `/effort`) or tells it to go on.
+
+A task goes to a subagent only where the file says so for that task, or the user asks. A subagent starts without the
+session's context, and the user sees its work only as the session reports it, so it suits a self-contained task, such
+as mapping a few pages or a review pass, not page code the user shapes as it is written. Claude Code's Agent tool
+starts one with a model and effort; where the agent cannot, the session does the task.
 
 ## Keeping it current
 

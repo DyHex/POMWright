@@ -34,10 +34,10 @@ A project keeps its POMWright decisions in `POMWRIGHT.md`: the shape of its page
 names, test data, and the other choices POMWright leaves open. Look for it beside the Playwright config the task
 concerns, then in each folder above it, up to the repository root.
 
-- **Found**: follow it, the model and effort it names for the task included. Its decisions replace this skill's
-  defaults (rules 3 to 6 and 10 below, and the conventions in the guides); how POMWright and Playwright behave is not
-  a decision. When the user states a new preference, or
-  changes one, update the file.
+- **Found**: follow it. Its decisions replace this skill's defaults (rules 3 to 6 and 10 below, and the conventions in
+  the guides); how POMWright and Playwright behave is not a decision. Where it names another model or effort for the
+  task than the session's, say so before starting; the session does the task unless the file or the user hands it to
+  a subagent. When the user states a new preference, or changes one, update the file.
 - **Missing**: creating it is the first task in the project, before any other, also when the project has tests and
   page code: ask the user each decision, showing what the project's code already does, write the answers into a copy
   of [assets/templates/POMWRIGHT.md](assets/templates/POMWRIGHT.md), and offer a line in the agent instructions the
