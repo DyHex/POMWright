@@ -23,8 +23,8 @@ steps build on that. Your tests stay Playwright tests.
 Read the version in `node_modules/pomwright/package.json`.
 
 - **3.x**: follow this skill.
-- **2.x or 1.x**: say so before changing anything; the upgrade is its own task, on the site's
-  [Upgrading from 2.x](https://dyhex.github.io/POMWright/docs/upgrading-from-2x/) page.
+- **2.x or 1.x**: say so before changing anything; the upgrade is its own task:
+  [guides/upgrading-from-2x.md](guides/upgrading-from-2x.md).
 - **Not installed**: `npm install --save-dev pomwright` (or `pnpm add --save-dev pomwright`) in a project that has
   `@playwright/test` 1.64 or later; see [Installation](https://dyhex.github.io/POMWright/docs/installation/).
 
@@ -200,6 +200,8 @@ way a user finds it.
 | write tests: steps, assertions, data, waiting, random overlays | [guides/writing-tests.md](guides/writing-tests.md) |
 | fixtures for page objects, the test-data fixture, setup some tests need | [guides/fixtures-and-test-data.md](guides/fixtures-and-test-data.md) |
 | a project's layout, one app or several, starting from the templates | [guides/project-structure.md](guides/project-structure.md) |
+| review or refactor a project, its page objects or its tests | [guides/reviewing.md](guides/reviewing.md) |
+| upgrade a 2.x project | [guides/upgrading-from-2x.md](guides/upgrading-from-2x.md) |
 
 ## When something fails
 
