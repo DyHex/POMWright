@@ -57,7 +57,8 @@ page).
   chain, on the page or in the code, fails until the spec and the page change together. `skillsChains.spec.ts` does the
   same for the agent skills in `skills/`, one test per skill file, and also fails when a skill file shows a rendering
   its test does not compare, or has no test. A change to a message, a rendering or a mechanism greps `website/` for the old text and updates the pages with it,
-  and a consumer-facing change updates the page that describes it.
+  and a consumer-facing change updates the page that describes it. A change to anything an agent skill describes updates
+  the skill too ([skills/AGENTS.md](../skills/AGENTS.md)).
 - Page shapes follow playwright.dev. Getting started pages: *Introduction*, "You will learn", short sections whose
   example grows from the last, *What's next*; one page, one outcome. Concept pages open with the Playwright concept
   beneath them, linked, and say what POMWright adds; then a small fixture (the HTML and the registry or page object the

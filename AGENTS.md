@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Persistent context and working rules for AI agents and humans contributing to POMWright. This file holds what every task
-needs; the rest of the contributor guide is in an `AGENTS.md` in six folders and in `docs/`, and *The index* below says
+needs; the rest of the contributor guide is in an `AGENTS.md` in seven folders and in `docs/`, and *The index* below says
 which file to read before which work. Read this file fully, and each file the index names for your task, before changing
 anything. Repo-specific facts here override generic defaults. Last revised 2026-10-29, with two principles of how to
 work (the real thing over a stand-in; leaving the code better than you found it), after the fixes from the 3.0.2 defect
@@ -70,8 +70,8 @@ review and the guide split by folder and by task.
   process `.md`; `test/test-data` and `.pack` are excluded). `pnpm format` (`biome format --write .`) rewrites
   formatting only; import order and lint fixes come from `biome check --write`. `pnpm lint:workflows` runs actionlint
   and ShellCheck over the workflows at CI's pinned versions, `pnpm lint:guide` checks every relative link and
-  anchor of this guide and of the skills, and `pnpm lint:skills` the skills' format; CI's
-  `lint` job runs all three.
+  anchor of this guide and of the skills, and `pnpm lint:skills` the skills' format
+  ([skills/AGENTS.md](skills/AGENTS.md)); CI's `lint` job runs all three.
 - `pnpm build` runs `tsup index.ts --format cjs --dts --clean`, which empties `dist/` first, then
   `scripts/write-esm-entry.mjs`, so a local pack holds exactly what the source produces, as CI's fresh checkout does.
 - `pnpm test:unit` runs the vitest unit tests for the pure helpers in seconds and type-checks the test files and
@@ -106,6 +106,7 @@ review and the guide split by folder and by task.
 | [test/AGENTS.md](test/AGENTS.md) | the test commands, probing, the harness | in Claude Code, when its Read tool opens a file under `test/` | running a test command beyond the ones above; probing a claim; changing `pack-*.sh`, `test-server-check.sh` or `playwright.base.ts` |
 | [website/AGENTS.md](website/AGENTS.md) | the site, the README, doc comments, the docs checks, the site's scripts | in Claude Code, when its Read tool opens a file under `website/` | changing the README or a doc comment; adding an export or a public member; changing anything a page or doc comment describes: behavior, a message, chain or rendering, a mechanism or a design (most changes under `src/` and `.github/`); changing `scripts/check-*.mjs` |
 | [.github/AGENTS.md](.github/AGENTS.md) | the workflows, Dependabot, how Publish and Pages run, the packaging probes | in Claude Code, when its Read tool opens a file under `.github/` | changing a script only CI runs or the packaging probes |
+| [skills/AGENTS.md](skills/AGENTS.md) | the agent skills: who reads them, how they are split, their format, examples and chains | in Claude Code, when its Read tool opens a file under `skills/` | changing a skill, or anything a skill describes |
 | [docs/repository.md](docs/repository.md) | the repository map, packaging, the toolchain, how this guide is laid out and loads | no | adding a top-level file or folder; changing the toolchain (the unit tests' `vitest.config.ts` and `tsconfig.vitest.json` among it), a dependency or this guide |
 | [docs/versioning.md](docs/versioning.md) | supported versions, bumps, changesets | no | any consumer-facing change, which needs a changeset; moving a supported version |
 | [docs/releases.md](docs/releases.md) | planning a release, its working folder, carrying it out, the Trusted Publisher, the backlog | no | planning or carrying out a release; writing a plan |

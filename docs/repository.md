@@ -15,7 +15,7 @@ among it) or a dependency, or changing the contributor guide. Part of the contri
 | `src/` | The runtime and its unit tests: see [src/AGENTS.md](../src/AGENTS.md), [src/locators/AGENTS.md](../src/locators/AGENTS.md) and [src/helpers/AGENTS.md](../src/helpers/AGENTS.md). | yes |
 | `test/` | Standalone pnpm project that installs the packed package from `.pack/pomwright` and runs Playwright against it. See [test/AGENTS.md](../test/AGENTS.md). | yes |
 | `website/` | The documentation site, a pnpm project of its own: see [website/AGENTS.md](../website/AGENTS.md). | yes |
-| `skills/` | Agent skills in the Claude Code and claude.ai format, one folder per skill with its `SKILL.md` and the scripts it ships: `defect-review/`, an evidence-based defect review of a whole project, a change set or one area, with `scripts/review-status.mjs` (the status table, cost projections and cost caps of a review whose segments run as subagents). Not published (`package.json#files`), not on the site yet: kept for a later Skills section. biome checks the scripts but not the `SKILL.md` (it does not process `.md`). Their evals and test runs are not in the repository. | yes |
+| `skills/` | Agent skills in the [Agent Skills](https://agentskills.io/specification) format, which Claude Code, Codex and other agents read, one folder per skill: see [skills/AGENTS.md](../skills/AGENTS.md). `defect-review/`, an evidence-based defect review of a whole project, a change set or one area, with `scripts/review-status.mjs` (the status table, cost projections and cost caps of a review whose segments run as subagents). Not published (`package.json#files`), not on the site yet: kept for a later Skills section. Checked by `check-skills.mjs`, `check-guide-links.mjs`, `check-doc-snippets.mjs` and `test/tests/docs/skillsChains.spec.ts`; biome checks the scripts but not the Markdown. Their evals and test runs are not in the repository. | yes |
 | `.changeset/` | Changesets: `config.json`, and the pending changesets `pnpm changeset` adds (see [versioning.md](versioning.md)). | config and new changesets |
 | `CHANGELOG.md`, `LICENSE` | The changelog, which changesets writes at release time; the Apache-2.0 license. | no |
 | `.github/` | The workflows, Dependabot's configuration and `CODEOWNERS` (the code owners, whose review the ruleset `main: review` requires): see [.github/AGENTS.md](../.github/AGENTS.md). | yes |
@@ -32,8 +32,8 @@ among it) or a dependency, or changing the contributor guide. Part of the contri
 
 ## The contributor guide
 
-The root `AGENTS.md` holds what every task needs and indexes the rest. Six folders have an `AGENTS.md` for the work
-under them: `src/`, `src/locators/`, `src/helpers/`, `test/`, `website/` and `.github/`. `docs/` holds what applies by
+The root `AGENTS.md` holds what every task needs and indexes the rest. Seven folders have an `AGENTS.md` for the work
+under them: `src/`, `src/locators/`, `src/helpers/`, `test/`, `website/`, `skills/` and `.github/`. `docs/` holds what applies by
 task rather than by folder: this file, versioning and releases.
 
 How it loads: Claude Code 2.1.277 and later read the root `AGENTS.md` at the start, and a folder's `AGENTS.md` when
