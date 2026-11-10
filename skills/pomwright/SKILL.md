@@ -195,7 +195,11 @@ way a user finds it.
 | session storage, codecs, `seed` | [references/session-storage.md](references/session-storage.md) |
 | the `log` fixture, child loggers, `@step` | [references/reports.md](references/reports.md) |
 | the exported types, generic base classes, `declaration: true` | [references/typescript.md](references/typescript.md) |
-| locator modules, a base class, a project's layout | [Organizing a project](https://dyhex.github.io/POMWright/docs/organizing-a-project/), [Locator modules](https://dyhex.github.io/POMWright/docs/locator-modules/) |
+| choose a locator, the segments of a path, its name | [guides/choosing-locators-and-paths.md](guides/choosing-locators-and-paths.md) |
+| write a page object for a page, with its locator module and fixture | [guides/writing-page-objects.md](guides/writing-page-objects.md) |
+| locator modules: composing, common locators in the base class, slots | [guides/locator-modules.md](guides/locator-modules.md) |
+| write tests: steps, assertions, data, waiting, random overlays | [guides/writing-tests.md](guides/writing-tests.md) |
+| a project's layout, one app or several | [Organizing a project](https://dyhex.github.io/POMWright/docs/organizing-a-project/) |
 
 ## When something fails
 

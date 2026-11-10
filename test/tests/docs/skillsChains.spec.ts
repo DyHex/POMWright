@@ -268,6 +268,33 @@ skillTest("skills/pomwright/references/reports.md", async () => {
 	shows(entries[1]?.prefix).toBe("TestCase -> CheckoutPage -> fillCard");
 });
 
+skillTest("skills/pomwright/guides/writing-tests.md", async ({ page }) => {
+	// the guide's claim: page.addLocatorHandler() with a path's getNestedLocator() as the trigger dismisses an overlay that
+	// blocks an action. setContent stands in for a page the test server serves: whether an overlay intercepts a click,
+	// and Playwright's check before the action, depend on the rendered DOM, not on how the document arrived
+	const { getNestedLocator, registry } = createRegistryWithAccessors<
+		"main" | "main.button@subscribe" | "dialog@survey" | "dialog@survey.button@close"
+	>(page);
+	registry.add("main").locator("main");
+	registry.add("main.button@subscribe").getByRole("button", { name: "Subscribe" });
+	registry.add("dialog@survey").getByRole("dialog", { name: "Survey" });
+	registry.add("dialog@survey.button@close").getByRole("button", { name: "Close" });
+	await page.setContent(
+		`<main><button onclick="document.title = 'subscribed'">Subscribe</button></main>
+		<div role="dialog" aria-label="Survey" style="position: fixed; inset: 0; background: white">
+			<button onclick="this.parentElement.remove()">Close</button>
+		</div>`,
+	);
+	// the control: without the handler, the overlay intercepts the click
+	await expect(getNestedLocator("main.button@subscribe").click({ timeout: 1_000 })).rejects.toThrow();
+	await page.addLocatorHandler(getNestedLocator("dialog@survey"), async () => {
+		await getNestedLocator("dialog@survey.button@close").click();
+	});
+	await getNestedLocator("main.button@subscribe").click({ timeout: 5_000 });
+	await expect(page).toHaveTitle("subscribed");
+	await expect(getNestedLocator("dialog@survey")).toHaveCount(0);
+});
+
 /** Every Markdown file under skills/, as paths from the repository root. */
 const skillFiles = (dir: string): string[] =>
 	readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
