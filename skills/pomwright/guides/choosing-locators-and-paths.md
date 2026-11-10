@@ -45,8 +45,11 @@ own options. Each is for a situation; the installed declarations list them all:
 - `locator(css, options)`: `hasText`, `hasNotText`, `has` and `hasNot`, as `filter()` takes them.
 
 Then by `filter()`: `hasText` and `hasNotText` by the text inside, `has` and `hasNot` by an element inside (a locator
-or a registered path), `visible`. A product card is `getByRole("listitem")` filtered by its heading, not `getByText` on
-the heading, which finds the heading. `nth` is the last resort ([Several matches](#several-matches-and-one-among-them)).
+or a registered path), `visible`. `hasText` matches part of the text, ignoring case: `hasText: "Lamp"` matches the
+"Lamp" card and the "Desk lamp" card. To pick one item by a name, filter by the element inside that carries it, with
+its exact name: a product card is `getByRole("listitem")` that `has` the heading `{ name: "Lamp", exact: true }`, a
+cart row is `getByRole("row")` that `has` the cell `{ name: "Lamp", exact: true }`. Not `getByText` on the heading,
+which finds the heading. `nth` is the last resort ([Several matches](#several-matches-and-one-among-them)).
 
 A state option matches only while the element is in that state: a path with `pressed: false` matches nothing once the
 toggle is pressed. Use one to find whichever element is in the state (the selected tab); to check the state of an
@@ -88,9 +91,10 @@ groups paths.
 
 ## Several matches, and one among them
 
-Register the repeated element once and pick one in a query, by what identifies it: a row by its text (`hasText`, and
-`hasNotText` to leave out a similar one), a card by its heading's exact name (`has`)
-(`references/resolving-and-queries.md`). An index is the last resort, for a chain that cannot be made unique otherwise.
+Register the repeated element once and pick one in a query, by what identifies it: a row by a cell's exact text, a
+card by its heading's exact name (`has`), or by a text no other item contains (`hasText`, with `hasNotText` to leave out
+a similar one) (`references/resolving-and-queries.md`). An index is the last resort, for a chain that cannot be made
+unique otherwise.
 
 ## Worked example
 

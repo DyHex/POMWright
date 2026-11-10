@@ -9,7 +9,7 @@ decide follows the skill's defaults.
 - **Apps and origins**: the shop, `SHOP_URL`, read in `env.ts` by the shop's base class.
 - **Environments**: each origin's variable is set per environment, locally and in CI.
 - **Playwright's `baseURL`**: not set; page code takes its origins from `env.ts`.
-- **Layout**: a folder per app in `page-objects/`, `fixtures/`, `test-data/` and `tests/`.
+- **Layout**: a folder per app in `page-objects/` and `tests/`, a file per app in `fixtures/` and `test-data/`.
 - **File names**: `<name>.locators.ts` beside `<name>.page.ts`.
 - **Imports**: relative paths.
 

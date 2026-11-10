@@ -1,13 +1,14 @@
 ---
 name: pomwright
 description: >-
-  Writes, reviews and refactors Playwright tests that use POMWright (the pomwright package): page objects
-  (PageObject, or the project's own classes, functions or fixtures over a registry), dot-delimited locator paths and locator modules (add, getNestedLocator, getLocator, getLocatorSchema,
-  createReusable, createRegistryWithAccessors), fixtures and test data, navigation, session storage (SessionStorage,
-  seed), the log fixture and the @step decorator. Use it whenever code imports from "pomwright", when a project's tests
-  use page objects with locator paths such as "main.form@login.button@login", when a project has a POMWRIGHT.md, when setting up or restructuring a
-  Playwright project with page objects, or when the user mentions POMWright. It says what POMWright adds to Playwright
-  and leaves everything else to Playwright.
+  Writes, reviews, refactors and upgrades (from POMWright 2.x) Playwright tests that use POMWright (the pomwright
+  package): page objects (PageObject, or the project's own classes, functions or fixtures over a registry),
+  dot-delimited locator paths and locator modules (add, getNestedLocator, getLocator, getLocatorSchema, createReusable,
+  createRegistryWithAccessors), fixtures and test data, navigation, session storage (SessionStorage, seed), the log
+  fixture and the @step decorator. Use it whenever code imports from "pomwright", when a project's tests use page
+  objects with locator paths such as "main.form@login.button@login", when a project has a POMWRIGHT.md, when setting up
+  or restructuring a Playwright project with page objects, when upgrading from POMWright 2.x, or when the user mentions
+  POMWright. It says what POMWright adds to Playwright and leaves everything else to Playwright.
 license: Apache-2.0
 compatibility: POMWright 3.x, @playwright/test >=1.64.0 <2.0.0, Node 20 or later, TypeScript.
 ---
@@ -39,7 +40,8 @@ concerns, then in each folder above it, up to the repository root.
   task than the session's, say so before starting; the session does the task unless the file or the user hands it to
   a subagent. When the user states a new preference, or changes one, update the file.
 - **Missing**: creating it is the first task in the project, before any other, also when the project has tests and
-  page code: ask the user each decision, showing what the project's code already does, write the answers into a copy
+  page code and when the request asks for code: ask the user each decision, showing what the project does now beside
+  the default, then stop and write no code until they answer; write the answers into a copy
   of [assets/templates/POMWRIGHT.md](assets/templates/POMWRIGHT.md), and offer a line in the agent instructions the
   project uses (`AGENTS.md`, `CLAUDE.md`) that points to it. The decisions, their options and how to ask them:
   [guides/project-decisions.md](guides/project-decisions.md).

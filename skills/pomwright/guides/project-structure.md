@@ -13,8 +13,8 @@ the templates that start it, and the direction imports flow. The site's version:
 
 ## The layout
 
-Each app has a folder of its own in `page-objects/`, `fixtures/`, `test-data/` and `tests/` from the start, so a
-second app is a sibling folder, not a move:
+Each app has a folder of its own in `page-objects/` and `tests/`, and a file of its own in `fixtures/` and
+`test-data/`, from the start, so a second app is a sibling, not a move:
 
 ```text
 env.ts                                  the origins, from the environment
@@ -73,10 +73,10 @@ The templates import each other by relative paths, which work in any project. A 
 
 - **One app**: the layout above. The site shows a flatter variant (`page-objects/common/` and `page-objects/pages/`
   without an app folder) for a suite that will only ever test one app.
-- **Several apps in one Playwright project**: a folder per app in each of `page-objects/`, `fixtures/`, `test-data/`
-  and `tests/`; each app has its own base class with its own origin from `env.ts`, and its own fixtures file, merged
-  into `fixtures.ts`. Helpers every app shares go in `page-objects/common/`; tests of a flow that crosses apps go in
-  `tests/e2e/`.
+- **Several apps in one Playwright project**: a folder per app in `page-objects/` and `tests/`, a file per app in
+  `fixtures/` and `test-data/`; each app has its own base class with its own origin from `env.ts`, and its own fixtures
+  file, merged into `fixtures.ts`. Helpers every app shares go in `page-objects/common/`; tests of a flow that crosses
+  apps go in `tests/e2e/`.
 - **A monorepo with several Playwright packages**: a shared workspace package holds what they share (fixtures, helpers,
   locator modules of shared widgets, a base Playwright config), with `pomwright` and `@playwright/test` as peer
   dependencies, and each app's package has its own page objects, test data and tests on top of it.

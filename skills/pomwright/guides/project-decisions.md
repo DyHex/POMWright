@@ -21,14 +21,23 @@ the config's folder, then in each folder above it, up to the repository root.
 ## Creating it
 
 When the file is missing, writing it comes first, before other work in the project, also when the project already has
-tests and page code.
+tests and page code, and also when the request asks for code: ask, then stop, and write no code until the user has
+answered. The decisions set where each file goes, how it is named and how data reaches it, so code written before them
+is code rewritten.
 
 1. **Look first.** In a project with tests, read the Playwright config, the env module, a base class, two page objects,
    the fixtures and two specs, and note for each decision below what the code does. Where it does two things, note
    both.
-2. **Ask in one message.** List every decision with what the code does, or the default in a new project, and one line
-   on each option. The user answers only where they want something else. Mixed code is a question: which of the two
-   is the decision?
+2. **Ask in one message.** List every decision with what the project does now, the default, and one line on the other
+   choices, each in its own column, so the user sees what would change. The user answers only where they want
+   something else. Mixed code is a question: which of the two is the decision?
+
+   | decision | the project now | default | other choices |
+   | --- | --- | --- | --- |
+   | origins | `baseURL` in `playwright.config.ts` | `env.ts`, no `baseURL` | keep `baseURL`, set from `env.ts` |
+   | test data | written in each spec | one `testData` fixture | data modules each spec imports |
+   | shape | no page code yet | `PageObject` subclasses | own classes, functions, fixtures |
+
 3. **Write the file.** Copy the template beside the Playwright config and fill in the answers. Add a note to a decision
    where the user gave a reason or an exception.
 4. **Offer the pointer.** Offer one line in the agent instructions the project uses, so that agents working without
@@ -48,7 +57,7 @@ The default comes first; the others are what projects choose instead.
 | origins | in `env.ts`, one environment variable per app, read by each app's base class | another config module the project has |
 | environments | each origin's variable set per environment (locally, in CI) | one variable (`TEST_ENV`) that picks every origin from a map in `env.ts` |
 | Playwright's `baseURL` | not set: page code takes its origins from `env.ts` | set from the same `env.ts` value, for one app, so that Playwright's relative URLs (`page.goto("/cart")`, `expect(page).toHaveURL("/cart")`, the `request` fixture) reach it |
-| layout | a folder per app in `page-objects/`, `fixtures/`, `test-data/`, `tests/` (`guides/project-structure.md`) | the project's own layout |
+| layout | a folder per app in `page-objects/` and `tests/`, a file per app in `fixtures/` and `test-data/` (`guides/project-structure.md`) | the project's own layout |
 | file names | `<name>.locators.ts` beside `<name>.page.ts` | the project's own names |
 | imports | relative paths | path aliases (`@page-objects/*`) in `tsconfig.json` |
 | where locators are registered | a locator module per page, shared parts as composed modules | inline, in `defineLocators()` |
