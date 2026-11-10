@@ -141,7 +141,7 @@ export const testData = {
   orders: {
     open: { id: "ORD-1042" },
   },
-};
+} as const;
 ```
 
 ```ts title="fixtures.ts"
@@ -155,9 +155,8 @@ export const test = base.extend<{ ordersPage: OrdersPage; testData: typeof testD
   ordersPage: async ({ page }, use) => {
     await use(new OrdersPage(page));
   },
-  testData: async ({}, use) => {
-    await use(testData);
-  },
+  // a value, not a function: the same data for every test
+  testData,
 });
 ```
 
@@ -199,7 +198,8 @@ way a user finds it.
 | write a page object for a page, with its locator module and fixture | [guides/writing-page-objects.md](guides/writing-page-objects.md) |
 | locator modules: composing, common locators in the base class, slots | [guides/locator-modules.md](guides/locator-modules.md) |
 | write tests: steps, assertions, data, waiting, random overlays | [guides/writing-tests.md](guides/writing-tests.md) |
-| a project's layout, one app or several | [Organizing a project](https://dyhex.github.io/POMWright/docs/organizing-a-project/) |
+| fixtures for page objects, the test-data fixture, setup some tests need | [guides/fixtures-and-test-data.md](guides/fixtures-and-test-data.md) |
+| a project's layout, one app or several, starting from the templates | [guides/project-structure.md](guides/project-structure.md) |
 
 ## When something fails
 

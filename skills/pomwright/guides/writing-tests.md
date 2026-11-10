@@ -52,7 +52,7 @@ export const testData = {
     open: { id: "ORD-1042" },
     alsoOpen: { id: "ORD-1043" },
   },
-};
+} as const;
 ```
 
 ```ts title="fixtures.ts"
@@ -66,9 +66,8 @@ export const test = base.extend<{ ordersPage: OrdersPage; testData: typeof testD
   ordersPage: async ({ page }, use) => {
     await use(new OrdersPage(page));
   },
-  testData: async ({}, use) => {
-    await use(testData);
-  },
+  // a value, not a function: the same data for every test
+  testData,
 });
 ```
 
