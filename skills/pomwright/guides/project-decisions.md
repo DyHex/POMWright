@@ -63,7 +63,7 @@ The default comes first; the others are what projects choose instead.
 | step titles | `@step()`'s own, `ClassName.methodName` | a title per method, `@step("Log in")` |
 | assertions | web-first, in specs, and as `expect…` steps of the page code for a check several specs repeat | only in specs |
 | parameters | one options object for two or more | positional parameters |
-| test data | one `testData` fixture, by `testData.<app>.<page>.<case>`; page code takes data as arguments | data modules each spec imports; values in the specs |
+| test data | one `testData` fixture, by `testData.<app>.<page>.<case>`, holding values, data imported from files (JSON among them), and generators, builders and helpers; page code takes data as arguments | data modules each spec imports; values in the specs; a fixture per kind of data; a data library the project already uses |
 | state a test needs and does not test | set up directly: a login saved by Playwright's setup project as `storageState`, session storage seeded with `seed` before the app loads | through the UI, as a user would |
 | overlays | one that is predictable (a dialog on a first visit) handled by a step or a precondition; one that appears at random by `page.addLocatorHandler()` | the project's own helper |
 | logging | page code takes a child of the `log` fixture only where it logs | always, or never |

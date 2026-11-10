@@ -49,15 +49,38 @@ Each app has a fixtures file; `fixtures.ts` merges them with Playwright's `merge
 
 ## Test data through one fixture
 
-All test data reaches tests through one `testData` fixture, organized by dot paths, `testData.<app>.<page>.<case>`, page
-specific data included: one place to find, change and review it, instead of imports spread over page objects and specs.
-Page objects take data as arguments and import none.
+The recommended approach, and the user's choice: a project's `POMWRIGHT.md` may decide otherwise (data modules each
+spec imports, values in the specs, a fixture per kind of data). All test data reaches tests through one `testData`
+fixture, organized by dot paths, `testData.<app>.<page>.<case>`, page specific data included: one place to find, change
+and review it, instead of imports spread over page objects and specs. Page objects take data as arguments and import
+none.
+
+What sits at a path is whatever the case needs:
+
+- **a value**, read-only through `as const`, so no test changes what another reads;
+- **values from a file**: another module, or a JSON file the test-data module imports (`resolveJsonModule` in the
+  TypeScript config; in a project with `"type": "module"` the import takes `with { type: "json" }`, which a CommonJS
+  project's `tsc` rejects);
+- **a generator**, a function that returns fresh data each call, for data a test must not share with another (a new
+  customer each run), called in the test;
+- **a builder**, a function that returns the default with what a case changes, so a case states only its difference;
+- **a helper** the data uses, such as a date some days ahead, formatted as the app shows it.
 
 ```ts title="test-data.ts"
+import { randomUUID } from "node:crypto";
+
+type Delivery = { postcode: string; email: string };
+
+const happyForm: Readonly<Delivery> = { postcode: "0150", email: "ada@shop.example" };
+
 export const testData = {
   shop: {
     checkout: {
-      happyForm: { postcode: "0150", email: "ada@shop.example" },
+      happyForm,
+      // a builder: the happy form, with what a case changes
+      form: (changes: Partial<Delivery> = {}): Delivery => ({ ...happyForm, ...changes }),
+      // a generator: a new customer each call, so no two tests share one
+      newCustomer: () => ({ email: `customer-${randomUUID()}@shop.example` }),
     },
   },
 } as const;
@@ -74,11 +97,12 @@ export const test = base.extend<{ testData: typeof testData }>({
 ```
 
 A test asks for `testData` and passes what it needs to a page object's method:
-`await checkoutPage.fillDelivery(testData.shop.checkout.happyForm)`.
+`await checkoutPage.fillDelivery(testData.shop.checkout.happyForm)`, or a case's difference,
+`await checkoutPage.fillDelivery(testData.shop.checkout.form({ postcode: "9990" }))`.
 
-- `as const` keeps the data read-only, so no test changes what another reads.
-- Data a test must not share with others (a new customer each run) is a function in the test data that returns a fresh
-  value, called in the test.
+- Data the app must hold before a test (an order to cancel) is created by a fixture of its own, through the app's API
+  with Playwright's [`request`](https://playwright.dev/docs/api-testing), and handed to the test; the test data holds
+  what the fixture sends.
 - `test.use({ testData })` replaces the whole fixture for a file. Data that differs per environment is chosen in the
   test-data module from the same environment `env.ts` reads, or per project with a Playwright
   [option fixture](https://playwright.dev/docs/test-parameterize#parameterized-projects).

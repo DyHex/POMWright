@@ -101,7 +101,8 @@ are defaults: where the project's `POMWRIGHT.md` decides otherwise, follow it.
    registry you create yourself is checked when you call `registry.verify()`, after the last registration.
 9. **Resolution is synchronous**: `getNestedLocator`, `getLocator` and `getLocatorSchema` return at once; await the
    action or the assertion, never the resolution.
-10. **Test data comes from one test-data fixture**, by dot paths (`testData.orders.open`); page code takes data as
+10. **Test data comes from one test-data fixture**, by dot paths (`testData.orders.open`): values, data imported from
+    files (JSON among them), and generators, builders and helpers for data a case makes; page code takes data as
     arguments.
 11. **Wait as Playwright waits**: web-first assertions, `navigation.expectThisPage()` or `page.waitForURL()` after a
     navigation; no sleeps.

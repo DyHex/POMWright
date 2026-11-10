@@ -38,7 +38,9 @@ decide follows the skill's defaults.
 ## Tests
 
 - **Page code in tests**: as fixtures, from one `test` in `fixtures/fixtures.ts` that every spec imports.
-- **Test data**: one `testData` fixture, by `testData.<app>.<page>.<case>`; page code takes data as arguments.
+- **Test data**: one `testData` fixture, by `testData.<app>.<page>.<case>`, holding values, data imported from files
+  (JSON among them), and generators and builders for data a test must not share or a case changes; page code takes
+  data as arguments.
 - **State a test needs and does not test**: set up directly: a login by Playwright's setup project and `storageState`,
   session storage seeded with `seed` before the app loads.
 - **Overlays**: a predictable one by a step or a precondition; one that appears at random by
