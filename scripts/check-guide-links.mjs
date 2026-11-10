@@ -1,5 +1,5 @@
-// Checks that every relative link of the contributor guide resolves: the root AGENTS.md, the AGENTS.md of each folder,
-// and docs/*.md. A link's file or folder must exist; an anchor into a Markdown file must name one of its headings, as
+// Checks that every relative link of the contributor guide and the agent skills resolves: the root AGENTS.md, the
+// AGENTS.md of each folder, docs/*.md, and every Markdown file under skills/. A link's file or folder must exist; an anchor into a Markdown file must name one of its headings, as
 // GitHub makes them (lower case, punctuation but hyphens dropped, spaces as hyphens, a repeated heading with -1, -2,
 // …); a line anchor into another file (#L64, #L64-L70) is GitHub's and is taken as written. Links to a site (http,
 // https, mailto) are not checked here: the site's own links are the site build's.
@@ -19,12 +19,23 @@ function guideFiles(dir) {
 		return entry.name === "AGENTS.md" ? [full] : [];
 	});
 }
+const markdownIn = (dir) =>
+	fs.existsSync(dir)
+		? fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+				const full = path.join(dir, entry.name);
+				if (entry.isDirectory()) return markdownIn(full);
+				return entry.name.endsWith(".md") ? [full] : [];
+			})
+		: [];
 const files = [
-	...guideFiles(root),
-	...fs
-		.readdirSync(path.join(root, "docs"))
-		.filter((name) => name.endsWith(".md"))
-		.map((name) => path.join(root, "docs", name)),
+	...new Set([
+		...guideFiles(root),
+		...fs
+			.readdirSync(path.join(root, "docs"))
+			.filter((name) => name.endsWith(".md"))
+			.map((name) => path.join(root, "docs", name)),
+		...markdownIn(path.join(root, "skills")),
+	]),
 ];
 
 const slugs = new Map(); // a Markdown file -> the anchors of its headings

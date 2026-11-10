@@ -69,9 +69,12 @@ jobs:
       # locally too
       - name: Lint the workflows
         run: bash scripts/lint-workflows.sh
-      # every relative link and anchor of the contributor guide (pnpm lint:guide)
+      # every relative link and anchor of the contributor guide and the skills (pnpm lint:guide)
       - name: Check the guide's links
         run: node scripts/check-guide-links.mjs
+      # the agent skills' frontmatter, sizes, contents lists, reference depth and site links (pnpm lint:skills)
+      - name: Check the skills
+        run: node scripts/check-skills.mjs
       # every path of the release checks, in throwaway repositories with a fake npm (seconds, no network)
       - name: Test the release checks
         run: bash scripts/release-check.test.sh

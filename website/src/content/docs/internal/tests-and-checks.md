@@ -95,8 +95,10 @@ untested merge.
 
 - **lint**: biome over the whole repository, warnings failing; actionlint over the workflows, with shellcheck over
   their scripts and over every shell script the repository tracks, both pinned by version and checksum in `scripts/lint-workflows.sh`,
-  which `pnpm lint:workflows` runs locally too; every relative link and anchor of the contributor guide
-  (`scripts/check-guide-links.mjs`); then the release checks' test (`scripts/release-check.test.sh`), which runs every
+  which `pnpm lint:workflows` runs locally too; every relative link and anchor of the contributor guide and of the
+  agent skills (`scripts/check-guide-links.mjs`); the skills' format (`scripts/check-skills.mjs`: frontmatter that every
+  agent accepts, the sizes of their files, contents lists, references one level deep and links to this site); then the
+  release checks' test (`scripts/release-check.test.sh`), which runs every
   path of a release in throwaway repositories with a fake npm.
 - **package**: the unit tests, then one build and one tarball, kept as an artifact.
 - **harness**: that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs
