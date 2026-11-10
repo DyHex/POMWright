@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import { createRegistryWithAccessors } from "pomwright";
+import { createRegistryWithAccessors, PageObject } from "pomwright";
 import { chain, checkThatPagesShow, flatten, recordedOnPage, selector, shows } from "./chains";
 
 // Every locator chain the agent skills in skills/ show, rebuilt through the packed package and compared, one test per
@@ -199,6 +199,62 @@ skillTest("skills/pomwright/references/resolving-and-queries.md", async ({ page 
 	await expect(byText).toHaveCount(2);
 	await expect(addToCart).toHaveCount(1);
 	await expect(addToCart).toHaveAttribute("data-card", "lamp");
+});
+
+skillTest("skills/pomwright/references/reusing.md", async ({ page }) => {
+	// reuse by path
+	const shared = createRegistryWithAccessors<"shared.list.items" | "main.list@orders" | "main.list@orders.item@last">(
+		page,
+	).registry;
+	shared.add("shared.list.items").getByRole("listitem");
+	shared.add("main.list@orders").getByRole("list", { name: "Orders" });
+	shared.add("main.list@orders.item@last", { reuse: "shared.list.items" }).nth("last").describe("Last order");
+	const last = shared.getNestedLocator("main.list@orders.item@last");
+	shows(chain(last)).toBe("getByRole('list', { name: 'Orders' }).getByRole('listitem').last()");
+	shows(last.description()).toBe("Last order");
+
+	// seeds
+	const seeded = createRegistryWithAccessors<"card" | "card.heading@summary" | "card.headings">(page).registry;
+	const heading = seeded.createReusable.getByRole("heading", { level: 2 });
+	seeded.add("card").getByRole("article");
+	seeded.add("card.heading@summary", { reuse: heading }).getByRole({ name: "Summary" });
+	seeded.add("card.headings", { reuse: heading });
+	shows(chain(seeded.getLocator("card.heading@summary"))).toBe("getByRole('heading', { name: 'Summary', level: 2 })");
+	shows(chain(seeded.getLocator("card.headings"))).toBe("getByRole('heading', { level: 2 })");
+});
+
+skillTest("skills/pomwright/references/page-objects.md", async ({ page }) => {
+	// the message of How a mistake is reported: a form filtered by a heading path that is never registered
+	type Paths =
+		| "main"
+		| "main.form@login"
+		| "main.form@login.heading"
+		| "main.form@login.input@email"
+		| "main.form@login.input@password"
+		| "main.form@login.button@login";
+	class BrokenLoginPage extends PageObject<Paths> {
+		constructor(page: Page) {
+			super(page, "https://shop.example", "/login", { label: "LoginPage" });
+		}
+
+		protected defineLocators(): void {
+			this.add("main").locator("main");
+			this.add("main.form@login").locator("form").filter({ has: "main.form@login.heading" });
+			this.add("main.form@login.input@email").getByLabel("Email");
+			this.add("main.form@login.input@password").getByLabel("Password");
+			this.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
+		}
+	}
+	// used right after new, so the check that a page object schedules runs here rather than outside the test
+	let message = "";
+	try {
+		new BrokenLoginPage(page).getNestedLocator("main");
+	} catch (error) {
+		message = (error as Error).message;
+	}
+	shows(message).toBe(
+		'LoginPage: Locator registry verification failed for 1 of 5 paths:\n  "main.form@login": No locator schema registered for path "main.form@login.heading".',
+	);
 });
 
 /** Every Markdown file under skills/, as paths from the repository root. */

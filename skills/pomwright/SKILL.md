@@ -189,8 +189,8 @@ way a user finds it.
 | register locators: the ten methods, `filter`, `nth`, `describe`, `getById`, frames | [references/registering.md](references/registering.md) |
 | paths, their rules, the registry, `createRegistryWithAccessors`, `verify`, `strictChains`, when the page changes | [references/paths-and-registry.md](references/paths-and-registry.md) |
 | `getNestedLocator`, `getLocator`, several matches, queries (`getLocatorSchema`, `update`, `replace`, `skip`), one row or card among several | [references/resolving-and-queries.md](references/resolving-and-queries.md) |
-| share a locator (reuse by path) or make variants (`createReusable`) | [Reusing locators](https://dyhex.github.io/POMWright/docs/reusing-locators/) |
-| write a page object, its lifecycle, actions after navigation | [Page objects](https://dyhex.github.io/POMWright/docs/page-objects/) |
+| share a locator (reuse by path) or make variants (`createReusable`) | [references/reusing.md](references/reusing.md) |
+| a page object: its parts, when `defineLocators()` runs, actions after navigation, how a mistake is reported | [references/page-objects.md](references/page-objects.md) |
 | URLs and the navigation helper | [URLs and navigation](https://dyhex.github.io/POMWright/docs/urls-and-navigation/) |
 | session storage and `seed` | [Session storage](https://dyhex.github.io/POMWright/docs/session-storage/) |
 | the `log` fixture, child loggers, `@step` | [Logging](https://dyhex.github.io/POMWright/docs/logging/), [Test steps](https://dyhex.github.io/POMWright/docs/test-steps/) |
