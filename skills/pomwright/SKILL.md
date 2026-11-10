@@ -191,9 +191,10 @@ way a user finds it.
 | `getNestedLocator`, `getLocator`, several matches, queries (`getLocatorSchema`, `update`, `replace`, `skip`), one row or card among several | [references/resolving-and-queries.md](references/resolving-and-queries.md) |
 | share a locator (reuse by path) or make variants (`createReusable`) | [references/reusing.md](references/reusing.md) |
 | a page object: its parts, when `defineLocators()` runs, actions after navigation, how a mistake is reported | [references/page-objects.md](references/page-objects.md) |
-| URLs and the navigation helper | [URLs and navigation](https://dyhex.github.io/POMWright/docs/urls-and-navigation/) |
-| session storage and `seed` | [Session storage](https://dyhex.github.io/POMWright/docs/session-storage/) |
-| the `log` fixture, child loggers, `@step` | [Logging](https://dyhex.github.io/POMWright/docs/logging/), [Test steps](https://dyhex.github.io/POMWright/docs/test-steps/) |
+| URLs, the navigation helper, pages whose URL varies | [references/navigation.md](references/navigation.md) |
+| session storage, codecs, `seed` | [references/session-storage.md](references/session-storage.md) |
+| the `log` fixture, child loggers, `@step` | [references/reports.md](references/reports.md) |
+| the exported types, generic base classes, `declaration: true` | [references/typescript.md](references/typescript.md) |
 | locator modules, a base class, a project's layout | [Organizing a project](https://dyhex.github.io/POMWright/docs/organizing-a-project/), [Locator modules](https://dyhex.github.io/POMWright/docs/locator-modules/) |
 
 ## When something fails

@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import { createRegistryWithAccessors, PageObject } from "pomwright";
+import { createRegistryWithAccessors, type LogEntry, PageObject, PlaywrightReportLogger } from "pomwright";
 import { chain, checkThatPagesShow, flatten, recordedOnPage, selector, shows } from "./chains";
 
 // Every locator chain the agent skills in skills/ show, rebuilt through the packed package and compared, one test per
@@ -255,6 +255,17 @@ skillTest("skills/pomwright/references/page-objects.md", async ({ page }) => {
 	shows(message).toBe(
 		'LoginPage: Locator registry verification failed for 1 of 5 paths:\n  "main.form@login": No locator schema registered for path "main.form@login.heading".',
 	);
+});
+
+skillTest("skills/pomwright/references/reports.md", async () => {
+	// a child of a child names the whole path from the test's logger
+	const entries: LogEntry[] = [];
+	const log = new PlaywrightReportLogger({ current: "debug", initial: "debug" }, entries, "TestCase");
+	const checkout = log.getNewChildLogger("CheckoutPage");
+	checkout.info("paying");
+	checkout.getNewChildLogger("fillCard").debug("filling the card ending 4242");
+	shows(entries[0]?.prefix).toBe("TestCase -> CheckoutPage");
+	shows(entries[1]?.prefix).toBe("TestCase -> CheckoutPage -> fillCard");
 });
 
 /** Every Markdown file under skills/, as paths from the repository root. */
