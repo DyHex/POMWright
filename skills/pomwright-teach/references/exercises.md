@@ -81,7 +81,7 @@ writing a query that finds one card, turning a test into page-object steps, seed
 
 ## Checking the learner's work
 
-Run the spec, then read the code. A pass written to the rules (Playwright's order of preference, `kind@which` names,
+Run the spec, then read the code. A pass written to the rules (the order of preference, `kind@which` names,
 the chain as short as unique, `@step` methods, data from the fixture) is the win to record. A pass that breaks a rule
 gets one improvement, the most important, shown in the right form, and a rerun. A failure gets a hint that points at
 the place, not the answer, then a bigger one if needed.

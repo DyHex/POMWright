@@ -21,7 +21,7 @@ fixtures. The practice shop serves for these exercises too, with `page.getByRole
 | unit | the learner can | sources | practice shop |
 | --- | --- | --- | --- |
 | 1. A first page object | name elements with paths, register them, resolve a chain, navigate | `references/registering.md`, `references/paths-and-registry.md`; *Your first page object* | home: header, newsletter form |
-| 2. Choosing locators and paths | pick the locator by Playwright's order, name segments `kind@which`, chain as much as needed | `guides/choosing-locators-and-paths.md`; *Resolving locators* | login form; the "Log in" link and button |
+| 2. Choosing locators and paths | pick the locator by the order of preference, name segments `kind@which`, chain as much as needed | `guides/choosing-locators-and-paths.md`; *Resolving locators* | login form; the "Log in" link and button |
 | 3. Page objects in tests | turn page objects into fixtures, write a test as steps, `@step` methods | `references/page-objects.md`, `guides/writing-tests.md`; *Page objects in tests* | home, login |
 | 4. Test data | give tests their data through one fixture | `guides/fixtures-and-test-data.md` | login |
 | 5. One among several | find a card by its heading, a row by its text, with queries | `references/resolving-and-queries.md`; *Queries* | products, cart |

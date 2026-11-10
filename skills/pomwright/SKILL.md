@@ -78,11 +78,12 @@ are defaults: where the project's `POMWRIGHT.md` decides otherwise, follow it.
    to count every match on the page.
 2. **One locator per path, registered once**, in `defineLocators()` or a locator module. A change to the page is an
    edit in one place.
-3. **Locators in Playwright's order of preference**: `getByRole` with the accessible name (interactive elements, and
-   landmarks, forms, dialogs, tables), `getByText` (non-interactive text), `getByLabel` (form fields),
-   `getByPlaceholder` (a field without a label), `getByAltText`, `getByTitle`, then `getByTestId`, and POMWright's
-   `getById` beside it, when nothing user-facing identifies the element; `locator(css)` last, for a segment the app
-   gives no role, label or text.
+3. **Locators in order of preference**, the first that identifies the element in its scope: `getByRole` with the
+   accessible name (interactive elements, and landmarks, forms, dialogs, tables), `getByLabel` (form fields),
+   `getByPlaceholder` (a field without a label), `getByText` (non-interactive text), `getByAltText`, `getByTitle`,
+   then `getByTestId` and POMWright's `getById` when nothing user-facing identifies the element, and `locator(css)`
+   last; never XPath. One that matches several is narrowed before the next is tried: by its options (`name`,
+   `exact`), then `filter()` (`hasText`, `hasNotText`, `has`, `hasNot`, `visible`); `nth` last.
 4. **Paths from the outside in**, one segment per element a user would recognize (a landmark, a form, a dialog, a
    table), only as many as make the chain unique; each segment names its kind and which one, `kind@which`, the kind
    being the element's role (`button@save`, `dialog@consent`); a segment that matches several elements in its scope

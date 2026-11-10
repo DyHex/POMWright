@@ -5,26 +5,42 @@ themselves are in `references/registering.md`; the path rules in `references/pat
 
 ## Contents
 
-- [The locator: Playwright's order of preference](#the-locator-playwrights-order-of-preference)
+- [The locator: the order of preference](#the-locator-the-order-of-preference)
 - [The segments: how much context](#the-segments-how-much-context)
 - [The names: kind@which](#the-names-kindwhich)
 - [Several matches, and one among them](#several-matches-and-one-among-them)
 - [Worked example](#worked-example)
 
-## The locator: Playwright's order of preference
+## The locator: the order of preference
 
-For each element a test acts on or checks, take the first of these that identifies it, as playwright.dev's
-[Locators](https://playwright.dev/docs/locators) page recommends:
+For each element a test acts on or checks, take the first of these that identifies it in its scope. They are
+Playwright's locators, each used for what playwright.dev's [Locators](https://playwright.dev/docs/locators) page says it
+is for, in the order Testing Library gives its queries
+([Priority](https://testing-library.com/docs/queries/about#priority)): what a user sees first, then the contracts a
+user does not see, then the page's structure.
 
 1. **`getByRole(role, { name })`**: buttons, links, checkboxes, text boxes, tabs, menu items, and the containers a user
    sees as one thing: `main`, `navigation`, `region` (a section with a name), `form`, `dialog`, `table`, `list`. Pass the
    accessible name; `exact: true` when one name is part of another ("Save" and "Save draft").
-2. **`getByText(text)`**: non-interactive text: a message, a status, a price.
-3. **`getByLabel(text)`**: a form field with a label; **`getByPlaceholder(text)`** when it has none.
-4. **`getByAltText(text)`** for an image, **`getByTitle(text)`** for an element known by its `title`.
-5. **`getByTestId(id)`**, or POMWright's **`getById(id)`** for an id that is the element's stable contract, when nothing a
-   user sees identifies the element.
-6. **`locator(css)`**, last, for a segment the app gives no role, label or text, written as short as it can be.
+2. **`getByLabel(text)`**: a form field with a label.
+3. **`getByPlaceholder(text)`**: a field without a label.
+4. **`getByText(text)`**: non-interactive text: a message, a status, a price.
+5. **`getByAltText(text)`**: an image.
+6. **`getByTitle(text)`**: an element known only by its `title`, which screen readers do not always read and sighted
+   users do not see by default.
+7. **`getByTestId(id)`**, when nothing a user sees identifies the element.
+8. POMWright's **`getById(id)`**, for an id that is the element's stable contract, where the app has no test id.
+9. **`locator(css)`**, last, for a segment the app gives none of these, written as short as it can be.
+
+When the locator matches several elements in its scope, narrow it before moving down the list: by its own options
+(`name`, `exact`), then by `filter()`: `hasText` and `hasNotText` by the text inside, `has` and `hasNot` by an element
+inside (a locator or a registered path), `visible`. A product card is `getByRole("listitem")` filtered by its heading,
+not `getByText` on the heading, which finds the heading. `nth` is the last resort
+([Several matches](#several-matches-and-one-among-them)).
+
+XPath is not used. It does not reach into shadow DOM, where CSS and the `getBy` methods do; an absolute XPath in a path
+matches nothing, since each segment is searched inside the one before it; and what it is used for has a Playwright
+form: text by `getByText` or `filter({ hasText })`, a parent by `filter({ has })`, a position by `nth`.
 
 A name that varies (a count, a user's name) is a RegExp in the registration (`{ name: /^Orders \(\d+\)$/ }`) or the exact
 value in a query for one use. When the app lacks a role or a label a user would need, the missing accessibility is
@@ -58,9 +74,9 @@ groups paths.
 
 ## Several matches, and one among them
 
-Register the repeated element once and pick one in a query, by what identifies it: a row by its text, a card by its
-heading's exact name (`references/resolving-and-queries.md`). An index is the last resort, for a chain that cannot be
-made unique otherwise.
+Register the repeated element once and pick one in a query, by what identifies it: a row by its text (`hasText`, and
+`hasNotText` to leave out a similar one), a card by its heading's exact name (`has`)
+(`references/resolving-and-queries.md`). An index is the last resort, for a chain that cannot be made unique otherwise.
 
 ## Worked example
 

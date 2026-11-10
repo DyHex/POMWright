@@ -53,7 +53,8 @@ The default comes first; the others are what projects choose instead.
 | imports | relative paths | path aliases (`@page-objects/*`) in `tsconfig.json` |
 | where locators are registered | a locator module per page, shared parts as composed modules | inline, in `defineLocators()` |
 | test id attribute | Playwright's, `data-testid` | the app's own, set with `testIdAttribute` in the config's `use`; `getByTestId` follows it |
-| locator preference | Playwright's order: role, text, label, placeholder, alt text, title, then test id or id, CSS last | test ids first, where the app gives every element a stable one |
+| locator preference | role, label, placeholder, text, alt text, title, test id, id, then CSS, each narrowed by its options and `filter()` before the next; `nth` last | test ids first, where the app gives every element a stable one |
+| XPath | never | last, after CSS, where existing tests rely on it |
 | segment names | `kind@which`, the kind being the element's role (`button@save`) | the project's own style, applied the same way everywhere |
 | plural and singular | by what a segment matches in its scope: `main.list@products.cards` for several, `main.list@products.card` for one | always singular |
 | one of several | a query where it is used; a path of its own when many tests use it, named by what it matches: `main.list@products.card@lamp` for one lamp, `main.list@products.cards@lamp` for several; `nth` last | queries only, no narrowed paths |

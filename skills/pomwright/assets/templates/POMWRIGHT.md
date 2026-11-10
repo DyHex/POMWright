@@ -26,8 +26,9 @@ decide follows the skill's defaults.
 ## Locators and paths
 
 - **Test id attribute**: Playwright's, `data-testid`.
-- **Locator preference**: Playwright's order: role, text, label, placeholder, alt text, title, then test id or id;
-  CSS last.
+- **Locator preference**: role, label, placeholder, text, alt text, title, test id, id, then CSS; one that matches
+  several is narrowed by its options and `filter()` before the next is tried; `nth` last.
+- **XPath**: never.
 - **Segment names**: `kind@which`, the kind being the element's role (`button@save`, `dialog@consent`).
 - **Plural and singular**: by what a segment matches in its scope: `main.list@products.cards` for several,
   `main.list@products.card` for one.

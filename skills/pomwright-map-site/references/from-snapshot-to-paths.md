@@ -43,9 +43,9 @@ A container a user sees as one thing becomes a segment, registered by its role a
 
 A `generic` container that groups what a test acts on (a section of buttons, a card) has no role to find it by:
 
-- when the suggested locator names it by an id that is part of the page's design (`#section1` above), register it with
-  `getById("section1")`;
 - when it has a test id, `getByTestId`;
+- otherwise, when the suggested locator names it by an id that is part of the page's design (`#section1` above),
+  register it with `getById("section1")`;
 - otherwise leave it out and let the next segment carry the context, or, when the elements repeat, register the
   repeated elements as a plural path and pick one with a query;
 - and report it: a heading inside a `<section>` with `aria-labelledby` would make it a named region, findable by role.

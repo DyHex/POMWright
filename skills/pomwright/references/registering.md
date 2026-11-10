@@ -16,19 +16,20 @@ steps. Full rules: [Registering locators](https://dyhex.github.io/POMWright/docs
 
 `add(path)` is followed by exactly one of these, with the arguments and types of the Playwright method of the same
 name. In a page object the calls are `this.add(…)` inside `defineLocators()`; in a locator module, `registry.add(…)`.
-The list is in Playwright's order of preference: take the first that identifies the element.
+The list is in the skills' order of preference (`guides/choosing-locators-and-paths.md`): take the first that
+identifies the element, narrowed by its options and `filter()` where it matches several.
 
 | method | Playwright's | use it for |
 | --- | --- | --- |
 | `getByRole(role, options?)` | `page.getByRole()` | interactive elements and landmarks, regions, forms, dialogs, tables, lists, with `{ name }` |
-| `getByText(text, options?)` | `page.getByText()` | non-interactive text |
 | `getByLabel(text, options?)` | `page.getByLabel()` | form fields |
 | `getByPlaceholder(text, options?)` | `page.getByPlaceholder()` | a field without a label |
+| `getByText(text, options?)` | `page.getByText()` | non-interactive text |
 | `getByAltText(text, options?)` | `page.getByAltText()` | images |
-| `getByTitle(text, options?)` | `page.getByTitle()` | an element known by its `title` attribute |
+| `getByTitle(text, options?)` | `page.getByTitle()` | an element known only by its `title` attribute |
 | `getByTestId(testId)` | `page.getByTestId()` | an element nothing user-facing identifies |
-| `getById(id)` | none: POMWright's | an `id` that is the element's stable contract, see [Ids](#ids-getbyid) |
-| `locator(selector, options?)` | `page.locator()` | a segment the app gives no role, label or text: a CSS selector, as short as it can be |
+| `getById(id)` | none: POMWright's | an `id` that is the element's stable contract, where the app has no test id, see [Ids](#ids-getbyid) |
+| `locator(selector, options?)` | `page.locator()` | a segment the app gives none of these: a CSS selector, as short as it can be; never XPath |
 | `frameLocator(selector?)` | `locator(selector)` then `contentFrame()` | an `<iframe>` whose content the paths below it search, see [Frames](#frames) |
 
 ```ts
