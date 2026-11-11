@@ -10,7 +10,7 @@ test("describe defaults to the terminal locator path", async ({ page }) => {
 
 	const registry = createTestRegistry<LocatorSchemaPaths>(page);
 
-	registry.add("main").locator("main").describe("Main container");
+	registry.add("main").getByRole("main").describe("Main container");
 	registry.add("main.button@login").getByRole("button", { name: "Login" });
 
 	const direct = registry.getLocator("main.button@login");

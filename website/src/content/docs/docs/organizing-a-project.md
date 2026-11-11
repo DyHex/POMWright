@@ -47,7 +47,7 @@ export class AccountPage extends ShopPage<Paths> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
     this.add("main.heading").getByRole("heading", { level: 1 });
   }
 }
@@ -116,7 +116,7 @@ import type { LocatorRegistry } from "pomwright";
 export type Paths = "main" | "main.form@login" | "main.form@login.button@login";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
   registry.add("main.form@login").getByRole("form", { name: "Log in" });
   registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 }

@@ -99,7 +99,7 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
   addHeader(registry);
   addFooter(registry);
   addConsentDialog(registry);
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
   // "main.heading" is a slot: each page registers its own (see Shared slots)
 }
 ```
@@ -264,7 +264,7 @@ export function defineLocators<ExternalPaths extends string = never>(
 ): void;
 
 export function defineLocators(registry: LocatorRegistry<Paths>, locale: Locale) {
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
   registry.add("main.button@login").getByRole("button", { name: loginLabel[locale] });
 }
 ```
@@ -300,7 +300,7 @@ import type { LocatorRegistry } from "pomwright";
 export type Paths = "main" | "main.list@products" | "main.list@products.items@onSale";
 
 export function defineLocators(registry: LocatorRegistry<Paths>, page: Page) {
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
   registry.add("main.list@products").getByRole("list", { name: "Products" });
   registry
     .add("main.list@products.items@onSale")
@@ -328,7 +328,7 @@ export class ProductsPage extends PageObject<Paths> {
 ```
 
 ```text
-locator('main').getByRole('list', { name: 'Products' }).getByRole('listitem').filter({ has: getByText('Sale', { exact: true }) })
+getByRole('main').getByRole('list', { name: 'Products' }).getByRole('listitem').filter({ has: getByText('Sale', { exact: true }) })
 ```
 
 Playwright looks for the `has` locator inside each element being filtered, so `page.getByText("Sale", { exact: true })`
@@ -376,7 +376,7 @@ export type Paths =
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   addShared(registry);
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
   registry.add("main.list@orders").getByRole("list", { name: "Orders" });
   registry.add("main.list@orders.items", { reuse: "shared.list.items" });
   registry.add("main.list@orders.item@last", { reuse: "shared.list.items" }).nth("last").describe("Last order");

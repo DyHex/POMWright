@@ -148,7 +148,7 @@ export type PageObjectOptions<Options extends PageObjectTypeOptions = { baseUrlT
  *   }
  *
  *   protected defineLocators(): void {
- *     this.add("main").locator("main");
+ *     this.add("main").getByRole("main");
  *     this.add("main.button@login").getByRole("button", { name: "Log in" });
  *   }
  * }
@@ -420,7 +420,7 @@ export abstract class PageObject<
 	 * @example
 	 * ```ts
 	 * protected defineLocators(): void {
-	 *   this.add("main").locator("main");
+	 *   this.add("main").getByRole("main");
 	 *   this.add("main.button@login").getByRole("button", { name: "Log in" });
 	 * }
 	 * ```

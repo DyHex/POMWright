@@ -10,5 +10,5 @@ export function defineLocators<ExternalPaths extends string = never>(
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
 	addHeader(registry);
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 }

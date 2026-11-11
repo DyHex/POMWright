@@ -44,7 +44,7 @@ export class OrdersPage extends PageObject<Paths, { storage: typeof ordersStorag
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
     this.add("main.table@orders").getByRole("table", { name: "Orders" });
     this.add("main.table@orders.row").getByRole("row");
     this.add("main.table@orders.row.button@cancel").getByRole("button", { name: "Cancel" });
@@ -107,7 +107,7 @@ Canceling `ORD-1042` clicks this locator, which the report and the trace viewer 
 `main.table@orders.row.button@cancel`:
 
 ```text
-locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })
+getByRole('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })
 ```
 
 `getNestedLocator(path)` resolves a path's registered chain as it is: the shorthand for the locators you use most, as

@@ -50,7 +50,7 @@ export function defineLocators<ExternalPaths extends string = never>(
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   addHeader(registry);
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
   // "main.heading" is a slot: each page registers its own
 }
 ```

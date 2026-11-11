@@ -83,7 +83,7 @@ export class EditorPage extends PageObject<Paths> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
     this.add("main.toolbar").getByRole("toolbar");
     for (const action of actions) {
       this.add(`main.toolbar.button@${action}`).getByRole("button", { name: action });
@@ -154,7 +154,7 @@ type Paths =
 
 const { add } = createRegistryWithAccessors<Paths>(page);
 
-add("main").locator("main");
+add("main").getByRole("main");
 add("main.section@order").getByRole("region", { name: "Order" });
 add("main.section@order.region@subscriptions").getByRole("region", { name: "Subscriptions" });
 add("main.section@order.region@subscriptions.region@subscription").getByRole("region", { name: "Mobile subscription" });
@@ -170,7 +170,7 @@ chains back:
   path below it resolves again, with its name unchanged:
 
   ```text
-  locator('main').getByRole('region', { name: 'Order' }).getByRole('region', { name: 'Mobile subscription' }).getByRole('button', { name: 'Edit' })
+  getByRole('main').getByRole('region', { name: 'Order' }).getByRole('region', { name: 'Mobile subscription' }).getByRole('button', { name: 'Edit' })
   ```
 
   This is one line. It does not fit a registry with `strictChains: true`, whose check then reports the missing
@@ -239,7 +239,7 @@ contains the text (`shell.main.list`). Without regular expressions, two replacem
 :::note
 Rename the paths below it too, not the exact path alone. A path left under the old segment still compiles, since the
 segment is then a name that groups paths, and it resolves without that segment's locator: `main.list.item` becomes
-`locator('main').getByRole('listitem')`. Only [`strictChains: true`](/POMWright/docs/verifying-registries/) reports it:
+`getByRole('main').getByRole('listitem')`. Only [`strictChains: true`](/POMWright/docs/verifying-registries/) reports it:
 
 ```text
 "main.list.item": strictChains requires every ancestor to be registered; "main.list" is not.
@@ -314,7 +314,7 @@ type Paths = "main" | "main.button@save";
 
 const { registry, add, getNestedLocator } = createRegistryWithAccessors<Paths>(page);
 
-add("main").locator("main");
+add("main").getByRole("main");
 add("main.button@save").getByRole("button", { name: "Save" });
 registry.verify();
 

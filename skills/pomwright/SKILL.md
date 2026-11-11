@@ -127,7 +127,7 @@ export type Paths =
   | "main.table@orders.rows.cell@status";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
   registry.add("main.table@orders").getByRole("table", { name: "Orders" });
   registry.add("main.table@orders.rows").getByRole("row");
   registry.add("main.table@orders.rows.rowheader").getByRole("rowheader");
@@ -212,7 +212,7 @@ test("a customer cancels an open order", async ({ ordersPage, testData }) => {
 Canceling `ORD-1042` clicks this chain, which the report shows as `main.table@orders.rows.button@cancel`:
 
 ```text
-locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ has: getByRole('rowheader', { name: 'ORD-1042', exact: true }) }).getByRole('button', { name: 'Cancel' })
+getByRole('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ has: getByRole('rowheader', { name: 'ORD-1042', exact: true }) }).getByRole('button', { name: 'Cancel' })
 ```
 
 The row is found by its header's exact name; `hasText` would match part of a text, `ORD-10420` too. The status cell

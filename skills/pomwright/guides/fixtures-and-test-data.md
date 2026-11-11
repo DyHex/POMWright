@@ -27,7 +27,7 @@ class HomePage extends PageObject<"main"> {
     super(page, "https://shop.example", "");
   }
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
   }
 }
 

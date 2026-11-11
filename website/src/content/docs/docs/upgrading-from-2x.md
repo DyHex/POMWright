@@ -247,7 +247,7 @@ import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.list" | "main.list.item">;
 // ---cut---
-registry.getLocatorSchema("main.list.item").skip("main.list").getNestedLocator(); // locator('main').getByRole('listitem')
+registry.getLocatorSchema("main.list.item").skip("main.list").getNestedLocator(); // getByRole('main').getByRole('listitem')
 ```
 
 `remove()` on the terminal followed by `update()` or `replace()` becomes the `update()` or `replace()` alone, plus
@@ -357,8 +357,8 @@ locator call if that comes earlier. Page objects need no change, with three cons
       super(page, "https://shop.example", "/");
     }
     protected defineLocators(): void {
-      this.add("main").locator("main");
-      this.add("main").locator("main");
+      this.add("main").getByRole("main");
+      this.add("main").getByRole("main");
     }
   }
   declare const page: Page;
@@ -402,7 +402,7 @@ export class DashboardPage extends PageObject<"main" | "main.spinner"> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
     this.add("main.spinner").getByRole("progressbar");
   }
 
@@ -490,7 +490,7 @@ export class LoginPage extends PageObject<"main"> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
   }
 }
 ```
@@ -582,7 +582,7 @@ export class AccountPage extends PageObject<"main", { storage: typeof accountSto
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
   }
 }
 

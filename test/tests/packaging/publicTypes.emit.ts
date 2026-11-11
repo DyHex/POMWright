@@ -33,7 +33,7 @@ export const rowReplacement = (registry: LocatorRegistry<Paths>) =>
 export const rowFilter = (text: string) => ({ hasText: text, has: "list.item" as const });
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.heading", { reuse: headingSeed(registry) });
 	registry.add("list").locator("ul");
 	registry.add("list.item").getByRole("listitem").filter(rowFilter("Row"));

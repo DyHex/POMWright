@@ -19,7 +19,7 @@ import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.button@login">;
 // ---cut---
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
 registry.add("main.button@login").getByRole("button", { name: "Log in" });
 
 registry.getNestedLocator("main.button@login").description(); // "main.button@login"
@@ -35,8 +35,8 @@ Only the resolved path's description is used; the descriptions of its ancestors 
 | `toString()`, `description()` | `main.button@login` | the chain; `description()` is `null` |
 | the HTML report's row of an action or assertion | `Click main.button@login` | the chain |
 | an assertion error's `Locator:` line | `Locator: main.button@login` | the chain |
-| the call log of every action and assertion | `waiting for locator('main').getByRole('button', { name: 'Log in' })` | the same |
-| a strict mode error | `strict mode violation: locator('main').getByRole('button', { name: 'Log in' }) resolved to 2 elements` | the same |
+| the call log of every action and assertion | `waiting for getByRole('main').getByRole('button', { name: 'Log in' })` | the same |
+| a strict mode error | `strict mode violation: getByRole('main').getByRole('button', { name: 'Log in' }) resolved to 2 elements` | the same |
 
 So a report stays readable, and a failure's call log still shows the chain Playwright waited for.
 
@@ -87,7 +87,7 @@ The argument is a string. From JavaScript, `describe(null)` or `describe(undefin
 ## Chaining further
 
 A locator you chain further yourself is a new Playwright locator, and Playwright gives it no description:
-`registry.getNestedLocator("main").locator("li")` prints `locator('main').locator('li')`. Register the path instead
+`registry.getNestedLocator("main").locator("li")` prints `getByRole('main').locator('li')`. Register the path instead
 when it is worth a name.
 
 ## Reference

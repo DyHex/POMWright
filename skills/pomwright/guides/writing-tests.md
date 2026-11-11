@@ -30,7 +30,7 @@ export class OrdersPage extends PageObject<Paths> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
     this.add("main.table@orders").getByRole("table", { name: "Orders" });
     this.add("main.table@orders.rows").getByRole("row");
     this.add("main.table@orders.rows.rowheader").getByRole("rowheader");
@@ -137,7 +137,7 @@ export class HomePage extends PageObject<Paths> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
     this.add("main.button@subscribe").getByRole("button", { name: "Subscribe" });
     this.add("dialog@survey").getByRole("dialog", { name: "Survey" });
     this.add("dialog@survey.button@close").getByRole("button", { name: "Close" });

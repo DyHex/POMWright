@@ -58,7 +58,7 @@ skillTest("skills/pomwright/SKILL.md", async ({ page }) => {
 		| "main.table@orders.rows.button@cancel"
 		| "main.table@orders.rows.cell@status";
 	const { registry } = createRegistryWithAccessors<Paths>(page);
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.table@orders").getByRole("table", { name: "Orders" });
 	registry.add("main.table@orders.rows").getByRole("row");
 	registry.add("main.table@orders.rows.rowheader").getByRole("rowheader");
@@ -74,7 +74,7 @@ skillTest("skills/pomwright/SKILL.md", async ({ page }) => {
 		.filter("main.table@orders.rows", { has: orderNumber })
 		.getNestedLocator();
 	shows(chain(cancel)).toBe(
-		"locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ has: getByRole('rowheader', { name: 'ORD-1042', exact: true }) }).getByRole('button', { name: 'Cancel' })",
+		"getByRole('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ has: getByRole('rowheader', { name: 'ORD-1042', exact: true }) }).getByRole('button', { name: 'Cancel' })",
 	);
 	shows(cancel.description()).toBe("main.table@orders.rows.button@cancel");
 });
@@ -86,15 +86,15 @@ skillTest("skills/pomwright/references/registering.md", async ({ page }) => {
 	const methods = createRegistryWithAccessors<"main" | "main.form@login" | "main.form@login.button@login" | "cart">(
 		page,
 	).registry;
-	methods.add("main").locator("main");
+	methods.add("main").getByRole("main");
 	methods.add("main.form@login").getByRole("form", { name: "Log in" });
 	methods.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 	shows(chain(methods.getNestedLocator("main.form@login.button@login"))).toBe(
-		"locator('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })",
+		"getByRole('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })",
 	);
 	methods.add("cart").locator("section.cart", { hasText: "Total" });
 	shows(chain(methods.getLocator("cart"))).toBe("locator('section.cart').filter({ hasText: 'Total' })");
-	// the file says getByRole("main") finds the <main> element too. setContent stands in for a page the test server serves:
+	// the file says getByRole("main") finds the <main> element. setContent stands in for a page the test server serves:
 	// an element's role depends on its markup alone, so the stand-in hides nothing a served page would add
 	await page.setContent("<main><p>content</p></main>");
 	await expect(page.getByRole("main")).toHaveCount(1);
@@ -112,12 +112,12 @@ skillTest("skills/pomwright/references/registering.md", async ({ page }) => {
 	const filtering = createRegistryWithAccessors<
 		"main" | "main.region@orders" | "main.region@orders.heading" | "main.region@orders.item@open"
 	>(page).registry;
-	filtering.add("main").locator("main");
+	filtering.add("main").getByRole("main");
 	filtering.add("main.region@orders").getByRole("region").filter({ has: "main.region@orders.heading" });
 	filtering.add("main.region@orders.heading").getByRole("heading", { name: "Orders" });
 	filtering.add("main.region@orders.item@open").getByRole("listitem").filter({ hasText: "Open" });
 	shows(chain(filtering.getNestedLocator("main.region@orders.item@open"))).toBe(
-		"locator('main').getByRole('region').filter({ has: getByRole('heading', { name: 'Orders' }) }).getByRole('listitem').filter({ hasText: 'Open' })",
+		"getByRole('main').getByRole('region').filter({ has: getByRole('heading', { name: 'Orders' }) }).getByRole('listitem').filter({ hasText: 'Open' })",
 	);
 
 	// ids: the selector a string id becomes
@@ -129,12 +129,12 @@ skillTest("skills/pomwright/references/registering.md", async ({ page }) => {
 	const frames = createRegistryWithAccessors<
 		"main" | "main.region@payment" | "main.region@payment.frame" | "main.region@payment.frame.input@cardNumber"
 	>(page).registry;
-	frames.add("main").locator("main");
+	frames.add("main").getByRole("main");
 	frames.add("main.region@payment").getByRole("region", { name: "Payment" });
 	frames.add("main.region@payment.frame").frameLocator("iframe");
 	frames.add("main.region@payment.frame.input@cardNumber").getByLabel("Card number");
 	shows(chain(frames.getNestedLocator("main.region@payment.frame.input@cardNumber"))).toBe(
-		"locator('main').getByRole('region', { name: 'Payment' }).locator('iframe').contentFrame().getByLabel('Card number')",
+		"getByRole('main').getByRole('region', { name: 'Payment' }).locator('iframe').contentFrame().getByLabel('Card number')",
 	);
 });
 
@@ -153,7 +153,7 @@ skillTest("skills/pomwright/references/resolving-and-queries.md", async ({ page 
 	const orders = createRegistryWithAccessors<
 		"main" | "main.table@orders" | "main.table@orders.rows" | "main.table@orders.rows.button@cancel"
 	>(page).registry;
-	orders.add("main").locator("main");
+	orders.add("main").getByRole("main");
 	orders.add("main.table@orders").getByRole("table", { name: "Orders" });
 	orders.add("main.table@orders.rows").getByRole("row");
 	orders.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
@@ -165,7 +165,7 @@ skillTest("skills/pomwright/references/resolving-and-queries.md", async ({ page 
 				.getNestedLocator(),
 		),
 	).toBe(
-		"locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })",
+		"getByRole('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })",
 	);
 
 	// a card by its heading's exact name
@@ -245,7 +245,7 @@ skillTest("skills/pomwright/references/page-objects.md", async ({ page }) => {
 		}
 
 		protected defineLocators(): void {
-			this.add("main").locator("main");
+			this.add("main").getByRole("main");
 			this.add("main.form@login").locator("form").filter({ has: "main.form@login.heading" });
 			this.add("main.form@login.input@email").getByLabel("Email");
 			this.add("main.form@login.input@password").getByLabel("Password");
@@ -282,7 +282,7 @@ skillTest("skills/pomwright/guides/writing-tests.md", async ({ page }) => {
 	const { getNestedLocator, registry } = createRegistryWithAccessors<
 		"main" | "main.button@subscribe" | "dialog@survey" | "dialog@survey.button@close"
 	>(page);
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.button@subscribe").getByRole("button", { name: "Subscribe" });
 	registry.add("dialog@survey").getByRole("dialog", { name: "Survey" });
 	registry.add("dialog@survey.button@close").getByRole("button", { name: "Close" });

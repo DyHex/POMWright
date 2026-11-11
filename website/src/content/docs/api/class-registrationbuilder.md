@@ -13,10 +13,10 @@ import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.list" | "main.list.item">;
 // ---cut---
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
 registry.add("main.list").locator("ul.orders");
 registry.add("main.list.item").getByRole("listitem").filter({ hasText: "Open" }).nth(0);
-// main.list.item: locator('main').locator('ul.orders').getByRole('listitem').filter({ hasText: 'Open' }).first()
+// main.list.item: getByRole('main').locator('ul.orders').getByRole('listitem').filter({ hasText: 'Open' }).first()
 ```
 
 The chains on this page are shown without the description, which is the path unless `describe` sets one. Guides:
@@ -491,11 +491,11 @@ import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.list" | "main.list.items@open" | "main.list.item@lastOpen">;
 // ---cut---
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
 registry.add("main.list").locator("ul");
 registry.add("main.list.items@open").getByRole("listitem").filter({ hasText: "Open" });
 registry.add("main.list.item@lastOpen", { reuse: "main.list.items@open" }).nth("last").describe("Last open item");
-// locator('main').locator('ul').getByRole('listitem').filter({ hasText: 'Open' }).last()
+// getByRole('main').locator('ul').getByRole('listitem').filter({ hasText: 'Open' }).last()
 ```
 
 ### A seed

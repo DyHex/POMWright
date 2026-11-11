@@ -425,7 +425,7 @@ export class AccountPage extends PageObject<"main", { storage: typeof accountSto
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
   }
 }
 ```

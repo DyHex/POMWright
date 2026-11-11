@@ -22,7 +22,7 @@ export type Paths =
   | "main.list.items";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
   registry.add("main.form@login").getByRole("form", { name: "Log in" });
   registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
   registry.add("main.list").locator("ul");
@@ -166,7 +166,7 @@ import type { Paths } from "./shop.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 const lastItem = registry.getLocatorSchema("main.list.items").nth("last").getNestedLocator();
-// locator('main').locator('ul').getByRole('listitem').last()
+// getByRole('main').locator('ul').getByRole('listitem').last()
 ```
 
 **Arguments**
@@ -200,7 +200,7 @@ import type { Paths } from "./shop.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 await registry.getNestedLocator("main.form@login.button@login").click();
-// locator('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
+// getByRole('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
 ```
 
 **Arguments**
@@ -313,7 +313,7 @@ import { createRegistryWithAccessors } from "pomwright";
 declare const page: Page;
 // ---cut---
 const { registry, getNestedLocator } = createRegistryWithAccessors<"main" | "main.button@save">(page);
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
 registry.add("main.button@save").getByRole("button", { name: "Save" });
 registry.verify();
 

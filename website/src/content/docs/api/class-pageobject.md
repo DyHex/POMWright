@@ -20,7 +20,7 @@ export class LoginPage extends PageObject<Paths> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
     this.add("main.button@login").getByRole("button", { name: "Log in" });
   }
 }
@@ -61,7 +61,7 @@ export class OrderPage extends PageObject<"main", { urlPathType: RegExp; storage
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
   }
 }
 ```
@@ -90,7 +90,7 @@ export class AccountPage extends PageObject<"main"> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
   }
 }
 ```
@@ -169,7 +169,7 @@ export class LoginPage extends PageObject<"main" | "main.button@login"> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
     this.add("main.button@login").getByRole("button", { name: loginLabel[this.locale] });
   }
 }
@@ -214,7 +214,7 @@ export class DashboardPage extends PageObject<"main" | "main.spinner"> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
     this.add("main.spinner").getByRole("progressbar");
   }
 

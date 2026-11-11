@@ -32,7 +32,7 @@ export const selector = (page: Page, shown: string) => {
 /** A selector the page shows under `main`, rendered as Playwright prints the nested locator. */
 export const nested = (page: Page, shown: string) => {
 	onPage(shown);
-	const rendered = `${page.locator("main").locator(shown)}`;
+	const rendered = `${page.getByRole("main").locator(shown)}`;
 	renderings.add(rendered);
 	return rendered;
 };

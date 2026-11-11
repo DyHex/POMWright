@@ -83,7 +83,7 @@ import { createRegistryWithAccessors } from "pomwright";
 declare const page: Page;
 // ---cut---
 const { registry } = createRegistryWithAccessors<"main" | "main.form.button.save">(page, { strictChains: true });
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
 registry.add("main.form.button.save").getByRole("button", { name: "Save" });
 registry.verify();
 ```

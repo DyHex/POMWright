@@ -49,7 +49,7 @@ export class CheckoutPage extends PageObject<"main" | "main.input@cardNumber"> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
     this.add("main.input@cardNumber").getByLabel("Card number");
   }
 

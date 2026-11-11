@@ -108,7 +108,7 @@ an order summary region whose total has no label; a cookie dialog.
 | --- | --- | --- |
 | the header | `header` | `getByRole("banner")` |
 | its cart link | `header.link@cart` | `getByRole("link", { name: "Cart" })` |
-| main content | `main` | `locator("main")` |
+| main content | `main` | `getByRole("main")` |
 | the delivery form | `main.form@delivery` | `getByRole("form", { name: "Delivery" })` |
 | its postcode field | `main.form@delivery.input@postcode` | `getByLabel("Postcode")` |
 | its continue button | `main.form@delivery.button@continue` | `getByRole("button", { name: "Continue" })` |

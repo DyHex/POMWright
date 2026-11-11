@@ -37,15 +37,15 @@ import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.form@login" | "main.form@login.button@login">;
 
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
 registry.add("main.form@login").getByRole("form", { name: "Log in" });
 registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 // getNestedLocator("main.form@login.button@login"):
-// locator('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
+// getByRole('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
 ```
 
-`locator("main")` is the one CSS selector here: the `<main>` element is a landmark, and `getByRole("main")` finds it
-too, so either is right. Playwright prints the options of `locator(selector, options)` as a step:
+`getByRole("main")` finds the `<main>` element by its landmark role, and every path below it searches
+inside it only. With CSS, Playwright prints the options of `locator(selector, options)` as a step:
 `locator("section.cart", { hasText: "Total" })` resolves to `locator('section.cart').filter({ hasText: 'Total' })`.
 
 ## Steps: filter, nth, describe
@@ -87,12 +87,12 @@ import type { LocatorRegistry } from "pomwright";
 type Paths = "main" | "main.region@orders" | "main.region@orders.heading" | "main.region@orders.item@open";
 declare const registry: LocatorRegistry<Paths>;
 
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
 registry.add("main.region@orders").getByRole("region").filter({ has: "main.region@orders.heading" });
 registry.add("main.region@orders.heading").getByRole("heading", { name: "Orders" });
 registry.add("main.region@orders.item@open").getByRole("listitem").filter({ hasText: "Open" });
 // getNestedLocator("main.region@orders.item@open"):
-// locator('main').getByRole('region').filter({ has: getByRole('heading', { name: 'Orders' }) }).getByRole('listitem').filter({ hasText: 'Open' })
+// getByRole('main').getByRole('region').filter({ has: getByRole('heading', { name: 'Orders' }) }).getByRole('listitem').filter({ hasText: 'Open' })
 ```
 
 Prefer the path: it is short, it may name a path registered later in `defineLocators()`, and the page object's check
@@ -129,12 +129,12 @@ type Paths =
   | "main.region@payment.frame.input@cardNumber";
 declare const registry: LocatorRegistry<Paths>;
 
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
 registry.add("main.region@payment").getByRole("region", { name: "Payment" });
 registry.add("main.region@payment.frame").frameLocator("iframe");
 registry.add("main.region@payment.frame.input@cardNumber").getByLabel("Card number");
 // getNestedLocator("main.region@payment.frame.input@cardNumber"):
-// locator('main').getByRole('region', { name: 'Payment' }).locator('iframe').contentFrame().getByLabel('Card number')
+// getByRole('main').getByRole('region', { name: 'Payment' }).locator('iframe').contentFrame().getByLabel('Card number')
 ```
 
 Resolving the frame segment's own path gives the `<iframe>` element. `frameLocator()` without a selector is Playwright's

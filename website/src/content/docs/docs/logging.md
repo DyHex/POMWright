@@ -116,7 +116,7 @@ export class CheckoutPage extends PageObject<"main"> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
   }
 
   async pay() {

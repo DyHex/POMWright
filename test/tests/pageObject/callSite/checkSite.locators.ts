@@ -8,7 +8,7 @@ export function defineListLocators<ExternalPaths extends string = never>(
 	registry: LocatorRegistry<ListPaths | ExternalPaths>,
 ): void;
 export function defineListLocators(registry: LocatorRegistry<ListPaths>) {
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main").locator("body"); // SITE module-add
 }
 

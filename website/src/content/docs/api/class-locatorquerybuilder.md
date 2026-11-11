@@ -14,7 +14,7 @@ import type { LocatorRegistry } from "pomwright";
 export type Paths = "main" | "main.list" | "main.list.item" | "main.button@save";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
   registry.add("main.list").locator("ul").filter({ hasText: "Orders" });
   registry.add("main.list.item").locator("li").nth(0);
   registry.add("main.button@save").getByRole("button", { name: "Save", exact: true });
@@ -33,7 +33,7 @@ const lastOpenOrder = registry
   .filter({ hasText: "Open" })
   .nth("last")
   .getNestedLocator();
-// locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').filter({ hasText: 'Open' }).last()
+// getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').filter({ hasText: 'Open' }).last()
 ```
 
 A method that takes a `subPath` works on that segment of the query's chain: the path itself or one of its registered
@@ -56,10 +56,10 @@ import type { Paths } from "./orders.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.list.item").clearSteps().getNestedLocator();
-// locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li')
+// getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li')
 
 registry.getLocatorSchema("main.list.item").clearSteps("main.list").getNestedLocator();
-// locator('main').locator('ul').locator('li').first()
+// getByRole('main').locator('ul').locator('li').first()
 ```
 
 **Arguments**
@@ -184,7 +184,7 @@ import type { Paths } from "./orders.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.list.item").getNestedLocator();
-// locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()
+// getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()
 ```
 
 **Returns**
@@ -207,7 +207,7 @@ import type { Paths } from "./orders.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.list.item").clearSteps().nth(2).getNestedLocator();
-// locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').nth(2)
+// getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').nth(2)
 ```
 
 The registered `nth(0)` stays unless cleared; see [steps](/POMWright/docs/queries/#steps-filter-nth-clearsteps).
@@ -247,7 +247,7 @@ import type { Paths } from "./orders.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.list.item").replace("main.list").getByRole("list", { name: "Orders" }).getNestedLocator();
-// locator('main').getByRole('list', { name: 'Orders' }).filter({ hasText: 'Orders' }).locator('li').first()
+// getByRole('main').getByRole('list', { name: 'Orders' }).filter({ hasText: 'Orders' }).locator('li').first()
 ```
 
 **Arguments**
@@ -284,7 +284,7 @@ import type { Paths } from "./orders.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.list.item").skip("main.list").getNestedLocator();
-// locator('main').locator('li').first()
+// getByRole('main').locator('li').first()
 ```
 
 **Arguments**
@@ -323,7 +323,7 @@ declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 const query = registry.getLocatorSchema("main.list.item").skip("main.list");
 query.unskip("main.list").getNestedLocator();
-// locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()
+// getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()
 ```
 
 **Arguments**
@@ -357,10 +357,10 @@ import type { Paths } from "./orders.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.button@save").update().getByRole({ name: "Cancel" }).getNestedLocator();
-// locator('main').getByRole('button', { name: 'Cancel', exact: true })
+// getByRole('main').getByRole('button', { name: 'Cancel', exact: true })
 
 registry.getLocatorSchema("main.button@save").update().getByRole("button", null).getNestedLocator();
-// locator('main').getByRole('button')
+// getByRole('main').getByRole('button')
 ```
 
 **Arguments**

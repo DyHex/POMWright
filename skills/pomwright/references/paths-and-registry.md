@@ -49,7 +49,7 @@ type Action = (typeof actions)[number];
 type Paths = "main" | "main.toolbar" | `main.toolbar.button@${Action}`;
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
   registry.add("main.toolbar").getByRole("toolbar");
   for (const action of actions) {
     registry.add(`main.toolbar.button@${action}`).getByRole("button", { name: action });
@@ -94,7 +94,7 @@ declare const page: Page;
 type Paths = "main" | "main.button@save";
 const { registry, getNestedLocator } = createRegistryWithAccessors<Paths>(page);
 
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
 registry.add("main.button@save").getByRole("button", { name: "Save" });
 registry.verify();
 

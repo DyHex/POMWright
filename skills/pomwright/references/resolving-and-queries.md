@@ -42,7 +42,7 @@ import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.table@cart" | "main.table@cart.inputs@quantity">;
 
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
 registry.add("main.table@cart").getByRole("table", { name: "Cart" });
 registry.add("main.table@cart.inputs@quantity").getByLabel("Quantity");
 
@@ -88,7 +88,7 @@ import type { LocatorRegistry } from "pomwright";
 type Paths = "main" | "main.table@orders" | "main.table@orders.rows" | "main.table@orders.rows.button@cancel";
 declare const registry: LocatorRegistry<Paths>;
 
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
 registry.add("main.table@orders").getByRole("table", { name: "Orders" });
 registry.add("main.table@orders.rows").getByRole("row");
 registry.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
@@ -97,7 +97,7 @@ const cancel = registry
   .getLocatorSchema("main.table@orders.rows.button@cancel")
   .filter("main.table@orders.rows", { hasText: "ORD-1042" })
   .getNestedLocator();
-// locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })
+// getByRole('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })
 ```
 
 When text alone is ambiguous (`hasText: "Lamp"` also matches "Desk lamp"), filter by the element that names it: a query
@@ -157,7 +157,7 @@ import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.button@wishlist">;
 
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
 registry.add("main.button@wishlist").getByRole("button", { name: "Add to wishlist" });
 
 const wishlist = registry.getLocatorSchema("main.button@wishlist");

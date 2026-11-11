@@ -38,7 +38,7 @@ export class HomePage extends PageObject<Paths> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
     // TODO: register the newsletter form, its email field and its subscribe button
   }
 }

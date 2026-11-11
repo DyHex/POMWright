@@ -52,10 +52,10 @@ For example, `main.section@orders` keeps the section that contains the Orders he
 `getByRole('heading', { name: 'Orders' })`, and Playwright finds it inside the Orders section:
 
 ```text
-locator('main').locator('section').filter({ has: getByRole('heading', { name: 'Orders' }) })
+getByRole('main').locator('section').filter({ has: getByRole('heading', { name: 'Orders' }) })
 ```
 
-Resolved as its chain, the heading path would start with `locator('main')`. Playwright would then look for a `main`
+Resolved as its chain, the heading path would start with `getByRole('main')`. Playwright would then look for a `main`
 inside each section, and since no section contains one, no section would match.
 
 A filter path is resolved when the chain that uses it is, so registration accepts forward references: a path may name

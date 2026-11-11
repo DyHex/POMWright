@@ -46,7 +46,7 @@ export class CartPage extends PageObject<"main", { storage: typeof cartStorage }
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
   }
 }
 

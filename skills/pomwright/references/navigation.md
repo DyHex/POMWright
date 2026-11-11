@@ -44,7 +44,7 @@ class LoginPage extends PageObject<"main"> {
     super(page, "https://shop.example", "/login");
   }
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
   }
 }
 
@@ -53,7 +53,7 @@ class AccountPage extends PageObject<"main"> {
     super(page, "https://shop.example", "/account");
   }
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
   }
 }
 
@@ -93,7 +93,7 @@ export class AccountPage extends PageObject<"main", { urlPathType: RegExp }> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
   }
 }
 ```

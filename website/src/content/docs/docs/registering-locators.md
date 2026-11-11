@@ -15,7 +15,7 @@ import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.form@login" | "main.form@login.button@login">;
 // ---cut---
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
 registry.add("main.form@login").getByRole("form", { name: "Log in" });
 registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 ```

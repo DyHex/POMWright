@@ -51,7 +51,7 @@ export type Paths =
   | "main.status";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
   registry.add("main.list@products").getByRole("list", { name: "Products" });
   registry.add("main.list@products.cards").getByRole("listitem");
   registry.add("main.list@products.cards.heading").getByRole("heading");
