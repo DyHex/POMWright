@@ -30,7 +30,7 @@ shape of page code the project chose, without changing what its tests check.
 | fixtures | one `test` every spec imports, merged from fixture files that extend POMWright's `test`; a fixture body builds what it hands the test and nothing else; no hand-written copy of the `log` fixture | `guides/fixtures-and-test-data.md` |
 | test data | one read-only `testData` fixture by app, page and case; page code takes data as arguments | `guides/fixtures-and-test-data.md` |
 | page code | constructors take the page (and a logger only when they log); a `PageObject`'s `defineLocators()` registers synchronously and its "loaded" is defined in `pageActionsToPerformAfterNavigation()`; a registry created by hand is checked with `registry.verify()`; locators resolved in getters, methods or functions; actions and checks are report steps named in the user's words, one options object for two or more parameters | `guides/writing-page-objects.md`, `guides/choosing-a-shape.md` |
-| locators | the order of preference, accessible names given, a locator that matches several narrowed by its options and `filter()` before a lower one is used; test ids, then ids, where nothing user-facing identifies an element; CSS for the segments the app gives nothing else; no XPath | `guides/choosing-locators-and-paths.md` |
+| locators | each locator fits its element on the page: a role and accessible name where the page gives one, a locator that matches several narrowed by its options and `filter()` before a lower one is used; test ids, then ids, where nothing user-facing identifies an element; CSS for the segments the app gives nothing else; no XPath. A locator is a finding for what it does on the page (fragile, ambiguous, passed by a similar element, not what a user sees), never for its place in the order; a scope segment such as `main` and a test id the page leaves no alternative to are sound | `guides/choosing-locators-and-paths.md` |
 | paths | `kind@which` names, plural for several matches, the segments a user would recognize and no more; shared parts named one way across the project | `guides/choosing-locators-and-paths.md` |
 | resolution | `getNestedLocator` for what tests act on; `getLocator` only inside filters or for whole-page counts; no `await` on a resolution | `references/resolving-and-queries.md` |
 | variations | one-use variations as queries (a row by a cell's exact text, a card by its heading's exact name), not extra registrations or hand-built chains; no filter that a similar item also passes (`hasText: "Lamp"` passes the "Desk lamp" too) | `references/resolving-and-queries.md` |
@@ -44,7 +44,8 @@ For each finding: the file and line, what good looks like for it, the rewrite (a
 change would touch. Group findings by area, most valuable first: a structural change (imports, fixtures, test data)
 pays off across every test, a locator change across every test of one page. Say what is already sound. Code that
 follows a decision in `POMWRIGHT.md` is not a finding; code that departs from one is, and so is a decision the code
-shows the project has outgrown, raised as a question.
+shows the project has outgrown, raised as a question. Code that departs from this skill's defaults for a reason the page
+or the project gives is not a finding either: look at the page or the code before calling it one.
 
 A rewrite, shown as the right way to do it:
 

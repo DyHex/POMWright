@@ -36,7 +36,13 @@ user installed. Write for that reader:
   locators for what its docs say each is for, in Testing Library's priority (role, label, placeholder, text, alt text,
   title, test id), then POMWright's `getById`, then CSS; never XPath, which Playwright does not recommend and which
   does not reach into shadow DOM. A locator that matches several is narrowed by its options and `filter()` before the
-  next is tried, `nth` last.
+  next is tried, `nth` last. The priority is a preference: the element and the page decide, and a segment may be there
+  for its scope (`main`, registered `getByRole("main")`).
+- **Defaults with their reasons, not templates.** Projects, pages and users differ, so a rule a skill teaches says why,
+  and the skill has the agent look at the project and the page before applying it, and depart from it, saying so, where
+  the reason does not hold. An example shows one page's reasoning; the eval rounds showed agents copying examples
+  literally, so an example says what made each choice right there. How POMWright and Playwright behave is a fact, not a
+  default.
 - **Lead by example.** A skill shows the right way in its examples and says why; it does not catalogue mistakes.
 - **Where the docs leave a choice, the user decides**, and a project records its decisions in `POMWRIGHT.md`, which the
   `pomwright` skill reads first and, when it is missing, writes first, asking the user
@@ -63,6 +69,9 @@ user installed. Write for that reader:
   lines opens with a contents list linking each `##` heading. References are one level deep: every Markdown file of a
   skill is linked from its `SKILL.md` and links on to no other. Every link to the site names a page and heading.
 - Relative links and anchors resolve: `pnpm lint:guide` reads the skills too.
+- The `pomwright` skill's upgrade guide lists every item the site's *Upgrading from 2.x* marks **compiles**, in the
+  page's order, with exactly the searches the page gives: those changes compile, so only a search finds them, and an
+  agent that reads a summary of the page misses them. A change to those items on the page changes the list with it.
 
 ## Examples and chains
 

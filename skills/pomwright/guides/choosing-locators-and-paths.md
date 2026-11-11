@@ -7,6 +7,7 @@ themselves are in `references/registering.md`; the path rules in `references/pat
 
 - [The locator: the order of preference](#the-locator-the-order-of-preference)
 - [The segments: how much context](#the-segments-how-much-context)
+- [The scope: what a segment keeps in and out](#the-scope-what-a-segment-keeps-in-and-out)
 - [The names: kind@which](#the-names-kindwhich)
 - [Several matches, and one among them](#several-matches-and-one-among-them)
 - [Worked example](#worked-example)
@@ -71,6 +72,23 @@ A path's segments are the containers a user would name, from the outside in: a l
 on the page, and none of the layout elements between them. Too many segments fail on changes a user never notices;
 too few find a similar element elsewhere. A segment the chain does not need may stay unregistered, as a name that
 groups paths.
+
+## The scope: what a segment keeps in and out
+
+Each segment is searched inside the one before it, so a segment can be there for its scope alone. `main`, registered
+`getByRole("main")`, keeps every path below it inside the page's main content. On a page whose cookie dialog sits
+after `</main>`, `main.dialog@cookies` matches nothing while `dialog@cookies` finds the dialog, and
+`dialog@cookies.button@accept` finds its "Accept all" button, which no path under `main` can reach. So, for each part
+of the page:
+
+- Where it sits in the DOM decides its first segment, not where it shows on the screen: a dialog, a banner or a menu
+  the app renders outside main starts a path of its own (`dialog@cookies.button@accept`).
+- A page with no main landmark has no `main` segment; its paths start at the outermost container a user would name.
+- A part every page has (a header, the cookie dialog) is registered once for every page, in a common module
+  (`guides/locator-modules.md`).
+
+Read the page before deciding: an accessibility snapshot shows the roles and names, the DOM shows where each element
+sits. Neither the order of preference nor an example decides it for a page you have not looked at.
 
 ## The names: kind@which
 

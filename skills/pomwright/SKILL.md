@@ -15,9 +15,8 @@ compatibility: POMWright 3.x, @playwright/test >=1.64.0 <2.0.0, Node 20 or later
 
 # POMWright
 
-POMWright is a library for Playwright Test. It names every locator with a dot-delimited path, registers one locator per
-path, and builds the Playwright locator chain from the path; page objects, session storage, a report logger and test
-steps build on that. Your tests stay Playwright tests.
+POMWright, for Playwright Test, names each locator with a dot-delimited path, registers one per path and builds the
+chain from it; page objects, session storage, a logger and steps build on that. Tests stay Playwright tests.
 
 ## First, the installed version
 
@@ -39,11 +38,11 @@ concerns, then in each folder above it, up to the repository root.
   the guides); how POMWright and Playwright behave is not a decision. Where it names another model or effort for the
   task than the session's, say so before starting; the session does the task unless the file or the user hands it to
   a subagent. When the user states a new preference, or changes one, update the file.
-- **Missing**: creating it is the first task in the project, before any other, also when the project has tests and page
-  code and when the request asks for code: ask the user each decision, showing what the project does now beside the
-  default, then stop and write no code until they answer; write the answers into a copy of
-  [assets/templates/POMWRIGHT.md](assets/templates/POMWRIGHT.md), and offer a line in the agent instructions the project
-  uses (`AGENTS.md`, `CLAUDE.md`) that points to it. The decisions, their options and how to ask them:
+- **Missing**: creating it is the first task in the project, also when it has tests and page code and when the request
+  asks for code: ask the user each decision, showing what the project does now beside the default, then stop and write
+  no code until they answer; write the answers into a copy of
+  [assets/templates/POMWRIGHT.md](assets/templates/POMWRIGHT.md) and offer a line pointing to it in the project's agent
+  instructions (`AGENTS.md`, `CLAUDE.md`). Each decision and how to ask it:
   [guides/project-decisions.md](guides/project-decisions.md).
 - A question about POMWright that works on no project's code needs no file.
 
@@ -62,36 +61,39 @@ Use the first column as playwright.dev documents it; POMWright changes none of i
 
 ## Where facts come from
 
-- **Signatures, options, error messages**: the installed declarations, `node_modules/pomwright/dist/index.d.ts`, which
-  carry every doc comment with an example and a link to its API page. The file is large: search it for the name you
-  need, do not read it whole. Never write a signature or a message from memory.
+- **Signatures, options, error messages**: the installed `node_modules/pomwright/dist/index.d.ts`, with every doc
+  comment, its example and API page link. Search the large file for a name; never read it whole or write from memory.
 - **Concepts and the full rules**: the site page each section links, under `https://dyhex.github.io/POMWright/`.
 - **Playwright itself**: playwright.dev.
 
 ## The rules for every task
 
-They hold in every shape of page code ([guides/choosing-a-shape.md](guides/choosing-a-shape.md)). Rules 3 to 6 and 10
-are defaults: where the project's `POMWRIGHT.md` decides otherwise, follow it.
+They hold in every shape of page code ([guides/choosing-a-shape.md](guides/choosing-a-shape.md)). Rules 8 and 9 are how
+POMWright works; the others are defaults with their reasons: look at the project and the page first, follow the
+project's `POMWRIGHT.md` where it decides otherwise (rules 3 to 6 and 10), and where a page takes away a rule's reason,
+depart from it and say why. The examples show one page's reasoning, not a pattern to copy.
 
 1. **Act on and assert against `getNestedLocator(path)`**: the chain of the path's registered segments. Use
    `getLocator(path)`, the path's own locator without its ancestors, only to build a chain yourself, inside a filter, or
    to count every match on the page.
-2. **One locator per path, registered once**, in `defineLocators()` or a locator module. A change to the page is an
-   edit in one place.
-3. **Locators in order of preference**, the first that identifies the element in its scope: `getByRole` with the
-   accessible name (interactive elements, and landmarks, forms, dialogs, tables), `getByLabel` (form fields),
-   `getByPlaceholder` (a field without a label), `getByText` (non-interactive text), `getByAltText`, `getByTitle`,
-   then `getByTestId` and POMWright's `getById` when nothing user-facing identifies the element, and `locator(css)`
-   last; never XPath. One that matches several is narrowed before the next is tried: by the method's own options,
-   each for its situation (`getByRole`'s `name`, `exact`, `description`, `level`, `checked`, `pressed`, `selected`,
-   `expanded`, `disabled`, `includeHidden`; `exact` on the text methods), then `filter()` (`hasText`, `hasNotText`,
-   `has`, `hasNot`, `visible`); `nth` last. `hasText` matches part of a text, ignoring case ("Lamp" passes "Desk
-   lamp"): one item of several is picked by the element inside that names it, with its exact name, through `has`.
+2. **One locator per path, registered once**, in `defineLocators()` or a locator module: a page's change is one edit.
+3. **Locators as a user finds the element**, usually the first in this order that identifies it in its scope:
+   `getByRole` with the accessible name (interactive elements, landmarks, forms, dialogs, tables), `getByLabel` (form
+   fields), `getByPlaceholder` (a field without a label), `getByText` (non-interactive text), `getByAltText`,
+   `getByTitle`, then `getByTestId` and POMWright's `getById` when nothing user-facing identifies it, and `locator(css)`
+   last; never XPath. The element and the page decide, not the order alone. One that matches several is narrowed
+   before the next is tried: by the method's own options, each for its situation (`getByRole`'s `name`, `exact`,
+   `description`, `level`, `checked`, `pressed`, `selected`, `expanded`, `disabled`, `includeHidden`; `exact` on the
+   text methods), then `filter()` (`hasText`, `hasNotText`, `has`, `hasNot`, `visible`); `nth` last. `hasText` matches
+   part of a text, ignoring case ("Lamp" passes "Desk lamp"): one item of several is picked by the element inside that
+   names it, with its exact name, through `has`.
 4. **Paths from the outside in**, one segment per element a user would recognize (a landmark, a form, a dialog, a
-   table), only as many as make the chain unique; each segment names its kind and which one, `kind@which`, the kind
-   being the element's role (`button@save`, `dialog@consent`); a segment whose registration matches several elements
-   in its scope is plural (`main.list@products.cards`, a row's `cells`), also when a query picks one of them; one that
-   matches one is singular (`main.list@products.card`); a row with no row header is picked by one of its `cells`.
+   table), only as many as make the chain unique; a segment can be there for its scope: `main` keeps a path's search in
+   the main content, a dialog outside main starts a path of its own (`dialog@cookies.button@accept`), a page with no
+   main has no `main`. Each segment names its kind and which one, `kind@which`, the kind being the element's role
+   (`button@save`, `dialog@consent`); one whose registration matches several elements in its scope is plural
+   (`main.list@products.cards`, a row's `cells`), also when a query picks one of them; one that matches one is
+   singular (`main.list@products.card`); a row with no row header is picked by one of its `cells`.
 5. **Page code reaches tests as Playwright fixtures**; what every page of one app shares (its origin, its common
    locators) is in one place, such as the app's base class; a test reads as steps on the page code.
 6. **The page code's actions and checks are report steps**: `@step()` methods in a class, `test.step` in a function;
@@ -111,9 +113,8 @@ are defaults: where the project's `POMWRIGHT.md` decides otherwise, follow it.
 
 ## One complete example
 
-An orders page as a `PageObject`: its locator module, its page object, the fixtures that hand it and the test data to
-tests, and a test. In a project it extends the app's base class, which registers the parts every page has, `main`
-among them (`guides/writing-page-objects.md`).
+An orders page as a `PageObject`, with its locator module, fixtures, test data and a test; in a project it extends the
+app's base class, which registers the parts every page has (`guides/writing-page-objects.md`).
 
 ```ts title="orders.locators.ts"
 import type { LocatorRegistry } from "pomwright";
@@ -244,7 +245,6 @@ uses a test id because a cell has no name of its own to find it by; every other 
 
 ## When something fails
 
-POMWright's messages name the page object and the path, and most say the fix. A page object checks its registry right
-after it is constructed, so a registry mistake fails the test in the fixture, before its body runs, listing every
-failing path. Search the message in the installed declarations or on the site's
-[Error messages](https://dyhex.github.io/POMWright/api/errors/) page before changing code.
+POMWright's messages name the page object and the path, and most say the fix. A registry mistake fails the test in the
+fixture, before its body runs, listing every failing path. Search the message in the installed declarations or on
+[Error messages](https://dyhex.github.io/POMWright/api/errors/) before changing code.

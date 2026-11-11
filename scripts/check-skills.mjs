@@ -20,12 +20,15 @@
 //   each relative link and anchor resolves.
 // - Every link to the documentation site (https://dyhex.github.io/POMWright/…) names a page and, after `#`, one of its
 //   headings.
+// - The pomwright skill's upgrade guide lists every item the site's *Upgrading from 2.x* marks **compiles**, in the
+//   page's order, each with exactly the searches the page gives it (its `sh` blocks and inline `grep` commands): those
+//   changes compile, so a search is the only way to find them, and an agent that reads a summary of the page misses them.
 //
 // A skill listed in EXEMPT is held to the frontmatter and link rules only, with the reason given there.
 
 import fs from "node:fs";
 import path from "node:path";
-import { siteUrlProblem, siteUrlsIn } from "./site-pages.mjs";
+import { contentDir, siteUrlProblem, siteUrlsIn, slugOf } from "./site-pages.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const skillsDir = path.join(root, "skills");
@@ -259,6 +262,52 @@ for (const file of fs.existsSync(skillsDir) ? markdownIn(skillsDir) : []) {
 	for (const url of siteUrlsIn(fs.readFileSync(file, "utf8"))) {
 		const problem = siteUrlProblem(url);
 		if (problem) report(file, problem);
+	}
+}
+
+// the upgrade guide's items that compile, against the site's page
+const upgradePage = path.join(contentDir, "docs/upgrading-from-2x.md");
+const upgradeGuide = path.join(skillsDir, "pomwright/guides/upgrading-from-2x.md");
+const upgradeSearches = (body) => [
+	...[...body.matchAll(/```sh[^\n]*\n([\s\S]*?)```/g)].map((match) => match[1].replace(/^ {2}/gm, "").trim()),
+	...[...body.matchAll(/`(grep [^`]+)`/g)].map((match) => match[1].trim()),
+];
+if (fs.existsSync(upgradePage) && fs.existsSync(upgradeGuide)) {
+	const onPage = fs
+		.readFileSync(upgradePage, "utf8")
+		.split(/\n(?=### )/)
+		.filter((part) => part.startsWith("### "))
+		.map((part) => {
+			const [heading, ...rest] = part.split("\n");
+			const body = rest.join("\n");
+			const lead = body.trim().split("\n\n")[0];
+			return { anchor: slugOf(heading.slice(4).trim()), compiles: /\*\*compiles\*\*|\*\*Compiles/.test(lead), body };
+		})
+		.filter((item) => item.compiles)
+		.map((item) => ({ anchor: item.anchor, searches: upgradeSearches(item.body) }));
+	const guideText = fs.readFileSync(upgradeGuide, "utf8");
+	const listStart = guideText.indexOf("## The items that compile, and their searches");
+	const inGuide =
+		listStart === -1
+			? []
+			: guideText
+					.slice(listStart)
+					.split(/\n(?=- \[)/)
+					.slice(1)
+					.map((item) => ({
+						anchor: item.match(
+							/^- \[[^\]]*\]\(https:\/\/dyhex\.github\.io\/POMWright\/docs\/upgrading-from-2x\/#([^)]+)\)/,
+						)?.[1],
+						searches: upgradeSearches(item),
+					}));
+	const show = (items) => items.map((item) => `#${item.anchor} [${item.searches.join(" ; ")}]`).join(", ");
+	if (listStart === -1) {
+		report(upgradeGuide, "has no ## The items that compile, and their searches");
+	} else if (JSON.stringify(onPage) !== JSON.stringify(inGuide)) {
+		report(
+			upgradeGuide,
+			`its items that compile differ from the site's page; the page has ${show(onPage)}; the guide has ${show(inGuide)}`,
+		);
 	}
 }
 

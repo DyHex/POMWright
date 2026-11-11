@@ -17,6 +17,8 @@ const skillsDir = path.join(root, "skills");
 /** A locator call as Playwright renders it: global, for every one in a file, and once, for whether a file has one. */
 const RENDERING = /\b(?:locator|getBy[A-Z]\w*|frameLocator)\('/g;
 const HAS_RENDERING = new RegExp(RENDERING.source);
+/** A skill file's text without its shell blocks: a search such as `grep -rn 'frameLocator(' .` is a command, not a rendering. */
+const withoutShell = (text: string) => text.replace(/^\s*```(?:sh|bash|shell)\b[^\n]*\n[\s\S]*?^\s*```/gm, "");
 
 /** The skill files that have a test here. */
 const tested = new Set<string>();
@@ -35,7 +37,7 @@ test.afterEach(() => {
 	if (!title.startsWith("skills/")) {
 		return;
 	}
-	const flat = flatten(readFileSync(path.join(root, title), "utf8"));
+	const flat = flatten(withoutShell(readFileSync(path.join(root, title), "utf8")));
 	const covered: [number, number][] = [];
 	for (const shown of recordedOnPage()) {
 		for (let at = flat.indexOf(shown); at !== -1; at = flat.indexOf(shown, at + 1)) {
@@ -312,7 +314,7 @@ const skillFiles = (dir: string): string[] =>
 
 test("every skill file that shows a rendering has a test", () => {
 	const untested = skillFiles(skillsDir).filter(
-		(file) => !tested.has(file) && HAS_RENDERING.test(readFileSync(path.join(root, file), "utf8")),
+		(file) => !tested.has(file) && HAS_RENDERING.test(withoutShell(readFileSync(path.join(root, file), "utf8"))),
 	);
 	expect(untested).toEqual([]);
 });

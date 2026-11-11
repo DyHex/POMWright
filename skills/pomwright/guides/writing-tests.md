@@ -99,14 +99,15 @@ test("a customer cancels one of two open orders", async ({ ordersPage, testData 
 
 ## Assertions
 
-Assert with Playwright's web-first assertions, `await expect(locator).toBeVisible()`, never
-`expect(await locator.isVisible()).toBe(true)`. A check a test repeats belongs in the page object as an `expect…`
+Assert with Playwright's web-first assertions, `await expect(locator).toBeVisible()`, which retry until the page
+matches; `expect(await locator.isVisible()).toBe(true)` reads the page once, before it may be ready. A check a test repeats belongs in the page object as an `expect…`
 `@step()` method; a one-off assertion in a test resolves the path itself:
 `await expect(ordersPage.getNestedLocator("main.table@orders")).toBeVisible()`.
 
 ## Data, and several cases
 
-Data comes from the test-data fixture (`guides/fixtures-and-test-data.md`), never typed into a page object. Several
+Data comes from the test-data fixture by default (`guides/fixtures-and-test-data.md`, or what the project's
+`POMWRIGHT.md` decides), and page code takes it as arguments, so one page object serves every case. Several
 cases of one behavior are a loop of uniquely titled tests over typed cases, with hooks outside the loop, as
 Playwright's [Parameterize tests](https://playwright.dev/docs/test-parameterize) shows; each case can carry its own
 tags.
