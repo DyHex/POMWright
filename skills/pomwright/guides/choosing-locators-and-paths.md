@@ -169,4 +169,5 @@ A row is picked by the cell that names it: a query narrows `rows.cells` to the c
 example does with its row header. The path stays `cells`, since its registration matches every cell. Where the table
 has row headers, the row's header is `rows.rowheader`, one per row. The quantity is what tests check, so its text
 cannot find it: a test id where the app has one, otherwise its column, `nth(1)`, singular since it matches one cell per
-row; here the index is how a user reads the table, by its columns.
+row; here the index is how a user reads the table, by its columns. If the columns move, the check fails with the text
+it found, as a wrong quantity does; a cell found by the quantity it should hold would say only that it found nothing.

@@ -104,8 +104,7 @@ message; where no one can be asked, take a tester's way and say why. An example 
 8. **A `PageObject`'s `defineLocators()` registers synchronously** and runs right after the constructor, so it may read
    constructor arguments and fields; resolve a locator in a getter or a method, never in a field initializer. A
    registry you create yourself is checked when you call `registry.verify()`, after the last registration.
-9. **Resolution is synchronous**: `getNestedLocator`, `getLocator` and `getLocatorSchema` return at once; await the
-   action or the assertion, never the resolution.
+9. **Resolution is synchronous**: `getNestedLocator`, `getLocator`, `getLocatorSchema` return at once; never await them.
 10. **Test data comes from one test-data fixture**, by dot paths (`testData.orders.open`): values, data imported from
     files (JSON too), and generators, builders and helpers for data a case makes; page code takes data as arguments.
 11. **Wait as Playwright waits**: web-first assertions, not a value read once (`count()`, `isVisible()`) and asserted;
@@ -222,8 +221,9 @@ Canceling `ORD-1042` clicks this chain, which the report shows as `main.table@or
 getByRole('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ has: getByRole('rowheader', { name: 'ORD-1042', exact: true }) }).getByRole('button', { name: 'Cancel' })
 ```
 
-The row is found by its header's exact name (`hasText` would match `ORD-10420` too), the status cell by a test id (a
-cell has no name), the rest as a user finds them; `expectStatus` is page code as most tests here check a status.
+The row is found by its header's exact name (`hasText` would match `ORD-10420` too), the rest as a user finds them; the
+status is what tests check, so it can't find its own cell: a test id does, or without one its column (`nth`), as a moved
+column then fails with what it found, like a wrong status. `expectStatus` is page code: most tests here check a status.
 
 ## Which file to read for which task
 
