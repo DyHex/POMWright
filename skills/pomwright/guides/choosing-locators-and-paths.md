@@ -10,6 +10,7 @@ themselves are in `references/registering.md`; the path rules in `references/pat
 - [The names: kind@which](#the-names-kindwhich)
 - [Several matches, and one among them](#several-matches-and-one-among-them)
 - [Worked example](#worked-example)
+- [Worked example: a table](#worked-example-a-table)
 
 ## The locator: the order of preference
 
@@ -80,9 +81,10 @@ groups paths.
   `button@btn3`.
 - A segment that is the only one of its kind where it stands needs no `@which`: `main`, `header`,
   `main.table@orders.caption`.
-- Plural or singular by what the segment matches in its scope: several cards in the list, `main.list@products.cards`;
-  one, `main.list@products.card`. A segment below a plural one names what each of them holds:
-  `main.list@products.cards.button@addToCart`, one button per card.
+- Plural or singular by what the segment's registration matches in its scope: several cards in the list,
+  `main.list@products.cards`; one, `main.list@products.card`. A segment below a plural one names what each of them
+  holds: `main.list@products.cards.button@addToCart`, one button per card. A query that later picks one of the matches
+  leaves the path plural: `getByRole("cell")` in a row is `rows.cells`, whichever cell a query narrows it to.
 - One of several gets a path of its own only when many tests use it: a filter or `nth` on a path that reuses the plural
   one, named by what it matches (`main.list@products.card@lamp` for one lamp, `main.list@products.cards@lamp` for
   several); otherwise a query picks it where it is used.
@@ -91,10 +93,11 @@ groups paths.
 
 ## Several matches, and one among them
 
-Register the repeated element once and pick one in a query, by what identifies it: a row by a cell's exact text, a
-card by its heading's exact name (`has`), or by a text no other item contains (`hasText`, with `hasNotText` to leave out
-a similar one) (`references/resolving-and-queries.md`). An index is the last resort, for a chain that cannot be made
-unique otherwise.
+Register the repeated element once and pick one in a query, by what identifies it: a row by the exact name of the cell
+that names it (its row header, or one of its cells: [a table](#worked-example-a-table)), a card by its heading's exact
+name (`has`), or by a text no other item contains (`hasText`, with `hasNotText` to leave out a similar one)
+(`references/resolving-and-queries.md`). An index is the last resort, for a chain that cannot be made unique
+otherwise.
 
 ## Worked example
 
@@ -116,3 +119,23 @@ an order summary region whose total has no label; a cookie dialog.
 
 The total uses a test id because the summary shows it as a bare number with no label of its own; everything else is
 found the way a user finds it. The dialog is not under `main`: it sits at the page's top level.
+
+## Worked example: a table
+
+A cart: a table named "Cart" whose rows hold a product's name, its quantity and a "Remove" button, in plain cells, with
+no row header; "Lamp" and "Desk lamp" can both be in it.
+
+| element | path | registration |
+| --- | --- | --- |
+| the table | `main.table@cart` | `getByRole("table", { name: "Cart" })` |
+| its rows | `main.table@cart.rows` | `getByRole("row")` |
+| each row's cells | `main.table@cart.rows.cells` | `getByRole("cell")` |
+| each row's quantity | `main.table@cart.rows.cell@quantity` | `getByRole("cell").nth(1)` |
+| each row's remove button | `main.table@cart.rows.button@remove` | `getByRole("button", { name: "Remove" })` |
+
+A row is picked by the cell that names it: a query narrows `rows.cells` to the cell with the product's exact name
+(`update().getByRole({ name: "Lamp", exact: true })`) and filters the rows by it with `has`, as `SKILL.md`'s orders
+example does with its row header. The path stays `cells`, since its registration matches every cell. Where the table
+has row headers, the row's header is `rows.rowheader`, one per row. The quantity is what tests check, so its text
+cannot find it: a test id where the app has one, otherwise its column, `nth(1)`, singular since it matches one cell per
+row; here the index is how a user reads the table, by its columns.

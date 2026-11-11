@@ -22,14 +22,36 @@ containers a user sees, which become the path tree.
 
 ## 2. The locator module
 
-`<name>.locators.ts` beside the page object exports the paths and a function that registers them. A module that no
-other module composes needs no overload signature (see `guides/locator-modules.md` for one that does):
+`<name>.locators.ts` beside the page object exports the paths and a function that registers them. The parts every page
+of the app has (the header, `main`) are not the page's: they are in the app's common module, which the base class
+registers (step 3), written once for every page:
+
+```ts title="common.locators.ts"
+import type { LocatorRegistry } from "pomwright";
+
+export type Paths = "header" | "header.link@cart" | "main";
+
+export function defineLocators<ExternalPaths extends string = never>(
+  registry: LocatorRegistry<Paths | ExternalPaths>,
+): void;
+
+export function defineLocators(registry: LocatorRegistry<Paths>) {
+  registry.add("header").getByRole("banner");
+  registry.add("header.link@cart").getByRole("link", { name: "Cart" });
+  registry.add("main").locator("main");
+}
+```
+
+The page's module registers only its own paths. Its `Paths` include the common ones, since its paths extend `main`; a
+module that no other module composes needs no overload signature (`guides/locator-modules.md` composes several parts,
+and has slots: a common path each page registers as its own):
 
 ```ts title="checkout.locators.ts"
 import type { LocatorRegistry } from "pomwright";
+import type { Paths as CommonPaths } from "./common.locators";
 
 export type Paths =
-  | "main"
+  | CommonPaths
   | "main.form@delivery"
   | "main.form@delivery.input@postcode"
   | "main.form@delivery.button@continue"
@@ -37,7 +59,6 @@ export type Paths =
   | "main.region@summary.text@total";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("main").locator("main");
   registry.add("main.form@delivery").getByRole("form", { name: "Delivery" });
   registry.add("main.form@delivery.input@postcode").getByLabel("Postcode");
   registry.add("main.form@delivery.button@continue").getByRole("button", { name: "Continue" });
@@ -48,24 +69,36 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 
 ## 3. The page object
 
-`<name>.page.ts` extends the app's base class and passes only its path. Its methods are what a test does and checks on
-the page, as `@step()` methods named in the user's words; one with two or more parameters takes one options object.
-A method that reads a value returns it; a check is an `expect…` method that asserts with Playwright's web-first
-assertions:
+The app's base class holds what every page shares: the origin, the navigation defaults, and the common locators,
+registered before each page registers its own:
 
 ```ts title="shop.page.ts"
 import type { Page } from "@playwright/test";
 import { PageObject, type PageObjectOptions } from "pomwright";
+import { defineLocators as addCommon, type Paths as CommonPaths } from "./common.locators";
 
-export abstract class ShopPage<Paths extends string> extends PageObject<Paths> {
+export abstract class ShopPage<Paths extends string> extends PageObject<Paths | CommonPaths> {
   protected constructor(page: Page, urlPath: string, options?: PageObjectOptions) {
     super(page, process.env.SHOP_URL ?? "https://shop.example", urlPath, {
       navOptions: { waitUntil: "domcontentloaded" },
       ...options,
     });
   }
+
+  protected defineLocators(): void {
+    addCommon(this.locatorRegistry);
+    this.definePageLocators();
+  }
+
+  /** Registers the page's own locators; the common ones are registered already. */
+  protected abstract definePageLocators(): void;
 }
 ```
+
+`<name>.page.ts` extends the app's base class and passes only its path. Its methods are what a test does and checks on
+the page, as `@step()` methods named in the user's words; one with two or more parameters takes one options object.
+A method that reads a value returns it; a check is an `expect…` method that asserts with Playwright's web-first
+assertions:
 
 ```ts title="checkout.page.ts"
 import { expect, type Page } from "@playwright/test";
@@ -78,7 +111,7 @@ export class CheckoutPage extends ShopPage<Paths> {
     super(page, "/checkout");
   }
 
-  protected defineLocators(): void {
+  protected definePageLocators(): void {
     defineLocators(this.locatorRegistry);
   }
 
