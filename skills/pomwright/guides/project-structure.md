@@ -58,7 +58,7 @@ POMWright 3.x. To start a project:
 1. Start from a Playwright project (`npm init playwright@latest`), then add POMWright
    (`npm install --save-dev pomwright`).
 2. Write `POMWRIGHT.md` from the template, with the user's decisions (`guides/project-decisions.md`). The templates
-   follow the defaults; where a decision differs, adapt them to it as you copy them.
+   follow the defaults, their paths' names among them; where a decision differs, adapt them to it as you copy them.
 3. Copy the templates into the project, keeping their paths, and rename the app: `shop` in folder and file names,
    `ShopPage`, `shopUrl` and `SHOP_URL` in [env.ts](../assets/templates/env.ts) and the base class.
 4. Set the origin in the environment, or the fallback in `env.ts`.

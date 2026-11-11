@@ -49,7 +49,7 @@ user installed. Write for that reader:
   (`pomwright/guides/project-decisions.md`, its template `pomwright/assets/templates/POMWRIGHT.md`). The skills teach
   the same defaults everywhere: `PageObject` subclasses, origins from `env.ts` and no `baseURL`; a path segment names
   its kind by what the element does (`input` for any field, `dropdown` for a select or combobox, `button`, `link`) and,
-  where several alike share its scope, which one, as its locator picks it (`button@save`), plural for several in its
+  where several alike share its scope, which one, in a user's words (`button@login`), plural for several in its
   scope (`main.list@products.cards`), singular for one; an `expect…` method of the page code for a part of the page
   other tests are likely to check, the spec for a check only one test makes; a blank line between registrations, written
   into `POMWRIGHT.md` without asking; files `<name>.locators.ts` and `<name>.page.ts`; a method with two or more

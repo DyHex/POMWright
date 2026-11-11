@@ -124,7 +124,7 @@ and TypeScript and the check point at anything missed.
 
 - **A wrapper is removed**: delete that segment's `add(…)`; the paths below it resolve again with their names
   unchanged (not under `strictChains`). To rename the paths below it too, find and replace the segment's path with its
-  trailing dot, `main.section@order.region@subscriptions.` with `main.section@order.`, then remove the segment's
+  trailing dot, `main.section@order.section@subscriptions.` with `main.section@order.`, then remove the segment's
   member of `Paths` and its `add(…)`.
 - **A wrapper is added**: rename the paths below it to include it, and register it.
 - **An element moves**: replace its old path prefix with the new one.

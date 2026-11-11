@@ -87,17 +87,17 @@ without its ancestors, because Playwright looks for it inside each element being
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-type Paths = "main" | "main.region@orders" | "main.region@orders.heading" | "main.region@orders.item@open";
+type Paths = "main" | "main.section@orders" | "main.section@orders.heading" | "main.section@orders.item@open";
 declare const registry: LocatorRegistry<Paths>;
 
 registry.add("main").getByRole("main");
 
-registry.add("main.region@orders").getByRole("region").filter({ has: "main.region@orders.heading" });
+registry.add("main.section@orders").getByRole("region").filter({ has: "main.section@orders.heading" });
 
-registry.add("main.region@orders.heading").getByRole("heading", { name: "Orders" });
+registry.add("main.section@orders.heading").getByRole("heading", { name: "Orders" });
 
-registry.add("main.region@orders.item@open").getByRole("listitem").filter({ hasText: "Open" });
-// getNestedLocator("main.region@orders.item@open"):
+registry.add("main.section@orders.item@open").getByRole("listitem").filter({ hasText: "Open" });
+// getNestedLocator("main.section@orders.item@open"):
 // getByRole('main').getByRole('region').filter({ has: getByRole('heading', { name: 'Orders' }) }).getByRole('listitem').filter({ hasText: 'Open' })
 ```
 
@@ -130,19 +130,19 @@ import type { LocatorRegistry } from "pomwright";
 
 type Paths =
   | "main"
-  | "main.region@payment"
-  | "main.region@payment.frame"
-  | "main.region@payment.frame.input@cardNumber";
+  | "main.section@payment"
+  | "main.section@payment.frame"
+  | "main.section@payment.frame.input@cardNumber";
 declare const registry: LocatorRegistry<Paths>;
 
 registry.add("main").getByRole("main");
 
-registry.add("main.region@payment").getByRole("region", { name: "Payment" });
+registry.add("main.section@payment").getByRole("region", { name: "Payment" });
 
-registry.add("main.region@payment.frame").frameLocator("iframe");
+registry.add("main.section@payment.frame").frameLocator("iframe");
 
-registry.add("main.region@payment.frame.input@cardNumber").getByLabel("Card number");
-// getNestedLocator("main.region@payment.frame.input@cardNumber"):
+registry.add("main.section@payment.frame.input@cardNumber").getByLabel("Card number");
+// getNestedLocator("main.section@payment.frame.input@cardNumber"):
 // getByRole('main').getByRole('region', { name: 'Payment' }).locator('iframe').contentFrame().getByLabel('Card number')
 ```
 

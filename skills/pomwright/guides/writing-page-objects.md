@@ -58,8 +58,8 @@ export type Paths =
   | "main.form@delivery"
   | "main.form@delivery.input@postcode"
   | "main.form@delivery.button@continue"
-  | "main.region@summary"
-  | "main.region@summary.text@total";
+  | "main.section@summary"
+  | "main.section@summary.text@total";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main.form@delivery").getByRole("form", { name: "Delivery" });
@@ -68,9 +68,9 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 
   registry.add("main.form@delivery.button@continue").getByRole("button", { name: "Continue" });
 
-  registry.add("main.region@summary").getByRole("region", { name: "Order summary" });
+  registry.add("main.section@summary").getByRole("region", { name: "Order summary" });
 
-  registry.add("main.region@summary.text@total").getByTestId("order-total");
+  registry.add("main.section@summary.text@total").getByTestId("order-total");
 }
 ```
 
@@ -138,7 +138,7 @@ export class CheckoutPage extends ShopPage<Paths> {
 
   @step()
   async expectTotal(total: string) {
-    await expect(this.getNestedLocator("main.region@summary.text@total")).toHaveText(total);
+    await expect(this.getNestedLocator("main.section@summary.text@total")).toHaveText(total);
   }
 }
 ```

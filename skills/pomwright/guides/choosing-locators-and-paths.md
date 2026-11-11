@@ -100,19 +100,20 @@ skill's examples use. The skill's default:
   email, search, password), `dropdown` for a select or a combobox; `button`, `link`, `checkbox`, `radio`, `tab`,
   `dialog`, each for a behavior of its own. Landmarks and what a user reads take the names readers know: `main`,
   `header`, `footer`, `navigation`, `heading`, `text` (a price, a total). Containers take their role or a plain kind:
-  `form`, `table`, `row`, `cell`, `list`, `region`, `section`, `card`, `badge`.
-- `@which` names what the locator picks the element by, so `button@save` and `button` are different paths with
-  different locators: `getByRole("button", { name: "Save" })` and `getByRole("button")`. It tells one of several alike
-  apart; when to add it is a judgment, as a tester makes it:
-  - several alike in the scope: `button@save`, `link@help`, `input@email`, `dialog@consent`; a section with an
-    accessible name is `region@delivery` (`getByRole("region", { name: "Delivery" })`), one without it, picked by its
-    heading, `section@delivery`;
+  `form`, `table`, `row`, `cell`, `list`, `section`, `card`, `badge`.
+- `@which` tells one of several alike apart, so `button@save` and `button` are different paths with different
+  locators: `getByRole("button", { name: "Save" })` and `getByRole("button")`. When to add it is a judgment, as a
+  tester makes it:
+  - several alike in the scope: `button@save`, `link@help`, `input@email`, `dialog@consent`; a section is
+    `section@delivery`, found by `getByRole("region", { name: "Delivery" })` where it has an accessible name, or by its
+    heading where it has none;
   - the only one of its kind where it stands: no `@which` (`main`, `header`, `main.status`,
     `main.table@orders.caption`, a card's `heading`);
   - rows, cards and items picked by their data: no `@which`; the segment is plural and a query or a helper method
     picks one ([below](#several-matches-and-one-among-them)).
-- `which` is what the element means to a user, in camelCase: `button@addToCart`, not `button@primary` or
-  `button@btn3`.
+- `which` says which one in a user's words, in camelCase: what it does or what it is for, as the page puts it
+  (`button@login` for the "Log in" button that submits the form, not `button@submit`; `button@addToCart`, not
+  `button@primary` or `button@btn3`).
 - Plural or singular by what the segment's registration matches in its scope: several cards in the list,
   `main.list@products.cards`; one, `main.list@products.card`. A segment below a plural one names what each of them
   holds: `main.list@products.cards.button@addToCart`, one button per card. A query that later picks one of the matches
@@ -144,8 +145,8 @@ an order summary region whose total has no label; a cookie dialog.
 | the delivery form | `main.form@delivery` | `getByRole("form", { name: "Delivery" })` |
 | its postcode field | `main.form@delivery.input@postcode` | `getByLabel("Postcode")` |
 | its continue button | `main.form@delivery.button@continue` | `getByRole("button", { name: "Continue" })` |
-| the summary | `main.region@summary` | `getByRole("region", { name: "Order summary" })` |
-| its total | `main.region@summary.text@total` | `getByTestId("order-total")` |
+| the summary | `main.section@summary` | `getByRole("region", { name: "Order summary" })` |
+| its total | `main.section@summary.text@total` | `getByTestId("order-total")` |
 | the cookie dialog | `dialog@consent` | `getByRole("dialog", { name: "Cookies" })` |
 | its accept button | `dialog@consent.button@accept` | `getByRole("button", { name: "Accept all" })` |
 

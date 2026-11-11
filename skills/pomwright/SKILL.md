@@ -34,10 +34,10 @@ A project keeps its POMWright decisions in `POMWRIGHT.md`: the shape of its page
 names, test data, and the other choices POMWright leaves open. Look for it beside the Playwright config the task
 concerns, then in each folder above it, up to the repository root.
 
-- **Found**: follow it. Its decisions replace this skill's defaults (rules 3 to 6 and 10 below, the names its examples
-  use, the guides' conventions); how POMWright and Playwright behave is not a decision. Where the project's code does
-  otherwise, say so in your reply and ask which holds. Where it names another model or effort than the session's, say
-  so; the session does the task unless the file or the user hands it to a subagent. Record new preferences in it.
+- **Found**: follow it. Its decisions replace this skill's defaults (rules 3 to 6 and 10 below, its examples' and
+  templates' names, the guides' conventions); how POMWright and Playwright behave is not a decision. Where the project's
+  code does otherwise, say so in your reply and ask which holds. Where it names another model or effort, say so; the
+  session does the task unless the file or the user hands it to a subagent. Record new preferences.
 - **Missing**: creating it is the first task in the project, also when it has tests and page code and when the request
   asks for code: ask the user every decision in one message, showing what the project does now beside the default, then
   stop and write no code until they answer; write the answers into a copy of
@@ -71,8 +71,8 @@ concerns, then in each folder above it, up to the repository root.
 They hold in every shape of page code ([guides/choosing-a-shape.md](guides/choosing-a-shape.md)). Rules 8 and 9 are how
 POMWright works; the others are defaults with their reasons: look at the project and the page first, follow the
 project's `POMWRIGHT.md` where it decides otherwise (rules 3 to 6 and 10), and where a page takes away a rule's reason,
-depart from it and say why. Where several ways are right and nothing says which, ask the user, all open questions in one
-message; where no one can be asked, take a tester's way and say why. An example shows one page's reasoning.
+depart from it and say why. Where several ways are right and nothing says which, ask, all open questions at once; where
+no one can be asked, take a tester's way and say why. Examples and templates show reasoning, not a pattern to copy.
 
 1. **Act on and assert against `getNestedLocator(path)`**, the chain of the path's segments; use `getLocator(path)`, the
    path's own locator alone, only to build a chain yourself, inside a filter, or to count every match on the page.
@@ -91,10 +91,10 @@ message; where no one can be asked, take a tester's way and say why. An example 
    table), only as many as make the chain unique; a segment can be there for its scope: `main` keeps a path's search in
    the main content, a dialog outside main starts a path of its own (`dialog@cookies.button@accept`), a page with no
    main has no `main`. A segment's kind says what the element does (`input` for any field, `button`, `link`), or its
-   role where POMWRIGHT.md says so (`textbox`, `banner`); its `@which`, as its locator picks it, tells one of several
-   alike apart: `getByRole("button", { name: "Save" })` is `button@save`, the only status `main.status`. Several matches
-   in its scope make a segment plural (`main.list@products.cards`, a row's `cells`), also when a query picks one; one,
-   singular; a row with no row header is picked by one of its `cells`.
+   role where POMWRIGHT.md says so (`textbox`, `banner`); its `@which` tells one of several alike apart in a user's
+   words, by what it does or is for (`button@login`, not `button@submit`); the only status is `main.status`. Several
+   matches in its scope make a segment plural (`main.list@products.cards`, a row's `cells`), also when a query picks
+   one; one, singular; a row with no row header is picked by one of its `cells`.
 5. **Page code reaches tests as Playwright fixtures**; what every page of one app shares (its origin, its common
    locators) is in one place, such as the app's base class; a test reads as steps on the page code.
 6. **The page code's actions and checks are report steps**: `@step()` methods in a class, `test.step` in a function;

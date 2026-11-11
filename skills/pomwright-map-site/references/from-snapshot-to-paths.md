@@ -44,7 +44,7 @@ switch shown as hidden text, its alternatives as links).
 
 A container a user sees as one thing becomes a segment, registered by its role and name: `main`, `navigation`,
 `banner`, `contentinfo`, a named `region`, a `form`, a `dialog`, a `table`, a `list`. In the snapshot above,
-`region "Accessible Section"` becomes `region@accessible` with `getByRole("region", { name: "Accessible Section" })`.
+`region "Accessible Section"` becomes `section@accessible` with `getByRole("region", { name: "Accessible Section" })`.
 
 A `generic` container that groups what a test acts on (a section of buttons, a card) has no role to find it by:
 
