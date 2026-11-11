@@ -34,10 +34,10 @@ A project keeps its POMWright decisions in `POMWRIGHT.md`: the shape of its page
 names, test data, and the other choices POMWright leaves open. Look for it beside the Playwright config the task
 concerns, then in each folder above it, up to the repository root.
 
-- **Found**: follow it. Its decisions replace this skill's defaults (rules 3 to 6 and 10 below, and the conventions in
-  the guides); how POMWright and Playwright behave is not a decision. Where the project's code does otherwise, say so in
-  your reply and ask which holds. Where it names another model or effort than the session's, say so; the session does
-  the task unless the file or the user hands it to a subagent. Record the user's new preferences in it.
+- **Found**: follow it. Its decisions replace this skill's defaults (rules 3 to 6 and 10 below, the names its examples
+  use, the guides' conventions); how POMWright and Playwright behave is not a decision. Where the project's code does
+  otherwise, say so in your reply and ask which holds. Where it names another model or effort than the session's, say
+  so; the session does the task unless the file or the user hands it to a subagent. Record new preferences in it.
 - **Missing**: creating it is the first task in the project, also when it has tests and page code and when the request
   asks for code: ask the user every decision in one message, showing what the project does now beside the default, then
   stop and write no code until they answer; write the answers into a copy of
@@ -90,11 +90,11 @@ message; where no one can be asked, take a tester's way and say why. An example 
 4. **Paths from the outside in**, one segment per element a user would recognize (a landmark, a form, a dialog, a
    table), only as many as make the chain unique; a segment can be there for its scope: `main` keeps a path's search in
    the main content, a dialog outside main starts a path of its own (`dialog@cookies.button@accept`), a page with no
-   main has no `main`. A segment's kind says what the element does (`input` for any field, `button`, `link`); its
-   `@which`, as its locator picks it, tells one of several alike apart: `getByRole("button", { name: "Save" })` is
-   `button@save`, the only status `main.status`. Several matches in its scope make a segment plural
-   (`main.list@products.cards`, a row's `cells`), also when a query picks one; one, singular; a row with no row header
-   is picked by one of its `cells`.
+   main has no `main`. A segment's kind says what the element does (`input` for any field, `button`, `link`), or its
+   role where POMWRIGHT.md says so (`textbox`, `banner`); its `@which`, as its locator picks it, tells one of several
+   alike apart: `getByRole("button", { name: "Save" })` is `button@save`, the only status `main.status`. Several matches
+   in its scope make a segment plural (`main.list@products.cards`, a row's `cells`), also when a query picks one; one,
+   singular; a row with no row header is picked by one of its `cells`.
 5. **Page code reaches tests as Playwright fixtures**; what every page of one app shares (its origin, its common
    locators) is in one place, such as the app's base class; a test reads as steps on the page code.
 6. **The page code's actions and checks are report steps**: `@step()` methods in a class, `test.step` in a function;

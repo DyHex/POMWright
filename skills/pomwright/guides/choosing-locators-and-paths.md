@@ -93,7 +93,8 @@ sits. Neither the order of preference nor an example decides it for a page you h
 ## The names: kind@which
 
 Names are a convention: the project's `POMWRIGHT.md` records one and every path keeps it. A project that names kinds
-by their roles (`textbox@email`, `combobox`, `banner`) is as right as this skill's default:
+by their roles (`textbox@email`, `combobox`, `banner`) is as right, and its paths use those names, not the ones this
+skill's examples use. The skill's default:
 
 - The kind says what the element does, in a word that fits its like: `input` for any field a user types into (text,
   email, search, password), `dropdown` for a select or a combobox; `button`, `link`, `checkbox`, `radio`, `tab`,
