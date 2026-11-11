@@ -59,10 +59,12 @@ Only as many segments as make each chain unique: a `generic` that only wraps ano
 
 ## Elements become paths
 
-Each element a test acts on or checks becomes a path under its container: the role is the kind, the name in camelCase
-the which (`button "Reset Color"` as `button@resetColor`). Headings that identify a container become its `heading`;
-text a test checks becomes `text@<what>`. Elements that repeat with the same role under one container (rows, cards,
-list items) become one plural path.
+Each element a test acts on or checks becomes a path under its container, named by the project's convention
+(`POMWRIGHT.md`; the `pomwright` skill's default names the kind by what the element does: a `textbox` is an `input`, a
+`combobox` a `dropdown`, a `button` and a `link` keep theirs). Where several alike share the container, the name in
+camelCase is the which (`button "Reset Color"` as `button@resetColor`); the only one of its kind needs none. Headings
+that identify a container become its `heading`; text a test checks becomes `text@<what>`. Elements that repeat with the
+same role under one container (rows, cards, list items) become one plural path.
 
 A name that carries state (`"Toggle A: Off"`, `"Orders (3)"`) is registered by its stable part, as a RegExp
 (`{ name: /^Toggle A/ }`), or by the test id the suggestion found.

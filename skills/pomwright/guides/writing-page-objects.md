@@ -145,6 +145,8 @@ export class CheckoutPage extends ShopPage<Paths> {
 
 - Locators stay inside the page object: tests call its methods, and reach `getNestedLocator` only for a one-off
   assertion no method covers.
+- `expectTotal` is page code, though one test calls it so far, because the total is what most checkout tests check; a
+  check only one test makes stays in its spec. Where it is unclear which, ask.
 - `pageActionsToPerformAfterNavigation()` holds what "this page has loaded" means, so `navigation.goto()` and
   `navigation.expectThisPage()` wait for it.
 - Data comes in as arguments; the page object does not import test data.

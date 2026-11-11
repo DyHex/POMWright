@@ -19,7 +19,9 @@ decide follows the skill's defaults.
 - **Locators**: a locator module per page; parts every page has as composed modules, registered by the base class.
 - **Registrations**: a blank line between each `add` call and each composed module's call.
 - **Steps**: every action and check is a `@step()` method, titled `ClassName.methodName`.
-- **Assertions**: web-first, in specs; a check several specs repeat is an `expect…` method of the page code.
+- **Assertions**: web-first; a check of a part of the page other tests are likely to check too (an order's status, a
+  total) is an `expect…` method of the page code, also while one test uses it; a check only one test makes stays in its
+  spec.
 - **Parameters**: two or more go in one options object.
 - **Logging**: page code takes a child of the `log` fixture only where it logs.
 - **`strictChains`**: off.
@@ -30,7 +32,11 @@ decide follows the skill's defaults.
 - **Locator preference**: role, label, placeholder, text, alt text, title, test id, id, then CSS; one that matches
   several is narrowed by its options and `filter()` before the next is tried; `nth` last.
 - **XPath**: never.
-- **Segment names**: `kind@which`, the kind being the element's role (`button@save`, `dialog@consent`).
+- **Segment names**: `kind@which`. The kind says what the element does, in a word that fits its like: `input` for any
+  field, `dropdown` for a select or combobox, `button`, `link`, `checkbox`, `radio`, `dialog`, `header`, `text`.
+  `@which` tells one of several alike apart, as the locator picks it (`button@save` is
+  `getByRole("button", { name: "Save" })`); none for the only one of its kind (`main.status`), nor for rows and cards
+  picked by their data.
 - **Plural and singular**: by what a segment matches in its scope: `main.list@products.cards` for several,
   `main.list@products.card` for one.
 - **One of several**: a query where it is used; a path of its own when many tests use it, named by what it matches

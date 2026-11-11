@@ -51,11 +51,11 @@ goes ahead with the script either way.
 
 ## The workflow
 
-1. **Scope.** Ask for the origin (and any other origin the flow crosses), the start path, the environment, and whether
-   pages need a login. Ask what tests should check beyond the elements a user acts on: values, texts and states (a
-   product's name, price and content; a status). Ask whether the app's source is in this repository or one the user
-   can point to. The project's `POMWRIGHT.md` holds its decisions; without one, the `pomwright` skill writes it first.
-   Confirm before the first navigation.
+1. **Scope.** Ask in one message, every question together: the origin (and any other origin the flow crosses), the start
+   path, the environment, and whether pages need a login; what tests should check beyond the elements a user acts on:
+   values, texts and states (a product's name, price and content; a status); and whether the app's source is in this
+   repository or one the user can point to. The project's `POMWRIGHT.md` holds its decisions; without one, the
+   `pomwright` skill writes it first, its questions in the same message. Confirm before the first navigation.
 2. **Crawl** from the project's root:
    `node <this skill>/scripts/map.mjs crawl https://shop.example/ --depth 2 --limit 40`. It prints the pages found on
    the origin, grouped by path pattern (`/orders/[id]`), with their titles. Show the list; **the user picks the pages**.

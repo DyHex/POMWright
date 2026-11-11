@@ -67,13 +67,13 @@ The default comes first; the others are what projects choose instead.
 | test id attribute | Playwright's, `data-testid` | the app's own, set with `testIdAttribute` in the config's `use`; `getByTestId` follows it |
 | locator preference | role, label, placeholder, text, alt text, title, test id, id, then CSS, each narrowed by its options and `filter()` before the next; `nth` last | test ids first, where the app gives every element a stable one |
 | XPath | never | last, after CSS, where existing tests rely on it |
-| segment names | `kind@which`, the kind being the element's role (`button@save`) | the project's own style, applied the same way everywhere |
+| segment names | `kind@which`: the kind says what the element does (`input` for any field, `dropdown` for a select or combobox, `button`, `link`); `@which` tells one of several alike apart, as the locator picks it (`button@save`); none for the only one of its kind (`main.status`) or rows picked by their data | kinds by role (`textbox@email`, `combobox`, `banner`), or the project's own style; either way, the same everywhere |
 | plural and singular | by what a segment matches in its scope: `main.list@products.cards` for several, `main.list@products.card` for one | always singular |
 | one of several | a query where it is used; a path of its own when many tests use it, named by what it matches: `main.list@products.card@lamp` for one lamp, `main.list@products.cards@lamp` for several; `nth` last | queries only, no narrowed paths |
 | page code in tests | as fixtures, from one `test` that every spec imports | built in each test |
 | steps | every action and check of the page code is a report step: `@step()`, or `test.step` in a function | only the methods the project names |
 | step titles | `@step()`'s own, `ClassName.methodName` | a title per method, `@step("Log in")` |
-| assertions | web-first, in specs, and as `expect…` steps of the page code for a check several specs repeat | only in specs |
+| assertions | web-first; an `expect…` step of the page code for a part of the page other tests are likely to check (an order's status, a total), also while one test uses it; in the spec for a check only that test makes | only in specs; in page code only once several specs repeat a check |
 | parameters | one options object for two or more | positional parameters |
 | test data | one `testData` fixture, by `testData.<app>.<page>.<case>`, holding values, data imported from files (JSON among them), and generators, builders and helpers; page code takes data as arguments | data modules each spec imports; values in the specs; a fixture per kind of data; a data library the project already uses |
 | state a test needs and does not test | set up directly: a login saved by Playwright's setup project as `storageState`, session storage seeded with `seed` before the app loads | through the UI, as a user would |

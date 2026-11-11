@@ -48,16 +48,22 @@ user installed. Write for that reader:
   `pomwright` skill reads first and, when it is missing, writes first, asking the user
   (`pomwright/guides/project-decisions.md`, its template `pomwright/assets/templates/POMWRIGHT.md`). The skills teach
   the same defaults everywhere: `PageObject` subclasses, origins from `env.ts` and no `baseURL`; a path segment names
-  its kind and which one, `kind@which`, the kind being the element's role (`button@save`, `dialog@consent`), plural for
-  several in its scope (`main.list@products.cards`), singular for one; a blank line between registrations, written into
-  `POMWRIGHT.md` without asking; files `<name>.locators.ts` and `<name>.page.ts`;
-  a method with two or more parameters takes one options object, as the README's example does; test data reaches tests
-  through one fixture, by dot paths such as `testData.checkout.feedback.happyForm`, holding values, data imported from
-  files, generators and builders, and page code takes data as arguments; logging from page code is an option, with a
-  child logger for each page object or helper so the report shows where an entry came from; the session does every task
-  at its own model and effort, says so where the file recommends others, and hands a task to a subagent only where the
-  file or the user says so. A new default changes the guide, the template and every skill that teaches it together.
-  `testInfo` is Playwright's and not taught.
+  its kind by what the element does (`input` for any field, `dropdown` for a select or combobox, `button`, `link`) and,
+  where several alike share its scope, which one, as its locator picks it (`button@save`), plural for several in its
+  scope (`main.list@products.cards`), singular for one; an `expect…` method of the page code for a part of the page
+  other tests are likely to check, the spec for a check only one test makes; a blank line between registrations, written
+  into `POMWRIGHT.md` without asking; files `<name>.locators.ts` and `<name>.page.ts`; a method with two or more
+  parameters takes one options object, as the README's example does; test data reaches tests through one fixture, by dot
+  paths such as `testData.checkout.feedback.happyForm`, holding values, data imported from files, generators and
+  builders, and page code takes data as arguments; logging from page code is an option, with a child logger for each
+  page object or helper so the report shows where an entry came from; the session does every task at its own model and
+  effort, says so where the file recommends others, and hands a task to a subagent only where the file or the user says
+  so. A new default changes the guide, the template and every skill that teaches it together. `testInfo` is Playwright's
+  and not taught.
+- **Ask when the context does not decide.** Where several ways are right and neither the project, its `POMWRIGHT.md` nor
+  the task says which, a skill has the agent ask the user, every open question together in one message, not one at a
+  time; where no one can be asked (a run without a user), the agent takes the way a tester or developer would, and says
+  which and why.
 
 ## Format (`pnpm lint:skills`, `scripts/check-skills.mjs`)
 

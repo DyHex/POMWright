@@ -35,16 +35,15 @@ names, test data, and the other choices POMWright leaves open. Look for it besid
 concerns, then in each folder above it, up to the repository root.
 
 - **Found**: follow it. Its decisions replace this skill's defaults (rules 3 to 6 and 10 below, and the conventions in
-  the guides); how POMWright and Playwright behave is not a decision. Where it names another model or effort for the
-  task than the session's, say so before starting; the session does the task unless the file or the user hands it to
-  a subagent. When the user states a new preference, or changes one, update the file.
+  the guides); how POMWright and Playwright behave is not a decision. Where the project's code does otherwise, say so
+  and ask which holds. Where it names another model or effort than the session's, say so; the session does the task
+  unless the file or the user hands it to a subagent. Write a preference the user states or changes into the file.
 - **Missing**: creating it is the first task in the project, also when it has tests and page code and when the request
-  asks for code: ask the user each decision, showing what the project does now beside the default, then stop and write
-  no code until they answer; write the answers into a copy of
+  asks for code: ask the user every decision in one message, showing what the project does now beside the default, then
+  stop and write no code until they answer; write the answers into a copy of
   [assets/templates/POMWRIGHT.md](assets/templates/POMWRIGHT.md) and offer a line pointing to it in the project's agent
   instructions (`AGENTS.md`, `CLAUDE.md`). Each decision and how to ask it:
-  [guides/project-decisions.md](guides/project-decisions.md).
-- A question about POMWright that works on no project's code needs no file.
+  [guides/project-decisions.md](guides/project-decisions.md). A question that works on no project's code needs no file.
 
 ## What POMWright adds, and what stays Playwright
 
@@ -72,11 +71,11 @@ concerns, then in each folder above it, up to the repository root.
 They hold in every shape of page code ([guides/choosing-a-shape.md](guides/choosing-a-shape.md)). Rules 8 and 9 are how
 POMWright works; the others are defaults with their reasons: look at the project and the page first, follow the
 project's `POMWRIGHT.md` where it decides otherwise (rules 3 to 6 and 10), and where a page takes away a rule's reason,
-depart from it and say why. The examples show one page's reasoning, not a pattern to copy.
+depart from it and say why. Where several ways are right and nothing says which, ask the user, all open questions in one
+message; where no one can be asked, take a tester's way and say why. An example shows one page's reasoning.
 
-1. **Act on and assert against `getNestedLocator(path)`**: the chain of the path's registered segments. Use
-   `getLocator(path)`, the path's own locator without its ancestors, only to build a chain yourself, inside a filter, or
-   to count every match on the page.
+1. **Act on and assert against `getNestedLocator(path)`**, the chain of the path's segments; use `getLocator(path)`, the
+   path's own locator alone, only to build a chain yourself, inside a filter, or to count every match on the page.
 2. **One locator per path, registered once**, in `defineLocators()` or a locator module: a page's change is one edit.
 3. **Locators as a user finds the element**, usually the first in this order that identifies it in its scope:
    `getByRole` with the accessible name (interactive elements, landmarks, forms, dialogs, tables), `getByLabel` (form
@@ -91,10 +90,11 @@ depart from it and say why. The examples show one page's reasoning, not a patter
 4. **Paths from the outside in**, one segment per element a user would recognize (a landmark, a form, a dialog, a
    table), only as many as make the chain unique; a segment can be there for its scope: `main` keeps a path's search in
    the main content, a dialog outside main starts a path of its own (`dialog@cookies.button@accept`), a page with no
-   main has no `main`. Each segment names its kind and which one, `kind@which`, the kind being the element's role
-   (`button@save`, `dialog@consent`); one whose registration matches several elements in its scope is plural
-   (`main.list@products.cards`, a row's `cells`), also when a query picks one of them; one that matches one is
-   singular (`main.list@products.card`); a row with no row header is picked by one of its `cells`.
+   main has no `main`. A segment's kind says what the element does (`input` for any field, `button`, `link`); its
+   `@which`, as its locator picks it, tells one of several alike apart: `getByRole("button", { name: "Save" })` is
+   `button@save`, the only status `main.status`. Several matches in its scope make a segment plural
+   (`main.list@products.cards`, a row's `cells`), also when a query picks one; one, singular; a row with no row header
+   is picked by one of its `cells`.
 5. **Page code reaches tests as Playwright fixtures**; what every page of one app shares (its origin, its common
    locators) is in one place, such as the app's base class; a test reads as steps on the page code.
 6. **The page code's actions and checks are report steps**: `@step()` methods in a class, `test.step` in a function;
@@ -222,8 +222,8 @@ Canceling `ORD-1042` clicks this chain, which the report shows as `main.table@or
 getByRole('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ has: getByRole('rowheader', { name: 'ORD-1042', exact: true }) }).getByRole('button', { name: 'Cancel' })
 ```
 
-The row is found by its header's exact name; `hasText` would match part of a text, `ORD-10420` too. The status cell
-uses a test id because a cell has no name of its own to find it by; every other segment is found the way a user does.
+The row is found by its header's exact name (`hasText` would match `ORD-10420` too), the status cell by a test id (a
+cell has no name), the rest as a user finds them; `expectStatus` is page code as most tests here check a status.
 
 ## Which file to read for which task
 
