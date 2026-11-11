@@ -37,7 +37,9 @@ export function defineLocators<ExternalPaths extends string = never>(
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("header").getByRole("banner");
+
   registry.add("header.link@cart").getByRole("link", { name: "Cart" });
+
   registry.add("main").getByRole("main");
 }
 ```
@@ -60,9 +62,13 @@ export type Paths =
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main.form@delivery").getByRole("form", { name: "Delivery" });
+
   registry.add("main.form@delivery.input@postcode").getByLabel("Postcode");
+
   registry.add("main.form@delivery.button@continue").getByRole("button", { name: "Continue" });
+
   registry.add("main.region@summary").getByRole("region", { name: "Order summary" });
+
   registry.add("main.region@summary.text@total").getByTestId("order-total");
 }
 ```

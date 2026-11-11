@@ -38,7 +38,9 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"main" | "main.form@login" | "main.form@login.button@login">;
 
 registry.add("main").getByRole("main");
+
 registry.add("main.form@login").getByRole("form", { name: "Log in" });
+
 registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 // getNestedLocator("main.form@login.button@login"):
 // getByRole('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
@@ -59,6 +61,7 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"main.list@orders" | "main.list@orders.item@open">;
 
 registry.add("main.list@orders").getByRole("list", { name: "Orders" });
+
 registry
   .add("main.list@orders.item@open")
   .getByRole("listitem")
@@ -88,8 +91,11 @@ type Paths = "main" | "main.region@orders" | "main.region@orders.heading" | "mai
 declare const registry: LocatorRegistry<Paths>;
 
 registry.add("main").getByRole("main");
+
 registry.add("main.region@orders").getByRole("region").filter({ has: "main.region@orders.heading" });
+
 registry.add("main.region@orders.heading").getByRole("heading", { name: "Orders" });
+
 registry.add("main.region@orders.item@open").getByRole("listitem").filter({ hasText: "Open" });
 // getNestedLocator("main.region@orders.item@open"):
 // getByRole('main').getByRole('region').filter({ has: getByRole('heading', { name: 'Orders' }) }).getByRole('listitem').filter({ hasText: 'Open' })
@@ -130,8 +136,11 @@ type Paths =
 declare const registry: LocatorRegistry<Paths>;
 
 registry.add("main").getByRole("main");
+
 registry.add("main.region@payment").getByRole("region", { name: "Payment" });
+
 registry.add("main.region@payment.frame").frameLocator("iframe");
+
 registry.add("main.region@payment.frame.input@cardNumber").getByLabel("Card number");
 // getNestedLocator("main.region@payment.frame.input@cardNumber"):
 // getByRole('main').getByRole('region', { name: 'Payment' }).locator('iframe').contentFrame().getByLabel('Card number')

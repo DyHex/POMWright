@@ -43,7 +43,9 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"main" | "main.table@cart" | "main.table@cart.inputs@quantity">;
 
 registry.add("main").getByRole("main");
+
 registry.add("main.table@cart").getByRole("table", { name: "Cart" });
+
 registry.add("main.table@cart.inputs@quantity").getByLabel("Quantity");
 
 const quantities = ["1", "2", "5"];
@@ -89,8 +91,11 @@ type Paths = "main" | "main.table@orders" | "main.table@orders.rows" | "main.tab
 declare const registry: LocatorRegistry<Paths>;
 
 registry.add("main").getByRole("main");
+
 registry.add("main.table@orders").getByRole("table", { name: "Orders" });
+
 registry.add("main.table@orders.rows").getByRole("row");
+
 registry.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
 
 const cancel = registry
@@ -115,8 +120,11 @@ type Paths =
 declare const registry: LocatorRegistry<Paths>;
 
 registry.add("main.list@products").getByRole("list", { name: "Products" });
+
 registry.add("main.list@products.cards").getByRole("listitem");
+
 registry.add("main.list@products.cards.heading").getByRole("heading");
+
 registry.add("main.list@products.cards.button@addToCart").getByRole("button", { name: "Add to cart" });
 
 const heading = registry
@@ -158,6 +166,7 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"main" | "main.button@wishlist">;
 
 registry.add("main").getByRole("main");
+
 registry.add("main.button@wishlist").getByRole("button", { name: "Add to wishlist" });
 
 const wishlist = registry.getLocatorSchema("main.button@wishlist");

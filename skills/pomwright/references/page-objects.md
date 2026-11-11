@@ -26,9 +26,13 @@ export type Paths =
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").getByRole("main");
+
   registry.add("main.form@login").getByRole("form", { name: "Log in" });
+
   registry.add("main.form@login.input@email").getByLabel("Email");
+
   registry.add("main.form@login.input@password").getByLabel("Password");
+
   registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 }
 ```
@@ -88,6 +92,7 @@ export class LocalizedLoginPage extends PageObject<"main" | "main.button@login">
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
+
     this.add("main.button@login").getByRole("button", { name: loginLabel[this.locale] });
   }
 
@@ -122,6 +127,7 @@ export class DashboardPage extends PageObject<"main" | "main.progressbar@loading
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
+
     this.add("main.progressbar@loading").getByRole("progressbar");
   }
 

@@ -67,8 +67,11 @@ export class OrdersPage extends PageObject<Paths> {
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
+
     this.add("main.table@orders").getByRole("table", { name: "Orders" });
+
     this.add("main.table@orders.rows").getByRole("row");
+
     this.add("main.button@export").getByRole("button", { name: "Export" });
   }
 }

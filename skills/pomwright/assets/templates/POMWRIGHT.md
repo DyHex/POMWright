@@ -17,6 +17,7 @@ decide follows the skill's defaults.
 
 - **Shape**: `PageObject` subclasses, each extending its app's base class.
 - **Locators**: a locator module per page; parts every page has as composed modules, registered by the base class.
+- **Registrations**: a blank line between each `add` call and each composed module's call.
 - **Steps**: every action and check is a `@step()` method, titled `ClassName.methodName`.
 - **Assertions**: web-first, in specs; a check several specs repeat is an `expect…` method of the page code.
 - **Parameters**: two or more go in one options object.

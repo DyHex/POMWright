@@ -30,7 +30,9 @@ export function defineLocators<ExternalPaths extends string = never>(
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("header").getByRole("banner");
+
   registry.add("header.link@cart").getByRole("link", { name: "Cart" });
+
   registry.add("header.link@help").getByRole("link", { name: "Help" });
 }
 ```
@@ -50,6 +52,7 @@ export function defineLocators<ExternalPaths extends string = never>(
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   addHeader(registry);
+
   registry.add("main").getByRole("main");
   // "main.heading" is a slot: each page registers its own
 }
@@ -97,7 +100,9 @@ export class OrdersPage extends ShopPage<Paths> {
 
   protected definePageLocators(): void {
     this.add("main.heading").getByRole("heading", { name: "Orders" });
+
     this.add("main.list@orders").getByRole("list", { name: "Orders" });
+
     this.add("main.list@orders.items").getByRole("listitem");
   }
 }

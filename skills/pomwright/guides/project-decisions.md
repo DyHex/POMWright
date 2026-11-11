@@ -29,7 +29,9 @@ is code rewritten.
    the fixtures and two specs, and note for each decision below what the code does. Where it does two things, note
    both.
 2. **Ask in one message.** List every decision with what the project does now, the default, and one line on the other
-   choices, each in its own column, so the user sees what would change. The user answers only where they want
+   choices, each in its own column, so the user sees what would change. A decision marked *not asked* below is
+   written with its default, or with what the project's code does throughout where it does otherwise, and changes
+   only when the user says so. The user answers only where they want
    something else. Mixed code is a question: which of the two is the decision?
 
    | decision | the project now | default | other choices |
@@ -61,6 +63,7 @@ The default comes first; the others are what projects choose instead.
 | file names | `<name>.locators.ts` beside `<name>.page.ts` | the project's own names |
 | imports | relative paths | path aliases (`@page-objects/*`) in `tsconfig.json` |
 | where locators are registered | a locator module per page, shared parts as composed modules | inline, in `defineLocators()` |
+| registrations (*not asked*) | a blank line between each `add` call and each composed module's call, so a module reads one element at a time | one after another, without blank lines |
 | test id attribute | Playwright's, `data-testid` | the app's own, set with `testIdAttribute` in the config's `use`; `getByTestId` follows it |
 | locator preference | role, label, placeholder, text, alt text, title, test id, id, then CSS, each narrowed by its options and `filter()` before the next; `nth` last | test ids first, where the app gives every element a stable one |
 | XPath | never | last, after CSS, where existing tests rely on it |

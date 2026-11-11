@@ -48,7 +48,7 @@ concerns, then in each folder above it, up to the repository root.
 
 ## What POMWright adds, and what stays Playwright
 
-| Playwright's, used as playwright.dev documents it | what POMWright adds on it |
+| Playwright's, used as playwright.dev documents it; POMWright changes none of it | what POMWright adds on it; each part stands alone |
 | --- | --- |
 | locators, `filter`, `nth`, chaining | a path per locator, a registry with one locator per path, the chain built from a path, queries for one use |
 | page object classes, `page.goto`, `page.waitForURL`, `baseURL` | `PageObject`, a base class to extend or not: a page's origin and path, a navigation helper, its registry checked at construction |
@@ -57,14 +57,15 @@ concerns, then in each folder above it, up to the repository root.
 | the test runner, `test`, fixtures, configuration, projects | `test` with a `log` fixture, whose entries go into the report |
 | actions, auto-waiting, `expect`, `storageState`, tracing, reports | nothing: a resolved path is an ordinary `Locator` |
 
-Use the first column as playwright.dev documents it; POMWright changes none of it. Each part of the second stands alone.
-
 ## Where facts come from
 
 - **Signatures, options, error messages**: the installed `node_modules/pomwright/dist/index.d.ts`, with every doc
   comment, its example and API page link. Search the large file for a name; never read it whole or write from memory.
 - **Concepts and the full rules**: the site page each section links, under `https://dyhex.github.io/POMWright/`.
 - **Playwright itself**: playwright.dev.
+- **When something fails**: POMWright's messages name the page object and the path, and most say the fix; a registry
+  mistake fails the test in its fixture, listing every failing path. Search the message in the installed declarations
+  or on [Error messages](https://dyhex.github.io/POMWright/api/errors/) before changing code.
 
 ## The rules for every task
 
@@ -129,10 +130,15 @@ export type Paths =
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").getByRole("main");
+
   registry.add("main.table@orders").getByRole("table", { name: "Orders" });
+
   registry.add("main.table@orders.rows").getByRole("row");
+
   registry.add("main.table@orders.rows.rowheader").getByRole("rowheader");
+
   registry.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
+
   registry.add("main.table@orders.rows.cell@status").getByTestId("order-status");
 }
 ```
@@ -242,9 +248,3 @@ uses a test id because a cell has no name of its own to find it by; every other 
 | a project's layout, one app or several, starting from the templates | [guides/project-structure.md](guides/project-structure.md) |
 | review or refactor a project, its page objects or its tests | [guides/reviewing.md](guides/reviewing.md) |
 | upgrade a 2.x project | [guides/upgrading-from-2x.md](guides/upgrading-from-2x.md) |
-
-## When something fails
-
-POMWright's messages name the page object and the path, and most say the fix. A registry mistake fails the test in the
-fixture, before its body runs, listing every failing path. Search the message in the installed declarations or on
-[Error messages](https://dyhex.github.io/POMWright/api/errors/) before changing code.

@@ -49,7 +49,8 @@ user installed. Write for that reader:
   (`pomwright/guides/project-decisions.md`, its template `pomwright/assets/templates/POMWRIGHT.md`). The skills teach
   the same defaults everywhere: `PageObject` subclasses, origins from `env.ts` and no `baseURL`; a path segment names
   its kind and which one, `kind@which`, the kind being the element's role (`button@save`, `dialog@consent`), plural for
-  several in its scope (`main.list@products.cards`), singular for one; files `<name>.locators.ts` and `<name>.page.ts`;
+  several in its scope (`main.list@products.cards`), singular for one; a blank line between registrations, written into
+  `POMWRIGHT.md` without asking; files `<name>.locators.ts` and `<name>.page.ts`;
   a method with two or more parameters takes one options object, as the README's example does; test data reaches tests
   through one fixture, by dot paths such as `testData.checkout.feedback.happyForm`, holding values, data imported from
   files, generators and builders, and page code takes data as arguments; logging from page code is an option, with a

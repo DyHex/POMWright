@@ -23,7 +23,9 @@ type Paths = "shared.list.items" | "main.list@orders" | "main.list@orders.item@l
 declare const registry: LocatorRegistry<Paths>;
 
 registry.add("shared.list.items").getByRole("listitem");
+
 registry.add("main.list@orders").getByRole("list", { name: "Orders" });
+
 registry.add("main.list@orders.item@last", { reuse: "shared.list.items" }).nth("last").describe("Last order");
 // getNestedLocator("main.list@orders.item@last"), described "Last order":
 // getByRole('list', { name: 'Orders' }).getByRole('listitem').last()
@@ -51,8 +53,10 @@ declare const registry: LocatorRegistry<"card" | "card.heading@summary" | "card.
 const heading = registry.createReusable.getByRole("heading", { level: 2 });
 
 registry.add("card").getByRole("article");
+
 registry.add("card.heading@summary", { reuse: heading }).getByRole({ name: "Summary" });
 // getLocator("card.heading@summary"): getByRole('heading', { name: 'Summary', level: 2 })
+
 registry.add("card.headings", { reuse: heading });
 // getLocator("card.headings"): getByRole('heading', { level: 2 })
 ```
@@ -71,6 +75,7 @@ export const headingSeed = (registry: LocatorRegistry<Paths>): ReusableLocator<P
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("card").getByRole("article");
+
   registry.add("card.heading@summary", { reuse: headingSeed(registry) }).getByRole({ name: "Summary" });
 }
 ```

@@ -10,8 +10,12 @@ export type Paths =
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
 	registry.add("main.heading").getByRole("heading", { level: 1 });
+
 	registry.add("main.form@newsletter").getByRole("form", { name: "Newsletter" });
+
 	registry.add("main.form@newsletter.input@email").getByLabel("Email");
+
 	registry.add("main.form@newsletter.button@subscribe").getByRole("button", { name: "Subscribe" });
+
 	registry.add("main.form@newsletter.text@confirmation").getByText("Thanks for subscribing");
 }

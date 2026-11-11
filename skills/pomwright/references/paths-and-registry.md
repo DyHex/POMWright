@@ -50,6 +50,7 @@ type Paths = "main" | "main.toolbar" | `main.toolbar.button@${Action}`;
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").getByRole("main");
+
   registry.add("main.toolbar").getByRole("toolbar");
   for (const action of actions) {
     registry.add(`main.toolbar.button@${action}`).getByRole("button", { name: action });
@@ -71,6 +72,7 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"main.form@login" | "main.form@login.button.submit">;
 
 registry.add("main.form@login").getByRole("form", { name: "Log in" });
+
 registry.add("main.form@login.button.submit").getByRole("button", { name: "Log in" });
 // getNestedLocator("main.form@login.button.submit"): "main" and "main.form@login.button" are names
 // getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
@@ -95,6 +97,7 @@ type Paths = "main" | "main.button@save";
 const { registry, getNestedLocator } = createRegistryWithAccessors<Paths>(page);
 
 registry.add("main").getByRole("main");
+
 registry.add("main.button@save").getByRole("button", { name: "Save" });
 registry.verify();
 

@@ -8,6 +8,8 @@ export function defineLocators<ExternalPaths extends string = never>(
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
 	registry.add("header").getByRole("banner");
+
 	registry.add("header.link@home").getByRole("link", { name: "Shop" });
+
 	registry.add("header.link@cart").getByRole("link", { name: "Cart" });
 }
