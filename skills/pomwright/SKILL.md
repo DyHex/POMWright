@@ -91,7 +91,7 @@ are defaults: where the project's `POMWRIGHT.md` decides otherwise, follow it.
    table), only as many as make the chain unique; each segment names its kind and which one, `kind@which`, the kind
    being the element's role (`button@save`, `dialog@consent`); a segment whose registration matches several elements
    in its scope is plural (`main.list@products.cards`, a row's `cells`), also when a query picks one of them; one that
-   matches one is singular (`main.list@products.card`).
+   matches one is singular (`main.list@products.card`); a row with no row header is picked by one of its `cells`.
 5. **Page code reaches tests as Playwright fixtures**; what every page of one app shares (its origin, its common
    locators) is in one place, such as the app's base class; a test reads as steps on the page code.
 6. **The page code's actions and checks are report steps**: `@step()` methods in a class, `test.step` in a function;
