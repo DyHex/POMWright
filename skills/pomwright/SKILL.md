@@ -241,7 +241,7 @@ uses a test id because a cell has no name of its own to find it by; every other 
 | a project's decisions: asking them, writing and keeping `POMWRIGHT.md` | [guides/project-decisions.md](guides/project-decisions.md) |
 | choose the shape: `PageObject`, your own classes, functions or fixtures over a registry | [guides/choosing-a-shape.md](guides/choosing-a-shape.md) |
 | choose a locator, the segments of a path, its name | [guides/choosing-locators-and-paths.md](guides/choosing-locators-and-paths.md) |
-| write a page object for a page, with its locator module and fixture | [guides/writing-page-objects.md](guides/writing-page-objects.md) |
+| write a page object for a page, with its locator module and fixture; pages not yet read are mapped by the `pomwright-map-site` skill (installed with this one) | [guides/writing-page-objects.md](guides/writing-page-objects.md) |
 | locator modules: composing, common locators in the base class, slots | [guides/locator-modules.md](guides/locator-modules.md) |
 | write tests: steps, assertions, data, waiting, random overlays | [guides/writing-tests.md](guides/writing-tests.md) |
 | fixtures for page objects, the test-data fixture, setup some tests need | [guides/fixtures-and-test-data.md](guides/fixtures-and-test-data.md) |

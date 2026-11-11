@@ -1,7 +1,8 @@
 # From a snapshot to paths
 
 How to read the aria snapshot `scripts/map.mjs snapshot` prints (Playwright's `page.ariaSnapshot({ mode: "ai" })`),
-and turn it into the paths and registrations of a locator module. The rules for locators and names are the `pomwright`
+with the DOM and the screenshot it saves beside it, and turn them into the paths and registrations of a locator
+module. The rules for locators and names are the `pomwright`
 skill's `guides/choosing-locators-and-paths.md`; this file is about getting there from a snapshot.
 
 ## Contents
@@ -11,6 +12,7 @@ skill's `guides/choosing-locators-and-paths.md`; this file is about getting ther
 - [Elements become paths](#elements-become-paths)
 - [The suggested locators](#the-suggested-locators)
 - [Frames](#frames)
+- [What the snapshot leaves out: the DOM and the screenshot](#what-the-snapshot-leaves-out-the-dom-and-the-screenshot)
 - [What to leave out](#what-to-leave-out)
 
 ## Reading the snapshot
@@ -33,7 +35,10 @@ like `f1e3`. Excerpts from two pages, joined here to show each kind of line:
       - 'button "Toggle A: Off" [ref=f1e3]'
 ```
 
-`generic` is an element without a role: a `div` or a `span`. Its children are what matter.
+`generic` is an element without a role: a `div` or a `span`. Its children are what matter. A line marked
+`[aria-hidden]` is text a user sees and assistive technology does not: `getByRole` cannot find it, so a test reaches
+it by text or by a test id, and the hiding is worth reporting when it is a control's state (the current choice of a
+switch shown as hidden text, its alternatives as links).
 
 ## Containers become segments
 
@@ -79,6 +84,18 @@ page, the way codegen writes one. Use it as evidence, not as the registration:
 An `iframe` line becomes a `frameLocator(selector)` segment, with the selector the suggestion uses for it
 (`iframe[title="iframeA"]` above), registered under the container that tells the frames apart; the frame's elements
 become paths below it. A frame inside a frame is a second `frameLocator` segment below the first.
+
+## What the snapshot leaves out: the DOM and the screenshot
+
+The snapshot names what assistive technology names. `map.mjs snapshot` also prints what it does not: the elements with
+a test id (and which attribute the app uses for them), the ids in `main`, and the text hidden from assistive
+technology. Search the saved DOM for the rest, by what you need (an element's test id, the attribute a container
+carries, the component a part of the page comes from), never by reading it whole: on a real page it is many times the
+snapshot's size.
+
+Look at the screenshot before designing paths: what a user sees as one card or one row, what covers what (a cookie
+dialog over the page until it is answered, a sticky header), what is broken (an image that does not load), and what
+the snapshot shows that a user cannot see. The paths follow what a user sees.
 
 ## What to leave out
 

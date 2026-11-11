@@ -16,9 +16,10 @@ shows the page code and the fixture in each shape.
 
 ## 1. List what tests need from the page
 
-Look at the page (the running app, a screenshot, an accessibility snapshot) and list the elements tests act on or
-check, and no others: a page object is the tests' vocabulary for the page, not a copy of its markup. Group them by the
-containers a user sees, which become the path tree.
+Look at the page (the running app, a screenshot, an accessibility snapshot, and what its controls reveal: a menu, a
+tab, "show more", a choice that leads to another page) and list the elements tests act on or check, and no others: a
+page object is the tests' vocabulary for the page, not a copy of its markup. Group them by the containers a user sees,
+which become the path tree. To read a running site's pages this way, use the `pomwright-map-site` skill.
 
 ## 2. The locator module
 
