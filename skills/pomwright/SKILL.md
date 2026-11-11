@@ -35,9 +35,9 @@ names, test data, and the other choices POMWright leaves open. Look for it besid
 concerns, then in each folder above it, up to the repository root.
 
 - **Found**: follow it. Its decisions replace this skill's defaults (rules 3 to 6 and 10 below, and the conventions in
-  the guides); how POMWright and Playwright behave is not a decision. Where the project's code does otherwise, say so
-  and ask which holds. Where it names another model or effort than the session's, say so; the session does the task
-  unless the file or the user hands it to a subagent. Write a preference the user states or changes into the file.
+  the guides); how POMWright and Playwright behave is not a decision. Where the project's code does otherwise, say so in
+  your reply and ask which holds. Where it names another model or effort than the session's, say so; the session does
+  the task unless the file or the user hands it to a subagent. Record the user's new preferences in it.
 - **Missing**: creating it is the first task in the project, also when it has tests and page code and when the request
   asks for code: ask the user every decision in one message, showing what the project does now beside the default, then
   stop and write no code until they answer; write the answers into a copy of
@@ -107,10 +107,10 @@ message; where no one can be asked, take a tester's way and say why. An example 
 9. **Resolution is synchronous**: `getNestedLocator`, `getLocator` and `getLocatorSchema` return at once; await the
    action or the assertion, never the resolution.
 10. **Test data comes from one test-data fixture**, by dot paths (`testData.orders.open`): values, data imported from
-    files (JSON among them), and generators, builders and helpers for data a case makes; page code takes data as
-    arguments.
-11. **Wait as Playwright waits**: web-first assertions, `navigation.expectThisPage()` or `page.waitForURL()` after a
-    navigation; no sleeps.
+    files (JSON too), and generators, builders and helpers for data a case makes; page code takes data as arguments.
+11. **Wait as Playwright waits**: web-first assertions, not a value read once (`count()`, `isVisible()`) and asserted;
+    `navigation.expectThisPage()` or `page.waitForURL()` after a navigation; no sleeps. A page whose content arrives
+    after it loads says what "loaded" means in `pageActionsToPerformAfterNavigation()`, so `goto()` waits for it.
 
 ## One complete example
 
