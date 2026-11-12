@@ -46,9 +46,9 @@ context calls for; a departure from one is asked about, not assumed to be a defe
   types or interface files, the changelog and migration guides, the supported version ranges in the manifest.
 - **Inventory adds:** every export, member, option and overload; the module formats and entry points the manifest
   declares; the published file list; peer and optional dependencies; the declared runtime floor.
-- **Risk order:** input validation at the public boundary; state shared between calls (caches, singletons,
-  registries); async ordering and cleanup; types against runtime; packaging (missing files, a module format that does
-  not load); defaults that differ between entry points.
+- **Risk order:** input validation at the public boundary; state shared between calls (caches, singletons, pools,
+  global settings); async ordering and cleanup; types against runtime; packaging (missing files, a module format that
+  does not load); defaults that differ between entry points.
 - **Where behavior lives:** the packed artifact installed into a scratch project, imported under every module system
   the package claims, on the runtime floor and the newest supported version. A build folder can hold files the
   published package leaves out, and the reverse. Types are probed with the compiler, as a consumer's code.

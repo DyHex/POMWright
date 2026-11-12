@@ -118,8 +118,8 @@ Give your probes a scratch folder of your own too, outside the repository and no
   longer holds.
 - **Cite.** Every claim names the file and line, the page, or the command and its output.
 - **Judge a run by its exit code, not by its output.** A summary line can hide a failure printed above it, and some
-  tools report errors outside their counts (a type error, an unhandled rejection, a warning treated as an error). Read
-  the exit code first, then the output for the detail.
+  tools report errors outside their counts (a type error, an error in a background task, a warning treated as an
+  error). Read the exit code first, then the output for the detail.
 
 ## Phase 0: orient, profile, record a baseline
 
