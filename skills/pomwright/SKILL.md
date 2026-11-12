@@ -36,7 +36,9 @@ Playwright config the task concerns, then in each folder above it, up to the rep
 
 - **Only the parts it uses.** Its *POMWright's parts* names which of `PageObject`, a `LocatorRegistry` of its own,
   `@step`, `SessionStorage` and the `log` fixture the project uses: write code with those alone, and Playwright's own
-  API for the rest. A file without that section: the parts the project's code uses; ask before bringing in another.
+  API for the rest. Each part brings what belongs to it: its types, options and helpers (the `json` codec with session
+  storage, the `LocatorRegistry` type a page object's locator module takes). A file without that section: the parts
+  the project's code uses; ask before bringing in another.
 
 - **Found**: follow it. Its decisions replace this skill's defaults (rules 3 to 6 and 10 below, its examples' and
   templates' names, the guides' conventions); how POMWright and Playwright behave is not a decision. Where the project's

@@ -16,6 +16,8 @@ decide follows the skill's defaults.
 ## POMWright's parts
 
 The parts of POMWright this project uses. Code here uses these and no other part, and Playwright's own API for the rest.
+Each part brings what belongs to it: its types, options and helpers, such as the `json` codec with session storage and
+the `LocatorRegistry` type a page object's locator module takes.
 
 - **`PageObject`**: the base class of every page object; its registry, navigation helper and session storage helper
   come with it.

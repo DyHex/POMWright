@@ -48,7 +48,8 @@ user installed. Write for that reader:
 - **Where the docs leave a choice, the user decides**, and a project records its decisions in `POMWRIGHT.md`, which the
   `pomwright` skill reads first and, when it is missing, writes first, asking the user
   (`pomwright/guides/project-decisions.md`, its template `pomwright/assets/templates/POMWRIGHT.md`). Its *POMWright's
-  parts* names the parts of POMWright the project uses, and a skill writes code with no other. The skills teach the same
+  parts* names the parts of POMWright the project uses, and a skill writes code with no other (each part brings its
+  types, options and helpers). The skills teach the same
   defaults everywhere: `PageObject` subclasses whose base class forwards every option with its type, origins from `env.ts` and no `baseURL`; a path segment names
   its kind by what the element does (`input` for any field, `dropdown` for a select or combobox, `button`, `link`) and,
   where its locator picks it by a name, which one, in a user's words (`button@login`), plural for several in its
