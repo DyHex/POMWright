@@ -33,11 +33,39 @@ POMWright. For example:
 
 `POMWRIGHT.md` records the project's decisions: which parts of POMWright it uses (`PageObject`, a registry of its own,
 `@step`, `SessionStorage`, the `log` fixture), and the skill uses no other; its apps and origins, Playwright's
-`baseURL`, the layout and file names, the shape of the page code, how paths are named, where checks live, test data, and the model and effort to use
-for which task. The skill's default names a path segment by what the element does and which one in a user's words
-(`main.form@login.button@login`), plural for several (`main.table@orders.rows`); a project that names them another way
-records its own convention, and the skill follows it. The defaults are in the skill's
+`baseURL`, the layout and file names, the shape of the page code, how paths are named, where checks live, test data, and
+the model and effort to use for which task. The skill's default names a path segment by what the element does and which
+one in a user's words (`main.form@login.button@login`), plural for several (`main.table@orders.rows`), a region a
+`section` whatever it looks like; a project that names them another way records its own convention, and the skill
+follows it. The defaults are in the skill's
 [template](https://github.com/DyHex/POMWright/blob/main/skills/pomwright/assets/templates/POMWRIGHT.md).
+
+## What we measured
+
+23 tasks a tester does with POMWright on a small practice shop (page objects and tests, a flaky test, seeded session
+storage, an upgrade from 2.x, a review, a new project), 3 runs each with the skill and without it, Claude Opus 5.5 at
+effort high. A run counts as correct when its tests pass, the code checks find nothing, and an AI judge, whose every
+finding we checked against the code, finds the task done to the rubric.
+
+| | with the skill | without |
+| --- | --- | --- |
+| runs correct | 69 of 69 | 49 of 69 |
+| mistakes a reviewer would flag, per run | 0.2 | 0.5 |
+| code compiles and its tests pass | 51 of 51 | 51 of 51 |
+| time and cost per run | 59 s, $0.49 | 65 s, $0.50 |
+
+- **Where it matters most**: it asks the open decisions before writing code (9 of 9 runs; without it, none of 9), keeps
+  the parts every page has in one place, fixes a flaky test in the page object rather than in the one spec, and finds
+  the planted problems in a review (8 of 9 across Haiku, Sonnet and Opus, against none of 9 without).
+- **Cost**: a few cents more on the smallest tasks, where loading the skill is a larger share; 19 to 31% cheaper and
+  18 to 38% faster on the larger ones. After later changes, a recheck of 8 tasks counted 24 of 24 runs correct and 0.08
+  mistakes a run.
+- **Larger tasks**, such as refactoring a whole test project, were not measured. The gains are consistency (structure,
+  names, reuse, asking first), which a larger task has more chances to lose, and the saving grew with the task's size.
+- **Limits**: a small, predictable practice app; one model at one effort; 3 runs a task. The runs without the skill had
+  the project's code and `POMWRIGHT.md` to follow, which helps them.
+
+Run it as the [index](/POMWright/skills/#using-them-well) recommends.
 
 ## Install and source
 

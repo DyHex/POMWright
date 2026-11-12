@@ -22,8 +22,8 @@ page).
 ## Rules
 
 - The documentation is the Starlight site in `website/`, served at `https://dyhex.github.io/POMWright/`, with its
-  content in `website/src/content/docs/`, in four sections: `docs/` to learn, `api/` to look up, `internal/` to
-  understand, `skills/` to install and use the agent skills. The 2.x docs are linked at the tag,
+  content in `website/src/content/docs/`, in four sections, in this order: `docs/` to learn, `api/` to look up,
+  `skills/` to install and use the agent skills, `internal/` to understand. The 2.x docs are linked at the tag,
   `https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2`. The README says what POMWright is, shows one example, and
   links the site rather than repeating it; the snippet check compiles its examples as one more page, each block titled
   in its fence meta (`title="orders.page.ts"`), which GitHub and npm do not show.

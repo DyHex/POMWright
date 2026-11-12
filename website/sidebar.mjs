@@ -61,6 +61,19 @@ export const topics = [
 		],
 	},
 	{
+		label: "Skills",
+		link: "/skills/",
+		icon: "puzzle",
+		items: [
+			"skills",
+			{
+				label: "POMWright",
+				items: ["skills/pomwright", "skills/pomwright-map-site", "skills/pomwright-teach"],
+			},
+			{ label: "Other skills", items: ["skills/defect-review"] },
+		],
+	},
+	{
 		label: "Internal",
 		link: "/internal/",
 		icon: "setting",
@@ -78,19 +91,6 @@ export const topics = [
 			"internal/packaging",
 			"internal/tests-and-checks",
 			"internal/documentation",
-		],
-	},
-	{
-		label: "Skills",
-		link: "/skills/",
-		icon: "puzzle",
-		items: [
-			"skills",
-			{
-				label: "POMWright",
-				items: ["skills/pomwright", "skills/pomwright-map-site", "skills/pomwright-teach"],
-			},
-			{ label: "Other skills", items: ["skills/defect-review"] },
 		],
 	},
 ];

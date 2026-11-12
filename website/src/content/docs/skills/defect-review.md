@@ -35,6 +35,22 @@ When the request does not say which, it asks.
 4. **Report.** One Markdown file: the confirmed defects with their reproductions, documentation findings, what it could
    not confirm, design questions, and what it found sound.
 
+## What we measured
+
+POMWright's own releases were reviewed with it: the reviews behind 3.0.1 and 3.0.2 ran with its earlier, POMWright
+version. The two whole-project reviews of 3.0.2 found:
+
+| | first review | second review, after the fixes |
+| --- | --- | --- |
+| confirmed defects | 30 (6 Medium, 24 Low) | 19 (3 Medium, 16 Low) |
+| documentation findings | 19 | 37 |
+| the first review's 61 findings, by then | | 54 fixed, 5 in part, 2 kept as decided |
+
+Every finding came with its reproduction (the command, its exit code, the output). They also caught release problems
+before a merge: a dependency update that would have failed every publish, and changesets claiming fixes that did not
+fully hold. It was not compared with an agent reviewing without it, and the general version on this page has not been
+measured since its rewrite. Run it as the [index](/POMWright/skills/#using-them-well) recommends.
+
 ## Install and source
 
 Install it as the [index](/POMWright/skills/#install) shows, on its own or with the POMWright skills. Source:

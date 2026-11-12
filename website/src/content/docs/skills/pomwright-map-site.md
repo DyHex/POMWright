@@ -37,6 +37,27 @@ It builds on the [`pomwright`](/POMWright/skills/pomwright/) skill, which must b
 It works with Playwright alone, through a script it ships, and maps with that script. Where your machine has
 `playwright-cli` or Playwright MCP, it asks before using one for a state the script cannot reach.
 
+## What we measured
+
+One staging site's start page and a product page, mapped into page code with the skill (4 runs) and without it (2
+runs), Claude Opus 5.5 at effort high, graded by code against a reference mapping the maintainer reviewed:
+
+| | with the skill | without |
+| --- | --- | --- |
+| compiles, its starter tests pass on the site | 4 of 4 | 2 of 2 |
+| paths that match nothing | 0 | 0 |
+| the reference's paths it also mapped | 90% | 92% |
+| time and cost per run | 10.8 min, $4.57 | 16.9 min, $6.12 |
+
+- **The same result, 36% faster and 25% cheaper.** The runs without the skill had a strong start: the project's
+  `POMWRIGHT.md`, POMWright's own README and types, and the site's source with its POMWright code. A project without
+  them would likely show a larger gap; not measured.
+- **Why it maps with its script**: in an earlier round, runs that used Playwright MCP instead cost 36% more and took
+  32% longer, for no more coverage.
+- **Limits**: one site, 2 to 4 runs a setup; more pages were not measured.
+
+Run it as the [index](/POMWright/skills/#using-them-well) recommends.
+
 ## Install and source
 
 Install it with `pomwright`, as the [index](/POMWright/skills/#install) shows. Source:

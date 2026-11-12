@@ -6,8 +6,8 @@ description: "Where the documentation lives, how its examples, API coverage and 
 ## Where it lives
 
 The documentation is this site, built with [Starlight](https://starlight.astro.build/) from `website/`, in four
-sections: Docs to learn, the API reference to look up, these Internal pages to understand, and the Skills, which present
-the agent skills and how to install them. The pages are Markdown in
+sections: Docs to learn, the API reference to look up, the Skills, which present the agent skills and how to install
+them, and these Internal pages to understand. The pages are Markdown in
 `website/src/content/docs/`, one folder per section. The editor's hovers are the doc comments in `src/`, written from
 the same facts as the API pages.
 

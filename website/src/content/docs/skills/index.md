@@ -49,8 +49,21 @@ A skill that starts only when you run it is run as `/<skill>` in Claude Code and
 ## Requirements
 
 The POMWright skills need POMWright 3.x, `@playwright/test` 1.64 or later and Node 20 or later. They read the
-installed POMWright version first, and send a 2.x project to its upgrade. They were evaluated with Claude Opus at effort
-high, which is the effort to run them at.
+installed POMWright version first, and send a 2.x project to its upgrade.
+
+## Using them well
+
+- **Run them at effort high.** Every evaluation ran Claude Opus 5.5 at high. In one probe (a small task, no tools), low
+  took 14 minutes and 128,000 tokens where high took 4 seconds, and medium gave no answer in three tries; we have not
+  measured the skills at lower efforts.
+- **Review what they write.** The skills make mistakes, fewer than an agent without them (each skill's page says what
+  we measured), mostly a comment, a name or a test-data path a reviewer would flag. Read an agent's code as you would a
+  colleague's.
+- **Disagree in `POMWRIGHT.md`.** Where you would do something another way than the skill's default (the names of
+  paths, the shape of page code, where checks live), record it in your `POMWRIGHT.md`: its decisions replace the
+  defaults, for every agent and person on the project.
+- **Tell us.** A mistake the skills keep making, or a default that does not fit: open an
+  [issue](https://github.com/DyHex/POMWright/issues).
 
 ## `POMWRIGHT.md`
 
@@ -65,4 +78,4 @@ and person follows the same decisions. See [`pomwright`](/POMWright/skills/pomwr
 Every TypeScript example in a skill compiles against the packed package, every locator chain a skill shows is rebuilt
 by a test, and every link to these docs names a page that exists; CI runs these checks. A change to POMWright updates
 the skills that describe it in the same change. Before a release of the skills, agents work through a set of tasks
-with and without them.
+with and without them; each skill's page says what that measured.

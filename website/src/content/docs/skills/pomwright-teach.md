@@ -37,6 +37,17 @@ Every claim in a lesson links its source, every POMWright API it uses is checked
 every example and exercise has been run in the workspace first. A track on your own project reads it only, after you
 confirm it is the right folder; the skill asks before reading anything else and says what reading shares.
 
+## What we measured
+
+One simulated course, with an agent as the teacher and the maintainer's agent as a learner who knows Playwright:
+getting started (six lessons, with a review after a break), the full course's first unit (frames) and a focused track
+(logging, on a team's project). Every exercise ran green before the learner saw it, most were checked three ways (the
+solution passes, the starter fails with the right message, a loose answer fails), every claim we checked against these
+docs and the installed package held but two, and a fresh session continued from the workspace's files. What it found
+is fixed. No people have taken a course with it yet; tell us how it goes.
+
+Run it as the [index](/POMWright/skills/#using-them-well) recommends.
+
 ## Install and source
 
 Install it with `pomwright`, as the [index](/POMWright/skills/#install) shows. Source:
