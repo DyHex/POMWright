@@ -2,7 +2,9 @@
 
 Skills for coding agents (Claude Code, Codex and other agents that read the [Agent Skills](https://agentskills.io/)
 format) that work with POMWright and Playwright. Each is a folder with a `SKILL.md` the agent loads when the skill
-applies, and the files it reads as it needs them.
+applies, and the files it reads as it needs them. The documentation site's
+[Skills section](https://dyhex.github.io/POMWright/skills/) has a page per skill: what it does, when to use it and how
+it works.
 
 ## The skills
 

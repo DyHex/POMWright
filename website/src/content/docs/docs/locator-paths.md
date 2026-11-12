@@ -29,7 +29,8 @@ These docs name paths by one convention, which a project may replace with its ow
 says what the element does (`input` for any field, `dropdown` for a select or a combobox, `button`, `link`, `section`),
 and `@which` says what its locator picks it by, in a user's words (`button@login` for the button that reads "Log in").
 An element found without a name, the only one of its kind, has no `@which` (`main`). A segment that matches several
-elements in its scope is plural (`main.table@orders.rows`), and one that matches one is singular.
+elements in its scope is plural (`main.table@orders.rows`), and one that matches one is singular. A project records
+its own convention in its `POMWRIGHT.md`, which the [`pomwright` agent skill](/POMWright/skills/pomwright/) follows.
 
 The union is the list of everything the registry can hold. TypeScript checks every path you pass against it, and
 offers the paths as completions:

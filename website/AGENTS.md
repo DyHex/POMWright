@@ -12,17 +12,18 @@ The documentation site's content (below): `src/content/docs/docs/`, the Docs sec
 page per concept, *Upgrading from 2.x*); `src/content/docs/api/`, the API reference (one page per class or group,
 `errors` and the index); `src/content/docs/internal/`, how POMWright works (`performance` among them); `snippets/`, the
 docs' example app (`login.page.ts`, `account.page.ts`, `orders.page.ts`, `checkout.page.ts`, `fixtures.ts`) that every
-page's examples import. Around them the Starlight site, a pnpm project of its own (`package.json`, `pnpm-lock.yaml`,
+page's examples import; `src/content/docs/skills/`, the Skills section (an index and a page per agent skill in
+`skills/`). Around them the Starlight site, a pnpm project of its own (`package.json`, `pnpm-lock.yaml`,
 exact versions): `astro.config.mjs` (base `/POMWright`, the link check, Mermaid, the edit links to `main`),
-`sidebar.mjs` (the three sections), `plugins/expressive-code-cut.mjs` (hides an example's `// ---cut---` prelude),
+`sidebar.mjs` (the four sections), `plugins/expressive-code-cut.mjs` (hides an example's `// ---cut---` prelude),
 `src/components/SiteTitle.astro` (the sections as tabs), `src/styles/custom.css`, `src/content/docs/index.mdx` (the home
 page).
 
 ## Rules
 
 - The documentation is the Starlight site in `website/`, served at `https://dyhex.github.io/POMWright/`, with its
-  content in `website/src/content/docs/`, in three sections: `docs/` to learn, `api/` to look up, `internal/` to
-  understand. The 2.x docs are linked at the tag,
+  content in `website/src/content/docs/`, in four sections: `docs/` to learn, `api/` to look up, `internal/` to
+  understand, `skills/` to install and use the agent skills. The 2.x docs are linked at the tag,
   `https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2`. The README says what POMWright is, shows one example, and
   links the site rather than repeating it; the snippet check compiles its examples as one more page, each block titled
   in its fence meta (`title="orders.page.ts"`), which GitHub and npm do not show.

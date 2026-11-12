@@ -5,8 +5,9 @@ description: "Where the documentation lives, how its examples, API coverage and 
 
 ## Where it lives
 
-The documentation is this site, built with [Starlight](https://starlight.astro.build/) from `website/`, in three
-sections: Docs to learn, the API reference to look up, and these Internal pages to understand. The pages are Markdown in
+The documentation is this site, built with [Starlight](https://starlight.astro.build/) from `website/`, in four
+sections: Docs to learn, the API reference to look up, these Internal pages to understand, and the Skills, which present
+the agent skills and how to install them. The pages are Markdown in
 `website/src/content/docs/`, one folder per section. The editor's hovers are the doc comments in `src/`, written from
 the same facts as the API pages.
 
@@ -66,7 +67,7 @@ root `package.json` install it and run it: `pnpm docs:dev` serves the pages at
 `http://localhost:4391/POMWright/` and reloads on every edit, but does not check links; `pnpm docs:build` writes
 `website/dist` and checks every link; `pnpm docs:preview` builds and serves that build at
 `http://localhost:4392/POMWright/`, as it will be deployed. The site's configuration is
-`website/astro.config.mjs`; the three sections and their sidebars are `website/sidebar.mjs`, shown as tabs beside the
+`website/astro.config.mjs`; the four sections and their sidebars are `website/sidebar.mjs`, shown as tabs beside the
 title by a component of its own; an Expressive Code plugin hides an example's compile-only prelude; Mermaid diagrams
 render in the browser, so the build does not catch a syntax error in one. `scripts/check-diagrams.mjs` does: it serves
 the built site, opens every page with a diagram in Chromium, in the light and the dark scheme, and fails on a diagram

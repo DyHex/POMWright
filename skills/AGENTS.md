@@ -13,8 +13,9 @@ it before working there. Read it before changing a skill too. Part of the contri
   policy, for a skill only the user starts).
 - The skills about POMWright are its core, `pomwright`, which an agent uses by itself whenever code uses POMWright, and
   workflow skills that build on it; `defect-review` is a general skill, held to the format rules below but not to the
-  POMWright ones. `npx skills add DyHex/POMWright` installs them from this folder. They are not in the npm package
-  (`package.json#files`), and their evaluations are not in the repository.
+  POMWright ones. `npx skills add DyHex/POMWright` installs them from this folder, and the site's Skills section
+  presents them. They are not in the npm package (`package.json#files`), and their evaluations are not in the
+  repository.
 
 ## Who reads a skill
 
@@ -96,6 +97,9 @@ user installed. Write for that reader:
 - A change to anything a skill describes (an API, a behavior, a message, a rendering, a recommended practice) updates
   the skill in the same change, as it updates the pages that describe it; `src/AGENTS.md` and `website/AGENTS.md` point
   here.
+- A change to what a skill does, how it starts or what it needs updates its page in the site's Skills section
+  (`website/src/content/docs/skills/`) and its row in `skills/README.md` in the same change; a new skill gets both, and
+  its place in `website/sidebar.mjs`.
 - Commands: `pnpm lint:skills`, `pnpm lint:guide`, `pnpm typecheck` after `pnpm harness:install` (the examples), and
   `pnpm pack-test --project=chromium tests/docs/skillsChains.spec.ts --reporter=line` (the chains).
 

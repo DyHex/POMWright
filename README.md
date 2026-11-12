@@ -174,6 +174,13 @@ Using POMWright 2.x? Its documentation is in this repository at the
 [`v2.1.0` tag](https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2). Still on 1.x? The
 [1.x to 2.x migration guide](https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v1-to-v2-migration) is at the same tag.
 
+## Agent skills
+
+Working through a coding agent? POMWright's [agent skills](https://dyhex.github.io/POMWright/skills/) teach it
+POMWright as the documentation describes: `pomwright` writes and reviews tests and page code, `pomwright-map-site`
+generates page code for a running site, and `pomwright-teach` teaches POMWright over several sessions. They live in
+[`skills/`](./skills/), not in the npm package; `npx skills add DyHex/POMWright` installs them.
+
 ## Support
 
 If you run into issues or have questions, please use the

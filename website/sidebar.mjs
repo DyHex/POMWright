@@ -1,4 +1,4 @@
-// The three sections and their sidebars, in reading order: the topics of starlight-sidebar-topics, shown as tabs
+// The four sections and their sidebars, in reading order: the topics of starlight-sidebar-topics, shown as tabs
 // beside the site title by src/components/SiteTitle.astro.
 export const topics = [
 	{
@@ -78,6 +78,19 @@ export const topics = [
 			"internal/packaging",
 			"internal/tests-and-checks",
 			"internal/documentation",
+		],
+	},
+	{
+		label: "Skills",
+		link: "/skills/",
+		icon: "puzzle",
+		items: [
+			"skills",
+			{
+				label: "POMWright",
+				items: ["skills/pomwright", "skills/pomwright-map-site", "skills/pomwright-teach"],
+			},
+			{ label: "Other skills", items: ["skills/defect-review"] },
 		],
 	},
 ];
