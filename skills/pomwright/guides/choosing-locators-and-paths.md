@@ -100,7 +100,9 @@ skill's examples use. The skill's default:
   email, search, password), `dropdown` for a select or a combobox; `button`, `link`, `checkbox`, `radio`, `tab`,
   `dialog`, each for a behavior of its own. Landmarks and what a user reads take the names readers know: `main`,
   `header`, `footer`, `navigation`, `heading`, `text` (a price, a total). Containers take their role or a plain kind:
-  `form`, `table`, `row`, `cell`, `list`, `section`, `card`, `badge`.
+  `form`, `table`, `row`, `cell`, `list`, `section`, `card`, `badge`. A `region` is a `section` whatever it looks like:
+  a cookie consent banner Playwright finds by `getByRole("region", { name: "We use cookies" })` is
+  `section@cookieConsent`; `dialog` is for the roles `dialog` and `alertdialog`.
 - `@which` says what the locator picks the element by, so `button@save` and `button` are different paths with
   different locators: `getByRole("button", { name: "Save" })` and `getByRole("button")`. When to add it is a judgment,
   as a tester makes it:
@@ -152,7 +154,8 @@ an order summary region whose total has no label; a cookie dialog.
 | its accept button | `dialog@consent.button@accept` | `getByRole("button", { name: "Accept all" })` |
 
 The total uses a test id because the summary shows it as a bare number with no label of its own; everything else is
-found the way a user finds it. The dialog is not under `main`: it sits at the page's top level.
+found the way a user finds it. The dialog is not under `main`: it sits at the page's top level. Here the consent is a
+dialog by its role; one Playwright finds by the role `region` is `section@consent`.
 
 ## Worked example: a table
 

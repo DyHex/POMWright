@@ -51,7 +51,8 @@ user installed. Write for that reader:
   parts* names the parts of POMWright the project uses, and a skill writes code with no other (each part brings its
   types, options and helpers). The skills teach the same
   defaults everywhere: `PageObject` subclasses whose base class forwards every option with its type, origins from `env.ts` and no `baseURL`; a path segment names
-  its kind by what the element does (`input` for any field, `dropdown` for a select or combobox, `button`, `link`) and,
+  its kind by what the element does (`input` for any field, `dropdown` for a select or combobox, `button`, `link`; a
+  region a `section`, whatever it looks like) and,
   where its locator picks it by a name, which one, in a user's words (`button@login`), plural for several in its
   scope (`main.list@products.cards`), singular for one; an `expect…` method of the page code for a part of the page
   other tests are likely to check, the spec for a check only one test makes; a blank line between registrations, written
