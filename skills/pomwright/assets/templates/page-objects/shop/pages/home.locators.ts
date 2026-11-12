@@ -3,6 +3,7 @@ import type { Paths as CommonPaths } from "../common/page-components/common.loca
 
 export type Paths =
 	| CommonPaths
+	| "main.heading"
 	| "main.form@newsletter"
 	| "main.form@newsletter.input@email"
 	| "main.form@newsletter.button@subscribe"

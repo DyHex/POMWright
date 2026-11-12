@@ -115,7 +115,8 @@ A page that registers a common path again fails with the duplicate error. A page
 
 A slot is a path a shared module declares but does not register, so each page fills it with its own locator
 (`main.heading` above). A page that forgets fails only when the path is resolved, since the check covers registered
-paths.
+paths. So a slot is for a path every page has: where some page lacks it (a start page with no `h1`), that page's type
+would still offer the path, which throws, so the module of each page that has it declares it instead.
 
 ## Sharing one locator between modules
 

@@ -43,7 +43,7 @@ export abstract class ShopPage<
 		this.definePageLocators();
 	}
 
-	/** Registers the page's own locators, the "main.heading" slot included; the common ones are registered already. */
+	/** Registers the page's own locators, its "main.heading" where it has one; the common ones are registered already. */
 	protected abstract definePageLocators(): void;
 
 	@step()
