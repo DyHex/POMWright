@@ -34,8 +34,8 @@ It builds on the [`pomwright`](/POMWright/skills/pomwright/) skill, which must b
    that matches nothing or too much, and reports what it generated, what it left out and why, and the accessibility
    gaps it saw.
 
-It works with Playwright alone, through a script it ships. Where your machine has `playwright-cli` or Playwright MCP, it
-says so and asks before it uses them.
+It works with Playwright alone, through a script it ships, and maps with that script. Where your machine has
+`playwright-cli` or Playwright MCP, it asks before using one for a state the script cannot reach.
 
 ## Install and source
 

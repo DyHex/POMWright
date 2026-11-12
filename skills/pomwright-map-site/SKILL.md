@@ -34,7 +34,10 @@ each page the way a user meets it, designs its paths, generates the files, and c
 reachable from the machine, and for pages behind a login a Playwright `storageState` file the user saved. With that,
 `scripts/map.mjs` does every step below: crawl, snapshot, DOM, screenshot, reveal, each one command.
 
-**What can help**: an agent that has Playwright's own tools may explore with them, under the same safety rules:
+**Map with the script.** It reads a page in one command (its snapshot, DOM and screenshot), where Playwright's own
+tools take a call per step, so it costs less and takes less time for the same pages. Those tools can help with a state
+the script's `reveal` cannot reach (a control a click does not open, a widget driven by drag or hover), under the same
+safety rules:
 
 - **`playwright-cli`** with its skill (`npm install -g @playwright/cli`, then `playwright-cli install --skills`): a
   browser session the agent drives step by step (`snapshot`, `click`, `go-back`, `screenshot`, `eval`,
@@ -45,9 +48,9 @@ reachable from the machine, and for pages behind a login a Playwright `storageSt
   `browser_navigate_back`, `browser_take_screenshot`, `browser_evaluate`; `--caps=testing` adds
   `browser_generate_locator`).
 
-At step 1, tell the user what this machine has and which you will use. Ask before using `playwright-cli` or MCP. Where
-neither is installed and the site has many states to reveal, say what one would add and let the user decide; mapping
-goes ahead with the script either way.
+At step 1, tell the user what this machine has, and map with the script. Ask before using `playwright-cli` or MCP for a
+state the script cannot reach, saying which state and why; where no one can be asked, use the script, and name the
+states it could not reach in your reply. Mapping goes ahead with the script either way.
 
 ## The workflow
 
