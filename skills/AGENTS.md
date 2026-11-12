@@ -49,21 +49,20 @@ user installed. Write for that reader:
   `pomwright` skill reads first and, when it is missing, writes first, asking the user
   (`pomwright/guides/project-decisions.md`, its template `pomwright/assets/templates/POMWRIGHT.md`). Its *POMWright's
   parts* names the parts of POMWright the project uses, and a skill writes code with no other (each part brings its
-  types, options and helpers). The skills teach the same
-  defaults everywhere: `PageObject` subclasses whose base class forwards every option with its type, origins from `env.ts` and no `baseURL`; a path segment names
-  its kind by what the element does (`input` for any field, `dropdown` for a select or combobox, `button`, `link`; a
-  region a `section`, whatever it looks like) and,
-  where its locator picks it by a name, which one, in a user's words (`button@login`), plural for several in its
-  scope (`main.list@products.cards`), singular for one; an `expect…` method of the page code for a part of the page
-  other tests are likely to check, the spec for a check only one test makes; a blank line between registrations, written
-  into `POMWRIGHT.md` without asking; files `<name>.locators.ts` and `<name>.page.ts`; a method with two or more
-  parameters takes one options object, as the README's example does; test data reaches tests through one fixture, by dot
-  paths such as `testData.checkout.feedback.happyForm`, holding values, data imported from files, generators and
-  builders, and page code takes data as arguments; logging from page code is an option, with a child logger for each
-  page object or helper so the report shows where an entry came from; the session does every task at its own model and
-  effort, says so where the file recommends others, and hands a task to a subagent only where the file or the user says
-  so. A new default changes the guide, the template and every skill that teaches it together. `testInfo` is Playwright's
-  and not taught.
+  types, options and helpers). The skills teach the same defaults everywhere: `PageObject` subclasses whose base class
+  forwards every option with its type, origins from `env.ts` and no `baseURL`; a path segment names its kind by what the
+  element does (`input` for any field, `dropdown` for a select or combobox, `button`, `link`; a region a `section`,
+  whatever it looks like) and, where its locator picks it by a name, which one, in a user's words (`button@login`),
+  plural for several in its scope (`main.list@products.cards`), singular for one; an `expect…` method of the page code
+  for a part of the page other tests are likely to check, the spec for a check only one test makes; a blank line between
+  registrations, written into `POMWRIGHT.md` without asking; files `<name>.locators.ts` and `<name>.page.ts`; a method
+  with two or more parameters takes one options object, as the README's example does; test data reaches tests through
+  one fixture, by dot paths such as `testData.checkout.feedback.happyForm`, holding values, data imported from files,
+  generators and builders, and page code takes data as arguments; logging from page code is an option, with a child
+  logger for each page object or helper so the report shows where an entry came from; the session does every task at its
+  own model and effort, says so where the file recommends others, and hands a task to a subagent only where the file or
+  the user says so. A new default changes the guide, the template and every skill that teaches it together. `testInfo`
+  is Playwright's and not taught.
 - **Ask when the context does not decide.** Where several ways are right and neither the project, its `POMWRIGHT.md` nor
   the task says which, a skill has the agent ask the user, every open question together in one message, not one at a
   time; where no one can be asked (a run without a user), the agent takes the way a tester or developer would, and says
@@ -76,9 +75,10 @@ user installed. Write for that reader:
   `metadata` beside them, which every agent accepts. A skill only the user starts, listed in the script's
   `USER_INVOKED` (it creates files or costs much, so no keyword may start it), also has `disable-model-invocation: true`,
   may have `argument-hint`, and has `agents/openai.yaml` with `allow_implicit_invocation: false`.
-- Sizes: `SKILL.md` at most 250 lines (`defect-review` 300; `pomwright` 330, for its complete example), every other Markdown file at most 300, and one over 100
-  lines opens with a contents list linking each `##` heading. References are one level deep: every Markdown file of a
-  skill is linked from its `SKILL.md` and links on to no other. Every link to the site names a page and heading.
+- Sizes: `SKILL.md` at most 250 lines (`defect-review` 300; `pomwright` 330, for its complete example), every other
+  Markdown file at most 300, and one over 100 lines opens with a contents list linking each `##` heading. References are
+  one level deep: every Markdown file of a skill is linked from its `SKILL.md` and links on to no other. Every link to
+  the site names a page and heading.
 - Relative links and anchors resolve: `pnpm lint:guide` reads the skills too.
 - The `pomwright` skill's upgrade guide lists every item the site's *Upgrading from 2.x* marks **compiles**, in the
   page's order, with exactly the searches the page gives: those changes compile, so only a search finds them, and an
