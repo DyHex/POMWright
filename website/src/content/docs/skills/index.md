@@ -76,6 +76,7 @@ and person follows the same decisions. See [`pomwright`](/POMWright/skills/pomwr
 ## How they are kept true
 
 Every TypeScript example in a skill compiles against the packed package, every locator chain a skill shows is rebuilt
-by a test, and every link to these docs names a page that exists; CI runs these checks. A change to POMWright updates
-the skills that describe it in the same change. Before a release of the skills, agents work through a set of tasks
-with and without them; each skill's page says what that measured.
+by a test, and every link to these docs names a page and heading that exist; CI runs these checks on every pull
+request. The contributor guide has a change to POMWright update the skills that describe it in the same change, and
+these checks fail when an example, a chain or a link no longer holds. Before their first release, agents worked through
+a set of tasks with and without the skills; each skill's page says what that measured.
