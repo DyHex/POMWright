@@ -76,19 +76,40 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 
 ## 3. The page object
 
-The app's base class holds what every page shares: the origin, the navigation defaults, and the common locators,
-registered before each page registers its own:
+The app's base class holds what every page shares: the origin, the navigation and registry defaults, and the common
+locators, registered before each page registers its own. It forwards every option with its type, so a page passes only
+what it needs (a RegExp path, a session storage schema) and never casts:
 
 ```ts title="shop.page.ts"
 import type { Page } from "@playwright/test";
-import { PageObject, type PageObjectOptions } from "pomwright";
+import {
+  PageObject,
+  type PageObjectOptions,
+  type PageObjectTypeOptions,
+  type StorageTypeFromOptions,
+  type UrlPathTypeFromOptions,
+} from "pomwright";
 import { defineLocators as addCommon, type Paths as CommonPaths } from "./common.locators";
 
-export abstract class ShopPage<Paths extends string> extends PageObject<Paths | CommonPaths> {
-  protected constructor(page: Page, urlPath: string, options?: PageObjectOptions) {
+type ShopOptions<Options extends PageObjectTypeOptions> = {
+  baseUrlType: string;
+  urlPathType: UrlPathTypeFromOptions<Options>;
+  storage: StorageTypeFromOptions<Options>;
+};
+
+export abstract class ShopPage<
+  Paths extends string,
+  Options extends PageObjectTypeOptions = { urlPathType: string },
+> extends PageObject<Paths | CommonPaths, ShopOptions<Options>> {
+  protected constructor(
+    page: Page,
+    urlPath: UrlPathTypeFromOptions<ShopOptions<Options>>,
+    options?: PageObjectOptions<ShopOptions<Options>>,
+  ) {
     super(page, process.env.SHOP_URL ?? "https://shop.example", urlPath, {
-      navOptions: { waitUntil: "domcontentloaded" },
       ...options,
+      navOptions: { waitUntil: "domcontentloaded", ...options?.navOptions },
+      locators: { strictChains: false, ...options?.locators },
     });
   }
 

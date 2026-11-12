@@ -30,9 +30,13 @@ Read the version in `node_modules/pomwright/package.json`.
 
 ## Then, the project's POMWRIGHT.md
 
-A project keeps its POMWright decisions in `POMWRIGHT.md`: the shape of its page code, Playwright's `baseURL`, path
-names, test data, and the other choices POMWright leaves open. Look for it beside the Playwright config the task
-concerns, then in each folder above it, up to the repository root.
+A project keeps its POMWright decisions in `POMWRIGHT.md`: which parts of POMWright it uses, the shape of its page
+code, Playwright's `baseURL`, path names, test data, and the other choices POMWright leaves open. Look for it beside the
+Playwright config the task concerns, then in each folder above it, up to the repository root.
+
+- **Only the parts it uses.** Its *POMWright's parts* names which of `PageObject`, a `LocatorRegistry` of its own,
+  `@step`, `SessionStorage` and the `log` fixture the project uses: write code with those alone, and Playwright's own
+  API for the rest. A file without that section: the parts the project's code uses; ask before bringing in another.
 
 - **Found**: follow it. Its decisions replace this skill's defaults (rules 3 to 6 and 10 below, its examples' and
   templates' names, the guides' conventions); how POMWright and Playwright behave is not a decision. Where the project's
@@ -113,8 +117,8 @@ no one can be asked, take a tester's way and say why. Examples and templates sho
 
 ## One complete example
 
-An orders page as a `PageObject`, with its locator module, fixtures, test data and a test; in a project it extends the
-app's base class, which registers the parts every page has (`guides/writing-page-objects.md`).
+An orders page: its locator module, the least a page object needs, the base class of the app's origin with every
+option, the page object written on it, then fixtures, test data and a test.
 
 ```ts title="orders.locators.ts"
 import type { LocatorRegistry } from "pomwright";
@@ -142,16 +146,81 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
 }
 ```
 
-```ts title="orders.page.ts"
-import { expect, type Page } from "@playwright/test";
-import { PageObject, step } from "pomwright";
+The least a page object needs is its origin, its path and its locators:
+
+```ts
+import type { Page } from "@playwright/test";
+import { PageObject } from "pomwright";
 import { defineLocators, type Paths } from "./orders.locators";
 
-export type OrderStatus = "Open" | "Cancelled";
-
-export class OrdersPage extends PageObject<Paths> {
+export class MinimalOrdersPage extends PageObject<Paths> {
   constructor(page: Page) {
     super(page, "https://shop.example", "/orders");
+  }
+
+  protected defineLocators(): void {
+    defineLocators(this.locatorRegistry);
+  }
+}
+```
+
+In a project, every page of an origin extends the origin's base class, which sets what they share and forwards every
+option with its type, so a page passes only what it needs and never casts. It is also where the parts every page has
+are registered (`guides/writing-page-objects.md`):
+
+```ts title="shop.page.ts"
+import type { Page } from "@playwright/test";
+import {
+  PageObject,
+  type PageObjectOptions,
+  type PageObjectTypeOptions,
+  type StorageTypeFromOptions,
+  type UrlPathTypeFromOptions,
+} from "pomwright";
+
+// the origin is a string; a page's own path type (a RegExp for a URL that varies) and storage schema pass through
+type ShopOptions<Options extends PageObjectTypeOptions> = {
+  baseUrlType: string;
+  urlPathType: UrlPathTypeFromOptions<Options>;
+  storage: StorageTypeFromOptions<Options>;
+};
+
+export abstract class ShopPage<
+  Paths extends string,
+  Options extends PageObjectTypeOptions = { urlPathType: string },
+> extends PageObject<Paths, ShopOptions<Options>> {
+  protected constructor(
+    page: Page,
+    urlPath: UrlPathTypeFromOptions<ShopOptions<Options>>,
+    options?: PageObjectOptions<ShopOptions<Options>>,
+  ) {
+    // a page's label and storage schema pass through; the navigation and registry defaults are the shop's, and a
+    // page may change them
+    super(page, process.env.SHOP_URL ?? "https://shop.example", urlPath, {
+      ...options,
+      navOptions: { waitUntil: "domcontentloaded", ...options?.navOptions },
+      locators: { strictChains: false, ...options?.locators },
+    });
+  }
+}
+```
+
+The orders page passes its path and the schema of the session storage the app keeps its orders in:
+
+```ts title="orders.page.ts"
+import { expect, type Page } from "@playwright/test";
+import { json, step } from "pomwright";
+import { defineLocators, type Paths } from "./orders.locators";
+import { ShopPage } from "./shop.page";
+
+export type OrderStatus = "Open" | "Cancelled";
+export type Order = { id: string; status: OrderStatus };
+
+const ordersStorage = { orders: json<Order[]>() };
+
+export class OrdersPage extends ShopPage<Paths, { storage: typeof ordersStorage }> {
+  constructor(page: Page) {
+    super(page, "/orders", { sessionStorage: { schema: ordersStorage } });
   }
 
   protected defineLocators(): void {
@@ -184,7 +253,9 @@ export class OrdersPage extends PageObject<Paths> {
 ```
 
 ```ts title="test-data.ts"
-export const testData = { orders: { open: { id: "ORD-1042" } } } as const;
+import type { Order } from "./orders.page";
+
+export const testData = { orders: { open: { id: "ORD-1042", status: "Open" } satisfies Order } };
 ```
 
 ```ts title="fixtures.ts"
@@ -208,6 +279,7 @@ import { test } from "./fixtures";
 
 test("a customer cancels an open order", async ({ ordersPage, testData }) => {
   const order = testData.orders.open.id;
+  await ordersPage.sessionStorage.seed({ orders: [testData.orders.open] });
   await ordersPage.navigation.goto();
   await ordersPage.expectStatus({ order, status: "Open" });
   await ordersPage.cancel({ order });

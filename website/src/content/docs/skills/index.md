@@ -54,8 +54,9 @@ high, which is the effort to run them at.
 
 ## `POMWRIGHT.md`
 
-`pomwright` keeps a project's choices in `POMWRIGHT.md`, beside the Playwright config: the shape of the page code,
-origins and `baseURL`, how paths are named, test data, and the rest of what POMWright leaves open. When the file is
+`pomwright` keeps a project's choices in `POMWRIGHT.md`, beside the Playwright config: which parts of POMWright it
+uses, the shape of the page code, origins and `baseURL`, how paths are named, test data, and the rest of what POMWright
+leaves open. When the file is
 missing, the skill asks you every decision in one message and writes the file before any other work, so every agent
 and person follows the same decisions. See [`pomwright`](/POMWright/skills/pomwright/#how-it-works).
 

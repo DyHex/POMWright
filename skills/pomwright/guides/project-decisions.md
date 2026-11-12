@@ -36,6 +36,7 @@ is code rewritten.
 
    | decision | the project now | default | other choices |
    | --- | --- | --- | --- |
+   | POMWright's parts | `PageObject`, `@step` | `PageObject`, `@step`, `SessionStorage`, `log` | a registry without `PageObject`; no `@step` |
    | origins | `baseURL` in `playwright.config.ts` | `env.ts`, no `baseURL` | keep `baseURL`, set from `env.ts` |
    | test data | written in each spec | one `testData` fixture | data modules each spec imports |
    | shape | no page code yet | `PageObject` subclasses | own classes, functions, fixtures |
@@ -55,6 +56,7 @@ The default comes first; the others are what projects choose instead.
 
 | decision | default | other choices |
 | --- | --- | --- |
+| POMWright's parts: which of `PageObject`, a `LocatorRegistry` of its own, `@step`, `SessionStorage` and the `log` fixture the project uses; code uses no other part | `PageObject` for every page object, with its registry, navigation and session storage helpers; `@step` on the page code; the `log` fixture through `test` from `pomwright`; a registry of its own none, a `SessionStorage` of its own only for another origin | any of them left out, Playwright's own API in its place (`test.step`, `page.sessionStorage`, Playwright's `test`); a registry of its own instead of `PageObject` (`guides/choosing-a-shape.md`), or beside it, for locators no page object owns (a widget several apps share, a fixture's) |
 | shape of the page code | `PageObject` subclasses, one base class per app | own classes, functions or fixtures over `createRegistryWithAccessors` (`guides/choosing-a-shape.md`) |
 | origins | in `env.ts`, one environment variable per app, read by each app's base class | another config module the project has |
 | environments | each origin's variable set per environment (locally, in CI) | one variable (`TEST_ENV`) that picks every origin from a map in `env.ts` |
@@ -105,5 +107,7 @@ starts one with a model and effort; where the agent cannot, the session does the
 
 - When the user states a new preference, or changes one, update the file in the same change as the code.
 - When the code and the file disagree, ask which one is right; do not change either silently.
+- A file without a decision this guide lists, such as *POMWright's parts* in a file written before it: take what the
+  project's code does, ask before departing from it, and add the decision to the file with the user's answer.
 - A review checks the code against the file. Code that follows a decision is not a finding, even when it differs from
   a default (`guides/reviewing.md`).

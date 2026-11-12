@@ -13,6 +13,17 @@ decide follows the skill's defaults.
 - **File names**: `<name>.locators.ts` beside `<name>.page.ts`.
 - **Imports**: relative paths.
 
+## POMWright's parts
+
+The parts of POMWright this project uses. Code here uses these and no other part, and Playwright's own API for the rest.
+
+- **`PageObject`**: the base class of every page object; its registry, navigation helper and session storage helper
+  come with it.
+- **A `LocatorRegistry` of its own** (`createRegistryWithAccessors`): none; every registry is a page object's.
+- **`@step`**: on every action and check of the page code.
+- **`SessionStorage`**: a page object's `sessionStorage`; a `SessionStorage` of its own only for another origin.
+- **The `log` fixture**: `test` from `pomwright`, which the project's fixtures extend.
+
 ## Page code
 
 - **Shape**: `PageObject` subclasses, each extending its app's base class.

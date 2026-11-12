@@ -31,8 +31,9 @@ POMWright. For example:
 3. **The task**, by the skill's rules and the guide for it: choosing locators and paths, writing page objects, locator
    modules, tests, fixtures and test data, the structure of a project, a review, an upgrade.
 
-`POMWRIGHT.md` records the project's decisions: its apps and origins, Playwright's `baseURL`, the layout and file
-names, the shape of the page code, how paths are named, where checks live, test data, and the model and effort to use
+`POMWRIGHT.md` records the project's decisions: which parts of POMWright it uses (`PageObject`, a registry of its own,
+`@step`, `SessionStorage`, the `log` fixture), and the skill uses no other; its apps and origins, Playwright's
+`baseURL`, the layout and file names, the shape of the page code, how paths are named, where checks live, test data, and the model and effort to use
 for which task. The skill's default names a path segment by what the element does and which one in a user's words
 (`main.form@login.button@login`), plural for several (`main.table@orders.rows`); a project that names them another way
 records its own convention, and the skill follows it. The defaults are in the skill's

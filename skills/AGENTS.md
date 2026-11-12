@@ -47,8 +47,9 @@ user installed. Write for that reader:
 - **Lead by example.** A skill shows the right way in its examples and says why; it does not catalogue mistakes.
 - **Where the docs leave a choice, the user decides**, and a project records its decisions in `POMWRIGHT.md`, which the
   `pomwright` skill reads first and, when it is missing, writes first, asking the user
-  (`pomwright/guides/project-decisions.md`, its template `pomwright/assets/templates/POMWRIGHT.md`). The skills teach
-  the same defaults everywhere: `PageObject` subclasses, origins from `env.ts` and no `baseURL`; a path segment names
+  (`pomwright/guides/project-decisions.md`, its template `pomwright/assets/templates/POMWRIGHT.md`). Its *POMWright's
+  parts* names the parts of POMWright the project uses, and a skill writes code with no other. The skills teach the same
+  defaults everywhere: `PageObject` subclasses whose base class forwards every option with its type, origins from `env.ts` and no `baseURL`; a path segment names
   its kind by what the element does (`input` for any field, `dropdown` for a select or combobox, `button`, `link`) and,
   where its locator picks it by a name, which one, in a user's words (`button@login`), plural for several in its
   scope (`main.list@products.cards`), singular for one; an `expect…` method of the page code for a part of the page
@@ -73,7 +74,7 @@ user installed. Write for that reader:
   `metadata` beside them, which every agent accepts. A skill only the user starts, listed in the script's
   `USER_INVOKED` (it creates files or costs much, so no keyword may start it), also has `disable-model-invocation: true`,
   may have `argument-hint`, and has `agents/openai.yaml` with `allow_implicit_invocation: false`.
-- Sizes: `SKILL.md` at most 250 lines (`defect-review` 300), every other Markdown file at most 300, and one over 100
+- Sizes: `SKILL.md` at most 250 lines (`defect-review` 300; `pomwright` 330, for its complete example), every other Markdown file at most 300, and one over 100
   lines opens with a contents list linking each `##` heading. References are one level deep: every Markdown file of a
   skill is linked from its `SKILL.md` and links on to no other. Every link to the site names a page and heading.
 - Relative links and anchors resolve: `pnpm lint:guide` reads the skills too.

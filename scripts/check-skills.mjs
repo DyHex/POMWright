@@ -37,7 +37,10 @@ const skillsDir = path.join(root, "skills");
 const USER_INVOKED = new Set(["pomwright-teach", "defect-review"]);
 const PORTABLE_KEYS = new Set(["name", "description", "license", "compatibility", "metadata"]);
 const USER_INVOKED_KEYS = new Set([...PORTABLE_KEYS, "disable-model-invocation", "argument-hint"]);
-const SKILL_LINES = new Map([["defect-review", 300]]);
+const SKILL_LINES = new Map([
+	["defect-review", 300],
+	["pomwright", 330],
+]);
 const DEFAULT_SKILL_LINES = 250;
 const FILE_LINES = 300;
 const CONTENTS_FROM = 100;
