@@ -1,0 +1,37 @@
+# http://localhost:9000/iframe  
+
+- generic [active] [ref=e1]:
+  - heading "Iframe playground" [level=1] [ref=e2]
+  - generic [ref=e3]:
+    - heading "Section A" [level=2] [ref=e4]
+    - iframe [ref=e5]:
+      - generic [ref=f1e1]:
+        - heading "Frame A" [level=3] [ref=f1e2]
+        - 'button "Toggle A: Off" [ref=f1e3]'
+  - generic [ref=e6]:
+    - heading "Section B" [level=2] [ref=e7]
+    - iframe [ref=e8]:
+      - generic [ref=f2e1]:
+        - heading "Frame B" [level=3] [ref=f2e2]
+        - 'button "Toggle B: Off" [ref=f2e3]'
+        - iframe [ref=f2e4]:
+          - generic [ref=f4e1]:
+            - heading "Frame C" [level=3] [ref=f4e2]
+            - 'button "Toggle C: Off" [ref=f4e3]'
+  - heading "Section C" [level=2] [ref=e10]
+
+# Suggested locators (locator.normalize(): a candidate; prefer a role with its name)
+
+e2  heading "Iframe playground"  ->  getByRole('heading', { name: 'Iframe playground' })
+e4  heading "Section A"  ->  getByRole('heading', { name: 'Section A' })
+e5  iframe  ->  locator('iframe[title="iframeA"]')
+f1e2  heading "Frame A"  ->  locator('iframe[title="iframeA"]').contentFrame().getByRole('heading', { name: 'Frame A' })
+f1e3  button "Toggle A: Off"  ->  locator('iframe[title="iframeA"]').contentFrame().getByTestId('toggle-a')
+e7  heading "Section B"  ->  getByRole('heading', { name: 'Section B' })
+e8  iframe  ->  locator('iframe[title="iframeB"]')
+f2e2  heading "Frame B"  ->  locator('iframe[title="iframeB"]').contentFrame().getByRole('heading', { name: 'Frame B' })
+f2e3  button "Toggle B: Off"  ->  locator('iframe[title="iframeB"]').contentFrame().getByTestId('toggle-b')
+f2e4  iframe  ->  locator('iframe[title="iframeB"]').contentFrame().locator('iframe[title="iframeC"]')
+f4e2  heading "Frame C"  ->  locator('iframe[title="iframeB"]').contentFrame().locator('iframe[title="iframeC"]').contentFrame().getByRole('heading', { name: 'Frame C' })
+f4e3  button "Toggle C: Off"  ->  locator('iframe[title="iframeB"]').contentFrame().locator('iframe[title="iframeC"]').contentFrame().getByTestId('toggle-c')
+e10  heading "Section C"  ->  getByRole('heading', { name: 'Section C' })

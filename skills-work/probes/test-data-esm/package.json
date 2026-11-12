@@ -1,0 +1,5 @@
+{
+	"name": "test-data-esm-probe",
+	"private": true,
+	"type": "module"
+}

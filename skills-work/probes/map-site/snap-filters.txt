@@ -1,0 +1,51 @@
+# http://localhost:9000/testfilters  
+
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - heading "Primary Colors Section" [level=2] [ref=e3]
+    - button "Red" [ref=e4]
+    - button "Blue" [ref=e5]
+    - button "Green" [ref=e6]
+    - button "Reset Color" [ref=e7]
+  - generic [ref=e8]:
+    - heading "Primary Colors Explorer" [level=2] [ref=e9]
+    - button "Red" [ref=e10]
+    - button "Blue" [ref=e11]
+    - button "Green" [ref=e12]
+    - button "Reset Color" [ref=e13]
+  - region "Accessible Section" [ref=e14]:
+    - heading "Primary Colors Test" [level=2] [ref=e15]
+    - button "Red" [ref=e16]
+    - button "Blue" [ref=e17]
+    - button "Green" [ref=e18]
+    - button "Reset Color" [ref=e19]
+  - generic [ref=e20]:
+    - heading "Primary Colors Playground" [level=2] [ref=e21]
+    - button "Red" [ref=e22]
+    - button "Blue" [ref=e23]
+    - button "Green" [ref=e24]
+    - button "Reset Color" [ref=e25]
+
+# Suggested locators (locator.normalize(): a candidate; prefer a role with its name)
+
+e3  heading "Primary Colors Section"  ->  getByRole('heading', { name: 'Primary Colors Section' })
+e4  button "Red"  ->  locator('#section1').getByRole('button', { name: 'Red' })
+e5  button "Blue"  ->  locator('#section1').getByRole('button', { name: 'Blue' })
+e6  button "Green"  ->  locator('#section1').getByRole('button', { name: 'Green' })
+e7  button "Reset Color"  ->  locator('#section1').getByRole('button', { name: 'Reset Color' })
+e9  heading "Primary Colors Explorer"  ->  getByRole('heading', { name: 'Primary Colors Explorer' })
+e10  button "Red"  ->  locator('#section2').getByRole('button', { name: 'Red' })
+e11  button "Blue"  ->  locator('#section2').getByRole('button', { name: 'Blue' })
+e12  button "Green"  ->  locator('#section2').getByRole('button', { name: 'Green' })
+e13  button "Reset Color"  ->  locator('#section2').getByRole('button', { name: 'Reset Color' })
+e14  region "Accessible Section"  ->  getByRole('region', { name: 'Accessible Section' })
+e15  heading "Primary Colors Test"  ->  getByRole('heading', { name: 'Primary Colors Test' })
+e16  button "Red"  ->  getByRole('region', { name: 'Accessible Section' }).getByRole('button', { name: 'Red' })
+e17  button "Blue"  ->  getByRole('region', { name: 'Accessible Section' }).getByRole('button', { name: 'Blue' })
+e18  button "Green"  ->  getByRole('region', { name: 'Accessible Section' }).getByRole('button', { name: 'Green' })
+e19  button "Reset Color"  ->  getByRole('region', { name: 'Accessible Section' }).getByRole('button', { name: 'Reset Color' })
+e21  heading "Primary Colors Playground"  ->  getByRole('heading', { name: 'Primary Colors Playground' })
+e22  button "Red"  ->  locator('#section4').getByRole('button', { name: 'Red' })
+e23  button "Blue"  ->  locator('#section4').getByRole('button', { name: 'Blue' })
+e24  button "Green"  ->  locator('#section4').getByRole('button', { name: 'Green' })
+e25  button "Reset Color"  ->  locator('#section4').getByRole('button', { name: 'Reset Color' })
