@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 // Maps a running site for the pomwright-map-site skill, with the project's own Playwright (1.64 or later).
 //
-//   node <skill>/scripts/map.mjs crawl <url> [--depth 2] [--limit 40] [--storage-state <file>]
+//   node <skill>/scripts/map.mjs crawl <url> [--depth 2] [--limit 40] [--storage-state <file>] [--origin <url>]
 //   node <skill>/scripts/map.mjs snapshot <url> [--out <dir>] [--consent "<button>"] [--wait-for "<role>=<name>"]
 //   node <skill>/scripts/map.mjs reveal <url> --click "<role>=<name>" [--click …] [--out <dir>] [--consent "<button>"]
 //
-// Run it from the project's root: it loads @playwright/test from there, and launches chromium headless. Every request
-// but GET and HEAD is aborted, in every command, so nothing it does sends data to the site; what was aborted is listed.
+// Run it from the project's root: it loads @playwright/test from there, and launches chromium headless. In every
+// command, every request but GET and HEAD is aborted, so nothing it does sends data to the site, and no page opens on an
+// origin the user did not name: the start URL's, and each --origin (an identity provider the user named, say), checked
+// before the browser sends the request, a redirect's included. What was aborted and what was not opened are listed.
 //
 // - crawl: opens the start page, follows the links on the same origin breadth first, up to --depth link hops and
 //   --limit pages, and prints every page found: its path, its title, and the path pattern it shares with pages whose
-//   paths differ only in an id (`/orders/42` and `/orders/43` as `/orders/[id]`).
+//   paths differ only in an id (`/orders/42` and `/orders/43` as `/orders/[id]`); then the links to other origins,
+//   listed, not opened.
 // - snapshot: opens one page and prints Playwright's aria snapshot of it in the "ai" mode (each element with a ref,
 //   iframes included), the locator Playwright's locator.normalize() suggests for each landmark, container, heading and
 //   interactive element, and what the snapshot does not name: elements with a test id, ids in main, and elements
@@ -24,7 +27,8 @@
 // --wait-for "<role>=<name>" waits, after the load, until that element shows: for a page whose content arrives later
 // (a table behind a progress bar), so the snapshot is of the page a user reads.
 // --consent "<button>" answers a cookie dialog first, with the button the user picked (the least consent, such as
-// "Only necessary cookies"), when the page shows one. --storage-state loads a logged-in state the user saved.
+// "Only necessary cookies"), when the page shows one. --storage-state loads a logged-in state the user saved. --origin
+// <url> names one more origin pages may open on; repeat it for each.
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -51,12 +55,14 @@ if (
 	!start ||
 	(command === "reveal" && options("click").length === 0)
 ) {
-	console.error("usage: map.mjs crawl <url> [--depth 2] [--limit 40] [--storage-state <file>]");
+	console.error("usage: map.mjs crawl <url> [--depth 2] [--limit 40] [--storage-state <file>] [--origin <url>]");
 	console.error('       map.mjs snapshot <url> [--out <dir>] [--consent "<button>"] [--wait-for "<role>=<name>"]');
 	console.error('       map.mjs reveal <url> --click "<role>=<name>" [--click …] [--out <dir>] [--consent "<button>"]');
 	process.exit(2);
 }
 const origin = new URL(start).origin;
+/** The origins the user named: pages open only on these. */
+const origins = new Set([origin, ...options("origin").map((url) => new URL(url).origin)]);
 const storageState = option("storage-state", undefined);
 const consent = option("consent", undefined);
 const waitFor = option("wait-for", undefined);
@@ -124,12 +130,54 @@ let exitCode = 0;
 
 // nothing that sends data reaches the site: every request but GET and HEAD is aborted, and listed at the end
 const aborted = [];
+const notOpened = []; // the pages not opened: on an origin not named, or in a new window
+let lastNotOpened; // the page not opened last; cleared before each navigation the script starts
+/** Records a page not opened, and why. */
+const notOpen = (url, why) => {
+	lastNotOpened = `${url.slice(0, 120)}: ${why}`;
+	notOpened.push(lastNotOpened);
+};
 await context.route("**/*", (route) => {
 	const request = route.request();
-	if (["GET", "HEAD"].includes(request.method())) return route.continue();
-	aborted.push(`${request.method()} ${request.url().slice(0, 120)}`);
-	return route.abort();
+	if (!["GET", "HEAD"].includes(request.method())) {
+		aborted.push(`${request.method()} ${request.url().slice(0, 120)}`);
+		return route.abort();
+	}
+	if (request.isNavigationRequest()) {
+		let thisPage;
+		try {
+			thisPage = request.frame().page() === page;
+		} catch {
+			thisPage = false; // a new window's first request comes before its frame
+		}
+		// "aborted" leaves the page where it was; another error would show an error page instead
+		if (!thisPage) {
+			notOpen(request.url(), "opens a new window");
+			return route.abort("aborted");
+		}
+	}
+	return route.continue();
 });
+
+// and no page opens on an origin the user did not name. Playwright routes a navigation's first request, not the
+// redirects the browser then follows, so the page's own documents are checked in the browser, through Chromium's
+// DevTools protocol, which pauses each of them, every redirect included, before it is sent (and leaves TLS to Chromium:
+// a check made from Node would refuse a certificate chain the browser completes itself).
+const cdp = await context.newCDPSession(page);
+const { frameTree } = await cdp.send("Page.getFrameTree");
+cdp.on("Fetch.requestPaused", ({ requestId, request, frameId, redirectedRequestId }) => {
+	const named = frameId !== frameTree.frame.id || origins.has(new URL(request.url).origin);
+	if (!named) {
+		const from = redirectedRequestId ? "a redirect " : "";
+		notOpen(request.url, `${from}leads to ${new URL(request.url).origin}, an origin not named`);
+	}
+	// the request can be gone by then: nothing is left to continue or abort
+	const reply = named
+		? ["Fetch.continueRequest", { requestId }]
+		: ["Fetch.failRequest", { requestId, errorReason: "Aborted" }];
+	cdp.send(...reply).catch(() => {});
+});
+await cdp.send("Fetch.enable", { patterns: [{ urlPattern: "*", resourceType: "Document", requestStage: "Request" }] });
 
 /** A file name for a page: its path, readable. */
 const slugOf = (url) =>
@@ -137,7 +185,12 @@ const slugOf = (url) =>
 
 /** Opens a page, waits for its load, and answers its cookie dialog with the user's button when one shows. */
 async function open(url) {
-	await page.goto(url, { waitUntil: "load" });
+	lastNotOpened = undefined;
+	try {
+		await page.goto(url, { waitUntil: "load" });
+	} catch (error) {
+		throw lastNotOpened ? new Error(`not opened: ${lastNotOpened} (name it with --origin to map it)`) : error;
+	}
 	if (waitFor !== undefined) {
 		const [role, ...name] = waitFor.split("=");
 		await page
@@ -174,28 +227,31 @@ try {
 		const depth = Number(option("depth", "2"));
 		const limit = Number(option("limit", "40"));
 		const seen = new Map(); // url without hash -> { title, depth } or { error }
+		const elsewhere = new Map(); // a link to another origin -> the page it was found on
 		let queue = [[new URL(start).href.replace(/#.*$/, ""), 0]];
 		while (queue.length > 0 && seen.size < limit) {
 			const next = [];
 			for (const [url, level] of queue) {
 				if (seen.has(url) || seen.size >= limit) continue;
+				lastNotOpened = undefined;
 				try {
 					const response = await page.goto(url, { waitUntil: "load" });
-					if (new URL(page.url()).origin !== origin) {
-						seen.set(url, { error: `left the origin for ${new URL(page.url()).origin}` });
-						continue;
-					}
 					seen.set(url, { title: await page.title(), status: response?.status() });
 					if (level >= depth) continue;
 					const links = await page.$$eval("a[href]", (anchors) => anchors.map((anchor) => anchor.href));
 					for (const link of links) {
 						const target = new URL(link);
-						if (target.origin !== origin || !/^https?:$/.test(target.protocol)) continue;
+						if (!/^https?:$/.test(target.protocol)) continue;
+						if (target.origin !== origin) {
+							if (!elsewhere.has(target.href)) elsewhere.set(target.href, new URL(url).pathname);
+							continue;
+						}
 						target.hash = "";
 						if (!seen.has(target.href)) next.push([target.href, level + 1]);
 					}
 				} catch (error) {
-					seen.set(url, { error: String(error.message ?? error).split("\n")[0] });
+					const why = lastNotOpened ? `not opened: ${lastNotOpened}` : String(error.message ?? error).split("\n")[0];
+					seen.set(url, { error: why });
 				}
 			}
 			queue = next;
@@ -220,6 +276,10 @@ try {
 					: "";
 			console.log(`${pattern}  ${what}${pattern === first.path ? "" : ` from ${first.path}`}${others}`);
 		}
+		const links = [...elsewhere].map(([link, from]) => `${link}  (on ${from})`);
+		console.log(
+			`\n# Links to other origins, listed, not opened (${links.length}${links.length > 40 ? ", the first 40" : ""})\n${links.slice(0, 40).join("\n") || "(none)"}`,
+		);
 	} else if (command === "snapshot") {
 		await open(start);
 		console.log(`# ${page.url()}  ${await page.title()}\n`);
@@ -277,6 +337,7 @@ try {
 				continue;
 			}
 			const url = page.url();
+			lastNotOpened = undefined;
 			try {
 				await element.click({ timeout: 5_000 });
 			} catch (error) {
@@ -289,6 +350,10 @@ try {
 			await page.waitForLoadState("load");
 			// a mapping tool, not a test: let what the click starts show before the snapshot
 			await page.waitForTimeout(500);
+			if (lastNotOpened !== undefined) {
+				console.log(`not opened: ${lastNotOpened}`);
+				continue;
+			}
 			const navigated = page.url() !== url;
 			console.log(navigated ? `navigated to ${page.url()}  ${await page.title()}` : "the URL did not change");
 			const after = await save(`${slugOf(url)}.click-${index + 1}`);
@@ -306,6 +371,9 @@ try {
 	}
 	if (aborted.length > 0) {
 		console.log(`\n# Aborted (every request but GET and HEAD): ${aborted.length}\n${aborted.slice(0, 20).join("\n")}`);
+	}
+	if (notOpened.length > 0) {
+		console.log(`\n# Not opened: ${notOpened.length}\n${notOpened.slice(0, 20).join("\n")}`);
 	}
 } catch (error) {
 	console.error(`map.mjs: ${String(error.message ?? error).split("\n")[0]}`);

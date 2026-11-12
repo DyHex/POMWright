@@ -8,7 +8,8 @@ description: "An agent maps the pages of a running site that you pick, and gener
 From a running site to page code your tests can use. You name the origin and pick the pages; the agent reads each page
 as a user meets it, designs its locator paths, generates the files, and checks every path against the live page. It
 only reads and reveals: it clicks only what you confirmed, to open menus, tabs and the like, never types or submits,
-and aborts every request but `GET` and `HEAD` while it maps.
+and aborts every request but `GET` and `HEAD` while it maps. It opens pages only on the origins you named, and checks
+where a redirect leads before following it.
 
 ## When to use it
 

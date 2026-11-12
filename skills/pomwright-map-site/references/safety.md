@@ -4,7 +4,11 @@ Mapping opens a real site in a real browser. It reads, and it clicks only to rev
 sends data. These rules hold for every route: the shipped `scripts/map.mjs`, `playwright-cli`, or Playwright MCP.
 
 - **Only the origins the user named.** Ask for them before the first navigation; a link to another origin is listed,
-  never opened. Several origins (an app and its identity provider) are each named by the user.
+  never opened. Several origins (an app and its identity provider) are each named by the user. `map.mjs` opens pages
+  only on the start URL's origin and each `--origin` the user named, checked in the browser before each request is
+  sent, a redirect's included: a page, a redirect or a click that leads elsewhere is listed as not opened, with its
+  origin. With `playwright-cli` or MCP, read where a link leads before clicking it, and stop when a page lands on an
+  origin not named.
 - **Nothing that sends data.** Every request but `GET` and `HEAD` is aborted while mapping, so a click that would
   submit, buy, add, delete or send reaches nothing (third-party tracking is aborted with it). `map.mjs` does this in
   every command and lists what it aborted. With `playwright-cli` or MCP, set the same up before the first click, with

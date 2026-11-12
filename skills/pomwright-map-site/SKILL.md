@@ -60,8 +60,10 @@ states it could not reach in your reply. Mapping goes ahead with the script eith
    repository or one the user can point to. The project's `POMWRIGHT.md` holds its decisions; without one, the
    `pomwright` skill writes it first, its questions in the same message. Confirm before the first navigation.
 2. **Crawl** from the project's root:
-   `node <this skill>/scripts/map.mjs crawl https://shop.example/ --depth 2 --limit 40`. It prints the pages found on
-   the origin, grouped by path pattern (`/orders/[id]`), with their titles. Show the list; **the user picks the pages**.
+   `node <this skill>/scripts/map.mjs crawl https://shop.example/ --depth 2 --limit 40`, with `--origin <url>` for each
+   other origin the user named (every command takes it). It prints the pages found on the origin, grouped by path
+   pattern (`/orders/[id]`), with their titles, and the links to other origins, not opened; a page that redirects to an
+   origin not named is listed as not opened. Show the list; **the user picks the pages**.
 3. **Read each picked page three ways**:
    `node <this skill>/scripts/map.mjs snapshot <url> --consent "<button>"`, with the cookie dialog's least-consent
    button the user agreed to, and `--wait-for "<role>=<name>"` for a page whose content arrives after it loads. It
@@ -73,7 +75,8 @@ states it could not reach in your reply. Mapping goes ahead with the script eith
 4. **Reveal what a user can open.** List the controls that change what the page shows: menus, tabs, accordions,
    "show more", a choice between options (an age group, a plan type), the cookie dialog. Confirm them with the user,
    then `node <this skill>/scripts/map.mjs reveal <url> --click "<role>=<name>" …`: for each it says whether the URL
-   changed and what appeared, and goes back. A choice that leads to another URL is a page of its own: the same template
+   changed and what appeared, and goes back; a click that leads to an origin not named (a log-in button that sends to
+   an identity provider) is not opened, and says where it leads. A choice that leads to another URL is a page of its own: the same template
    at several URLs is one page object with a RegExp path. A click another element intercepts is a fact to report, not
    one to force.
 5. **Shared parts.** What several pages have (header, menus, footer, the cookie dialog) is registered once, in common
