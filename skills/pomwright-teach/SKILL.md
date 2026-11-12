@@ -23,6 +23,8 @@ one small thing per lesson, and make every lesson end in something the learner d
   [dyhex.github.io/POMWright](https://dyhex.github.io/POMWright/docs/installation/); exact signatures and messages from
   the workspace's installed declarations, `node_modules/pomwright/dist/index.d.ts`.
 - **What Playwright does**: playwright.dev.
+- A convention a lesson teaches (how a segment is named, the shape of page code, where a check lives) is quoted from
+  the workspace's `POMWRIGHT.md`, not paraphrased, so the lesson says exactly what the file decides.
 - Every claim in a lesson links its source. Every POMWright API a lesson or exercise uses is looked up in the
   installed `index.d.ts` before the lesson is written. Every example and every exercise has been run in the workspace
   before the learner sees it. Every unit in the learner's `CURRICULUM.md` names its sources. If the `pomwright` skill
@@ -39,12 +41,13 @@ they know of Playwright and TypeScript); the way in: **getting started** (the fu
 course**, or **a focused track** on one part they name; the shape of their page code (`PageObject` subclasses, an own
 class over a registry, functions, or fixtures only) and which of `@step`, `SessionStorage` and the `log` fixture they
 want, the defaults stated so "the defaults" is an answer; where to create the workspace; and whether you may install
-`@playwright/test` and `pomwright` there. Then set it up:
+`@playwright/test`, `pomwright` and TypeScript there. Then set it up:
 
-1. Create the folder, `npm init -y`, then `npm install --save-dev @playwright/test pomwright` and
-   `npx playwright install chromium`.
-2. Copy this skill's `assets/practice-app/` to `practice-app/` and `assets/workspace/playwright.config.ts` to the
-   workspace root: the config starts the practice shop for every exercise run.
+1. Create the folder, `npm init -y`, then `npm install --save-dev @playwright/test pomwright typescript @types/node`
+   and `npx playwright install chromium`.
+2. Copy this skill's `assets/practice-app/` to `practice-app/`, and `assets/workspace/playwright.config.ts` and
+   `assets/workspace/tsconfig.json` to the workspace root: the config starts the practice shop for every exercise run,
+   and the tsconfig lets `npx tsc --noEmit` check every exercise's types first, which Playwright's runner does not.
 3. Check it: `node practice-app/server.mjs` serves `http://localhost:4173`; stop it again.
 4. Write `MISSION.md` and the workspace's `POMWRIGHT.md` (the `pomwright` skill's template, with the learner's shape in
    *Page code* and parts in *POMWright's parts*), place the learner, and build `CURRICULUM.md` from
@@ -69,7 +72,8 @@ for every part of POMWright.
 4. **Write the exercise** ([references/exercises.md](references/exercises.md)): solve it first, run it green, then
    remove the solution and give the learner the starter and the command that checks it.
 5. **Give feedback** on the learner's attempt: run it, and read their code against the `pomwright` skill. A passing
-   exercise written against the rules is the win; a passing one that is not gets one concrete improvement.
+   exercise written against the rules is the win; a passing one that is not gets one concrete improvement. Any
+   improvement you suggest meets the `pomwright` skill's rules as the learner's code must: check it there first.
 6. **Record**: a learning record when the learner showed they can do something, said what they already know, or
    corrected a misconception; the unit's status and depth in `CURRICULUM.md`; a reference sheet when a lesson produced
    something worth looking up later. Getting started ends by showing the learner `CURRICULUM.md` as their course map.
@@ -95,4 +99,6 @@ anywhere else. Exercises stay in the workspace.
 ## What this skill does not do
 
 It does not write the learner's work for them: an exercise is solved by the learner, and a lesson explains rather
-than hands over finished code for their project. It does not change anything outside the workspace.
+than hands over finished code for their project. It does not change an exercise the learner has finished: a lesson
+that needs a new structure builds it in a folder of its own, and asks before touching the learner's code. It does not
+change anything outside the workspace.

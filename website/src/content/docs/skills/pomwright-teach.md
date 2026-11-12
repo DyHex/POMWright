@@ -24,8 +24,8 @@ to learn, for example "page objects with locator paths, for our checkout tests".
 
 ## How it works
 
-1. **The workspace.** The first session asks where to create it (outside your work projects), and asks before
-   installing `@playwright/test` and `pomwright` there. It copies in the practice shop: a header, a newsletter form, a
+1. **The workspace.** The first session asks where to create it (outside your work projects), and asks before installing
+   `@playwright/test`, `pomwright` and TypeScript there. It copies in the practice shop: a header, a newsletter form, a
    cookie dialog, product cards, a cart kept in session storage, a payment form in an iframe and a login.
 2. **Your mission.** In one message it asks why you want to learn POMWright, what you will build and what you know of
    Playwright and TypeScript, the way in, and your shape and parts, then places you with a short check and writes your

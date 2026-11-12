@@ -62,12 +62,17 @@ shape; five units change:
 | 7 | the other three | `PageObject` and the other two | `PageObject` and the other two | `PageObject` and the other two |
 | 9 | `navigation.goto()`, `expectThisPage()`, `expectAnotherPage()` | `page.goto(new URL(path, env.shopUrl).href)`, `expect(page).toHaveURL` | the same | the same |
 
+In every shape, a page's own module includes the common paths in its union (`Paths = CommonPaths | …`) and takes
+`LocatorRegistry<Paths>`, as the `pomwright` skill's templates write it; the two-signature form (`ExternalPaths`) is
+for a module others compose, such as the header or the common module (`guides/locator-modules.md`).
+
 Every exercise is written in the learner's shape and parts (`references/exercises.md`).
 
 ## Getting started
 
-The fundamentals in one sitting, about two to three hours for a tester who knows Playwright: five lessons, each with
-its exercise, in the learner's shape.
+The fundamentals in one sitting, about two to three hours for a tester who knows Playwright: five lessons in the
+learner's shape, each about 20 minutes to read and 10 for its exercise, so each teaches its core and leaves the rest to
+the full course.
 
 1. **A first page** (units 1 and 2): register paths named `kind@which` with the preferred locators, resolve a chain,
    reach the page.

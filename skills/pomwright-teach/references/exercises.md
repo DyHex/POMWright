@@ -13,10 +13,14 @@ and passes, against the running practice shop, once they have.
 
 `exercises/NNNN-slug/`, with:
 
-- `TASK.md`: what to do, in two to five sentences, and the command that checks it;
+- `TASK.md`: what to do, in two to five sentences, and the command that checks it (`npx tsc --noEmit && npx playwright
+  test exercises/NNNN-slug`);
 - the starter files: page code or a locator module with `// TODO` where the learner writes, and whatever the task
   builds on, finished;
 - `NNNN-slug.spec.ts`: the check, which uses the learner's page code as a test would.
+
+An exercise has a folder of its own and never edits a finished one: what it builds on from an earlier exercise is
+copied in, finished, so the learner's earlier work stays as they wrote it.
 
 An exercise is written in the learner's shape and parts, as the workspace's `POMWRIGHT.md` records them: the starter
 is a page object, a class, a function or a fixture, as `references/curriculum.md` shows per shape, and `@step`,
@@ -87,5 +91,6 @@ writing a query that finds one card, turning a test into page-object steps, seed
 
 Run the spec, then read the code. A pass written to the rules (the order of preference, `kind@which` names, the chain
 as short as unique, `@step` methods where the learner chose them, data from the fixture) is the win to record. A pass
-that breaks a rule gets one improvement, the most important, shown in the right form, and a rerun. A failure gets a
+that breaks a rule gets one improvement, the most important, shown in the right form (itself held to the `pomwright`
+skill's rules, checked there first), and a rerun. A failure gets a
 hint that points at the place, not the answer, then a bigger one if needed.
