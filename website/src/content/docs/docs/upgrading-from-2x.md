@@ -116,6 +116,7 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"shell.frame@payment" | "shell.frame@payment.button@pay">;
 // ---cut---
 registry.add("shell.frame@payment").frameLocator("iframe").nth(1);
+
 registry.add("shell.frame@payment.button@pay").getByRole("button", { name: "Pay" });
 // 2.x:   the nth(1) was dropped
 // 3.x: locator('iframe').nth(1).contentFrame().getByRole('button', { name: 'Pay' })
@@ -268,6 +269,7 @@ declare const registry: LocatorRegistry<"table" | "table.row@first" | "table.row
 registry.add("table").locator("table");
 const row = registry.createReusable.locator("tr");
 registry.add("table.row@first", { reuse: row.nth(0) });
+
 registry.add("table.row@last", { reuse: row.nth("last") });
 // 2.x:   table.row@last resolved to locator('table').locator('tr').first().last(), the first row
 // 3.x: table.row@last resolves to locator('table').locator('tr').last()
@@ -358,6 +360,7 @@ locator call if that comes earlier. Page objects need no change, with three cons
     }
     protected defineLocators(): void {
       this.add("main").getByRole("main");
+
       this.add("main").getByRole("main");
     }
   }
@@ -403,6 +406,7 @@ export class DashboardPage extends PageObject<"main" | "main.spinner"> {
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
+
     this.add("main.spinner").getByRole("progressbar");
   }
 

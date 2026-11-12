@@ -27,8 +27,11 @@ export type Paths = "main" | "main.list" | "main.list.item" | "main.button@save"
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").getByRole("main");
+
   registry.add("main.list").locator("ul").filter({ hasText: "Orders" });
+
   registry.add("main.list.item").locator("li").nth(0);
+
   registry.add("main.button@save").getByRole("button", { name: "Save", exact: true });
 }
 ```
@@ -163,7 +166,9 @@ type Paths = "main" | "main.frame@payment" | "main.frame@payment.button@confirm"
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.add("main").getByRole("main");
+
 registry.add("main.frame@payment").frameLocator("iframe#payment");
+
 registry.add("main.frame@payment.button@confirm").getByRole("button", { name: "Confirm" });
 
 registry
@@ -212,7 +217,9 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"main" | "main.product@lamp" | "main.product@lamp.button@wishlist">;
 // ---cut---
 registry.add("main").getByRole("main");
+
 registry.add("main.product@lamp").getByRole("article", { name: "Desk lamp" });
+
 registry.add("main.product@lamp.button@wishlist").getByRole("button", { name: "Add to wishlist" });
 
 const wishlistButton = registry.getLocatorSchema("main.product@lamp.button@wishlist");

@@ -34,9 +34,9 @@ const ordersStorage = { orders: json<Order[]>() };
 type Paths =
   | "main"
   | "main.table@orders"
-  | "main.table@orders.row"
-  | "main.table@orders.row.button@cancel"
-  | "main.table@orders.row.cell@status";
+  | "main.table@orders.rows"
+  | "main.table@orders.rows.button@cancel"
+  | "main.table@orders.rows.cell@status";
 
 export class OrdersPage extends PageObject<Paths, { storage: typeof ordersStorage }> {
   constructor(page: Page) {
@@ -45,17 +45,21 @@ export class OrdersPage extends PageObject<Paths, { storage: typeof ordersStorag
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
+
     this.add("main.table@orders").getByRole("table", { name: "Orders" });
-    this.add("main.table@orders.row").getByRole("row");
-    this.add("main.table@orders.row.button@cancel").getByRole("button", { name: "Cancel" });
-    this.add("main.table@orders.row.cell@status").getByTestId("order-status");
+
+    this.add("main.table@orders.rows").getByRole("row");
+
+    this.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
+
+    this.add("main.table@orders.rows.cell@status").getByTestId("order-status");
   }
 
   @step()
   async cancel(options: { order: string }) {
     const { order } = options;
-    await this.getLocatorSchema("main.table@orders.row.button@cancel")
-      .filter("main.table@orders.row", { hasText: order })
+    await this.getLocatorSchema("main.table@orders.rows.button@cancel")
+      .filter("main.table@orders.rows", { hasText: order })
       .getNestedLocator()
       .click();
   }
@@ -63,8 +67,8 @@ export class OrdersPage extends PageObject<Paths, { storage: typeof ordersStorag
   @step()
   async expectStatus(options: { order: string; status: OrderStatus }) {
     const { order, status } = options;
-    const cell = this.getLocatorSchema("main.table@orders.row.cell@status")
-      .filter("main.table@orders.row", { hasText: order })
+    const cell = this.getLocatorSchema("main.table@orders.rows.cell@status")
+      .filter("main.table@orders.rows", { hasText: order })
       .getNestedLocator();
     await expect(cell).toHaveText(status);
   }
@@ -104,7 +108,7 @@ test("a customer cancels an open order", async ({ ordersPage, log }) => {
 ```
 
 Canceling `ORD-1042` clicks this locator, which the report and the trace viewer show by its path,
-`main.table@orders.row.button@cancel`:
+`main.table@orders.rows.button@cancel`:
 
 ```text
 getByRole('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })

@@ -39,16 +39,27 @@ export type Paths =
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").getByRole("main");
+
   registry.add("main.button@pay").getByRole("button", { name: "Pay", exact: true });
+
   registry.add("main.text@total").getByText("Total", { exact: true });
+
   registry.add("main.input@email").getByLabel("Email");
+
   registry.add("main.input@search").getByPlaceholder("Search");
+
   registry.add("main.image@card").getByAltText("Card logo");
+
   registry.add("main.icon@help").getByTitle("Help");
+
   registry.add("main.list@items").locator("ul", { hasText: "Items" });
+
   registry.add("main.frame@payment").frameLocator("iframe#payment");
+
   registry.add("main.frame@payment.button@confirm").getByRole("button", { name: "Confirm" });
+
   registry.add("main.rows@cart").getByTestId("cart-row");
+
   registry.add("main.panel@summary").getById("summary");
 }
 ```

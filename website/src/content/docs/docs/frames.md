@@ -31,9 +31,13 @@ export type Paths =
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("checkout").getByRole("main");
+
   registry.add("checkout.section@payment").getByRole("region", { name: "Payment" });
+
   registry.add("checkout.section@payment.frame").frameLocator("iframe");
+
   registry.add("checkout.section@payment.frame.input@cardNumber").getByLabel("Card number");
+
   registry.add("checkout.section@payment.frame.button@pay").getByRole("button", { name: "Pay" });
 }
 ```
@@ -77,7 +81,9 @@ type Paths = "widgets" | "widgets.frame@second" | "widgets.frame@second.button@g
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.add("widgets").locator(".widgets");
+
 registry.add("widgets.frame@second").frameLocator("iframe").nth(1);
+
 registry.add("widgets.frame@second.button@go").getByRole("button", { name: "Go" });
 // locator('.widgets').locator('iframe').nth(1).contentFrame().getByRole('button', { name: 'Go' })
 
@@ -106,6 +112,7 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"anyFrame" | "anyFrame.button@accept">;
 // ---cut---
 registry.add("anyFrame").frameLocator();
+
 registry.add("anyFrame.button@accept").getByRole("button", { name: "Accept" });
 
 await registry.getNestedLocator("anyFrame.button@accept").click();

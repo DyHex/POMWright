@@ -34,8 +34,9 @@ decide follows the skill's defaults.
 - **XPath**: never.
 - **Segment names**: `kind@which`. The kind says what the element does, in a word that fits its like: `input` for any
   field, `dropdown` for a select or combobox, `button`, `link`, `checkbox`, `radio`, `dialog`, `header`, `section`,
-  `text`. `@which` tells one of several alike apart in a user's words, what it does or is for (`button@login`, not
-  `button@submit`); none for the only one of its kind (`main.status`), nor for rows and cards picked by their data.
+  `text`. `@which` names what the locator picks by, in a user's words, what it does or is for (`button@login`, not
+  `button@submit`; `table@orders` for the table named "Orders"); none for one found without a name (`main.status`),
+  nor for rows and cards picked by their data.
 - **Plural and singular**: by what a segment matches in its scope: `main.list@products.cards` for several,
   `main.list@products.card` for one.
 - **One of several**: a query where it is used; a path of its own when many tests use it, named by what it matches

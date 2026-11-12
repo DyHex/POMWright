@@ -27,7 +27,7 @@ type Paths =
   | "main.form@login.button@login";
 ```
 
-- A segment names what the element is and, where several alike share its scope, which one, `kind@which`: `form@login`,
+- A segment names what the element is and, where its locator picks it by a name, which one, `kind@which`: `form@login`,
   `input@email`, `button@login`. The `@` and the names are a convention the project's `POMWRIGHT.md` records, not
   syntax (`guides/choosing-locators-and-paths.md`). A path that matches several elements is plural:
   `main.list@orders.items`.

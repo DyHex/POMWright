@@ -25,6 +25,12 @@ Each path's ancestors are its prefixes: `main` and `main.form@login` are ancesto
 A segment is any text without a dot or whitespace. Names that say what and which (`form@login`, `input@email`) keep
 paths readable in reports; the `@` is a convention, not syntax.
 
+These docs name paths by one convention, which a project may replace with its own. A segment is `kind@which`: the kind
+says what the element does (`input` for any field, `dropdown` for a select or a combobox, `button`, `link`, `section`),
+and `@which` says what its locator picks it by, in a user's words (`button@login` for the button that reads "Log in").
+An element found without a name, the only one of its kind, has no `@which` (`main`). A segment that matches several
+elements in its scope is plural (`main.table@orders.rows`), and one that matches one is singular.
+
 The union is the list of everything the registry can hold. TypeScript checks every path you pass against it, and
 offers the paths as completions:
 
@@ -84,6 +90,7 @@ export class EditorPage extends PageObject<Paths> {
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
+
     this.add("main.toolbar").getByRole("toolbar");
     for (const action of actions) {
       this.add(`main.toolbar.button@${action}`).getByRole("button", { name: action });
@@ -137,7 +144,7 @@ out of the chain. See [Resolving locators](/POMWright/docs/resolving-locators/#s
 
 A path says where an element is, so when the page's structure changes, the paths follow, and a chain through the old
 structure finds nothing. Each common change takes a small edit in one place, and TypeScript and the registry's check
-point at anything missed. The examples start from an order section whose subscriptions sit in a Subscriptions region:
+point at anything missed. The examples start from an order section whose subscriptions sit in a Subscriptions section:
 
 ```ts
 import type { Page } from "@playwright/test";
@@ -148,22 +155,26 @@ declare const page: Page;
 type Paths =
   | "main"
   | "main.section@order"
-  | "main.section@order.region@subscriptions"
-  | "main.section@order.region@subscriptions.region@subscription"
-  | "main.section@order.region@subscriptions.region@subscription.button@edit";
+  | "main.section@order.section@subscriptions"
+  | "main.section@order.section@subscriptions.section@subscription"
+  | "main.section@order.section@subscriptions.section@subscription.button@edit";
 
 const { add } = createRegistryWithAccessors<Paths>(page);
 
 add("main").getByRole("main");
+
 add("main.section@order").getByRole("region", { name: "Order" });
-add("main.section@order.region@subscriptions").getByRole("region", { name: "Subscriptions" });
-add("main.section@order.region@subscriptions.region@subscription").getByRole("region", { name: "Mobile subscription" });
-add("main.section@order.region@subscriptions.region@subscription.button@edit").getByRole("button", { name: "Edit" });
+
+add("main.section@order.section@subscriptions").getByRole("region", { name: "Subscriptions" });
+
+add("main.section@order.section@subscriptions.section@subscription").getByRole("region", { name: "Mobile subscription" });
+
+add("main.section@order.section@subscriptions.section@subscription.button@edit").getByRole("button", { name: "Edit" });
 ```
 
 ### A wrapper is removed
 
-The page drops the Subscriptions region, and the subscriptions now sit in the order section itself. Two edits bring the
+The page drops the Subscriptions section, and the subscriptions now sit in the order section itself. Two edits bring the
 chains back:
 
 - **Delete the segment's `add(…)`, and nothing else.** A segment without a locator is left out of the chain, so every
@@ -177,41 +188,41 @@ chains back:
   ancestor for every path below it:
 
   ```text
-  "main.section@order.region@subscriptions.region@subscription": strictChains requires every ancestor to be registered; "main.section@order.region@subscriptions" is not.
+  "main.section@order.section@subscriptions.section@subscription": strictChains requires every ancestor to be registered; "main.section@order.section@subscriptions" is not.
   ```
 
 - **Rename the paths below it**, so that the names describe the page again, with your editor's find and replace across
   the project:
 
-  - find `main.section@order.region@subscriptions.`
+  - find `main.section@order.section@subscriptions.`
   - replace with `main.section@order.`
 
   The closing dot limits the replace to the paths below the segment: the segment's own path does not contain it, and
-  neither does a sibling such as `region@subscriptionsArchive`. Then remove the segment itself: its member of `Paths`
+  neither does a sibling such as `section@subscriptionsArchive`. Then remove the segment itself: its member of `Paths`
   and its `add(…)`. Anything else that still names it, a `has`, a `skip`, or an `update` or `filter` sub-path, becomes
-  a compile error, to decide case by case. With regular expressions turned on, ``(["'`])main\.section@order\.region@subscriptions\.``
+  a compile error, to decide case by case. With regular expressions turned on, ``(["'`])main\.section@order\.section@subscriptions\.``
   replaced with `$1main.section@order.` does the same, and touches only a path in quotes.
 
 :::note
 Keep the dot. Without it, the replace also renames the segment's own path, and
-`skip("main.section@order.region@subscriptions")` becomes `skip("main.section@order")`, which compiles and leaves the
+`skip("main.section@order.section@subscriptions")` becomes `skip("main.section@order")`, which compiles and leaves the
 wrong segment out.
 :::
 
 ### A wrapper is added
 
-A Billing region now holds the subscription. The old chains still find it, since each locator of a chain is looked for
+A Billing section now holds the subscription. The old chains still find it, since each locator of a chain is looked for
 anywhere inside the previous one, not only directly inside it. To scope them to Billing, insert the segment with two
 replaces, one for the paths below the subscription and one for its own path, which is renamed too, since the
 subscription still exists:
 
-- `main.section@order.region@subscription.` with `main.section@order.region@billing.region@subscription.`
-- `main.section@order.region@subscription"` with `main.section@order.region@billing.region@subscription"`
+- `main.section@order.section@subscription.` with `main.section@order.section@billing.section@subscription.`
+- `main.section@order.section@subscription"` with `main.section@order.section@billing.section@subscription"`
 
-Then register `main.section@order.region@billing`. The dot and the quote keep both replaces off
-`region@subscriptions`; a path in single quotes or backticks takes its own closing quote. As one regular expression,
-``(["'`])main\.section@order\.region@subscription(?=[.'"`])`` replaced with
-`$1main.section@order.region@billing.region@subscription` covers both, in any quote style.
+Then register `main.section@order.section@billing`. The dot and the quote keep both replaces off
+`section@subscriptions`; a path in single quotes or backticks takes its own closing quote. As one regular expression,
+``(["'`])main\.section@order\.section@subscription(?=[.'"`])`` replaced with
+`$1main.section@order.section@billing.section@subscription` covers both, in any quote style.
 
 ### An element moves, or its locator changes
 
@@ -222,27 +233,27 @@ follows.
 ### One path gets a new name
 
 Rename a path and every path below it with one find and replace, regular expressions on. To rename `main.list` to
-`main.items`:
+`main.list@orders`:
 
 ```text
 find:     (["'`])main\.list(["'`.])
-replace:  $1main.items$2
+replace:  $1main.list@orders$2
 ```
 
 It changes the path wherever it is written, in any quotes: the members of `Paths` (a template member with a literal
 prefix, `` `main.list.item@${string}` ``, too), `add(…)`, resolutions, sub-paths, `reuse`, and `has` and `hasNot`
 paths. It leaves alone a sibling that starts the same (`main.listArchive`, `main.list@open`) and another path that
 contains the text (`shell.main.list`). Without regular expressions, two replacements do it for double-quoted paths:
-`"main.list"` with `"main.items"`, then `"main.list.` with `"main.items.`. A path composed from a variable, such as
-`` `${base}.list.item` ``, is not found; TypeScript flags it once `Paths` has changed.
+`"main.list"` with `"main.list@orders"`, then `"main.list.` with `"main.list@orders.`. A path composed from a
+variable, such as `` `${base}.list.items` ``, is not found; TypeScript flags it once `Paths` has changed.
 
 :::note
 Rename the paths below it too, not the exact path alone. A path left under the old segment still compiles, since the
-segment is then a name that groups paths, and it resolves without that segment's locator: `main.list.item` becomes
+segment is then a name that groups paths, and it resolves without that segment's locator: `main.list.items` becomes
 `getByRole('main').getByRole('listitem')`. Only [`strictChains: true`](/POMWright/docs/verifying-registries/) reports it:
 
 ```text
-"main.list.item": strictChains requires every ancestor to be registered; "main.list" is not.
+"main.list.items": strictChains requires every ancestor to be registered; "main.list" is not.
 ```
 :::
 
@@ -262,14 +273,14 @@ import type { LocatorRegistry } from "pomwright";
 type Paths =
   | "main"
   | "main.section@order"
-  | "main.section@order.region@subscriptions"
-  | "main.section@order.region@subscriptions.region@subscription"
-  | "main.section@order.region@subscriptions.region@subscription.button@edit";
+  | "main.section@order.section@subscriptions"
+  | "main.section@order.section@subscriptions.section@subscription"
+  | "main.section@order.section@subscriptions.section@subscription.button@edit";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 const edit = registry
-  .getLocatorSchema("main.section@order.region@subscriptions.region@subscription.button@edit")
-  .skip("main.section@order.region@subscriptions")
+  .getLocatorSchema("main.section@order.section@subscriptions.section@subscription.button@edit")
+  .skip("main.section@order.section@subscriptions")
   .getNestedLocator();
 ```
 
@@ -281,7 +292,7 @@ See [Queries](/POMWright/docs/queries/#leaving-an-ancestor-out-skip-and-unskip).
   sub-path of `skip`, `update` or `filter`:
 
   ```text
-  Argument of type '"main.section@order.region@subscriptions"' is not assignable to parameter of type '"main" | "main.section@order"'.
+  Argument of type '"main.section@order.section@subscriptions"' is not assignable to parameter of type '"main" | "main.section@order"'.
   ```
 
 - **The registry's check.** A `has` path that is no longer registered, or with `strictChains` an ancestor, fails the
@@ -315,6 +326,7 @@ type Paths = "main" | "main.button@save";
 const { registry, add, getNestedLocator } = createRegistryWithAccessors<Paths>(page);
 
 add("main").getByRole("main");
+
 add("main.button@save").getByRole("button", { name: "Save" });
 registry.verify();
 

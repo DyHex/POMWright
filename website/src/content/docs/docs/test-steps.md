@@ -22,7 +22,9 @@ export class LoginPage extends PageObject<Paths> {
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
+
     this.add("main.form@login").getByRole("form", { name: "Log in" });
+
     this.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
   }
 

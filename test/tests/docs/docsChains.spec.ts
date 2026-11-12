@@ -223,7 +223,7 @@ test("api/class-registrationbuilder.md", async ({ page }) => {
 		| "main.form.input@email"
 		| "main.input@search"
 		| "main.button@save"
-		| "main.row@order"
+		| "main.rows@order"
 		| "main.alert@error"
 		| "main.icon@info"
 		| "main.button@cancel"
@@ -261,7 +261,7 @@ test("api/class-registrationbuilder.md", async ({ page }) => {
 	registry.add("main.form.input@email").getByLabel("Email", { exact: true });
 	registry.add("main.input@search").getByPlaceholder("Search");
 	registry.add("main.button@save").getByRole("button", { name: "Save" });
-	registry.add("main.row@order").getByTestId("order-row");
+	registry.add("main.rows@order").getByTestId("order-row");
 	registry.add("main.alert@error").getByText(/failed/i);
 	registry.add("main.icon@info").getByTitle("More information");
 	registry.add("main.list").locator("ul.orders");
@@ -274,7 +274,7 @@ test("api/class-registrationbuilder.md", async ({ page }) => {
 	shows(chain(registry.getLocator("main.form.input@email"))).toBe("getByLabel('Email', { exact: true })");
 	shows(chain(registry.getLocator("main.input@search"))).toBe("getByPlaceholder('Search')");
 	shows(chain(registry.getLocator("main.button@save"))).toBe("getByRole('button', { name: 'Save' })");
-	shows(chain(registry.getLocator("main.row@order"))).toBe("getByTestId('order-row')");
+	shows(chain(registry.getLocator("main.rows@order"))).toBe("getByTestId('order-row')");
 	shows(chain(registry.getLocator("main.alert@error"))).toBe("getByText(/failed/i)");
 	shows(chain(registry.getLocator("main.icon@info"))).toBe("getByTitle('More information')");
 	shows(chain(registry.getLocator("main.list"))).toBe("locator('ul.orders')");
@@ -497,27 +497,29 @@ test("docs/locator-paths.md", async ({ page }) => {
 	type Paths =
 		| "main"
 		| "main.section@order"
-		| "main.section@order.region@subscriptions"
-		| "main.section@order.region@subscriptions.region@subscription"
-		| "main.section@order.region@subscriptions.region@subscription.button@edit";
+		| "main.section@order.section@subscriptions"
+		| "main.section@order.section@subscriptions.section@subscription"
+		| "main.section@order.section@subscriptions.section@subscription.button@edit";
 	const { add, getNestedLocator } = createRegistryWithAccessors<Paths>(page);
-	// "A wrapper is removed": the Subscriptions region's add(…) deleted, and nothing else
+	// "A wrapper is removed": the Subscriptions section's add(…) deleted, and nothing else
 	add("main").getByRole("main");
 	add("main.section@order").getByRole("region", { name: "Order" });
-	add("main.section@order.region@subscriptions.region@subscription").getByRole("region", {
+	add("main.section@order.section@subscriptions.section@subscription").getByRole("region", {
 		name: "Mobile subscription",
 	});
-	add("main.section@order.region@subscriptions.region@subscription.button@edit").getByRole("button", { name: "Edit" });
-	shows(chain(getNestedLocator("main.section@order.region@subscriptions.region@subscription.button@edit"))).toBe(
+	add("main.section@order.section@subscriptions.section@subscription.button@edit").getByRole("button", {
+		name: "Edit",
+	});
+	shows(chain(getNestedLocator("main.section@order.section@subscriptions.section@subscription.button@edit"))).toBe(
 		"getByRole('main').getByRole('region', { name: 'Order' }).getByRole('region', { name: 'Mobile subscription' }).getByRole('button', { name: 'Edit' })",
 	);
 
-	// "One path gets a new name": main.list renamed alone, main.list.item left on the old segment
-	const renamed = createRegistryWithAccessors<"main" | "main.items" | "main.list.item">(page).registry;
+	// "One path gets a new name": main.list renamed alone, main.list.items left on the old segment
+	const renamed = createRegistryWithAccessors<"main" | "main.list@orders" | "main.list.items">(page).registry;
 	renamed.add("main").getByRole("main");
-	renamed.add("main.items").locator("ul");
-	renamed.add("main.list.item").getByRole("listitem");
-	shows(chain(renamed.getNestedLocator("main.list.item"))).toBe("getByRole('main').getByRole('listitem')");
+	renamed.add("main.list@orders").locator("ul");
+	renamed.add("main.list.items").getByRole("listitem");
+	shows(chain(renamed.getNestedLocator("main.list.items"))).toBe("getByRole('main').getByRole('listitem')");
 });
 
 test("docs/queries.md", async ({ page }) => {
@@ -766,9 +768,9 @@ test("README.md", async ({ page }) => {
 	type Paths =
 		| "main"
 		| "main.table@orders"
-		| "main.table@orders.row"
-		| "main.table@orders.row.button@cancel"
-		| "main.table@orders.row.cell@status";
+		| "main.table@orders.rows"
+		| "main.table@orders.rows.button@cancel"
+		| "main.table@orders.rows.cell@status";
 	class OrdersPage extends PageObject<Paths> {
 		constructor(page: Page) {
 			super(page, "https://shop.example", "/orders");
@@ -776,13 +778,13 @@ test("README.md", async ({ page }) => {
 		protected defineLocators(): void {
 			this.add("main").getByRole("main");
 			this.add("main.table@orders").getByRole("table", { name: "Orders" });
-			this.add("main.table@orders.row").getByRole("row");
-			this.add("main.table@orders.row.button@cancel").getByRole("button", { name: "Cancel" });
-			this.add("main.table@orders.row.cell@status").getByTestId("order-status");
+			this.add("main.table@orders.rows").getByRole("row");
+			this.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
+			this.add("main.table@orders.rows.cell@status").getByTestId("order-status");
 		}
 		cancelButton(order: string) {
-			return this.getLocatorSchema("main.table@orders.row.button@cancel")
-				.filter("main.table@orders.row", { hasText: order })
+			return this.getLocatorSchema("main.table@orders.rows.button@cancel")
+				.filter("main.table@orders.rows", { hasText: order })
 				.getNestedLocator();
 		}
 	}
@@ -790,5 +792,5 @@ test("README.md", async ({ page }) => {
 	shows(chain(cancel)).toBe(
 		"getByRole('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })",
 	);
-	shows(cancel.description()).toBe("main.table@orders.row.button@cancel");
+	shows(cancel.description()).toBe("main.table@orders.rows.button@cancel");
 });

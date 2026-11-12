@@ -49,6 +49,7 @@ export type LocatorRegistrationPostDefinitionBuilder<
 	 * @example
 	 * ```ts
 	 * registry.add("main.list.items@open").getByRole("listitem").filter({ hasText: "Open" });
+	 *
 	 * registry.add("main.section@orders").locator("section").filter({ has: "main.section.heading@orders" });
 	 * ```
 	 */
@@ -222,6 +223,7 @@ export class LocatorRegistrationBuilder<
 	 * @example
 	 * ```ts
 	 * registry.add("main.list.items@open").getByRole("listitem").filter({ hasText: "Open" });
+	 *
 	 * registry.add("main.section@orders").locator("section").filter({ has: "main.section.heading@orders" });
 	 * ```
 	 */
@@ -648,8 +650,11 @@ export class LocatorRegistrationBuilder<
 	 * @example
 	 * ```ts
 	 * registry.add("shell.frame@payment").frameLocator("iframe#payment");
+	 *
 	 * registry.add("shell.frame@payment.button@pay").getByRole("button", { name: "Pay" });
+	 *
 	 * registry.add("anyFrame").frameLocator();
+	 *
 	 * registry.add("anyFrame.button@accept").getByRole("button", { name: "Accept" });
 	 * ```
 	 */
@@ -686,13 +691,13 @@ export class LocatorRegistrationBuilder<
 	 *
 	 * @param testId The test id: a string or a RegExp.
 	 * @returns The registration, for `filter`, `nth` and `describe` steps.
-	 * @throws When the test id is missing (from JavaScript): `getByTestId requires a testId value for "main.row@order".`
+	 * @throws When the test id is missing (from JavaScript): `getByTestId requires a testId value for "main.rows@order".`
 	 * @throws After the registration has ended, at the next call on the registry:
-	 * `getByTestId() cannot apply to "main.row@order": its registration was ended by add("…"); …`
+	 * `getByTestId() cannot apply to "main.rows@order": its registration was ended by add("…"); …`
 	 *
 	 * @example
 	 * ```ts
-	 * registry.add("main.row@order").getByTestId("order-row");
+	 * registry.add("main.rows@order").getByTestId("order-row");
 	 * ```
 	 *
 	 * @see https://dyhex.github.io/POMWright/api/class-registrationbuilder/#getbytestid
@@ -732,6 +737,7 @@ export class LocatorRegistrationBuilder<
 	 * @example
 	 * ```ts
 	 * registry.add("main.panel@settings").getById("settings.panel");
+	 *
 	 * registry.add("main.button@submit").getById(/^button\.submit\.[a-z0-9]{4}$/i);
 	 * ```
 	 */

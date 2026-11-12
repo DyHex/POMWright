@@ -76,11 +76,17 @@ export class LoginPage extends PageObject<Paths> {
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
+
     this.add("main.aside").locator("aside");
+
     this.add("main.aside.button@login").getByRole("button", { name: "Log in" });
+
     this.add("main.form@login").getByRole("form", { name: "Log in" });
+
     this.add("main.form@login.input@email").getByLabel("Email");
+
     this.add("main.form@login.input@password").getByLabel("Password");
+
     this.add("main.form@login.button@login", { reuse: "main.aside.button@login" });
   }
 

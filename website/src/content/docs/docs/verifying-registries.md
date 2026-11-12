@@ -22,8 +22,11 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"list" | "list.items" | "list.titel" | "menu" | "menu.items">;
 // ---cut---
 registry.add("list").locator("ul");
+
 registry.add("list.items").getByRole("listitem").filter({ has: "list.titel" }); // never registered
+
 registry.add("menu").locator("nav");
+
 registry.add("menu.items").locator("li").filter({ has: "menu.items" }); // refers to itself
 
 registry.verify();
@@ -84,6 +87,7 @@ declare const page: Page;
 // ---cut---
 const { registry } = createRegistryWithAccessors<"main" | "main.form.button.save">(page, { strictChains: true });
 registry.add("main").getByRole("main");
+
 registry.add("main.form.button.save").getByRole("button", { name: "Save" });
 registry.verify();
 ```

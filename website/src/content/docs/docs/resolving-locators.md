@@ -32,7 +32,9 @@ export type Paths =
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").getByRole("main");
+
   registry.add("main.form@login").getByRole("form", { name: "Log in" });
+
   registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 }
 ```
@@ -152,7 +154,9 @@ declare const registry: LocatorRegistry<
 >;
 // ---cut---
 registry.add("main").getByRole("main");
+
 registry.add("main.list@orders").getByRole("list", { name: "Orders" });
+
 registry.add("main.list@orders.items").getByRole("listitem");
 // getByRole('main').getByRole('list', { name: 'Orders' }).getByRole('listitem'): every order
 registry.add("main.list@orders.item@first", { reuse: "main.list@orders.items" }).nth("first");
@@ -199,7 +203,9 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"main" | "main.table@cart" | "main.table@cart.inputs@quantity">;
 // ---cut---
 registry.add("main").getByRole("main");
+
 registry.add("main.table@cart").getByRole("table", { name: "Cart" });
+
 registry.add("main.table@cart.inputs@quantity").getByLabel("Quantity");
 
 const quantities = ["1", "2", "5"];
@@ -225,6 +231,7 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"main.form" | "main.form.button.submit">;
 // ---cut---
 registry.add("main.form").getByRole("form", { name: "Log in" });
+
 registry.add("main.form.button.submit").getByRole("button", { name: "Log in" });
 
 registry.getNestedLocator("main.form.button.submit");

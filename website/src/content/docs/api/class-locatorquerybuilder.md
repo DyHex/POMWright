@@ -15,8 +15,11 @@ export type Paths = "main" | "main.list" | "main.list.item" | "main.button@save"
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").getByRole("main");
+
   registry.add("main.list").locator("ul").filter({ hasText: "Orders" });
+
   registry.add("main.list.item").locator("li").nth(0);
+
   registry.add("main.button@save").getByRole("button", { name: "Save", exact: true });
 }
 ```

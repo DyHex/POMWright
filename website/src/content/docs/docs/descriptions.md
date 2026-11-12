@@ -20,6 +20,7 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"main" | "main.button@login">;
 // ---cut---
 registry.add("main").getByRole("main");
+
 registry.add("main.button@login").getByRole("button", { name: "Log in" });
 
 registry.getNestedLocator("main.button@login").description(); // "main.button@login"

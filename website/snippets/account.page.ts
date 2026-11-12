@@ -10,6 +10,7 @@ export class AccountPage extends PageObject<Paths> {
 
 	protected defineLocators(): void {
 		this.add("main").getByRole("main");
+
 		this.add("main.heading").getByRole("heading", { level: 1 });
 	}
 }

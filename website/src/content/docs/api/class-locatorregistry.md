@@ -23,9 +23,13 @@ export type Paths =
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main").getByRole("main");
+
   registry.add("main.form@login").getByRole("form", { name: "Log in" });
+
   registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
+
   registry.add("main.list").locator("ul");
+
   registry.add("main.list.items").getByRole("listitem");
 }
 ```
@@ -237,6 +241,7 @@ declare const page: Page;
 // ---cut---
 const { registry } = createRegistryWithAccessors<"list" | "list.items" | "list.items.title">(page);
 registry.add("list").locator("ul");
+
 registry.add("list.items").getByRole("listitem").filter({ has: "list.items.title" });
 registry.verify();
 ```
@@ -314,6 +319,7 @@ declare const page: Page;
 // ---cut---
 const { registry, getNestedLocator } = createRegistryWithAccessors<"main" | "main.button@save">(page);
 registry.add("main").getByRole("main");
+
 registry.add("main.button@save").getByRole("button", { name: "Save" });
 registry.verify();
 

@@ -36,6 +36,7 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"section@orders" | "section@orders.item@open">;
 // ---cut---
 registry.add("section@orders").locator("section").filter({ hasText: "Orders" });
+
 registry.add("section@orders.item@open").getByRole("listitem").filter({ hasText: "Open" });
 // locator('section').filter({ hasText: 'Orders' }).getByRole('listitem').filter({ hasText: 'Open' })
 ```
@@ -53,8 +54,11 @@ type Paths =
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.add("main").getByRole("main");
+
 registry.add("main.section@orders").locator("section").filter({ has: "main.section@orders.heading" });
+
 registry.add("main.section@orders.heading").getByRole("heading", { name: "Orders" });
+
 registry.add("main.section@orders.item@open").getByRole("listitem").filter({ hasText: "Open" });
 
 registry.getNestedLocator("main.section@orders.item@open");
@@ -86,6 +90,7 @@ type Paths =
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.add("card").locator(".card");
+
 registry.add("card.badge@new").getByText("New");
 
 // a path: resolved at each use, to that path's own locator; verify() checks it exists
@@ -128,8 +133,11 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"list" | "list.item@first" | "list.item@third" | "list.item@last">;
 // ---cut---
 registry.add("list").locator("ul");
+
 registry.add("list.item@first").getByRole("listitem").nth("first");
+
 registry.add("list.item@third").getByRole("listitem").nth(2);
+
 registry.add("list.item@last").getByRole("listitem").nth(-1);
 ```
 

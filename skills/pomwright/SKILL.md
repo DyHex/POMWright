@@ -91,10 +91,10 @@ no one can be asked, take a tester's way and say why. Examples and templates sho
    table), only as many as make the chain unique; a segment can be there for its scope: `main` keeps a path's search in
    the main content, a dialog outside main starts a path of its own (`dialog@cookies.button@accept`), a page with no
    main has no `main`. A segment's kind says what the element does (`input` for any field, `button`, `link`), or its
-   role where POMWRIGHT.md says so (`textbox`, `banner`); its `@which` tells one of several alike apart in a user's
-   words, by what it does or is for (`button@login`, not `button@submit`); the only status is `main.status`. Several
-   matches in its scope make a segment plural (`main.list@products.cards`, a row's `cells`), also when a query picks
-   one; one, singular; a row with no row header is picked by one of its `cells`.
+   role where POMWRIGHT.md says so (`textbox`, `banner`); its `@which` names what the locator picks it by, in a user's
+   words, by what it does or is for (`button@login`, not `button@submit`); a status found without a name is
+   `main.status`. Several matches in its scope make a segment plural (`main.list@products.cards`, a row's `cells`), also
+   when a query picks one; one, singular; a row with no row header is picked by one of its `cells`.
 5. **Page code reaches tests as Playwright fixtures**; what every page of one app shares (its origin, its common
    locators) is in one place, such as the app's base class; a test reads as steps on the page code.
 6. **The page code's actions and checks are report steps**: `@step()` methods in a class, `test.step` in a function;

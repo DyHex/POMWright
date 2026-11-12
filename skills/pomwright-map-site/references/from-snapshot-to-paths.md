@@ -62,7 +62,7 @@ Only as many segments as make each chain unique: a `generic` that only wraps ano
 Each element a test acts on or checks becomes a path under its container, named by the project's convention
 (`POMWRIGHT.md`; the `pomwright` skill's default names the kind by what the element does: a `textbox` is an `input`, a
 `combobox` a `dropdown`, a `button` and a `link` keep theirs). Where several alike share the container, the name in
-camelCase is the which (`button "Reset Color"` as `button@resetColor`); the only one of its kind needs none. Headings
+camelCase is the which (`button "Reset Color"` as `button@resetColor`); one found without a name needs none. Headings
 that identify a container become its `heading`; text a test checks becomes `text@<what>`. Elements that repeat with the
 same role under one container (rows, cards, list items) become one plural path.
 

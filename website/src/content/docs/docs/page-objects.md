@@ -32,9 +32,13 @@ export class LoginPage extends PageObject<Paths> {
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
+
     this.add("main.form@login").getByRole("form", { name: "Log in" });
+
     this.add("main.form@login.input@email").getByLabel("Email");
+
     this.add("main.form@login.input@password").getByLabel("Password");
+
     this.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
   }
 
@@ -98,6 +102,7 @@ export class LocalizedLoginPage extends PageObject<"main" | "main.button@login">
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
+
     this.add("main.button@login").getByRole("button", { name: loginLabel[this.locale] });
   }
 }
@@ -140,6 +145,7 @@ export class AccountPage extends PageObject<"main" | "main.heading@account"> {
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
+
     this.add("main.heading@account").getByRole("heading", { name: `Account ${this.accountId}` });
   }
 }
@@ -181,6 +187,7 @@ class BrokenPage extends PageObject<"main"> {
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
+
     this.add("main").getByRole("main"); // registered twice
   }
 }
@@ -209,6 +216,7 @@ export class DashboardPage extends PageObject<"main" | "main.spinner"> {
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
+
     this.add("main.spinner").getByRole("progressbar");
   }
 

@@ -101,13 +101,14 @@ skill's examples use. The skill's default:
   `dialog`, each for a behavior of its own. Landmarks and what a user reads take the names readers know: `main`,
   `header`, `footer`, `navigation`, `heading`, `text` (a price, a total). Containers take their role or a plain kind:
   `form`, `table`, `row`, `cell`, `list`, `section`, `card`, `badge`.
-- `@which` tells one of several alike apart, so `button@save` and `button` are different paths with different
-  locators: `getByRole("button", { name: "Save" })` and `getByRole("button")`. When to add it is a judgment, as a
-  tester makes it:
-  - several alike in the scope: `button@save`, `link@help`, `input@email`, `dialog@consent`; a section is
+- `@which` says what the locator picks the element by, so `button@save` and `button` are different paths with
+  different locators: `getByRole("button", { name: "Save" })` and `getByRole("button")`. When to add it is a judgment,
+  as a tester makes it:
+  - found by a name, as several alike in the scope are and one the page names may be: `button@save`, `link@help`,
+    `input@email`, `dialog@consent`, `table@orders` for the only table, named "Orders"; a section is
     `section@delivery`, found by `getByRole("region", { name: "Delivery" })` where it has an accessible name, or by its
     heading where it has none;
-  - the only one of its kind where it stands: no `@which` (`main`, `header`, `main.status`,
+  - found without a name, the only one of its kind where it stands: no `@which` (`main`, `header`, `main.status`,
     `main.table@orders.caption`, a card's `heading`);
   - rows, cards and items picked by their data: no `@which`; the segment is plural and a query or a helper method
     picks one ([below](#several-matches-and-one-among-them)).

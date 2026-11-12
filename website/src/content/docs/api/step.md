@@ -12,19 +12,20 @@ generic methods and on static methods, which are titled by their class (`Account
 import type { Page } from "@playwright/test";
 import { PageObject, step } from "pomwright";
 
-export class LoginPage extends PageObject<"main" | "main.button@submit"> {
+export class LoginPage extends PageObject<"main" | "main.button@login"> {
   constructor(page: Page) {
     super(page, "https://shop.example", "/login");
   }
 
   protected defineLocators(): void {
     this.add("main").getByRole("main");
-    this.add("main.button@submit").getByRole("button", { name: "Log in" });
+
+    this.add("main.button@login").getByRole("button", { name: "Log in" });
   }
 
   @step()
   async submit() {
-    await this.getNestedLocator("main.button@submit").click(); // a step titled LoginPage.submit
+    await this.getNestedLocator("main.button@login").click(); // a step titled LoginPage.submit
   }
 }
 ```
