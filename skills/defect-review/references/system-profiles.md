@@ -21,17 +21,18 @@ section for its part.
 `profile.md`, written in Phase 0 before any opinion, read again at the start of every segment:
 
 ```text
-Kinds:               a library published to a registry; its CLI
-Languages, runtimes: TypeScript on Node 20 and 22; ESM and CommonJS builds
+Kinds:               a library that parses and validates configuration files, published to npm; its CLI
+Languages, runtimes: TypeScript on Node 22 and 24; ESM and CommonJS builds with type declarations
 Delivery:            npm package; the CLI is its bin entry
-Users and interface: developers, through the exported API and the CLI's flags and exit codes
+Users and interface: developers, through the exported API and its types, and the CLI's flags, output and exit codes
 Contract sources:    the README, the docs site, the doc comments, the CLI's --help, the guide's decided rules
-Environments:        Node 20 to 22 on Linux, macOS, Windows (the CI matrix); a real run is the packed tarball
-                     installed into a scratch project
-Standards in force:  semantic versioning; the language's module rules; POSIX exit codes; the guide's lint rules
-Risk order:          input validation at the API; concurrency of the cache; packaging; CLI exit codes; docs
+Environments:        Node 22 and 24 on Linux, macOS, Windows (the CI matrix); a real run is the packed tarball
+                     installed into a scratch project, imported as ESM and as CommonJS, and its CLI run from there
+Standards in force:  semantic versioning; Node's package exports; POSIX exit codes; the guide's lint rules
+Risk order:          validation of malformed files; the parse cache shared between calls; packaging; CLI exit codes;
+                     docs
 Probe catalog:       values and types, text and encodings, concurrency and ordering, I/O and filesystems, packaging
-Lenses:              design, tests, docs, configuration and operations; security (it reads user paths)
+Lenses:              design, tests, docs, configuration and operations; security (it reads paths users pass)
 Impact scheme:       semver
 Not shown by the repository, asked: whether Windows is supported or only tested
 ```
