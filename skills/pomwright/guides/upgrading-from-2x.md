@@ -22,15 +22,19 @@ it gives), and what to write instead. Read it whole; do not upgrade from memory.
    `curl -sL https://raw.githubusercontent.com/DyHex/POMWright/v<version>/website/src/content/docs/docs/upgrading-from-2x.md`.
    A fetch tool that hands back a summary of a page leaves items out.
 4. Run `npx tsc --noEmit`. Each compile error is an item of the page marked **compile error**: find it on the page and
-   write what it says.
+   write what it says, one for one, so each method keeps what it does and each test its order. For session storage: a
+   plain `set` stays `set`; `set(entries, { reload: true })` becomes `set(entries)` followed by `page.reload()`
+   ([its item](https://dyhex.github.io/POMWright/docs/upgrading-from-2x/#waitforcontext-and-reload-are-gone)); and
+   `setOnNextNavigation` becomes `seed`
+   ([its item](https://dyhex.github.io/POMWright/docs/upgrading-from-2x/#seed-replaces-setonnextnavigation)).
 5. Run the search of each item that compiles ([below](#the-items-that-compile-and-their-searches)), adapted to the map
    of step 2: another class or method name where the project wraps POMWright's, another folder or file type where its
    code lives elsewhere. Say which searches you adapted, and how. An item whose adapted search finds nothing does not
    apply.
 6. Run the suite. What is left fails with a message that names the fix: the items marked **fails at run time**.
-7. Then review the project against this skill (`guides/reviewing.md`): an upgrade that compiles and passes is the
-   point to adopt what 3.x makes possible, such as queries in place of extra registrations, and `seed` in place of a
-   reload after writing session storage.
+7. Then review the project against this skill (`guides/reviewing.md`), and report what 3.x makes possible as
+   suggestions for the user, such as queries in place of extra registrations; the upgrade itself changes only what
+   the page's items ask.
 
 Commit each item, or each group of the page's items, on its own, so a regression points at its change.
 
