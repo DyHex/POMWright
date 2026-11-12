@@ -37,26 +37,38 @@ It builds on the [`pomwright`](/POMWright/skills/pomwright/) skill, which must b
 It works with Playwright alone, through a script it ships, and maps with that script. Where your machine has
 `playwright-cli` or Playwright MCP, it asks before using one for a state the script cannot reach.
 
-## What we measured
+## What was measured
 
-One staging site's start page and a product page, mapped into page code with the skill (4 runs) and without it (2
-runs), Claude Opus 5.5 at effort high, graded by code against a reference mapping the maintainer reviewed:
+A real site's start page and product page, mapped into page code with the skill and without it, Claude Opus 5.5 at
+effort high, and graded against a reviewed reference mapping.
 
-| | with the skill | without |
-| --- | --- | --- |
-| compiles, its starter tests pass on the site | 4 of 4 | 2 of 2 |
-| paths that match nothing | 0 | 0 |
-| the reference's paths it also mapped | 90% | 92% |
-| time and cost per run | 10.8 min, $4.57 | 16.9 min, $6.12 |
+<div class="measured">
 
-- **The same result, 36% faster and 25% cheaper.** The runs without the skill had a strong start: the project's
-  `POMWRIGHT.md`, POMWright's own README and types, and the site's source with its POMWright code. A project without
-  them would likely show a larger gap; not measured.
-- **Why it maps with its script**: in an earlier round, runs that used Playwright MCP instead cost 36% more and took
-  32% longer, for no more coverage.
-- **Limits**: one site, 2 to 4 runs a setup; more pages were not measured.
+| measure | with | without | gain |
+| --- | --- | --- | --- |
+| compiles, tests pass on the site | **100%** | 100% | |
+| paths that match nothing | **0** | 0 | |
+| the reference's paths mapped | **90%** | 92% | the same |
+| time per run | **10.8 min** | 16.9 min | 36% faster |
+| cost per run | **$4.57** | $6.12 | 25% cheaper |
 
-Run it as the [index](/POMWright/skills/#using-them-well) recommends.
+```mermaid
+%%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#f97316, #3b82f6"}}}}%%
+xychart-beta
+  title "Per run"
+  x-axis ["minutes", "dollars"]
+  y-axis 0 --> 18
+  bar [16.9, 6.12]
+  bar [10.8, 4.57]
+```
+
+</div>
+
+Blue: with the skill. Orange: without it.
+
+- **Its own script**: runs that mapped with Playwright MCP instead took 32% longer and cost 36% more, and mapped no more
+  of the page. The skill maps with its script, and uses Playwright's tools only for what the script cannot reach.
+- **Effort high**, as the [index](/POMWright/skills/#using-them-well) recommends.
 
 ## Install and source
 

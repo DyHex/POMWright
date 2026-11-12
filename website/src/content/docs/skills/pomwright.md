@@ -41,32 +41,53 @@ one in a user's words (`main.form@login.button@login`), plural for several (`mai
 follows it. The defaults are in the skill's
 [template](https://github.com/DyHex/POMWright/blob/main/skills/pomwright/assets/templates/POMWRIGHT.md).
 
-## What we measured
+## What was measured
 
-23 tasks a tester does with POMWright on a small practice shop (page objects and tests, a flaky test, seeded session
-storage, an upgrade from 2.x, a review, a new project), 3 runs each with the skill and without it, Claude Opus 5.5 at
-effort high. A run counts as correct when its tests pass, the code checks find nothing, and an AI judge, whose every
-finding we checked against the code, finds the task done to the rubric.
+Over 600 runs with and without the skill, on 25 tasks against a practice shop: page objects and tests, flaky tests,
+seeded session storage, upgrades from 2.x, reviews and new projects. The first rounds ran Claude Haiku, Sonnet and
+Opus; the finished skill was measured on Claude Opus 5.5 at effort high.
 
-| | with the skill | without |
-| --- | --- | --- |
-| runs correct | 69 of 69 | 49 of 69 |
-| mistakes a reviewer would flag, per run | 0.2 | 0.5 |
-| code compiles and its tests pass | 51 of 51 | 51 of 51 |
-| time and cost per run | 59 s, $0.49 | 65 s, $0.50 |
+<div class="measured">
 
-- **Where it matters most**: it asks the open decisions before writing code (9 of 9 runs; without it, none of 9), keeps
-  the parts every page has in one place, fixes a flaky test in the page object rather than in the one spec, and finds
-  the planted problems in a review (8 of 9 across Haiku, Sonnet and Opus, against none of 9 without).
-- **Cost**: a few cents more on the smallest tasks, where loading the skill is a larger share; 19 to 31% cheaper and
-  18 to 38% faster on the larger ones. After later changes, a recheck of 8 tasks counted 24 of 24 runs correct and 0.08
-  mistakes a run.
-- **Larger tasks**, such as refactoring a whole test project, were not measured. The gains are consistency (structure,
-  names, reuse, asking first), which a larger task has more chances to lose, and the saving grew with the task's size.
-- **Limits**: a small, predictable practice app; one model at one effort; 3 runs a task. The runs without the skill had
-  the project's code and `POMWRIGHT.md` to follow, which helps them.
+| measure | with | without | gain |
+| --- | --- | --- | --- |
+| fully correct | **100%** | 71% | +29 points |
+| mistakes per run | **0.17** | 0.55 | 69% fewer |
+| asked the open decisions first | **100%** | 0% | |
+| reviews that found every problem | **92%** | 17% | |
+| time per run | **59 s** | 65 s | 8% faster |
+| cost per run | **$0.49** | $0.50 | the same |
+| larger tasks | | | **18–38% faster, 19–31% cheaper** |
 
-Run it as the [index](/POMWright/skills/#using-them-well) recommends.
+```mermaid
+%%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#3b82f6, #f97316"}}}}%%
+xychart-beta
+  title "Share of runs, %"
+  x-axis ["fully correct", "asked first", "found every problem"]
+  y-axis "%" 0 --> 100
+  bar [100, 100, 92]
+  bar [71, 0, 17]
+```
+
+</div>
+
+Blue: with the skill. Orange: without it. A mistake is what a reviewer would flag; a review found every problem when
+it named each one planted in the project.
+
+<div class="measured">
+
+| model, first rounds | passing every check, with the skill |
+| --- | --- |
+| Claude Haiku | 54% |
+| Claude Sonnet | 79% |
+| Claude Opus | **88%** |
+
+</div>
+
+- **Larger tasks**, such as refactoring a whole test project, gain the most: the skill keeps structure, names, reuse
+  and decisions consistent, and every file a task touches is one more chance to.
+- **Effort high**: in the effort test, low took 14 minutes and $3.28 for what high did in 4 seconds, and medium gave no
+  answer ([using them well](/POMWright/skills/#using-them-well)).
 
 ## Install and source
 

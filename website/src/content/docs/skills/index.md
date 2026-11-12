@@ -54,16 +54,24 @@ is pointed out before anything changes.
 
 ## Using them well
 
-- **Run them at effort high.** Every evaluation ran Claude Opus 5.5 at high. In one probe (a small task, no tools), low
-  took 14 minutes and 128,000 tokens where high took 4 seconds, and medium gave no answer in three tries; we have not
-  measured the skills at lower efforts.
+- **Run them at effort high.** Every evaluation ran Claude Opus 5.5 at high. The effort test, one small task
+  without tools, on Claude Opus 5.5:
+
+  | effort | time | output tokens | answer |
+  | --- | --- | --- | --- |
+  | high | **4 s** | **412** | right |
+  | xhigh | 5 s | 439 | right |
+  | low | 14 min | 128,634 ($3.28) | right |
+  | the default | 13.5 min | 128,726 ($3.31) | right |
+  | medium | | | none in three tries |
+
 - **Review what they write.** The skills make mistakes, fewer than an agent without them (each skill's page says what
-  we measured), mostly a comment, a name or a test-data path a reviewer would flag. Read an agent's code as you would a
+  was measured), mostly a comment, a name or a test-data path a reviewer would flag. Read an agent's code as you would a
   colleague's.
 - **Disagree in `POMWRIGHT.md`.** Where you would do something another way than the skill's default (the names of
   paths, the shape of page code, where checks live), record it in your `POMWRIGHT.md`: its decisions replace the
   defaults, for every agent and person on the project.
-- **Tell us.** A mistake the skills keep making, or a default that does not fit: open an
+- **Feedback.** A mistake the skills keep making, or a default that does not fit: open an
   [issue](https://github.com/DyHex/POMWright/issues).
 
 ## `POMWRIGHT.md`
@@ -80,4 +88,4 @@ Every TypeScript example in a skill compiles against the packed package, every l
 by a test, and every link to these docs names a page and heading that exist; CI runs these checks on every pull
 request. The contributor guide has a change to POMWright update the skills that describe it in the same change, and
 these checks fail when an example, a chain or a link no longer holds. Before their first release, agents worked through
-a set of tasks with and without the skills; each skill's page says what that measured.
+a set of tasks with and without the skills; each skill's page says what was measured.

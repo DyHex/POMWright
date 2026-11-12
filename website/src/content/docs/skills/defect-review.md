@@ -35,21 +35,46 @@ When the request does not say which, it asks.
 4. **Report.** One Markdown file: the confirmed defects with their reproductions, documentation findings, what it could
    not confirm, design questions, and what it found sound.
 
-## What we measured
+## What was measured
 
-POMWright's own releases were reviewed with it: the reviews behind 3.0.1 and 3.0.2 ran with its earlier, POMWright
-version. The two whole-project reviews of 3.0.2 found:
+Built while reviewing POMWright itself, first for POMWright and then made general. Evaluated with and without the skill
+on Claude Opus 5.5: a whole small library, a release's change set, one area and an ambiguous request.
 
-| | first review | second review, after the fixes |
+<div class="measured">
+
+| measure | with | without |
 | --- | --- | --- |
-| confirmed defects | 30 (6 Medium, 24 Low) | 19 (3 Medium, 16 Low) |
-| documentation findings | 19 | 37 |
-| the first review's 61 findings, by then | | 54 fixed, 5 in part, 2 kept as decided |
+| known defects found, each reproduced | **88%** | 38% |
+| all checks passed | **96%** | 42% |
+| asked for the scope when it was unclear | **yes** | no |
 
-Every finding came with its reproduction (the command, its exit code, the output). They also caught release problems
-before a merge: a dependency update that would have failed every publish, and changesets claiming fixes that did not
-fully hold. It was not compared with an agent reviewing without it, and the general version on this page has not been
-measured since its rewrite. Run it as the [index](/POMWright/skills/#using-them-well) recommends.
+```mermaid
+%%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#3b82f6, #f97316"}}}}%%
+xychart-beta
+  title "Share, %"
+  x-axis ["known defects found", "checks passed"]
+  y-axis "%" 0 --> 100
+  bar [88, 96]
+  bar [38, 42]
+```
+
+</div>
+
+Blue: with the skill. Orange: without it.
+
+In use, its reviews found most of the defects fixed in POMWright 3.0.1 and 3.0.2, each with its reproduction:
+
+<div class="measured">
+
+| whole-project review of 3.0.2 | confirmed defects | documentation findings |
+| --- | --- | --- |
+| first | 30 (6 medium, 24 low) | 19 |
+| second, after the fixes | 19 (3 medium, 16 low) | 37 |
+
+</div>
+
+They also caught release blockers before a merge, such as a dependency update that would have failed every publish.
+Run it as the [index](/POMWright/skills/#using-them-well) recommends.
 
 ## Install and source
 

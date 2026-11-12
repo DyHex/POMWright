@@ -37,16 +37,32 @@ Every claim in a lesson links its source, every POMWright API it uses is checked
 every example and exercise has been run in the workspace first. A track on your own project reads it only, after you
 confirm it is the right folder; the skill asks before reading anything else and says what reading shares.
 
-## What we measured
+## What was measured
 
-One simulated course, with an agent as the teacher and the maintainer's agent as a learner who knows Playwright:
-getting started (six lessons, with a review after a break), the full course's first unit (frames) and a focused track
-(logging, on a team's project). Every exercise ran green before the learner saw it, most were checked three ways (the
-solution passes, the starter fails with the right message, a loose answer fails), every claim we checked against these
-docs and the installed package held but two, and a fresh session continued from the workspace's files. What it found
-is fixed. No people have taken a course with it yet; tell us how it goes.
+Three courses run end to end with a teacher agent using the skill and a learner agent, Claude Opus 5.5 at effort high:
+two learners who know Playwright and one new to it. 30 lessons in all, from getting started into the full course and a
+focused track.
 
-Run it as the [index](/POMWright/skills/#using-them-well) recommends.
+<div class="measured">
+
+| measure | knows Playwright | new to Playwright |
+| --- | --- | --- |
+| getting started | **5 lessons** | **7 lessons**, 2 on Playwright first |
+| agent time to finish it | **19 min** | **37 min** |
+| cost to finish it | **$11** | **$13** |
+| lessons in all | 11 | 11 |
+| every exercise passing at the end | **30 of 30 tests** | **27 of 27 tests** |
+
+</div>
+
+- **Checked before you see it**: every exercise ran green before the learner got it, and the earlier ones were run
+  again as the course went on.
+- **Fitted to the learner**: Playwright lessons first for a newcomer, plain explanations of TypeScript, the learner's
+  own port and editor, their mission and checkout questions carried into later lessons.
+- **Grounded**: every POMWright API a lesson uses is looked up in the installed package, and every claim links its
+  source.
+- **Picks up where you left off**: a fresh session continued a course from the workspace's files alone.
+- **Effort high**, as the [index](/POMWright/skills/#using-them-well) recommends.
 
 ## Install and source
 
