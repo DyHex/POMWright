@@ -49,7 +49,8 @@ A skill that starts only when you run it is run as `/<skill>` in Claude Code and
 ## Requirements
 
 The POMWright skills need POMWright 3.x, `@playwright/test` 1.64 or later and Node 20 or later. They read the
-installed POMWright version first, and send a 2.x project to its upgrade.
+installed versions of both first: a 2.x project goes to its upgrade, and a `@playwright/test` outside POMWright's range
+is pointed out before anything changes.
 
 ## Using them well
 

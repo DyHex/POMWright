@@ -32,7 +32,7 @@ user installed. Write for that reader:
   ("use the `pomwright` skill"), never by a path into another skill or by copies of its text, and says what to do when
   the core is not installed. A skill is installed alone, so its relative links stay inside its folder.
 - **Versions.** A skill states what it covers in `compatibility` (POMWright 3.x, `@playwright/test` `>=1.64.0 <2.0.0`,
-  Node 20 or later) and tells the agent to read the installed version first.
+  Node 20 or later) and tells the agent to read the installed versions of POMWright and `@playwright/test` first.
 - **Mirror Playwright.** What Playwright owns is linked on playwright.dev, not restated. The skills use Playwright's
   locators for what its docs say each is for, in Testing Library's priority (role, label, placeholder, text, alt text,
   title, test id), then POMWright's `getById`, then CSS; never XPath, which Playwright does not recommend and which

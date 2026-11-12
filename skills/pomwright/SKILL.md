@@ -18,15 +18,17 @@ compatibility: POMWright 3.x, @playwright/test >=1.64.0 <2.0.0, Node 20 or later
 POMWright, for Playwright Test, names each locator with a dot-delimited path, registers one per path and builds the
 chain from it; page objects, session storage, a logger and steps build on that. Tests stay Playwright tests.
 
-## First, the installed version
+## First, the installed versions
 
-Read the version in `node_modules/pomwright/package.json`.
+Read the versions in `node_modules/pomwright/package.json` and `node_modules/@playwright/test/package.json`.
 
-- **3.x**: follow this skill.
-- **2.x or 1.x**: say so before changing anything; the upgrade is its own task:
-  [guides/upgrading-from-2x.md](guides/upgrading-from-2x.md).
-- **Not installed**: `npm install --save-dev pomwright` (or `pnpm add --save-dev pomwright`) in a project that has
-  `@playwright/test` 1.64 or later; see [Installation](https://dyhex.github.io/POMWright/docs/installation/).
+- **POMWright 3.x**: follow this skill. **2.x or 1.x**: say so before changing anything; the upgrade is its own task:
+  [guides/upgrading-from-2x.md](guides/upgrading-from-2x.md). **Not installed**: `npm install --save-dev pomwright`
+  (or `pnpm add --save-dev pomwright`); see [Installation](https://dyhex.github.io/POMWright/docs/installation/).
+- **`@playwright/test`**: inside the range in POMWright's `peerDependencies` (3.x: `>=1.64.0 <2.0.0`). Outside it, say
+  so before changing anything: POMWright relies on that range's Playwright, and upgrading Playwright is the user's
+  call (`npm install --save-dev @playwright/test@latest`, then `npx playwright install`). Write Playwright code for the
+  installed version: its API is in the installed declarations.
 
 ## Then, the project's POMWRIGHT.md
 

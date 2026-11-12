@@ -22,8 +22,9 @@ POMWright. For example:
 
 ## How it works
 
-1. **The installed version.** It reads the version in `node_modules/pomwright/package.json`. In a 2.x project it says
-   so before changing anything: the upgrade is a task of its own.
+1. **The installed versions.** It reads the versions of `pomwright` and `@playwright/test` in `node_modules`. In a 2.x
+   project it says so before changing anything: the upgrade is a task of its own; and so it does for a
+   `@playwright/test` outside the range POMWright supports, whose upgrade is your call.
 2. **The project's `POMWRIGHT.md`.** It looks for the file beside the Playwright config and in the folders above it,
    and follows it: its decisions replace the skill's defaults. When it is missing, writing it is the first task: the
    skill asks every decision in one message, with what the project does now beside each default, and writes no code
