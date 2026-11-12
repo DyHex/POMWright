@@ -102,3 +102,8 @@ It does not write the learner's work for them: an exercise is solved by the lear
 than hands over finished code for their project. It does not change an exercise the learner has finished: a lesson
 that needs a new structure builds it in a folder of its own, and asks before touching the learner's code. It does not
 change anything outside the workspace.
+
+## Credit
+
+Based on Matt Pocock's [`teach`](https://github.com/mattpocock/skills) skill (MIT): its method, scoped to POMWright and
+Playwright.

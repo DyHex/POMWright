@@ -19,6 +19,9 @@ files, so each session continues where the last one ended. You choose the way in
 Lessons and exercises are written in the shape of page code you choose (`PageObject` subclasses, your own class,
 functions, or fixtures) with the parts of POMWright you want.
 
+The skill is based on Matt Pocock's [`teach`](https://github.com/mattpocock/skills) skill (MIT): its method, scoped to
+POMWright and Playwright.
+
 ## When to use it
 
 It starts only when you run it: `/pomwright-teach` in Claude Code, `$pomwright-teach` in Codex, with what you would like
