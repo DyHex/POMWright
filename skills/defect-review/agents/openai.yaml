@@ -1,0 +1,5 @@
+interface:
+  display_name: "Defect review"
+  short_description: "An evidence-based defect review of a project, a change set or an area"
+policy:
+  allow_implicit_invocation: false

@@ -42,12 +42,7 @@ const DEFAULT_SKILL_LINES = 250;
 const FILE_LINES = 300;
 const CONTENTS_FROM = 100;
 /** Skills held to the frontmatter and link rules only, each with its reason. */
-const EXEMPT = new Map([
-	[
-		"defect-review",
-		"it predates the size and invocation rules, and its rewrite as a general skill brings it under them",
-	],
-]);
+const EXEMPT = new Map();
 
 const problems = [];
 const report = (file, message) => problems.push(`${path.relative(root, file)}: ${message}`);
