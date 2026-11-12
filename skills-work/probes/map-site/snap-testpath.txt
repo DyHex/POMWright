@@ -1,9 +1,0 @@
-# http://localhost:9000/testpath  
-
-- link "Random Color Link" [ref=e2] [cursor=pointer]:
-  - /url: "#"
-  - text: Go to Random Color Page
-
-# Suggested locators (locator.normalize(): a candidate; prefer a role with its name)
-
-e2  link "Random Color Link"  ->  getByRole('link', { name: 'Random Color Link' })
