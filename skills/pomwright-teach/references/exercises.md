@@ -14,13 +14,17 @@ and passes, against the running practice shop, once they have.
 `exercises/NNNN-slug/`, with:
 
 - `TASK.md`: what to do, in two to five sentences, and the command that checks it;
-- the starter files: a page object or a locator module with `// TODO` where the learner writes, and whatever the task
+- the starter files: page code or a locator module with `// TODO` where the learner writes, and whatever the task
   builds on, finished;
-- `NNNN-slug.spec.ts`: the check, which uses the learner's page object as a test would.
+- `NNNN-slug.spec.ts`: the check, which uses the learner's page code as a test would.
 
-The check is a spec the learner could have written: it navigates, acts and asserts through the page object. For a task
-about locators, it asserts every path matches the element it should (one for a singular path, at least one for a
-plural one), so a locator that finds too much fails as surely as one that finds nothing.
+An exercise is written in the learner's shape and parts, as the workspace's `POMWRIGHT.md` records them: the starter
+is a page object, a class, a function or a fixture, as `references/curriculum.md` shows per shape, and `@step`,
+`SessionStorage` and the `log` fixture appear only if the learner chose them. The example below is the default shape.
+
+The check is a spec the learner could have written: it navigates, acts and asserts through the learner's page code.
+For a task about locators, it asserts every path matches the element it should (one for a singular path, at least one
+for a plural one), so a locator that finds too much fails as surely as one that finds nothing.
 
 ```ts title="newsletter.page.ts"
 import type { Page } from "@playwright/test";
@@ -81,7 +85,7 @@ writing a query that finds one card, turning a test into page-object steps, seed
 
 ## Checking the learner's work
 
-Run the spec, then read the code. A pass written to the rules (the order of preference, `kind@which` names,
-the chain as short as unique, `@step` methods, data from the fixture) is the win to record. A pass that breaks a rule
-gets one improvement, the most important, shown in the right form, and a rerun. A failure gets a hint that points at
-the place, not the answer, then a bigger one if needed.
+Run the spec, then read the code. A pass written to the rules (the order of preference, `kind@which` names, the chain
+as short as unique, `@step` methods where the learner chose them, data from the fixture) is the win to record. A pass
+that breaks a rule gets one improvement, the most important, shown in the right form, and a rerun. A failure gets a
+hint that points at the place, not the answer, then a bigger one if needed.

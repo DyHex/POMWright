@@ -15,7 +15,7 @@ are not part of the `pomwright` package.
 | --- | --- | --- |
 | [`pomwright`](/POMWright/skills/pomwright/) | by itself, when code uses POMWright or you mention it | writes, reviews, refactors and upgrades tests, page code, locator modules, fixtures and test data |
 | [`pomwright-map-site`](/POMWright/skills/pomwright-map-site/) | when you ask for page objects for a running site | maps the pages you pick and generates their page code and a starter test that checks every path |
-| [`pomwright-teach`](/POMWright/skills/pomwright-teach/) | only when you run it | teaches POMWright over several sessions, with lessons, quizzes and exercises |
+| [`pomwright-teach`](/POMWright/skills/pomwright-teach/) | only when you run it | teaches POMWright: getting started in one sitting, the full course, or one part, with lessons, quizzes and exercises |
 
 `pomwright-map-site` and `pomwright-teach` build on `pomwright`: install it with them.
 

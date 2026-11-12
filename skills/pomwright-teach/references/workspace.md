@@ -7,6 +7,7 @@ the workspace folder.
 
 - [The files](#the-files)
 - [MISSION.md](#missionmd)
+- [CURRICULUM.md](#curriculummd)
 - [RESOURCES.md](#resourcesmd)
 - [Learning records](#learning-records)
 - [Lessons and reference sheets](#lessons-and-reference-sheets)
@@ -15,7 +16,8 @@ the workspace folder.
 
 | path | what it holds |
 | --- | --- |
-| `MISSION.md` | why the learner is learning POMWright, what success looks like, constraints |
+| `MISSION.md` | why the learner is learning POMWright, what success looks like, the way in, the shape and parts, constraints |
+| `CURRICULUM.md` | the learner's course, built from the skill's catalog: each unit's status, depth and sources |
 | `RESOURCES.md` | the sources lessons are built from, each with what to use it for |
 | `lessons/NNNN-slug.html` | one lesson per file, numbered in the order taught |
 | `reference/*.html` | compressed reference sheets: path naming, the ten methods, query recipes, a glossary |
@@ -23,7 +25,7 @@ the workspace folder.
 | `learning-records/NNNN-slug.md` | what the learner has shown they can do, or already knew |
 | `assets/` | the shared stylesheet and the components lessons are built from (a quiz, a code block with a copy button) |
 | `practice-app/` | the practice shop, copied from the skill |
-| `POMWRIGHT.md` | the workspace's POMWright decisions, from the `pomwright` skill's template with its defaults, which the lessons follow; unit 12 has the learner write one for a project of their own |
+| `POMWRIGHT.md` | the workspace's POMWright decisions, from the `pomwright` skill's template with the learner's shape (*Page code*) and parts (*POMWright's parts*) and the defaults for the rest, which every lesson and exercise follows; unit 12 has the learner write one for a project of their own |
 | `playwright.config.ts` | runs `exercises/` against the practice shop, which it starts |
 | `NOTES.md` | the learner's preferences for how they are taught, and working notes |
 
@@ -38,6 +40,13 @@ One to three sentences: the concrete outcome (a suite for their app, a review of
 ## Success looks like
 - A specific thing they will be able to do.
 
+## Way in
+Getting started, the full course, or a focused track on: <the part>.
+
+## Shape and parts
+The shape of their page code (`PageObject` subclasses, an own class, functions, or fixtures only) and which of `@step`,
+`SessionStorage` and the `log` fixture they use; the same as the workspace's `POMWRIGHT.md`.
+
 ## Starting point
 What they know of Playwright and TypeScript, and what they have written with them.
 
@@ -45,7 +54,29 @@ What they know of Playwright and TypeScript, and what they have written with the
 Time, the app they will test, what they do not want to learn now.
 ```
 
-One mission per workspace. Ask until the why is concrete; change it only with the learner, and record the change.
+One mission per workspace. Ask until the why is concrete; change it only with the learner, and record the change. A
+change of the shape or parts changes `POMWRIGHT.md` with it, and the lessons from then on.
+
+## CURRICULUM.md
+
+Built from the skill's catalog (`references/curriculum.md`, *Building CURRICULUM.md*) once the learner is placed, and
+updated after every lesson:
+
+```text
+# Curriculum: getting started (PageObject subclasses; @step, the log fixture)
+
+| unit | status | depth | sources |
+| --- | --- | --- | --- |
+| 1. First page code | covered | registered and resolved a form's paths; navigation.goto() | registering, paths-and-registry; Your first page object |
+| 5. One among several | planned | | resolving-and-queries; Queries |
+| 8. Frames | not in this course | | |
+
+## Next
+The full course from unit 7, or a focused track: frames, session storage, …
+```
+
+Its status is *planned*, *covered*, *partly covered*, *known* (placement or a record showed it) or *not in this course*;
+its depth says what the learner did, not what the lesson said. Getting started ends by showing it to the learner.
 
 ## RESOURCES.md
 
