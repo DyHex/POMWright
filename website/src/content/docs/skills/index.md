@@ -25,6 +25,21 @@ are not part of the `pomwright` package.
 | --- | --- | --- |
 | [`defect-review`](/POMWright/skills/defect-review/) | only when you run it | an evidence-based defect review of any kind of system, not only POMWright projects |
 
+## What was measured
+
+Each skill was measured before its first release; its page has the details.
+
+<div class="measured">
+
+| skill | with the skill | without |
+| --- | --- | --- |
+| [`pomwright`](/POMWright/skills/pomwright/#what-was-measured) | **99%** of runs fully correct, **0.03** mistakes per run, the open decisions asked first **every time** | 72%, 0.29, never |
+| [`pomwright-map-site`](/POMWright/skills/pomwright-map-site/#what-was-measured) | **36% cheaper, 35% faster**, no singular path that matches several | 26 such paths |
+| [`pomwright-teach`](/POMWright/skills/pomwright-teach/#what-was-measured) | three learners, from new to Playwright to knowing POMWright, through getting started, **every exercise passing** | |
+| [`defect-review`](/POMWright/skills/defect-review/#what-was-measured) | **7 of 8** known defects reported with a reproduction | 3 of 8 |
+
+</div>
+
 ## Install
 
 With the [skills CLI](https://github.com/vercel-labs/skills) (Node 22.20 or later), from your project's root:
@@ -54,8 +69,8 @@ is pointed out before anything changes.
 
 ## Using them well
 
-- **Run them at effort high.** Every evaluation ran Claude Opus 5.5 at high. The effort test, one small task
-  without tools, on Claude Opus 5.5:
+- **Run them at effort high.** The evaluations ran Claude Opus 5.5, the POMWright skills at effort high. The effort
+  test, one small task without tools, on Claude Opus 5.5:
 
   | effort | time | output tokens | answer |
   | --- | --- | --- | --- |
@@ -65,9 +80,9 @@ is pointed out before anything changes.
   | the default | 13.5 min | 128,726 ($3.31) | right |
   | medium | | | none in three tries |
 
-- **Review what they write.** The skills make mistakes, fewer than an agent without them (each skill's page says what
-  was measured), mostly a comment, a name or a test-data path a reviewer would flag. Read an agent's code as you would a
-  colleague's.
+- **Review what they write.** The skills make mistakes, far fewer than an agent without them: in the latest
+  evaluation, `pomwright` made 2 in 72 runs, against 21 without it (a test title that claims more than its check, a
+  count read once and checked as a number). Read an agent's code as you would a colleague's.
 - **Disagree in `POMWRIGHT.md`.** Where you would do something another way than the skill's default (the names of
   paths, the shape of page code, where checks live), record it in your `POMWRIGHT.md`: its decisions replace the
   defaults, for every agent and person on the project.
@@ -78,14 +93,16 @@ is pointed out before anything changes.
 
 `pomwright` keeps a project's choices in `POMWRIGHT.md`, beside the Playwright config: which parts of POMWright it
 uses, the shape of the page code, origins and `baseURL`, how paths are named, test data, and the rest of what POMWright
-leaves open. When the file is
-missing, the skill asks you every decision in one message and writes the file before any other work, so every agent
-and person follows the same decisions. See [`pomwright`](/POMWright/skills/pomwright/#how-it-works).
+leaves open. When the file is missing, the skill asks you every decision in one message and writes the file before
+any other work, so every agent and person follows the same decisions. See
+[`pomwright`](/POMWright/skills/pomwright/#how-it-works).
 
 ## How they are kept true
 
 Every TypeScript example in a skill compiles against the packed package, every locator chain a skill shows is rebuilt
 by a test, and every link to these docs names a page and heading that exist; CI runs these checks on every pull
 request. The contributor guide has a change to POMWright update the skills that describe it in the same change, and
-these checks fail when an example, a chain or a link no longer holds. Before their first release, agents worked through
-a set of tasks with and without the skills; each skill's page says what was measured.
+these checks fail when an example, a chain or a link no longer holds. Before their first release, each skill was measured:
+`pomwright` and `pomwright-map-site` against an agent without them, each run in a fresh workspace with the web and no
+access to this repository; `pomwright-teach` through three courses; `defect-review` with and without it. Each skill's
+page says what was measured.

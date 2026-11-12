@@ -16,7 +16,7 @@ It starts when you ask an agent to generate page objects, locators or a test pro
 POMWright suite from an existing application. For example:
 
 - "Generate page objects for the checkout of https://shop.example."
-- "Map the account pages of our staging site for POMWright."
+- "Map the account pages of the staging site for POMWright."
 
 It builds on the [`pomwright`](/POMWright/skills/pomwright/) skill, which must be installed too.
 
@@ -39,18 +39,21 @@ It works with Playwright alone, through a script it ships, and maps with that sc
 
 ## What was measured
 
-A real site's start page and product page, mapped into page code with the skill and without it, Claude Opus 5.5 at
-effort high, and graded against a reviewed reference mapping.
+A real site's start page and product page, mapped into page code in an empty project (Playwright, POMWright and
+TypeScript installed, nothing else) with the web open: 8 runs with the skills and 4 without, 2 a setup. Claude Opus 5.5
+at effort high, graded by code against a reviewed reference mapping on the live site.
 
 <div class="measured">
 
-| measure | with | without | gain |
+| measure | with the skills (8 runs) | without (4 runs) | gain |
 | --- | --- | --- | --- |
-| compiles, tests pass on the site | **100%** | 100% | |
-| paths that match nothing | **0** | 0 | |
-| the reference's paths mapped | **90%** | 92% | the same |
-| time per run | **10.8 min** | 16.9 min | 36% faster |
-| cost per run | **$4.57** | $6.12 | 25% cheaper |
+| compiles, its tests pass on the site, no path that matches nothing | **8 of 8** | 4 of 4 | |
+| the reference's paths mapped | **88%** | 88% | the same |
+| cost per run | **$3.90** | $6.06 | 36% cheaper |
+| time per run | **10.9 min** | 16.8 min | 35% faster |
+| singular paths that match several, in all | **0** | 26 | |
+| picks by position (`nth`, `first`, `last`), in all | **0** | 5 | |
+| locators by CSS | **3%** | 18% | |
 
 ```mermaid
 %%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#f97316, #3b82f6"}}}}%%
@@ -58,16 +61,31 @@ xychart-beta
   title "Per run"
   x-axis ["minutes", "dollars"]
   y-axis 0 --> 18
-  bar [16.9, 6.12]
-  bar [10.8, 4.57]
+  bar [16.8, 6.06]
+  bar [10.9, 3.90]
 ```
 
 </div>
 
-Blue: with the skill. Orange: without it.
+Blue: with the skills. Orange: without them. A singular path that matches several elements fails when a test acts on
+it; the skill's starter test checks every path's count, so its code has none.
 
-- **Its own script**: runs that mapped with Playwright MCP instead took 32% longer and cost 36% more, and mapped no more
-  of the page. The skill maps with its script, and uses Playwright's tools only for what the script cannot reach.
+<div class="measured">
+
+| setup | runs | cost per run | time per run | reference mapped |
+| --- | --- | --- | --- | --- |
+| skills, Playwright's library | 2 | **$3.39** | 9.6 min | 85% |
+| skills, library and CLI | 2 | $3.83 | 12.4 min | **93%** |
+| skills, library and MCP | 2 | $3.76 | **9.2 min** | 85% |
+| skills, library, CLI and MCP | 2 | $4.60 | 12.2 min | 90% |
+| no skills, library | 2 | $6.96 | 20.2 min | 86% |
+| no skills, MCP | 2 | $5.17 | 13.3 min | 91% |
+
+</div>
+
+- **Its own script**: every setup with the skills cost less and took less time than either setup without them. Given
+  Playwright MCP, the skills still mapped with their script; without the skills, MCP cost 53% more and took 39% longer
+  than the skills with the library alone.
 - **Effort high**, as the [index](/POMWright/skills/#using-them-well) recommends.
 
 ## Install and source

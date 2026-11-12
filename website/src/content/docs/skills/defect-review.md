@@ -37,22 +37,25 @@ When the request does not say which, it asks.
 
 ## What was measured
 
-Built while reviewing POMWright itself, first for POMWright and then made general. Evaluated with and without the skill
-on Claude Opus 5.5: a whole small library, a release's change set, one area and an ambiguous request.
+Built while reviewing POMWright itself, first for POMWright and then made general. Measured with and without the skill
+on four tasks, one run each, Claude Opus 5.5, each run in its own clone of the project under review.
 
 <div class="measured">
 
-| measure | with | without |
+| task | with the skill | without |
 | --- | --- | --- |
-| known defects found, each reproduced | **88%** | 38% |
-| all checks passed | **96%** | 42% |
-| asked for the scope when it was unclear | **yes** | no |
+| a whole small library (5 planted defects, a documentation error) | **10 of 10 checks** | 6 of 10 |
+| a release's change set (POMWright 3.0.0 to 3.0.1) | **6 of 6** | 4 of 6 |
+| one area (POMWright's session storage) | **6 of 7** | 3 of 7 |
+| an unclear request | **3 of 3: asked for the scope** | 0 of 3: reviewed without asking |
+| known defects reported with a reproduction | **7 of 8 (88%)** | 3 of 8 (38%) |
+| checks passed, mean of the four | **96%** | 42% |
 
 ```mermaid
 %%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#3b82f6, #f97316"}}}}%%
 xychart-beta
   title "Share, %"
-  x-axis ["known defects found", "checks passed"]
+  x-axis ["known defects reported", "checks passed"]
   y-axis "%" 0 --> 100
   bar [88, 96]
   bar [38, 42]
@@ -60,9 +63,15 @@ xychart-beta
 
 </div>
 
-Blue: with the skill. Orange: without it.
+Blue: with the skill. Orange: without it. Without the skill, the reviews saw most of the planted defects too, but
+reported fewer with a reproduction, gave their findings no semver impact (4 of 4 reviews), wrote reproductions that do
+not run as written (3 of 4) and left out the contract a defect breaks (2 of 4): what makes a report checkable.
 
-In use, its reviews found most of the defects fixed in POMWright 3.0.1 and 3.0.2, each with its reproduction:
+- **Worth its time**: a review with the skill took 15% longer and cost 32% more, the work of reproducing every finding,
+  for more than twice the known defects reported with a reproduction. On the unclear request it cost a third ($0.30
+  against $0.93), since it asks before it reads.
+- **In use**: its reviews found most of the defects fixed in POMWright 3.0.1 and 3.0.2, each with its reproduction, and
+  caught release blockers before a merge, such as a dependency update that would have failed every publish.
 
 <div class="measured">
 
@@ -73,7 +82,6 @@ In use, its reviews found most of the defects fixed in POMWright 3.0.1 and 3.0.2
 
 </div>
 
-They also caught release blockers before a merge, such as a dependency update that would have failed every publish.
 Run it as the [index](/POMWright/skills/#using-them-well) recommends.
 
 ## Install and source
