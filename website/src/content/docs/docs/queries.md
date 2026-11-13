@@ -26,9 +26,12 @@ import type { LocatorRegistry } from "pomwright";
 export type Paths = "main" | "main.list" | "main.list.item" | "main.button@save";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
+
   registry.add("main.list").locator("ul").filter({ hasText: "Orders" });
+
   registry.add("main.list.item").locator("li").nth(0);
+
   registry.add("main.button@save").getByRole("button", { name: "Save", exact: true });
 }
 ```
@@ -45,7 +48,7 @@ import type { Paths } from "./orders.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 const lastOrder = registry.getLocatorSchema("main.list.item").clearSteps().nth("last").getNestedLocator();
-// locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').last()
+// getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').last()
 ```
 
 A query's methods change the query and return it, so they chain. Each `getLocatorSchema` call is a new, independent
@@ -95,10 +98,10 @@ import type { Paths } from "./orders.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.list.item").filter("main.list", { hasText: "Open" }).getNestedLocator();
-// locator('main').locator('ul').filter({ hasText: 'Orders' }).filter({ hasText: 'Open' }).locator('li').first()
+// getByRole('main').locator('ul').filter({ hasText: 'Orders' }).filter({ hasText: 'Open' }).locator('li').first()
 
 registry.getLocatorSchema("main.list.item").nth("last").getNestedLocator();
-// locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first().last()
+// getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first().last()
 ```
 
 The registered `nth(0)` stays unless cleared, so the second query still finds the first item: `clearSteps()` first
@@ -143,7 +146,7 @@ import type { Paths } from "./orders.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.list.item").replace("main.list").getByRole("list", { name: "Orders" }).getNestedLocator();
-// locator('main').getByRole('list', { name: 'Orders' }).filter({ hasText: 'Orders' }).locator('li').first()
+// getByRole('main').getByRole('list', { name: 'Orders' }).filter({ hasText: 'Orders' }).locator('li').first()
 ```
 
 Neither `update` nor `replace` touches the segment's steps or its description: a step is something Playwright chains
@@ -162,8 +165,10 @@ import type { LocatorRegistry } from "pomwright";
 type Paths = "main" | "main.frame@payment" | "main.frame@payment.button@confirm";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
+
 registry.add("main.frame@payment").frameLocator("iframe#payment");
+
 registry.add("main.frame@payment.button@confirm").getByRole("button", { name: "Confirm" });
 
 registry
@@ -211,15 +216,17 @@ import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.product@lamp" | "main.product@lamp.button@wishlist">;
 // ---cut---
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
+
 registry.add("main.product@lamp").getByRole("article", { name: "Desk lamp" });
+
 registry.add("main.product@lamp.button@wishlist").getByRole("button", { name: "Add to wishlist" });
 
 const wishlistButton = registry.getLocatorSchema("main.product@lamp.button@wishlist");
 await wishlistButton.getNestedLocator().click();
 
 wishlistButton.update().getByRole({ name: "Remove from wishlist" });
-// locator('main').getByRole('article', { name: 'Desk lamp' }).getByRole('button', { name: 'Remove from wishlist' })
+// getByRole('main').getByRole('article', { name: 'Desk lamp' }).getByRole('button', { name: 'Remove from wishlist' })
 await expect(wishlistButton.getNestedLocator()).toBeVisible();
 await wishlistButton.getNestedLocator().click(); // the lamp leaves the wishlist again
 ```
@@ -250,10 +257,10 @@ import type { Paths } from "./orders.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 const query = registry.getLocatorSchema("main.list.item").skip("main.list");
-query.getNestedLocator(); // locator('main').locator('li').first()
+query.getNestedLocator(); // getByRole('main').locator('li').first()
 
 query.unskip("main.list").getNestedLocator();
-// locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()
+// getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()
 ```
 
 The query's own path cannot be skipped: TypeScript does not offer it, and from JavaScript it throws. A skipped segment

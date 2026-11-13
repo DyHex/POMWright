@@ -113,20 +113,22 @@ test("without a path, update(), replace() and clearSteps() act on the query's ow
 }) => {
 	type Paths = "main" | "main.list@orders";
 	const { add, getLocatorSchema } = createRegistryWithAccessors<Paths>(page);
-	add("main").locator("main");
+	add("main").getByRole("main");
 	add("main.list@orders").getByRole("list", { name: "Orders" }).filter({ hasText: "Shipped" }).nth(0);
 	const query = () => getLocatorSchema("main.list@orders");
 	const chain = (locator: { describe(description: string): unknown }) => `${locator.describe("")}`;
 
 	const updated = chain(query().update().getByRole({ name: "Archive" }).getNestedLocator());
 	expect(updated).toBe(chain(query().update("main.list@orders").getByRole({ name: "Archive" }).getNestedLocator()));
-	expect(updated).toBe("locator('main').getByRole('list', { name: 'Archive' }).filter({ hasText: 'Shipped' }).first()");
+	expect(updated).toBe(
+		"getByRole('main').getByRole('list', { name: 'Archive' }).filter({ hasText: 'Shipped' }).first()",
+	);
 
 	const replaced = chain(query().replace().locator("ol").getNestedLocator());
 	expect(replaced).toBe(chain(query().replace("main.list@orders").locator("ol").getNestedLocator()));
-	expect(replaced).toBe("locator('main').locator('ol').filter({ hasText: 'Shipped' }).first()");
+	expect(replaced).toBe("getByRole('main').locator('ol').filter({ hasText: 'Shipped' }).first()");
 
 	const cleared = chain(query().clearSteps().getNestedLocator());
 	expect(cleared).toBe(chain(query().clearSteps("main.list@orders").getNestedLocator()));
-	expect(cleared).toBe("locator('main').getByRole('list', { name: 'Orders' })");
+	expect(cleared).toBe("getByRole('main').getByRole('list', { name: 'Orders' })");
 });

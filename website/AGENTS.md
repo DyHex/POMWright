@@ -12,17 +12,18 @@ The documentation site's content (below): `src/content/docs/docs/`, the Docs sec
 page per concept, *Upgrading from 2.x*); `src/content/docs/api/`, the API reference (one page per class or group,
 `errors` and the index); `src/content/docs/internal/`, how POMWright works (`performance` among them); `snippets/`, the
 docs' example app (`login.page.ts`, `account.page.ts`, `orders.page.ts`, `checkout.page.ts`, `fixtures.ts`) that every
-page's examples import. Around them the Starlight site, a pnpm project of its own (`package.json`, `pnpm-lock.yaml`,
+page's examples import; `src/content/docs/skills/`, the Skills section (an index and a page per agent skill in
+`skills/`). Around them the Starlight site, a pnpm project of its own (`package.json`, `pnpm-lock.yaml`,
 exact versions): `astro.config.mjs` (base `/POMWright`, the link check, Mermaid, the edit links to `main`),
-`sidebar.mjs` (the three sections), `plugins/expressive-code-cut.mjs` (hides an example's `// ---cut---` prelude),
+`sidebar.mjs` (the four sections), `plugins/expressive-code-cut.mjs` (hides an example's `// ---cut---` prelude),
 `src/components/SiteTitle.astro` (the sections as tabs), `src/styles/custom.css`, `src/content/docs/index.mdx` (the home
 page).
 
 ## Rules
 
 - The documentation is the Starlight site in `website/`, served at `https://dyhex.github.io/POMWright/`, with its
-  content in `website/src/content/docs/`, in three sections: `docs/` to learn, `api/` to look up, `internal/` to
-  understand. The 2.x docs are linked at the tag,
+  content in `website/src/content/docs/`, in four sections, in this order: `docs/` to learn, `api/` to look up,
+  `skills/` to install and use the agent skills, `internal/` to understand. The 2.x docs are linked at the tag,
   `https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2`. The README says what POMWright is, shows one example, and
   links the site rather than repeating it; the snippet check compiles its examples as one more page, each block titled
   in its fence meta (`title="orders.page.ts"`), which GitHub and npm do not show.
@@ -54,8 +55,11 @@ page).
   probe against the build (see [test/AGENTS.md](../test/AGENTS.md#probing)); where a rendered string hides an option, the stored record is read instead.
   `test/tests/docs/docsChains.spec.ts` rebuilds every chain a page or the README shows in a `text` block, a code
   comment or the running text, one test per page, compares it, and checks that the page still shows it: a change to a
-  chain, on the page or in the code, fails until the spec and the page change together. A change to a message, a rendering or a mechanism greps `website/` for the old text and updates the pages with it,
-  and a consumer-facing change updates the page that describes it.
+  chain, on the page or in the code, fails until the spec and the page change together. `skillsChains.spec.ts` does the
+  same for the agent skills in `skills/`, one test per skill file, and also fails when a skill file shows a rendering
+  its test does not compare, or has no test. A change to a message, a rendering or a mechanism greps `website/` for the old text and updates the pages with it,
+  and a consumer-facing change updates the page that describes it. A change to anything an agent skill describes updates
+  the skill too ([skills/AGENTS.md](../skills/AGENTS.md)).
 - Page shapes follow playwright.dev. Getting started pages: *Introduction*, "You will learn", short sections whose
   example grows from the last, *What's next*; one page, one outcome. Concept pages open with the Playwright concept
   beneath them, linked, and say what POMWright adds; then a small fixture (the HTML and the registry or page object the
@@ -85,7 +89,11 @@ page).
   error is shown with `// @ts-expect-error`, which the check enforces. A block's language is the fence's first word,
   after any spaces, as CommonMark reads it; a TypeScript block the check would not compile, in a `~~~` fence, labeled
   `tsx`, `mts` or `cts`, or with `ts` written otherwise (a space before it, upper case), fails it with the fix, and so
-  does a `tsc` that fails without reporting a type error. It also compiles the doc comments' `@example` blocks, in a
+  does a `tsc` that fails without reporting a type error. The agent skills in `skills/` are compiled the same way, one
+  project per Markdown file, with three rules of their own, since an agent reads a skill's raw Markdown: no
+  `// ---cut---`, no `nocheck`, and code in double quotes, so that a single-quoted locator call in a skill is always a
+  rendering of a chain; no example app is copied in; and the `.ts` templates under `skills/<skill>/assets/` are compiled
+  at their paths. It also compiles the doc comments' `@example` blocks, in a
   project of their own (`test/.doc-examples/`): each as a fragment of a consumer's file, with an import of the exports
   and Playwright types it names and the instances it assumes declared once in the script (a new one goes there); an
   error points at the source line, and `nocheck` after the fence skips an example that cannot stand alone and lists

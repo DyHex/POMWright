@@ -13,10 +13,12 @@ import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.list" | "main.list.item">;
 // ---cut---
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
+
 registry.add("main.list").locator("ul.orders");
+
 registry.add("main.list.item").getByRole("listitem").filter({ hasText: "Open" }).nth(0);
-// main.list.item: locator('main').locator('ul.orders').getByRole('listitem').filter({ hasText: 'Open' }).first()
+// main.list.item: getByRole('main').locator('ul.orders').getByRole('listitem').filter({ hasText: 'Open' }).first()
 ```
 
 The chains on this page are shown without the description, which is the path unless `describe` sets one. Guides:
@@ -60,11 +62,14 @@ declare const registry: LocatorRegistry<
 >;
 // ---cut---
 registry.add("shell").locator("div.shell");
+
 registry.add("shell.frame@payment").frameLocator("iframe#payment");
+
 registry.add("shell.frame@payment.button@pay").getByRole("button", { name: "Pay" });
 // locator('div.shell').locator('iframe#payment').contentFrame().getByRole('button', { name: 'Pay' })
 
 registry.add("anyFrame").frameLocator();
+
 registry.add("anyFrame.button@accept").getByRole("button", { name: "Accept" });
 // frameLocator().getByRole('button', { name: 'Accept' })
 ```
@@ -253,9 +258,9 @@ Registers the path's locator as Playwright's
 ```ts
 import type { LocatorRegistry } from "pomwright";
 
-declare const registry: LocatorRegistry<"main.row@order">;
+declare const registry: LocatorRegistry<"main.rows@order">;
 // ---cut---
-registry.add("main.row@order").getByTestId("order-row");
+registry.add("main.rows@order").getByTestId("order-row");
 // getByTestId('order-row')
 ```
 
@@ -422,6 +427,7 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"main.section@orders" | "main.section@orders.heading">;
 // ---cut---
 registry.add("main.section@orders.heading").getByRole("heading", { name: "Orders" });
+
 registry.add("main.section@orders").locator("section").filter({ has: "main.section@orders.heading" });
 ```
 
@@ -491,11 +497,14 @@ import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.list" | "main.list.items@open" | "main.list.item@lastOpen">;
 // ---cut---
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
+
 registry.add("main.list").locator("ul");
+
 registry.add("main.list.items@open").getByRole("listitem").filter({ hasText: "Open" });
+
 registry.add("main.list.item@lastOpen", { reuse: "main.list.items@open" }).nth("last").describe("Last open item");
-// locator('main').locator('ul').getByRole('listitem').filter({ hasText: 'Open' }).last()
+// getByRole('main').locator('ul').getByRole('listitem').filter({ hasText: 'Open' }).last()
 ```
 
 ### A seed

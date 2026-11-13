@@ -95,7 +95,7 @@ test.describe("a page object's check points at the line that created it", () => 
 test.describe("a standalone registry points at the consumer's call", () => {
 	test("an add mistake: the add line", ({ page }) => {
 		const { registry } = createRegistryWithAccessors<"main">(page);
-		registry.add("main").locator("main");
+		registry.add("main").getByRole("main");
 		let error: unknown;
 		try {
 			registry.add("main").locator("body"); // SITE standalone-add
@@ -107,7 +107,7 @@ test.describe("a standalone registry points at the consumer's call", () => {
 
 	test("a mistake only verify() finds: the verify() line", ({ page }) => {
 		const { registry } = createRegistryWithAccessors<"main" | "main.list">(page);
-		registry.add("main").locator("main");
+		registry.add("main").getByRole("main");
 		registry
 			.add("main.list")
 			.locator("ul")

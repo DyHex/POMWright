@@ -389,7 +389,7 @@ describe("reuse by path", () => {
 		const registry = new LocatorRegistryInternal<
 			"main" | `main.button@${Button}` | "dialog" | `dialog.button@${Button}`
 		>(createFakePage());
-		registry.add("main").locator("main");
+		registry.add("main").getByRole("main");
 		registry.add("dialog").getByRole("dialog");
 		for (const button of buttons) registry.add(`main.button@${button}`).getByRole("button", { name: button });
 		for (const button of buttons) registry.add(`dialog.button@${button}`, { reuse: `main.button@${button}` });
@@ -523,7 +523,7 @@ describe("a primary is always a value; a lone null is the options", () => {
 	type NullPaths = "main" | "main.save" | "seeded" | "x";
 	const create = () => {
 		const registry = new LocatorRegistryInternal<NullPaths>(createFakePage());
-		registry.add("main").locator("main");
+		registry.add("main").getByRole("main");
 		registry.add("main.save").getByRole("button", { name: "Save", exact: true });
 		return registry;
 	};
@@ -713,11 +713,11 @@ describe("strictChains", () => {
 
 	it("leaves a sparse chain alone without the option and with false", () => {
 		for (const registry of [create(), create({}), create({ strictChains: false })]) {
-			registry.add("main").locator("main");
+			registry.add("main").getByRole("main");
 			registry.add("main.form.button.save").getByRole("button", { name: "Save" });
 			expect(() => registry.verify()).not.toThrow();
 			expect(chain(registry.getNestedLocator("main.form.button.save"))).toBe(
-				"locator('main').getByRole('button', { name: 'Save' })",
+				"getByRole('main').getByRole('button', { name: 'Save' })",
 			);
 		}
 	});
@@ -740,13 +740,13 @@ describe("strictChains", () => {
 
 	it("passes a chain whose every ancestor is registered, and skip still leaves one out", () => {
 		const registry = create({ strictChains: true });
-		registry.add("main").locator("main");
+		registry.add("main").getByRole("main");
 		registry.add("main.form").locator("form");
 		registry.add("main.form.button").locator("div.buttons");
 		registry.add("main.form.button.save").getByRole("button", { name: "Save" });
 		expect(() => registry.verify()).not.toThrow();
 		expect(chain(registry.getLocatorSchema("main.form.button.save").skip("main.form.button").getNestedLocator())).toBe(
-			"locator('main').locator('form').getByRole('button', { name: 'Save' })",
+			"getByRole('main').locator('form').getByRole('button', { name: 'Save' })",
 		);
 	});
 

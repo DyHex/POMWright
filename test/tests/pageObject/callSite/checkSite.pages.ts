@@ -16,7 +16,7 @@ export class DirectPage extends PageObject<"main"> {
 	}
 
 	protected defineLocators(): void {
-		this.add("main").locator("main");
+		this.add("main").getByRole("main");
 		this.add("main").locator("body"); // SITE direct-add
 	}
 }
@@ -34,7 +34,7 @@ export class BasedPage extends ShopPage<"main"> {
 	}
 
 	protected defineLocators(): void {
-		this.add("main").locator("main");
+		this.add("main").getByRole("main");
 		this.add("main").locator("body");
 	}
 }
@@ -75,7 +75,7 @@ export class MisspelledPage extends PageObject<"main" | "main.list"> {
 	}
 
 	protected defineLocators(): void {
-		this.add("main").locator("main");
+		this.add("main").getByRole("main");
 		// only verify() finds it: a has reference to a path that is not registered
 		this.add("main.list")
 			.locator("ul")

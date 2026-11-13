@@ -75,12 +75,18 @@ export class LoginPage extends PageObject<Paths> {
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
+
     this.add("main.aside").locator("aside");
+
     this.add("main.aside.button@login").getByRole("button", { name: "Log in" });
+
     this.add("main.form@login").getByRole("form", { name: "Log in" });
+
     this.add("main.form@login.input@email").getByLabel("Email");
+
     this.add("main.form@login.input@password").getByLabel("Password");
+
     this.add("main.form@login.button@login", { reuse: "main.aside.button@login" });
   }
 
@@ -116,18 +122,18 @@ import type { Page } from "@playwright/test";
 
 declare const page: Page;
 // ---cut---
-page.locator("main").getByRole("form", { name: "Log in" }).getByRole("button", { name: "Log in" });
+page.getByRole("main").getByRole("form", { name: "Log in" }).getByRole("button", { name: "Log in" });
 ```
 
 Each step of the chain searches inside the previous one, as
 [matching inside a locator](https://playwright.dev/docs/locators#matching-inside-a-locator) does in Playwright, so
 the button in the aside does not match; `getNestedLocator("main.aside.button@login")` finds that one, as
-`locator('main').locator('aside').getByRole('button', { name: 'Log in' })`. The result is an ordinary `Locator`:
+`getByRole('main').locator('aside').getByRole('button', { name: 'Log in' })`. The result is an ordinary `Locator`:
 actions wait for the element, and [strictness](https://playwright.dev/docs/locators#strictness) applies. Its
 description is its path, so the HTML report and the [trace viewer](https://playwright.dev/docs/trace-viewer)'s list of
 actions show `Click main.form@login.button@login` instead of the chain. The chain is one click away: select the action
 in the trace viewer, and its **Call** tab shows it as the `locator` parameter, and its **Log** tab starts with
-`waiting for locator('main').getByRole('form', { name: 'Log in' })…`.
+`waiting for getByRole('main').getByRole('form', { name: 'Log in' })…`.
 
 `getLocator(path)` resolves the path's own locator without its ancestors. `getLocator("main.aside.button@login")` is
 `getByRole('button', { name: 'Log in' })` on the whole page, which matches both buttons. It is meant for building a

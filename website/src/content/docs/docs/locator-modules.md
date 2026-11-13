@@ -25,7 +25,7 @@ locale or the page (see
 ```ts title="header.locators.ts"
 import type { LocatorRegistry } from "pomwright";
 
-export type Paths = "header" | "header.link@logo" | "header.link@help";
+export type Paths = "header" | "header.link@home" | "header.link@help";
 
 export function defineLocators<ExternalPaths extends string = never>(
   registry: LocatorRegistry<Paths | ExternalPaths>,
@@ -33,7 +33,9 @@ export function defineLocators<ExternalPaths extends string = never>(
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("header").getByRole("banner");
-  registry.add("header.link@logo").getByRole("link", { name: "Shop" });
+
+  registry.add("header.link@home").getByRole("link", { name: "Shop" });
+
   registry.add("header.link@help").getByRole("link", { name: "Help" });
 }
 ```
@@ -59,6 +61,7 @@ export function defineLocators<ExternalPaths extends string = never>(
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("footer").getByRole("contentinfo");
+
   registry.add("footer.link@terms").getByRole("link", { name: "Terms" });
 }
 ```
@@ -74,6 +77,7 @@ export function defineLocators<ExternalPaths extends string = never>(
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("dialog@consent").getByRole("dialog", { name: "Cookies" });
+
   registry.add("dialog@consent.button@accept").getByRole("button", { name: "Accept all" });
 }
 ```
@@ -99,7 +103,7 @@ export function defineLocators(registry: LocatorRegistry<Paths>) {
   addHeader(registry);
   addFooter(registry);
   addConsentDialog(registry);
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
   // "main.heading" is a slot: each page registers its own (see Shared slots)
 }
 ```
@@ -113,7 +117,9 @@ export type Paths = Common | "main.form@login" | "main.form@login.button@login";
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   addCommon(registry);
   registry.add("main.heading").getByRole("heading", { name: "Log in" });
+
   registry.add("main.form@login").getByRole("form", { name: "Log in" });
+
   registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 }
 ```
@@ -196,7 +202,9 @@ export class OrdersPage extends ShopPage<Paths> {
 
   protected definePageLocators(): void {
     this.add("main.heading").getByRole("heading", { name: "Orders" });
+
     this.add("main.list@orders").getByRole("list", { name: "Orders" });
+
     this.add("main.list@orders.items").getByRole("listitem");
   }
 }
@@ -224,7 +232,9 @@ export type Paths = CommonPaths | "main.section@payment" | "main.section@payment
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("main.heading").getByRole("heading", { name: "Checkout" });
+
   registry.add("main.section@payment").getByRole("region", { name: "Payment" });
+
   registry.add("main.section@payment.link@help", { reuse: "header.link@help" });
 }
 ```
@@ -264,7 +274,8 @@ export function defineLocators<ExternalPaths extends string = never>(
 ): void;
 
 export function defineLocators(registry: LocatorRegistry<Paths>, locale: Locale) {
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
+
   registry.add("main.button@login").getByRole("button", { name: loginLabel[locale] });
 }
 ```
@@ -300,8 +311,10 @@ import type { LocatorRegistry } from "pomwright";
 export type Paths = "main" | "main.list@products" | "main.list@products.items@onSale";
 
 export function defineLocators(registry: LocatorRegistry<Paths>, page: Page) {
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
+
   registry.add("main.list@products").getByRole("list", { name: "Products" });
+
   registry
     .add("main.list@products.items@onSale")
     .getByRole("listitem")
@@ -328,7 +341,7 @@ export class ProductsPage extends PageObject<Paths> {
 ```
 
 ```text
-locator('main').getByRole('list', { name: 'Products' }).getByRole('listitem').filter({ has: getByText('Sale', { exact: true }) })
+getByRole('main').getByRole('list', { name: 'Products' }).getByRole('listitem').filter({ has: getByText('Sale', { exact: true }) })
 ```
 
 Playwright looks for the `has` locator inside each element being filtered, so `page.getByText("Sale", { exact: true })`
@@ -358,6 +371,7 @@ export function defineLocators<ExternalPaths extends string = never>(
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("shared.list.items").getByRole("listitem");
+
   registry.add("shared.alert").getByRole("alert");
 }
 ```
@@ -376,10 +390,14 @@ export type Paths =
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   addShared(registry);
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
+
   registry.add("main.list@orders").getByRole("list", { name: "Orders" });
+
   registry.add("main.list@orders.items", { reuse: "shared.list.items" });
+
   registry.add("main.list@orders.item@last", { reuse: "shared.list.items" }).nth("last").describe("Last order");
+
   registry.add("main.alert@order", { reuse: "shared.alert" }).filter({ hasText: "Order" });
 }
 ```
@@ -416,6 +434,7 @@ export const lastRow = (registry: LocatorRegistry<Paths>): LocatorQueryBuilder<P
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("list").locator("ul");
+
   registry.add("list.items", { reuse: rowSeed(registry) });
 }
 ```

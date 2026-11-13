@@ -30,10 +30,14 @@ export type Paths =
   | "checkout.section@payment.frame.button@pay";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("checkout").locator("main");
+  registry.add("checkout").getByRole("main");
+
   registry.add("checkout.section@payment").getByRole("region", { name: "Payment" });
+
   registry.add("checkout.section@payment.frame").frameLocator("iframe");
+
   registry.add("checkout.section@payment.frame.input@cardNumber").getByLabel("Card number");
+
   registry.add("checkout.section@payment.frame.button@pay").getByRole("button", { name: "Pay" });
 }
 ```
@@ -49,16 +53,16 @@ import type { Paths } from "./checkout.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 await registry.getNestedLocator("checkout.section@payment.frame.input@cardNumber").fill("4242 4242 4242 4242");
-// locator('main').getByRole('region', { name: 'Payment' }).locator('iframe').contentFrame().getByLabel('Card number')
+// getByRole('main').getByRole('region', { name: 'Payment' }).locator('iframe').contentFrame().getByLabel('Card number')
 ```
 
-That is exactly the chain `page.locator("main").getByRole("region", { name: "Payment" }).frameLocator("iframe")` builds.
+That is exactly the chain `page.getByRole("main").getByRole("region", { name: "Payment" }).frameLocator("iframe")` builds.
 
 ## The frame segment itself
 
 Resolving the frame segment's own path gives the `<iframe>` element, steps included, as Playwright's `locator(selector)`
 does: `getNestedLocator("checkout.section@payment.frame")` is
-`locator('main').getByRole('region', { name: 'Payment' }).locator('iframe')`. Assert on it, or call `contentFrame()` on
+`getByRole('main').getByRole('region', { name: 'Payment' }).locator('iframe')`. Assert on it, or call `contentFrame()` on
 it to search the frame yourself. A path given to `filter({ has })` that names a frame segment is that element too.
 
 ## Telling frames apart
@@ -77,7 +81,9 @@ type Paths = "widgets" | "widgets.frame@second" | "widgets.frame@second.button@g
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.add("widgets").locator(".widgets");
+
 registry.add("widgets.frame@second").frameLocator("iframe").nth(1);
+
 registry.add("widgets.frame@second.button@go").getByRole("button", { name: "Go" });
 // locator('.widgets').locator('iframe').nth(1).contentFrame().getByRole('button', { name: 'Go' })
 
@@ -106,6 +112,7 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"anyFrame" | "anyFrame.button@accept">;
 // ---cut---
 registry.add("anyFrame").frameLocator();
+
 registry.add("anyFrame.button@accept").getByRole("button", { name: "Accept" });
 
 await registry.getNestedLocator("anyFrame.button@accept").click();

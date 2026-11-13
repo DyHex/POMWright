@@ -28,12 +28,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
+import { contentDir, headingsOf, siteUrl, siteUrlProblem, siteUrlsIn } from "./site-pages.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const declarations = path.resolve(root, process.argv[2] ?? ".pack/pomwright/dist/index.d.ts");
 const apiDir = path.join(root, "website/src/content/docs/api");
-const contentDir = path.join(root, "website/src/content/docs");
-const siteUrl = "https://dyhex.github.io/POMWright/";
 
 if (!fs.existsSync(declarations)) {
 	console.error(`api coverage: ${path.relative(root, declarations)} not found; run pnpm harness:install first`);
@@ -204,46 +203,11 @@ for (const name of ["LocatorRegistrationPreDefinitionBuilder", "LocatorRegistrat
 	}
 }
 
-/** A heading's anchor, as the site makes it (github-slugger: lower case, punctuation removed). */
-const slugOf = (text) =>
-	text
-		.toLowerCase()
-		.replace(/[^\p{L}\p{N}\s_-]/gu, "")
-		.trim()
-		.replace(/\s/g, "-");
-
-/** The headings of a page, outside code blocks, each with its level and its anchor (a repeated one gets `-1`, …). */
-function headingsOf(file) {
-	const headings = [];
-	const counts = new Map();
-	let fenced = false;
-	for (const line of fs.readFileSync(file, "utf8").split("\n")) {
-		if (/^\s*```/.test(line)) fenced = !fenced;
-		const heading = !fenced && /^(#{1,6}) (.+)$/.exec(line);
-		if (!heading) continue;
-		const base = slugOf(heading[2]);
-		const seen = counts.get(base) ?? 0;
-		counts.set(base, seen + 1);
-		headings.push({ level: heading[1].length, text: heading[2].trim(), anchor: seen === 0 ? base : `${base}-${seen}` });
-	}
-	return headings;
-}
-const anchorsOf = (file) => new Set(headingsOf(file).map((heading) => heading.anchor));
-
 // every link to the site in the declarations names a page and, after a `#`, one of its headings
-const siteUrls = new Set(
-	(fs.readFileSync(declarations, "utf8").match(/https:\/\/dyhex\.github\.io\/POMWright\/[^\s)`"'<>]*/g) ?? []).map(
-		(url) => url.replace(/[.,;:]+$/, ""),
-	),
-);
+const siteUrls = new Set(siteUrlsIn(fs.readFileSync(declarations, "utf8")));
 for (const url of siteUrls) {
-	const [pagePath, anchor] = url.slice(siteUrl.length).split("#");
-	const slug = pagePath.replace(/\/$/, "");
-	const page = [`${slug}.md`, `${slug}.mdx`, `${slug}/index.md`, `${slug}/index.mdx`]
-		.map((candidate) => path.join(contentDir, candidate))
-		.find((file) => fs.existsSync(file));
-	if (!page) problems.add(`no page for ${url}`);
-	else if (anchor && !anchorsOf(page).has(anchor)) problems.add(`no heading for ${url}`);
+	const problem = siteUrlProblem(url);
+	if (problem) problems.add(problem);
 }
 
 // each API page's sections: a `## Name` of an export (or of the builders' page) owns the `###` headings after it; the

@@ -38,17 +38,28 @@ export type Paths =
   | "main.panel@summary";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
+
   registry.add("main.button@pay").getByRole("button", { name: "Pay", exact: true });
+
   registry.add("main.text@total").getByText("Total", { exact: true });
+
   registry.add("main.input@email").getByLabel("Email");
+
   registry.add("main.input@search").getByPlaceholder("Search");
+
   registry.add("main.image@card").getByAltText("Card logo");
+
   registry.add("main.icon@help").getByTitle("Help");
+
   registry.add("main.list@items").locator("ul", { hasText: "Items" });
+
   registry.add("main.frame@payment").frameLocator("iframe#payment");
+
   registry.add("main.frame@payment.button@confirm").getByRole("button", { name: "Confirm" });
+
   registry.add("main.rows@cart").getByTestId("cart-row");
+
   registry.add("main.panel@summary").getById("summary");
 }
 ```
@@ -94,7 +105,7 @@ registry
   .update("main.frame@payment")
   .frameLocator("iframe#card")
   .getNestedLocator();
-// locator('main').locator('iframe#card').contentFrame().getByRole('button', { name: 'Confirm' })
+// getByRole('main').locator('iframe#card').contentFrame().getByRole('button', { name: 'Confirm' })
 
 registry
   .getLocatorSchema("main.frame@payment.button@confirm")
@@ -131,9 +142,9 @@ import type { Paths } from "./checkout.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.image@card").update().getByAltText(/logo/i).getNestedLocator();
-// locator('main').getByAltText(/logo/i)
+// getByRole('main').getByAltText(/logo/i)
 registry.getLocatorSchema("main.image@card").replace().getByAltText("Visa").getNestedLocator();
-// locator('main').getByAltText('Visa')
+// getByRole('main').getByAltText('Visa')
 ```
 
 **Arguments**
@@ -179,9 +190,9 @@ import type { Paths } from "./checkout.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.input@email").update().getByLabel("E-mail").getNestedLocator();
-// locator('main').getByLabel('E-mail')
+// getByRole('main').getByLabel('E-mail')
 registry.getLocatorSchema("main.input@email").replace().getByLabel("Email address").getNestedLocator();
-// locator('main').getByLabel('Email address')
+// getByRole('main').getByLabel('Email address')
 ```
 
 **Arguments**
@@ -203,9 +214,9 @@ import type { Paths } from "./checkout.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.input@search").update().getByPlaceholder({ exact: true }).getNestedLocator();
-// locator('main').getByPlaceholder('Search', { exact: true })
+// getByRole('main').getByPlaceholder('Search', { exact: true })
 registry.getLocatorSchema("main.input@search").replace().getByPlaceholder("Search products").getNestedLocator();
-// locator('main').getByPlaceholder('Search products')
+// getByRole('main').getByPlaceholder('Search products')
 ```
 
 **Arguments**
@@ -226,13 +237,13 @@ import type { Paths } from "./checkout.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.button@pay").update().getByRole({ name: "Pay now" }).getNestedLocator();
-// locator('main').getByRole('button', { name: 'Pay now', exact: true })
+// getByRole('main').getByRole('button', { name: 'Pay now', exact: true })
 registry.getLocatorSchema("main.button@pay").update().getByRole({ exact: null }).getNestedLocator();
-// locator('main').getByRole('button', { name: 'Pay' })
+// getByRole('main').getByRole('button', { name: 'Pay' })
 registry.getLocatorSchema("main.button@pay").update().getByRole("link", null).getNestedLocator();
-// locator('main').getByRole('link')
+// getByRole('main').getByRole('link')
 registry.getLocatorSchema("main.button@pay").replace().getByRole("link", { name: "Pay" }).getNestedLocator();
-// locator('main').getByRole('link', { name: 'Pay' })
+// getByRole('main').getByRole('link', { name: 'Pay' })
 ```
 
 **Arguments**
@@ -259,9 +270,9 @@ import type { Paths } from "./checkout.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.rows@cart").update().getByTestId("cart-item").getNestedLocator();
-// locator('main').getByTestId('cart-item')
+// getByRole('main').getByTestId('cart-item')
 registry.getLocatorSchema("main.rows@cart").replace().getByTestId(/cart-/).getNestedLocator();
-// locator('main').getByTestId(/cart-/)
+// getByRole('main').getByTestId(/cart-/)
 ```
 
 **Arguments**
@@ -281,9 +292,9 @@ import type { Paths } from "./checkout.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.text@total").update().getByText({ exact: null }).getNestedLocator();
-// locator('main').getByText('Total')
+// getByRole('main').getByText('Total')
 registry.getLocatorSchema("main.button@pay").replace().getByText("Pay", { exact: true }).getNestedLocator();
-// locator('main').getByText('Pay', { exact: true })
+// getByRole('main').getByText('Pay', { exact: true })
 ```
 
 **Arguments**
@@ -304,9 +315,9 @@ import type { Paths } from "./checkout.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.icon@help").update().getByTitle({ exact: true }).getNestedLocator();
-// locator('main').getByTitle('Help', { exact: true })
+// getByRole('main').getByTitle('Help', { exact: true })
 registry.getLocatorSchema("main.icon@help").replace().getByTitle("More help").getNestedLocator();
-// locator('main').getByTitle('More help')
+// getByRole('main').getByTitle('More help')
 ```
 
 **Arguments**
@@ -327,11 +338,11 @@ import type { Paths } from "./checkout.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.getLocatorSchema("main.list@items").update().locator({ hasText: "Cart" }).getNestedLocator();
-// locator('main').locator('ul').filter({ hasText: 'Cart' })
+// getByRole('main').locator('ul').filter({ hasText: 'Cart' })
 registry.getLocatorSchema("main.list@items").update().locator("ol", null).getNestedLocator();
-// locator('main').locator('ol')
+// getByRole('main').locator('ol')
 registry.getLocatorSchema("main.list@items").replace().locator("ol.cart").getNestedLocator();
-// locator('main').locator('ol.cart')
+// getByRole('main').locator('ol.cart')
 ```
 
 **Arguments**

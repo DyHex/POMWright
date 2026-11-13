@@ -77,7 +77,7 @@ function defineModule<ExternalPaths extends string = never>(
 	locale: Locale,
 ): void;
 function defineModule(registry: LocatorRegistry<ModulePaths>, locale: Locale) {
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.button").getByRole("button", { name: loginLabel[locale] });
 }
 
@@ -259,7 +259,7 @@ describe("what the definition sees", () => {
 			}
 			protected defineLocators() {
 				counts.define += 1;
-				this.add("main").locator("main");
+				this.add("main").getByRole("main");
 				this.getLocator("main");
 				this.locatorRegistry.verify();
 				this.add("main.button").getByRole("button");
@@ -279,7 +279,7 @@ describe("failures", () => {
 			super(page, BASE, "/login", label === undefined ? undefined : { label });
 		}
 		protected defineLocators() {
-			this.add("main").locator("main");
+			this.add("main").getByRole("main");
 			this.add("main").locator("body");
 		}
 	}
@@ -297,7 +297,7 @@ describe("failures", () => {
 			super(page, BASE, "/login", { label: "Typo" });
 		}
 		protected defineLocators() {
-			this.add("main").locator("main");
+			this.add("main").getByRole("main");
 			this.add("main.button")
 				.getByRole("button")
 				.filter({ has: "main.titel" as "main" });
@@ -364,7 +364,7 @@ describe("failures", () => {
 			}
 			// TypeScript accepts a Promise where the base method returns void
 			protected async defineLocators() {
-				this.add("main").locator("main");
+				this.add("main").getByRole("main");
 				await Promise.resolve();
 				if (this.fail) {
 					throw new Error("after the first await");
@@ -466,7 +466,7 @@ describe("a registration kept by a page object", () => {
 			super(page, BASE, "/login", { label: "Keeping" });
 		}
 		protected defineLocators() {
-			this.add("main").locator("main");
+			this.add("main").getByRole("main");
 			this.kept = this.add("main.button").getByRole("button");
 		}
 		narrow() {
@@ -483,7 +483,7 @@ describe("a registration kept by a page object", () => {
 		);
 		calls.length = 0;
 		instance.getNestedLocator("main.button");
-		expect(calls.map((call) => call.method)).toEqual(["locator", "getByRole", "describe"]);
+		expect(calls.map((call) => call.method)).toEqual(["getByRole", "getByRole", "describe"]);
 	});
 });
 
@@ -608,7 +608,7 @@ describe("PageObjectOptions", () => {
 				super(page, "/login", { label: "Login", navOptions: { timeout: 1 } });
 			}
 			protected defineLocators() {
-				this.add("main").locator("main");
+				this.add("main").getByRole("main");
 			}
 		}
 		const { instance, runCheck } = construct(() => new Login(createStubPage().page));

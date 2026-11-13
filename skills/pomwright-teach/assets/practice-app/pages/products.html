@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Products | Practice shop</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header>
+    <nav aria-label="Main">
+      <a href="/">Shop</a>
+      <a href="/products">Products</a>
+      <a href="/cart">Cart</a>
+      <a href="/login">Log in</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Products</h1>
+    <ul aria-label="Products">
+      <li><h2>Lamp</h2><p>249 kr</p><button type="button">Add to cart</button></li>
+      <li><h2>Desk lamp</h2><p>399 kr</p><button type="button">Add to cart</button></li>
+      <li><h2>Chair</h2><p>899 kr</p><button type="button">Add to cart</button></li>
+    </ul>
+    <p role="status"></p>
+  </main>
+  <div role="dialog" aria-label="Cookies" hidden>
+    <p>We use cookies to remember your cart.</p>
+    <button type="button">Accept all</button>
+    <button type="button">Reject all</button>
+  </div>
+  <script src="/app.js"></script>
+  <script>
+    for (const card of document.querySelectorAll('ul[aria-label="Products"] li')) {
+      card.querySelector("button").addEventListener("click", () => {
+        const name = card.querySelector("h2").textContent;
+        practiceShop.addToCart(name);
+        document.querySelector('[role="status"]').textContent = `Added ${name}`;
+      });
+    }
+  </script>
+</body>
+</html>

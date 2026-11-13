@@ -1,4 +1,4 @@
-/* The header shows the three sections on wide screens; the sidebar's topic list stays for the phone menu. */
+/* The header shows the four sections on wide screens; the sidebar's topic list stays for the phone menu. */
 @media (min-width: 50rem) {
 	.starlight-sidebar-topics {
 		display: none;
@@ -83,5 +83,28 @@
 .chart-pair > * {
 	flex: 1 1 18rem;
 	min-width: 0;
+	margin-top: 0;
+}
+
+/*
+ * The Skills pages' results (What was measured): each table and chart on a line of its own, centered, the chart wide
+ * enough to read.
+ */
+.measured {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+}
+
+.measured > table {
+	width: fit-content;
+	max-width: 100%;
+	margin-inline: auto;
+}
+
+.measured > :not(table) {
+	width: 100%;
+	max-width: 40rem;
 	margin-top: 0;
 }

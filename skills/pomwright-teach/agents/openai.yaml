@@ -1,0 +1,5 @@
+interface:
+  display_name: "POMWright teach"
+  short_description: "Learn POMWright with Playwright in a guided workspace"
+policy:
+  allow_implicit_invocation: false

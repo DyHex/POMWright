@@ -9,7 +9,7 @@ type Paths = "main" | "list" | "list.item";
 // Building a query never touches the page; resolution is covered by the integration specs.
 const createRegistry = () => {
 	const registry = new LocatorRegistryInternal<Paths>({} as Page);
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("list").locator("ul");
 	registry.add("list.item").getByRole("listitem");
 	return registry;
@@ -91,14 +91,14 @@ void typeContract;
 type ChainPaths = "main" | "main.list" | "main.list.item" | "a" | "a.b.c";
 const createChainRegistry = () => {
 	const registry = new LocatorRegistryInternal<ChainPaths>(createFakePage());
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.list").locator("ul").filter({ hasText: "Orders" }).describe("the list");
 	registry.add("main.list.item").locator("li").nth(0).describe("first item");
 	registry.add("a").locator("section");
 	registry.add("a.b.c").locator("p"); // "a.b" is a segment of the path without a registration
 	return registry;
 };
-const REGISTERED = "locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').nth(0)";
+const REGISTERED = "getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').nth(0)";
 
 describe("update with an explicit undefined first argument", () => {
 	it("keeps the registered one, as an omitted argument does, with or without options", () => {
@@ -113,7 +113,7 @@ describe("update with an explicit undefined first argument", () => {
 describe("skip and unskip", () => {
 	it("leave an ancestor out of the chain and bring it back exactly as it was", () => {
 		const query = createChainRegistry().getLocatorSchema("main.list.item");
-		expect(String(query.skip("main.list").getNestedLocator())).toBe("locator('main').locator('li').nth(0)");
+		expect(String(query.skip("main.list").getNestedLocator())).toBe("getByRole('main').locator('li').nth(0)");
 		const restored = query.unskip("main.list").getNestedLocator();
 		expect(String(restored)).toBe(REGISTERED);
 		expect((restored as unknown as FakeLocator).description()).toBe("first item");
@@ -126,7 +126,7 @@ describe("skip and unskip", () => {
 			.skip("main.list")
 			.unskip("main.list");
 		expect(String(query.getNestedLocator())).toBe(
-			"locator('main').locator('ul').filter({ hasText: 'Orders' }).filter({ hasText: 'Open' }).locator('li').nth(0)",
+			"getByRole('main').locator('ul').filter({ hasText: 'Orders' }).filter({ hasText: 'Open' }).locator('li').nth(0)",
 		);
 	});
 
@@ -227,7 +227,7 @@ describe("sub-path errors", () => {
 
 	it("are thrown at run time on a registry typed <string>, where every sub-path compiles", () => {
 		const registry = new LocatorRegistryInternal<string>({} as Page);
-		registry.add("main").locator("main");
+		registry.add("main").getByRole("main");
 		registry.add("main.list").getByRole("list");
 		registry.add("main.list.item").getByRole("listitem");
 		registry.add("footer").locator("footer");
@@ -261,7 +261,7 @@ describe("the any-frame form in a query", () => {
 		const registry = new LocatorRegistryInternal<FramePaths>(createFakePage());
 		registry.add("frame").frameLocator("iframe").nth(1);
 		registry.add("frame.btn").getByRole("button");
-		registry.add("main").locator("main");
+		registry.add("main").getByRole("main");
 		registry.add("main.frame").frameLocator("iframe");
 		registry.add("main.frame.btn").getByRole("button");
 		registry.add("any").frameLocator();

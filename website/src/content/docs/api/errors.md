@@ -78,7 +78,7 @@ getByRole requires a non-empty role for "main.heading".
 locator requires a non-empty selector for "main.list".
 frameLocator requires a non-empty selector for "shell.frame".
 getById requires a non-empty id for "main.panel@settings".
-getByTestId requires a testId value for "main.row@order".
+getByTestId requires a testId value for "main.rows@order".
 ```
 
 Thrown by a locator method of `add`, `createReusable` (`createReusable.getByRole requires a role value.`, without a

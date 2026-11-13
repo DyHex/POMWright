@@ -60,7 +60,7 @@ test("getById with a unicode-mode RegExp writes a quote, a backtick and >> by th
 
 	const { registry } = createRegistryWithAccessors<LocatorSchemaPaths>(page);
 
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.quote").getById(/^say"hi$/u);
 	// biome-ignore lint/complexity/useRegexLiterals: tsc over test/ targets below es2024, which rejects the v flag in a literal
 	registry.add("main.apostrophe").getById(new RegExp("^it's$", "v")); // tsc over test/ targets below es2024, which has the literal
@@ -91,7 +91,7 @@ test("getById reads a RegExp's escapes, quotes and >> whole, and finds the eleme
 
 	const { registry } = createRegistryWithAccessors<LocatorSchemaPaths>(page);
 
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	// biome-ignore lint/complexity/useRegexLiterals: tsc over test/ targets below es2024, which rejects the v flag in a literal
 	registry.add("main.backtick").getById(new RegExp("^a[\\`]b$", "v"));
 	registry.add("main.quotes").getById(/^say["']hi$/);

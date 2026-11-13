@@ -234,7 +234,7 @@ class StrictPage extends PageObject<Paths> {
 		super(page, "https://app.example", "/", { label: "Strict", locators: { strictChains: true } });
 	}
 	protected defineLocators(): void {
-		this.add("main").locator("main");
+		this.add("main").getByRole("main");
 	}
 }
 
@@ -297,7 +297,7 @@ class DomainLogin extends DomainPage<Paths> {
 		super(page, "/login", { label: "Login", navOptions: { timeout: 1 }, locators: registryOptions });
 	}
 	protected defineLocators(): void {
-		this.add("main").locator("main");
+		this.add("main").getByRole("main");
 	}
 }
 // @ts-expect-error locators takes the registry options
@@ -403,7 +403,7 @@ untypedPaths.getLocatorSchema("main.list.item").nth("footer", 0);
 const noPaths = createRegistryWithAccessors(page);
 noPaths.registry.verify();
 // @ts-expect-error createRegistryWithAccessors needs its paths as a type argument
-noPaths.add("main").locator("main");
+noPaths.add("main").getByRole("main");
 // @ts-expect-error createRegistryWithAccessors needs its paths as a type argument
 noPaths.getNestedLocator("main");
 // a generic wrapper passes its own paths

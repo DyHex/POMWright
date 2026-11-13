@@ -22,14 +22,18 @@ are common in generated markup. `getById` matches the `id` attribute itself, so 
 import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<
-  "section@settings" | "form.input@user" | "list.item@first" | "paragraph@hash" | "paragraph@intro"
+  "section@settings" | "form.input@user" | "list.item@first" | "text@hash" | "text@intro"
 >;
 // ---cut---
 registry.add("section@settings").getById("settings.panel");
+
 registry.add("form.input@user").getById("form:user");
+
 registry.add("list.item@first").getById("items[0]");
-registry.add("paragraph@hash").getById("#literal-hash"); // the "#" is part of the id
-registry.add("paragraph@intro").getById("1st");
+
+registry.add("text@hash").getById("#literal-hash"); // the "#" is part of the id
+
+registry.add("text@intro").getById("1st");
 ```
 
 Each of these finds its element, where `page.locator("#settings.panel")` finds nothing.

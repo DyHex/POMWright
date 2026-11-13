@@ -5,7 +5,7 @@ description: "How a path becomes a Playwright locator: getNestedLocator chains e
 
 ## Introduction
 
-In Playwright you narrow a search by chaining: `page.locator("main").getByRole("button")` finds buttons inside
+In Playwright you narrow a search by chaining: `page.getByRole("main").getByRole("button")` finds buttons inside
 `main` ([matching inside a locator](https://playwright.dev/docs/locators#matching-inside-a-locator)). POMWright builds
 that chain from a path. You register one locator per path, and resolving a path returns the Playwright
 [`Locator`](https://playwright.dev/docs/api/class-locator) that chains them.
@@ -31,8 +31,10 @@ export type Paths =
   | "main.form@login.button@login";
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
-  registry.add("main").locator("main");
+  registry.add("main").getByRole("main");
+
   registry.add("main.form@login").getByRole("form", { name: "Log in" });
+
   registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 }
 ```
@@ -61,7 +63,7 @@ import type { Paths } from "./login.locators";
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 const submit = registry.getNestedLocator("main.form@login.button@login");
-// locator('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
+// getByRole('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
 
 await submit.click();
 ```
@@ -70,7 +72,7 @@ Each segment's locator is resolved inside the one before it:
 
 ```mermaid
 flowchart LR
-  main["main<br/>locator('main')"] -->|inside| form["main.form@login<br/>getByRole('form', { name: 'Log in' })"]
+  main["main<br/>getByRole('main')"] -->|inside| form["main.form@login<br/>getByRole('form', { name: 'Log in' })"]
   form -->|inside| submit["main.form@login.button@login<br/>getByRole('button', { name: 'Log in' })"]
 ```
 
@@ -151,12 +153,14 @@ declare const registry: LocatorRegistry<
   "main" | "main.list@orders" | "main.list@orders.items" | "main.list@orders.item@first"
 >;
 // ---cut---
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
+
 registry.add("main.list@orders").getByRole("list", { name: "Orders" });
+
 registry.add("main.list@orders.items").getByRole("listitem");
-// locator('main').getByRole('list', { name: 'Orders' }).getByRole('listitem'): every order
+// getByRole('main').getByRole('list', { name: 'Orders' }).getByRole('listitem'): every order
 registry.add("main.list@orders.item@first", { reuse: "main.list@orders.items" }).nth("first");
-// locator('main').getByRole('list', { name: 'Orders' }).getByRole('listitem').first(): one order
+// getByRole('main').getByRole('list', { name: 'Orders' }).getByRole('listitem').first(): one order
 ```
 
 The `item@first` path is there to show the naming. Usually you register only `main.list@orders.items` and pick one
@@ -198,13 +202,15 @@ import type { LocatorRegistry } from "pomwright";
 
 declare const registry: LocatorRegistry<"main" | "main.table@cart" | "main.table@cart.inputs@quantity">;
 // ---cut---
-registry.add("main").locator("main");
+registry.add("main").getByRole("main");
+
 registry.add("main.table@cart").getByRole("table", { name: "Cart" });
+
 registry.add("main.table@cart.inputs@quantity").getByLabel("Quantity");
 
 const quantities = ["1", "2", "5"];
 const quantityInputs = registry.getNestedLocator("main.table@cart.inputs@quantity");
-// locator('main').getByRole('table', { name: 'Cart' }).getByLabel('Quantity'): 3 inputs, the aside's is not one
+// getByRole('main').getByRole('table', { name: 'Cart' }).getByLabel('Quantity'): 3 inputs, the aside's is not one
 
 await expect(quantityInputs).toHaveCount(quantities.length);
 for (const [row, value] of quantities.entries()) {
@@ -225,6 +231,7 @@ import type { LocatorRegistry } from "pomwright";
 declare const registry: LocatorRegistry<"main.form" | "main.form.button.submit">;
 // ---cut---
 registry.add("main.form").getByRole("form", { name: "Log in" });
+
 registry.add("main.form.button.submit").getByRole("button", { name: "Log in" });
 
 registry.getNestedLocator("main.form.button.submit");

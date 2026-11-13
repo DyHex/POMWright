@@ -9,8 +9,10 @@ export class CheckoutPage extends PageObject<Paths> {
 	}
 
 	protected defineLocators(): void {
-		this.add("main").locator("main");
+		this.add("main").getByRole("main");
+
 		this.add("main.text@orderId").getByTestId("order-id");
+
 		this.add("main.button@pay").getByRole("button", { name: "Pay" });
 	}
 

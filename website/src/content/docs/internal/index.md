@@ -61,7 +61,7 @@ flowchart TD
   records -->|copied on read| query
   query --> chain["buildLocatorChain"]
   chain --> table["the strategy table creates<br/>each segment's Playwright locator"]
-  table --> locator["page.locator('main').getByRole(…)<br/>.describe(path)"]
+  table --> locator["page.getByRole('main').getByRole(…)<br/>.describe(path)"]
 ```
 
 1. `add(path)` returns a registration builder. Its locator method checks the first argument against the

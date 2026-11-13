@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Home | Practice shop</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header>
+    <nav aria-label="Main">
+      <a href="/">Shop</a>
+      <a href="/products">Products</a>
+      <a href="/cart">Cart</a>
+      <a href="/login">Log in</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Welcome to the practice shop</h1>
+    <form aria-label="Newsletter">
+      <label>Email <input type="email" name="email"></label>
+      <button type="submit">Subscribe</button>
+      <p class="confirmation" hidden>Thanks for subscribing</p>
+    </form>
+  </main>
+  <div role="dialog" aria-label="Cookies" hidden>
+    <p>We use cookies to remember your cart.</p>
+    <button type="button">Accept all</button>
+    <button type="button">Reject all</button>
+  </div>
+  <script src="/app.js"></script>
+  <script>
+    document.querySelector('form[aria-label="Newsletter"]').addEventListener("submit", (event) => {
+      event.preventDefault();
+      document.querySelector(".confirmation").hidden = false;
+    });
+  </script>
+</body>
+</html>

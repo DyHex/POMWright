@@ -34,9 +34,9 @@ const ordersStorage = { orders: json<Order[]>() };
 type Paths =
   | "main"
   | "main.table@orders"
-  | "main.table@orders.row"
-  | "main.table@orders.row.button@cancel"
-  | "main.table@orders.row.cell@status";
+  | "main.table@orders.rows"
+  | "main.table@orders.rows.button@cancel"
+  | "main.table@orders.rows.cell@status";
 
 export class OrdersPage extends PageObject<Paths, { storage: typeof ordersStorage }> {
   constructor(page: Page) {
@@ -44,18 +44,22 @@ export class OrdersPage extends PageObject<Paths, { storage: typeof ordersStorag
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
+
     this.add("main.table@orders").getByRole("table", { name: "Orders" });
-    this.add("main.table@orders.row").getByRole("row");
-    this.add("main.table@orders.row.button@cancel").getByRole("button", { name: "Cancel" });
-    this.add("main.table@orders.row.cell@status").getByTestId("order-status");
+
+    this.add("main.table@orders.rows").getByRole("row");
+
+    this.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
+
+    this.add("main.table@orders.rows.cell@status").getByTestId("order-status");
   }
 
   @step()
   async cancel(options: { order: string }) {
     const { order } = options;
-    await this.getLocatorSchema("main.table@orders.row.button@cancel")
-      .filter("main.table@orders.row", { hasText: order })
+    await this.getLocatorSchema("main.table@orders.rows.button@cancel")
+      .filter("main.table@orders.rows", { hasText: order })
       .getNestedLocator()
       .click();
   }
@@ -63,8 +67,8 @@ export class OrdersPage extends PageObject<Paths, { storage: typeof ordersStorag
   @step()
   async expectStatus(options: { order: string; status: OrderStatus }) {
     const { order, status } = options;
-    const cell = this.getLocatorSchema("main.table@orders.row.cell@status")
-      .filter("main.table@orders.row", { hasText: order })
+    const cell = this.getLocatorSchema("main.table@orders.rows.cell@status")
+      .filter("main.table@orders.rows", { hasText: order })
       .getNestedLocator();
     await expect(cell).toHaveText(status);
   }
@@ -104,10 +108,10 @@ test("a customer cancels an open order", async ({ ordersPage, log }) => {
 ```
 
 Canceling `ORD-1042` clicks this locator, which the report and the trace viewer show by its path,
-`main.table@orders.row.button@cancel`:
+`main.table@orders.rows.button@cancel`:
 
 ```text
-locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })
+getByRole('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })
 ```
 
 `getNestedLocator(path)` resolves a path's registered chain as it is: the shorthand for the locators you use most, as
@@ -169,6 +173,13 @@ POMWright 3 needs `@playwright/test` 1.64 or later (below 2) and Node 20 or late
 Using POMWright 2.x? Its documentation is in this repository at the
 [`v2.1.0` tag](https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v2). Still on 1.x? The
 [1.x to 2.x migration guide](https://github.com/DyHex/POMWright/tree/v2.1.0/docs/v1-to-v2-migration) is at the same tag.
+
+## Agent skills
+
+Working through a coding agent? POMWright's [agent skills](https://dyhex.github.io/POMWright/skills/) teach it
+POMWright as the documentation describes: `pomwright` writes and reviews tests and page code, `pomwright-map-site`
+generates page code for a running site, and `pomwright-teach` teaches POMWright over several sessions. They live in
+[`skills/`](./skills/), not in the npm package; `npx skills add DyHex/POMWright` installs them.
 
 ## Support
 

@@ -36,7 +36,10 @@ with the table in [Page objects](/POMWright/docs/page-objects/#how-a-mistake-is-
 
 `docs/docsChains.spec.ts` rebuilds every locator chain the documentation and the README show, in a `text` block, a
 code comment or the running text, from the page's own example, and compares it with what the packed package resolves: one test per page,
-so a chain that a change to the code or to the page made stale names its page. The latest-1.x CI rows run it too, so
+so a chain that a change to the code or to the page made stale names its page. `docs/skillsChains.spec.ts` does the same
+for the agent skills in the repository's `skills/` folder, one test per skill file; since a skill's code is written in
+double quotes, every single-quoted locator call in a skill is a rendering, and the spec fails for one no comparison
+covers, or for a skill file with a rendering and no test. The latest-1.x CI rows run them too, so
 a Playwright release that prints a locator differently shows there first.
 
 After the harness, `pack-test` runs `test/playwright.steps.config.ts`: where the report places a step and its error,
@@ -60,8 +63,8 @@ its own so that no `--reporter` given to the harness can switch it off.
    [call sites](/POMWright/internal/call-sites/#steps-at-the-tests-line)). Decorated code compiled by `tsc` with
    `experimentalDecorators`, such as a page-object package, makes these calls; a unit test with a hand-made descriptor
    cannot show that they run.
-5. `scripts/check-doc-snippets.mjs`: every TypeScript example of the documentation, the README and the doc comments,
-   compiled against the installed package (see [documentation](/POMWright/internal/documentation/)).
+5. `scripts/check-doc-snippets.mjs`: every TypeScript example of the documentation, the README, the agent skills and
+   the doc comments, compiled against the installed package (see [documentation](/POMWright/internal/documentation/)).
 6. `scripts/check-api-coverage.mjs`: every export of the installed declarations has an API page or section, every
    member a heading in its own section, every export and member a doc comment with a summary and its parameters, every
    method and class property a `@see` to its own heading (not merely one that exists), every link to the site a page
@@ -92,8 +95,10 @@ untested merge.
 
 - **lint**: biome over the whole repository, warnings failing; actionlint over the workflows, with shellcheck over
   their scripts and over every shell script the repository tracks, both pinned by version and checksum in `scripts/lint-workflows.sh`,
-  which `pnpm lint:workflows` runs locally too; every relative link and anchor of the contributor guide
-  (`scripts/check-guide-links.mjs`); then the release checks' test (`scripts/release-check.test.sh`), which runs every
+  which `pnpm lint:workflows` runs locally too; every relative link and anchor of the contributor guide and of the
+  agent skills (`scripts/check-guide-links.mjs`); the skills' format (`scripts/check-skills.mjs`: frontmatter that every
+  agent accepts, the sizes of their files, contents lists, references one level deep and links to this site); then the
+  release checks' test (`scripts/release-check.test.sh`), which runs every
   path of a release in throwaway repositories with a fake npm.
 - **package**: the unit tests, then one build and one tarball, kept as an artifact.
 - **harness**: that tarball on each browser, at the pinned Playwright and at the latest 1.x; a pull request runs

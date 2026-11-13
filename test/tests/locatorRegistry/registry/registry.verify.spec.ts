@@ -203,7 +203,7 @@ test("an add(path) that never got a locator method fails, where every chain belo
 	// an add(path) written as a statement between the paths around it
 	type FormPaths = "main" | "main.form@login" | "main.form@login.button@login";
 	const { registry } = createRegistryWithAccessors<FormPaths>(page);
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.form@login");
 	registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 	expect(() => registry.verify()).toThrowError(
@@ -211,6 +211,6 @@ test("an add(path) that never got a locator method fails, where every chain belo
 	);
 	// what the check prevents: the chain leaves the form out
 	expect(`${registry.getNestedLocator("main.form@login.button@login").describe("")}`).toBe(
-		"locator('main').getByRole('button', { name: 'Log in' })",
+		"getByRole('main').getByRole('button', { name: 'Log in' })",
 	);
 });

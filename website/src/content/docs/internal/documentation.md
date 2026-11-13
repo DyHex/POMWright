@@ -5,8 +5,9 @@ description: "Where the documentation lives, how its examples, API coverage and 
 
 ## Where it lives
 
-The documentation is this site, built with [Starlight](https://starlight.astro.build/) from `website/`, in three
-sections: Docs to learn, the API reference to look up, and these Internal pages to understand. The pages are Markdown in
+The documentation is this site, built with [Starlight](https://starlight.astro.build/) from `website/`, in four
+sections: Docs to learn, the API reference to look up, the Skills, which present the agent skills and how to install
+them, and these Internal pages to understand. The pages are Markdown in
 `website/src/content/docs/`, one folder per section. The editor's hovers are the doc comments in `src/`, written from
 the same facts as the API pages.
 
@@ -16,7 +17,9 @@ the same facts as the API pages.
   it is written, never written from memory. A change to a message, a rendering or a mechanism updates the pages that
   show it in the same change. `test/tests/docs/docsChains.spec.ts` keeps the chains so: it rebuilds every chain a page
   or the README shows in a `text` block, a code comment or the running text through the packed package, one test per page, and compares
-  it, so a chain that changes fails the harness until the page changes with it.
+  it, so a chain that changes fails the harness until the page changes with it. `skillsChains.spec.ts` does the same for
+  the agent skills, and fails as well for a rendering a skill shows that no comparison covers, or a skill file with a
+  rendering and no test of its own.
 - **Examples compile.** `scripts/check-doc-snippets.mjs` takes every `ts` block, one small project per page, and
   compiles it against the installed package with the harness's options and `declaration: true`. A block with
   `title="name.ts"` is that file, which the page's other blocks import; lines up to `// ---cut---` are compiled but not
@@ -24,10 +27,14 @@ the same facts as the API pages.
   deliberate error is shown with `// @ts-expect-error`, which the check enforces. The example app in
   `website/snippets/`, four page objects on `shop.example` and their fixtures, can be imported from every page. The
   README's examples are compiled as one more page, their blocks titled in the fence (`title="orders.page.ts"`), which
-  GitHub and npm do not show. The doc comments' `@example` blocks are compiled too, in a project of their own: each is
-  a fragment of a consumer's file, so the check imports the exports and Playwright types it names and declares the
-  instances it assumes (`page`, `registry`, a login page object, …) once in the script; an error points at the source
-  line, and `nocheck` after the fence skips an example that cannot stand alone and lists it.
+  GitHub and npm do not show. The agent skills in the repository's `skills/` folder are compiled as pages too, one per
+  Markdown file, without the example app and with three rules of their own, since an agent reads a skill's Markdown
+  raw: no `// ---cut---` (an agent would copy the marker), no `nocheck`, and code in double quotes, so a single-quoted
+  locator call is always a rendering of a chain; the templates a skill copies into a project, the `.ts` files under its
+  `assets/`, are compiled at their paths. The doc comments' `@example` blocks are compiled too, in a project of their
+  own: each is a fragment of a consumer's file, so the check imports the exports and Playwright types it names and
+  declares the instances it assumes (`page`, `registry`, a login page object, …) once in the script; an error points at
+  the source line, and `nocheck` after the fence skips an example that cannot stand alone and lists it.
 - **Nothing is skipped silently.** A block's language is the fence's first word, after any spaces, as CommonMark and the
   site read it. A TypeScript block the check would not compile fails it, with the fix in the message: one in a `~~~`
   fence (write it as a ` ```ts ` block), one labeled `tsx`, `mts` or `cts` (write it as `ts`), one labeled `ts` written
@@ -60,7 +67,7 @@ root `package.json` install it and run it: `pnpm docs:dev` serves the pages at
 `http://localhost:4391/POMWright/` and reloads on every edit, but does not check links; `pnpm docs:build` writes
 `website/dist` and checks every link; `pnpm docs:preview` builds and serves that build at
 `http://localhost:4392/POMWright/`, as it will be deployed. The site's configuration is
-`website/astro.config.mjs`; the three sections and their sidebars are `website/sidebar.mjs`, shown as tabs beside the
+`website/astro.config.mjs`; the four sections and their sidebars are `website/sidebar.mjs`, shown as tabs beside the
 title by a component of its own; an Expressive Code plugin hides an example's compile-only prelude; Mermaid diagrams
 render in the browser, so the build does not catch a syntax error in one. `scripts/check-diagrams.mjs` does: it serves
 the built site, opens every page with a diagram in Chromium, in the light and the dark scheme, and fails on a diagram

@@ -26,8 +26,9 @@ it before working there. Read it before running these commands, probing a claim,
   `experimentalDecorators` (`tests/packaging/stepLegacyDecorators.typecheck.ts`, also compiled under the standard
   decorators by the first `tsc`); then `tsc -p test/tsconfig.legacyDecorators.emit.json`, which emits
   `step-locations/legacy/legacyWidget.ts` with `experimentalDecorators`, as CommonJS, into `test/.legacy-decorators/` for
-  the step-location check; then `scripts/check-doc-snippets.mjs`, every `ts` block of `website/src/content/docs` and the
-  README, and the doc comments' examples, against the installed package; `scripts/check-api-coverage.mjs`, the API
+  the step-location check; then `scripts/check-doc-snippets.mjs`, every `ts` block of `website/src/content/docs`, the
+  README and the skills in `skills/`, the skills' templates, and the doc comments' examples, against the installed
+  package; `scripts/check-api-coverage.mjs`, the API
   reference and the doc comments against the installed declarations; `scripts/check-error-messages.mjs`,
   *Error messages* against the messages `src/` throws and the compile-error messages its types define (see
   [website/AGENTS.md](../website/AGENTS.md)); and `scripts/check-playwright-retries.mjs`, `RETRY_PAUSES` against the
@@ -151,7 +152,10 @@ it before working there. Read it before running these commands, probing a claim,
   lines in its `cause`), `logging/` (the `log` fixture's attachments, read by an auto fixture torn
   down after it), `step/`, `testApp/`, `docs/` (`docsChains.spec.ts`: every chain the site and the README show in a
   `text` block, a code comment or the running text, rebuilt through the packed package, one test per page, which also
-  checks that its page shows every chain, selector and message it compares), `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
+  checks that its page shows every chain, selector and message it compares; its helpers and that page check are in
+  `chains.ts`, for every chain spec; `skillsChains.spec.ts`: the same for the skills in `skills/`, one test per skill
+  file, failing as well for a rendering its test does not compare and for a skill file with a rendering and no test),
+  `packaging/` (`esmEntry.spec.mts`, ESM inside the CommonJS harness: the
   published entries, one shared copy, closed deep imports, the manifest; `packageFiles.spec.ts`, the installed
   package's exact file list; `publicTypes.typecheck.ts`, `publicTypes.emit.ts` and `stepLegacyDecorators.typecheck.ts`,
   compile-only, the last also under `experimentalDecorators`; `emitSeeds.ts`, a value of every export, from which the

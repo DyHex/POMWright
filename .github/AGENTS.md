@@ -13,7 +13,9 @@ request, GitHub's merge commit): `lint` (biome; then `scripts/lint-workflows.sh`
 locally too: actionlint with ShellCheck for the `run:` scripts, each pinned by version and SHA-256 in the script and
 moved by hand, and that ShellCheck over every shell script the repository tracks, read from `git ls-files`, since
 actionlint sees a script a `run:` block calls as that one line; then `scripts/check-guide-links.mjs`,
-`pnpm lint:guide`, every relative link and anchor of the contributor guide; then `scripts/release-check.test.sh`, every
+`pnpm lint:guide`, every relative link and anchor of the contributor guide and the skills; then
+`scripts/check-skills.mjs`, `pnpm lint:skills`, the skills' frontmatter, sizes, contents lists, reference depth and
+site links; then `scripts/release-check.test.sh`, every
 path of the release checks in throwaway repositories with a fake npm), `package` (unit tests, build and pack once, the
 tarball as a run artifact) and `harness` (the browsers the caller passes, each at the Playwright pin and at the latest
 1.x, each testing that tarball), on Node 26, the default (`checks.yaml`'s `NODE_VERSION`, every job's line in one place;

@@ -30,7 +30,7 @@ export class ShopPage extends PageObject<Paths, { storage: typeof schema }> {
 	}
 
 	protected defineLocators(): void {
-		this.add("main").locator("main");
+		this.add("main").getByRole("main");
 		this.add("main.list").getByRole("list");
 		this.add("main.list.item").getByRole("listitem");
 	}

@@ -1,115 +1,26 @@
-import { readFileSync } from "node:fs";
 import path from "node:path";
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { createRegistryWithAccessors, PageObject } from "pomwright";
+import { chain, checkThatPagesShow, errorLines, errorMessage, nested, selector, shows } from "./chains";
 
 // Every locator chain the documentation shows, in a `text` block, a code comment or the running text, rebuilt here
-// through the packed package and compared, one test per page (its path under website/src/content/docs, or README.md). A page's examples
-// are copied as written; a chain is the locator as Playwright prints it without a description, which a resolved
-// locator otherwise prints instead (`describe("")`). A selector the page shows on its own is compared through
-// `page.locator(selector)`, which Playwright prints as it prints the registry's. Each test also reads its page and
-// checks that it shows every chain, selector and message compared here, so a change on either side fails here until
-// the page and this spec change together. Where a test needs a document, it sets the page's example with
-// page.setContent, a stand-in for a page the test server serves: a chain, and the strict mode error Playwright gives
-// for it, depend on the DOM alone, however the document arrived, so it could hide only what loading a page brings
-// (scripts, frames, another origin), which no page's message here depends on.
-
-const chain = (locator: Locator) => `${locator.describe("")}`;
+// through the packed package and compared, one test per page (its path under website/src/content/docs, or README.md),
+// with the helpers and the page check of ./chains.ts. A page's examples are copied as written. Where a test needs a
+// document, it sets the page's example with page.setContent, a stand-in for a page the test server serves: a chain, and
+// the strict mode error Playwright gives for it, depend on the DOM alone, however the document arrived, so it could hide
+// only what loading a page brings (scripts, frames, another origin), which no page's message here depends on.
 
 const root = path.join(__dirname, "../../..");
-/** What the page a test is named after must show, gathered as its comparisons run. */
-const shownOnPage: string[] = [];
-/** Renderings compared in place of a selector the page shows: the selector is what the page must hold. */
-const renderings = new Set<string>();
-const onPage = (shown: string) => {
-	if (!renderings.has(shown)) {
-		shownOnPage.push(shown);
-	}
-};
-/** A selector the page shows, rendered as Playwright prints a locator built from it. */
-const selector = (page: Page, shown: string) => {
-	onPage(shown);
-	const rendered = `${page.locator(shown)}`;
-	renderings.add(rendered);
-	return rendered;
-};
-/** A selector the page shows under `main`, rendered as Playwright prints the nested locator. */
-const nested = (page: Page, shown: string) => {
-	onPage(shown);
-	const rendered = `${page.locator("main").locator(shown)}`;
-	renderings.add(rendered);
-	return rendered;
-};
-// A line of Playwright's strict mode error, as the page shows it: without the numbering and the call's prefix.
-const asShown = (line: string) => line.replace(/^\s+\d\) /, "").replace(/^locator\.click: Error: /, "");
-// Firefox names two elements and then "...", which the page leaves out on purpose: it shows Chromium's and WebKit's.
-const FIREFOX_ELLIPSIS = "    ...";
 
-/** `expect.soft`, which also records what the page must show. */
-const shows = (actual: unknown) => ({
-	toBe: (expected: string) => {
-		expect.soft(actual).toBe(expected);
-		onPage(expected);
-	},
-	toContain: (expected: string) => {
-		expect.soft(actual).toContain(expected);
-		onPage(expected);
-	},
-	toEqual: (expected: string[]) => {
-		expect.soft(actual).toEqual(expected);
-		for (const line of expected) {
-			if (line !== FIREFOX_ELLIPSIS) {
-				onPage(asShown(line));
-			}
-		}
-	},
-	toMatch: (expected: RegExp) => expect.soft(actual).toMatch(expected),
-});
-
-// a page may break a chain over lines, in a comment or a `text` block: compared without line breaks, indentation and
-// comment markers too
-const flatten = (text: string) => text.replace(/\n\s*(\/\/|#)?\s*/g, "");
-
-test.beforeEach(() => {
-	shownOnPage.length = 0;
-	renderings.clear();
-});
-
-test.afterEach(() => {
-	const title = test.info().title;
-	const text = readFileSync(
-		title === "README.md" ? path.join(root, "README.md") : path.join(root, "website/src/content/docs", title),
-		"utf8",
-	);
-	const flat = flatten(text);
-	for (const shown of shownOnPage) {
-		expect.soft(text.includes(shown) || flat.includes(shown), `${title} shows ${JSON.stringify(shown)}`).toBe(true);
-	}
-});
-
-/** The error message an action throws on the blank page, whose call log shows the chain Playwright waited for. */
-const errorMessage = async (action: Promise<unknown>) =>
-	(
-		await action.then(
-			() => new Error("no error"),
-			(caught: Error) => caught,
-		)
-	).message;
-
-/** The first lines of the error an action throws, for Playwright's strict mode message. */
-const errorLines = async (action: Promise<unknown>, count: number) => {
-	const error = await action.then(
-		() => new Error("no error"),
-		(caught: Error) => caught,
-	);
-	return error.message.split("\n").slice(0, count);
-};
+checkThatPagesShow((title) =>
+	title === "README.md" ? path.join(root, "README.md") : path.join(root, "website/src/content/docs", title),
+);
 
 // the registry of orders.locators.ts on Queries and on the LocatorQueryBuilder page
 type OrdersPaths = "main" | "main.list" | "main.list.item" | "main.button@save";
 const ordersRegistry = (page: Page) => {
 	const { registry } = createRegistryWithAccessors<OrdersPaths>(page);
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.list").locator("ul").filter({ hasText: "Orders" });
 	registry.add("main.list.item").locator("li").nth(0);
 	registry.add("main.button@save").getByRole("button", { name: "Save", exact: true });
@@ -120,7 +31,7 @@ const ordersRegistry = (page: Page) => {
 type LoginPaths = "main" | "main.form@login" | "main.form@login.button@login" | "main.list" | "main.list.items";
 const loginRegistry = (page: Page) => {
 	const { registry } = createRegistryWithAccessors<LoginPaths>(page);
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.form@login").getByRole("form", { name: "Log in" });
 	registry.add("main.form@login.button@login").getByRole("button", { name: "Log in" });
 	registry.add("main.list").locator("ul");
@@ -132,34 +43,34 @@ test("api/class-locatorquerybuilder.md", async ({ page }) => {
 	const registry = ordersRegistry(page);
 	const query = () => registry.getLocatorSchema("main.list.item");
 	shows(chain(query().clearSteps().filter({ hasText: "Open" }).nth("last").getNestedLocator())).toBe(
-		"locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').filter({ hasText: 'Open' }).last()",
+		"getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').filter({ hasText: 'Open' }).last()",
 	);
 	shows(chain(query().clearSteps().getNestedLocator())).toBe(
-		"locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li')",
+		"getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li')",
 	);
 	shows(chain(query().clearSteps("main.list").getNestedLocator())).toBe(
-		"locator('main').locator('ul').locator('li').first()",
+		"getByRole('main').locator('ul').locator('li').first()",
 	);
 	shows(chain(query().nth("last").getLocator())).toBe("locator('li').first().last()");
 	shows(chain(query().getNestedLocator())).toBe(
-		"locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()",
+		"getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()",
 	);
 	shows(chain(query().clearSteps().nth(2).getNestedLocator())).toBe(
-		"locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').nth(2)",
+		"getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').nth(2)",
 	);
 	shows(chain(query().replace("main.list").getByRole("list", { name: "Orders" }).getNestedLocator())).toBe(
-		"locator('main').getByRole('list', { name: 'Orders' }).filter({ hasText: 'Orders' }).locator('li').first()",
+		"getByRole('main').getByRole('list', { name: 'Orders' }).filter({ hasText: 'Orders' }).locator('li').first()",
 	);
-	shows(chain(query().skip("main.list").getNestedLocator())).toBe("locator('main').locator('li').first()");
+	shows(chain(query().skip("main.list").getNestedLocator())).toBe("getByRole('main').locator('li').first()");
 	shows(chain(query().skip("main.list").unskip("main.list").getNestedLocator())).toBe(
-		"locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()",
+		"getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()",
 	);
 	const save = () => registry.getLocatorSchema("main.button@save");
 	shows(chain(save().update().getByRole({ name: "Cancel" }).getNestedLocator())).toBe(
-		"locator('main').getByRole('button', { name: 'Cancel', exact: true })",
+		"getByRole('main').getByRole('button', { name: 'Cancel', exact: true })",
 	);
 	shows(chain(save().update().getByRole("button", null).getNestedLocator())).toBe(
-		"locator('main').getByRole('button')",
+		"getByRole('main').getByRole('button')",
 	);
 });
 
@@ -167,10 +78,10 @@ test("api/class-locatorregistry.md", async ({ page }) => {
 	const registry = loginRegistry(page);
 	shows(chain(registry.getLocator("main.list.items"))).toBe("getByRole('listitem')");
 	shows(chain(registry.getLocatorSchema("main.list.items").nth("last").getNestedLocator())).toBe(
-		"locator('main').locator('ul').getByRole('listitem').last()",
+		"getByRole('main').locator('ul').getByRole('listitem').last()",
 	);
 	shows(chain(registry.getNestedLocator("main.form@login.button@login"))).toBe(
-		"locator('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })",
+		"getByRole('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })",
 	);
 });
 
@@ -189,7 +100,7 @@ test("api/class-locatorupdatebuilder.md", async ({ page }) => {
 		| "main.rows@cart"
 		| "main.panel@summary";
 	const { registry } = createRegistryWithAccessors<Paths>(page);
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.button@pay").getByRole("button", { name: "Pay", exact: true });
 	registry.add("main.text@total").getByText("Total", { exact: true });
 	registry.add("main.input@email").getByLabel("Email");
@@ -212,7 +123,7 @@ test("api/class-locatorupdatebuilder.md", async ({ page }) => {
 				.frameLocator("iframe#card")
 				.getNestedLocator(),
 		),
-	).toBe("locator('main').locator('iframe#card').contentFrame().getByRole('button', { name: 'Confirm' })");
+	).toBe("getByRole('main').locator('iframe#card').contentFrame().getByRole('button', { name: 'Confirm' })");
 	shows(
 		chain(
 			registry
@@ -224,10 +135,10 @@ test("api/class-locatorupdatebuilder.md", async ({ page }) => {
 		),
 	).toBe("frameLocator().getByRole('button', { name: 'Confirm' })");
 	shows(chain(query("main.image@card").update().getByAltText(/logo/i).getNestedLocator())).toBe(
-		"locator('main').getByAltText(/logo/i)",
+		"getByRole('main').getByAltText(/logo/i)",
 	);
 	shows(chain(query("main.image@card").replace().getByAltText("Visa").getNestedLocator())).toBe(
-		"locator('main').getByAltText('Visa')",
+		"getByRole('main').getByAltText('Visa')",
 	);
 	shows(
 		chain(
@@ -241,55 +152,55 @@ test("api/class-locatorupdatebuilder.md", async ({ page }) => {
 		nested(page, '[id="order-summary"]'),
 	);
 	shows(chain(query("main.input@email").update().getByLabel("E-mail").getNestedLocator())).toBe(
-		"locator('main').getByLabel('E-mail')",
+		"getByRole('main').getByLabel('E-mail')",
 	);
 	shows(chain(query("main.input@email").replace().getByLabel("Email address").getNestedLocator())).toBe(
-		"locator('main').getByLabel('Email address')",
+		"getByRole('main').getByLabel('Email address')",
 	);
 	shows(chain(query("main.input@search").update().getByPlaceholder({ exact: true }).getNestedLocator())).toBe(
-		"locator('main').getByPlaceholder('Search', { exact: true })",
+		"getByRole('main').getByPlaceholder('Search', { exact: true })",
 	);
 	shows(chain(query("main.input@search").replace().getByPlaceholder("Search products").getNestedLocator())).toBe(
-		"locator('main').getByPlaceholder('Search products')",
+		"getByRole('main').getByPlaceholder('Search products')",
 	);
 	shows(chain(query("main.button@pay").update().getByRole({ name: "Pay now" }).getNestedLocator())).toBe(
-		"locator('main').getByRole('button', { name: 'Pay now', exact: true })",
+		"getByRole('main').getByRole('button', { name: 'Pay now', exact: true })",
 	);
 	shows(chain(query("main.button@pay").update().getByRole({ exact: null }).getNestedLocator())).toBe(
-		"locator('main').getByRole('button', { name: 'Pay' })",
+		"getByRole('main').getByRole('button', { name: 'Pay' })",
 	);
 	shows(chain(query("main.button@pay").update().getByRole("link", null).getNestedLocator())).toBe(
-		"locator('main').getByRole('link')",
+		"getByRole('main').getByRole('link')",
 	);
 	shows(chain(query("main.button@pay").replace().getByRole("link", { name: "Pay" }).getNestedLocator())).toBe(
-		"locator('main').getByRole('link', { name: 'Pay' })",
+		"getByRole('main').getByRole('link', { name: 'Pay' })",
 	);
 	shows(chain(query("main.rows@cart").update().getByTestId("cart-item").getNestedLocator())).toBe(
-		"locator('main').getByTestId('cart-item')",
+		"getByRole('main').getByTestId('cart-item')",
 	);
 	shows(chain(query("main.rows@cart").replace().getByTestId(/cart-/).getNestedLocator())).toBe(
-		"locator('main').getByTestId(/cart-/)",
+		"getByRole('main').getByTestId(/cart-/)",
 	);
 	shows(chain(query("main.text@total").update().getByText({ exact: null }).getNestedLocator())).toBe(
-		"locator('main').getByText('Total')",
+		"getByRole('main').getByText('Total')",
 	);
 	shows(chain(query("main.button@pay").replace().getByText("Pay", { exact: true }).getNestedLocator())).toBe(
-		"locator('main').getByText('Pay', { exact: true })",
+		"getByRole('main').getByText('Pay', { exact: true })",
 	);
 	shows(chain(query("main.icon@help").update().getByTitle({ exact: true }).getNestedLocator())).toBe(
-		"locator('main').getByTitle('Help', { exact: true })",
+		"getByRole('main').getByTitle('Help', { exact: true })",
 	);
 	shows(chain(query("main.icon@help").replace().getByTitle("More help").getNestedLocator())).toBe(
-		"locator('main').getByTitle('More help')",
+		"getByRole('main').getByTitle('More help')",
 	);
 	shows(chain(query("main.list@items").update().locator({ hasText: "Cart" }).getNestedLocator())).toBe(
-		"locator('main').locator('ul').filter({ hasText: 'Cart' })",
+		"getByRole('main').locator('ul').filter({ hasText: 'Cart' })",
 	);
 	shows(chain(query("main.list@items").update().locator("ol", null).getNestedLocator())).toBe(
-		"locator('main').locator('ol')",
+		"getByRole('main').locator('ol')",
 	);
 	shows(chain(query("main.list@items").replace().locator("ol.cart").getNestedLocator())).toBe(
-		"locator('main').locator('ol.cart')",
+		"getByRole('main').locator('ol.cart')",
 	);
 });
 
@@ -312,7 +223,7 @@ test("api/class-registrationbuilder.md", async ({ page }) => {
 		| "main.form.input@email"
 		| "main.input@search"
 		| "main.button@save"
-		| "main.row@order"
+		| "main.rows@order"
 		| "main.alert@error"
 		| "main.icon@info"
 		| "main.button@cancel"
@@ -321,11 +232,11 @@ test("api/class-registrationbuilder.md", async ({ page }) => {
 
 	// the page's first example
 	let registry = fresh();
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.list").locator("ul.orders");
 	registry.add("main.list.item").getByRole("listitem").filter({ hasText: "Open" }).nth(0);
 	shows(chain(registry.getNestedLocator("main.list.item"))).toBe(
-		"locator('main').locator('ul.orders').getByRole('listitem').filter({ hasText: 'Open' }).first()",
+		"getByRole('main').locator('ul.orders').getByRole('listitem').filter({ hasText: 'Open' }).first()",
 	);
 
 	// frameLocator()
@@ -350,7 +261,7 @@ test("api/class-registrationbuilder.md", async ({ page }) => {
 	registry.add("main.form.input@email").getByLabel("Email", { exact: true });
 	registry.add("main.input@search").getByPlaceholder("Search");
 	registry.add("main.button@save").getByRole("button", { name: "Save" });
-	registry.add("main.row@order").getByTestId("order-row");
+	registry.add("main.rows@order").getByTestId("order-row");
 	registry.add("main.alert@error").getByText(/failed/i);
 	registry.add("main.icon@info").getByTitle("More information");
 	registry.add("main.list").locator("ul.orders");
@@ -363,7 +274,7 @@ test("api/class-registrationbuilder.md", async ({ page }) => {
 	shows(chain(registry.getLocator("main.form.input@email"))).toBe("getByLabel('Email', { exact: true })");
 	shows(chain(registry.getLocator("main.input@search"))).toBe("getByPlaceholder('Search')");
 	shows(chain(registry.getLocator("main.button@save"))).toBe("getByRole('button', { name: 'Save' })");
-	shows(chain(registry.getLocator("main.row@order"))).toBe("getByTestId('order-row')");
+	shows(chain(registry.getLocator("main.rows@order"))).toBe("getByTestId('order-row')");
 	shows(chain(registry.getLocator("main.alert@error"))).toBe("getByText(/failed/i)");
 	shows(chain(registry.getLocator("main.icon@info"))).toBe("getByTitle('More information')");
 	shows(chain(registry.getLocator("main.list"))).toBe("locator('ul.orders')");
@@ -371,12 +282,12 @@ test("api/class-registrationbuilder.md", async ({ page }) => {
 
 	// reuse by path
 	registry = fresh();
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.list").locator("ul");
 	registry.add("main.list.items@open").getByRole("listitem").filter({ hasText: "Open" });
 	registry.add("main.list.item@lastOpen", { reuse: "main.list.items@open" }).nth("last").describe("Last open item");
 	shows(chain(registry.getNestedLocator("main.list.item@lastOpen"))).toBe(
-		"locator('main').locator('ul').getByRole('listitem').filter({ hasText: 'Open' }).last()",
+		"getByRole('main').locator('ul').getByRole('listitem').filter({ hasText: 'Open' }).last()",
 	);
 
 	// a seed's override
@@ -414,7 +325,7 @@ test("api/class-reusablelocator.md", async ({ page }) => {
 
 test("docs/descriptions.md", async ({ page }) => {
 	const { registry } = createRegistryWithAccessors<"main" | "main.button@login" | "main.button@submit">(page);
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.button@login").getByRole("button", { name: "Log in" });
 	registry.add("main.button@submit").getByRole("button", { name: "Submit" }).describe("Primary submit button");
 	// the page shows toString() itself, after describe("") on the query
@@ -425,15 +336,15 @@ test("docs/descriptions.md", async ({ page }) => {
 	// "Where Playwright shows it": the call log and a strict mode error show the chain, described or not
 	const login = registry.getNestedLocator("main.button@login");
 	shows(await errorMessage(login.click({ timeout: 500 }))).toContain(
-		"waiting for locator('main').getByRole('button', { name: 'Log in' })",
+		"waiting for getByRole('main').getByRole('button', { name: 'Log in' })",
 	);
 	await page.setContent("<main><button>Log in</button><button>Log in</button></main>");
 	shows(await errorMessage(login.click({ timeout: 2_000 }))).toContain(
-		"strict mode violation: locator('main').getByRole('button', { name: 'Log in' }) resolved to 2 elements",
+		"strict mode violation: getByRole('main').getByRole('button', { name: 'Log in' }) resolved to 2 elements",
 	);
 
 	// "Chaining further": a locator chained further has no description, so it prints its chain
-	shows(`${registry.getNestedLocator("main").locator("li")}`).toBe("locator('main').locator('li')");
+	shows(`${registry.getNestedLocator("main").locator("li")}`).toBe("getByRole('main').locator('li')");
 });
 
 test("docs/first-page-object.md", async ({ page }) => {
@@ -450,7 +361,7 @@ test("docs/first-page-object.md", async ({ page }) => {
 			super(page, "https://shop.example", "/login");
 		}
 		protected defineLocators(): void {
-			this.add("main").locator("main");
+			this.add("main").getByRole("main");
 			this.add("main.aside").locator("aside");
 			this.add("main.aside.button@login").getByRole("button", { name: "Log in" });
 			this.add("main.form@login").getByRole("form", { name: "Log in" });
@@ -461,13 +372,13 @@ test("docs/first-page-object.md", async ({ page }) => {
 	}
 	const loginPage = new LoginPage(page);
 	shows(chain(loginPage.getNestedLocator("main.aside.button@login"))).toBe(
-		"locator('main').locator('aside').getByRole('button', { name: 'Log in' })",
+		"getByRole('main').locator('aside').getByRole('button', { name: 'Log in' })",
 	);
 	shows(chain(loginPage.getLocator("main.aside.button@login"))).toBe("getByRole('button', { name: 'Log in' })");
 	// the trace viewer's Log tab starts with the call log's first line
 	shows(
 		await errorMessage(loginPage.getNestedLocator("main.form@login.button@login").click({ timeout: 500 })),
-	).toContain("waiting for locator('main').getByRole('form', { name: 'Log in' })");
+	).toContain("waiting for getByRole('main').getByRole('form', { name: 'Log in' })");
 });
 
 test("docs/filters-and-indices.md", async ({ page }) => {
@@ -486,13 +397,13 @@ test("docs/filters-and-indices.md", async ({ page }) => {
 		"locator('section').filter({ hasText: 'Orders' }).getByRole('listitem').filter({ hasText: 'Open' })",
 	);
 
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.section@orders").locator("section").filter({ has: "main.section@orders.heading" });
 	registry.add("main.section@orders.heading").getByRole("heading", { name: "Orders" });
 	registry.add("main.section@orders.item@open").getByRole("listitem").filter({ hasText: "Open" });
 	// the page breaks this chain over two comment lines
 	shows(chain(registry.getNestedLocator("main.section@orders.item@open"))).toBe(
-		"locator('main').locator('section').filter({ has: getByRole('heading', { name: 'Orders' }) })" +
+		"getByRole('main').locator('section').filter({ has: getByRole('heading', { name: 'Orders' }) })" +
 			".getByRole('listitem').filter({ hasText: 'Open' })",
 	);
 
@@ -518,17 +429,17 @@ test("docs/frames.md", async ({ page }) => {
 		| "anyFrame"
 		| "anyFrame.button@accept";
 	const { registry } = createRegistryWithAccessors<Paths>(page);
-	registry.add("checkout").locator("main");
+	registry.add("checkout").getByRole("main");
 	registry.add("checkout.section@payment").getByRole("region", { name: "Payment" });
 	registry.add("checkout.section@payment.frame").frameLocator("iframe");
 	registry.add("checkout.section@payment.frame.input@cardNumber").getByLabel("Card number");
 	registry.add("checkout.section@payment.frame.button@pay").getByRole("button", { name: "Pay" });
 	shows(chain(registry.getNestedLocator("checkout.section@payment.frame.input@cardNumber"))).toBe(
-		"locator('main').getByRole('region', { name: 'Payment' }).locator('iframe').contentFrame().getByLabel('Card number')",
+		"getByRole('main').getByRole('region', { name: 'Payment' }).locator('iframe').contentFrame().getByLabel('Card number')",
 	);
 	// a frame segment as the terminal is the <iframe> element
 	shows(chain(registry.getNestedLocator("checkout.section@payment.frame"))).toBe(
-		"locator('main').getByRole('region', { name: 'Payment' }).locator('iframe')",
+		"getByRole('main').getByRole('region', { name: 'Payment' }).locator('iframe')",
 	);
 
 	registry.add("widgets").locator(".widgets");
@@ -571,14 +482,14 @@ test("docs/locating-by-id.md", async ({ page }) => {
 test("docs/locator-modules.md", async ({ page }) => {
 	type Paths = "main" | "main.list@products" | "main.list@products.items@onSale";
 	const { registry } = createRegistryWithAccessors<Paths>(page);
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.list@products").getByRole("list", { name: "Products" });
 	registry
 		.add("main.list@products.items@onSale")
 		.getByRole("listitem")
 		.filter({ has: page.getByText("Sale", { exact: true }) });
 	shows(chain(registry.getNestedLocator("main.list@products.items@onSale"))).toBe(
-		"locator('main').getByRole('list', { name: 'Products' }).getByRole('listitem').filter({ has: getByText('Sale', { exact: true }) })",
+		"getByRole('main').getByRole('list', { name: 'Products' }).getByRole('listitem').filter({ has: getByText('Sale', { exact: true }) })",
 	);
 });
 
@@ -586,55 +497,57 @@ test("docs/locator-paths.md", async ({ page }) => {
 	type Paths =
 		| "main"
 		| "main.section@order"
-		| "main.section@order.region@subscriptions"
-		| "main.section@order.region@subscriptions.region@subscription"
-		| "main.section@order.region@subscriptions.region@subscription.button@edit";
+		| "main.section@order.section@subscriptions"
+		| "main.section@order.section@subscriptions.section@subscription"
+		| "main.section@order.section@subscriptions.section@subscription.button@edit";
 	const { add, getNestedLocator } = createRegistryWithAccessors<Paths>(page);
-	// "A wrapper is removed": the Subscriptions region's add(…) deleted, and nothing else
-	add("main").locator("main");
+	// "A wrapper is removed": the Subscriptions section's add(…) deleted, and nothing else
+	add("main").getByRole("main");
 	add("main.section@order").getByRole("region", { name: "Order" });
-	add("main.section@order.region@subscriptions.region@subscription").getByRole("region", {
+	add("main.section@order.section@subscriptions.section@subscription").getByRole("region", {
 		name: "Mobile subscription",
 	});
-	add("main.section@order.region@subscriptions.region@subscription.button@edit").getByRole("button", { name: "Edit" });
-	shows(chain(getNestedLocator("main.section@order.region@subscriptions.region@subscription.button@edit"))).toBe(
-		"locator('main').getByRole('region', { name: 'Order' }).getByRole('region', { name: 'Mobile subscription' }).getByRole('button', { name: 'Edit' })",
+	add("main.section@order.section@subscriptions.section@subscription.button@edit").getByRole("button", {
+		name: "Edit",
+	});
+	shows(chain(getNestedLocator("main.section@order.section@subscriptions.section@subscription.button@edit"))).toBe(
+		"getByRole('main').getByRole('region', { name: 'Order' }).getByRole('region', { name: 'Mobile subscription' }).getByRole('button', { name: 'Edit' })",
 	);
 
-	// "One path gets a new name": main.list renamed alone, main.list.item left on the old segment
-	const renamed = createRegistryWithAccessors<"main" | "main.items" | "main.list.item">(page).registry;
-	renamed.add("main").locator("main");
-	renamed.add("main.items").locator("ul");
-	renamed.add("main.list.item").getByRole("listitem");
-	shows(chain(renamed.getNestedLocator("main.list.item"))).toBe("locator('main').getByRole('listitem')");
+	// "One path gets a new name": main.list renamed alone, main.list.items left on the old segment
+	const renamed = createRegistryWithAccessors<"main" | "main.list@orders" | "main.list.items">(page).registry;
+	renamed.add("main").getByRole("main");
+	renamed.add("main.list@orders").locator("ul");
+	renamed.add("main.list.items").getByRole("listitem");
+	shows(chain(renamed.getNestedLocator("main.list.items"))).toBe("getByRole('main').getByRole('listitem')");
 });
 
 test("docs/queries.md", async ({ page }) => {
 	const registry = ordersRegistry(page);
 	const query = () => registry.getLocatorSchema("main.list.item");
 	shows(chain(query().clearSteps().nth("last").getNestedLocator())).toBe(
-		"locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').last()",
+		"getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').last()",
 	);
 	shows(chain(query().filter("main.list", { hasText: "Open" }).getNestedLocator())).toBe(
-		"locator('main').locator('ul').filter({ hasText: 'Orders' }).filter({ hasText: 'Open' }).locator('li').first()",
+		"getByRole('main').locator('ul').filter({ hasText: 'Orders' }).filter({ hasText: 'Open' }).locator('li').first()",
 	);
 	shows(chain(query().nth("last").getNestedLocator())).toBe(
-		"locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first().last()",
+		"getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first().last()",
 	);
 	shows(chain(query().replace("main.list").getByRole("list", { name: "Orders" }).getNestedLocator())).toBe(
-		"locator('main').getByRole('list', { name: 'Orders' }).filter({ hasText: 'Orders' }).locator('li').first()",
+		"getByRole('main').getByRole('list', { name: 'Orders' }).filter({ hasText: 'Orders' }).locator('li').first()",
 	);
 	const skipped = query().skip("main.list");
-	shows(chain(skipped.getNestedLocator())).toBe("locator('main').locator('li').first()");
+	shows(chain(skipped.getNestedLocator())).toBe("getByRole('main').locator('li').first()");
 	shows(chain(skipped.unskip("main.list").getNestedLocator())).toBe(
-		"locator('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()",
+		"getByRole('main').locator('ul').filter({ hasText: 'Orders' }).locator('li').first()",
 	);
 
 	// the any-frame form in a query
 	const { registry: payment } = createRegistryWithAccessors<
 		"main" | "main.frame@payment" | "main.frame@payment.button@confirm"
 	>(page);
-	payment.add("main").locator("main");
+	payment.add("main").getByRole("main");
 	payment.add("main.frame@payment").frameLocator("iframe#payment");
 	payment.add("main.frame@payment.button@confirm").getByRole("button", { name: "Confirm" });
 	shows(
@@ -652,13 +565,13 @@ test("docs/queries.md", async ({ page }) => {
 	const { registry: lamp } = createRegistryWithAccessors<
 		"main" | "main.product@lamp" | "main.product@lamp.button@wishlist"
 	>(page);
-	lamp.add("main").locator("main");
+	lamp.add("main").getByRole("main");
 	lamp.add("main.product@lamp").getByRole("article", { name: "Desk lamp" });
 	lamp.add("main.product@lamp.button@wishlist").getByRole("button", { name: "Add to wishlist" });
 	const wishlistButton = lamp.getLocatorSchema("main.product@lamp.button@wishlist");
 	wishlistButton.update().getByRole({ name: "Remove from wishlist" });
 	shows(chain(wishlistButton.getNestedLocator())).toBe(
-		"locator('main').getByRole('article', { name: 'Desk lamp' }).getByRole('button', { name: 'Remove from wishlist' })",
+		"getByRole('main').getByRole('article', { name: 'Desk lamp' }).getByRole('button', { name: 'Remove from wishlist' })",
 	);
 });
 
@@ -695,7 +608,7 @@ test("docs/registering-locators.md", async ({ page }) => {
 test("docs/resolving-locators.md", async ({ page, browserName }) => {
 	const registry = loginRegistry(page);
 	shows(chain(registry.getNestedLocator("main.form@login.button@login"))).toBe(
-		"locator('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })",
+		"getByRole('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })",
 	);
 	const submit = registry.getLocator("main.form@login.button@login");
 	shows(`${page.getByRole("dialog", { name: "Session expired" }).locator(submit)}`).toBe(
@@ -718,25 +631,25 @@ test("docs/resolving-locators.md", async ({ page, browserName }) => {
 
 	type OrdersPaths = "main" | "main.list@orders" | "main.list@orders.items" | "main.list@orders.item@first";
 	const { registry: orders } = createRegistryWithAccessors<OrdersPaths>(page);
-	orders.add("main").locator("main");
+	orders.add("main").getByRole("main");
 	orders.add("main.list@orders").getByRole("list", { name: "Orders" });
 	orders.add("main.list@orders.items").getByRole("listitem");
 	orders.add("main.list@orders.item@first", { reuse: "main.list@orders.items" }).nth("first");
 	shows(chain(orders.getNestedLocator("main.list@orders.items"))).toBe(
-		"locator('main').getByRole('list', { name: 'Orders' }).getByRole('listitem')",
+		"getByRole('main').getByRole('list', { name: 'Orders' }).getByRole('listitem')",
 	);
 	shows(chain(orders.getNestedLocator("main.list@orders.item@first"))).toBe(
-		"locator('main').getByRole('list', { name: 'Orders' }).getByRole('listitem').first()",
+		"getByRole('main').getByRole('list', { name: 'Orders' }).getByRole('listitem').first()",
 	);
 
 	const { registry: cart } = createRegistryWithAccessors<
 		"main" | "main.table@cart" | "main.table@cart.inputs@quantity"
 	>(page);
-	cart.add("main").locator("main");
+	cart.add("main").getByRole("main");
 	cart.add("main.table@cart").getByRole("table", { name: "Cart" });
 	cart.add("main.table@cart.inputs@quantity").getByLabel("Quantity");
 	shows(chain(cart.getNestedLocator("main.table@cart.inputs@quantity"))).toBe(
-		"locator('main').getByRole('table', { name: 'Cart' }).getByLabel('Quantity')",
+		"getByRole('main').getByRole('table', { name: 'Cart' }).getByLabel('Quantity')",
 	);
 
 	const { registry: names } = createRegistryWithAccessors<"main.form" | "main.form.button.submit">(page);
@@ -823,11 +736,11 @@ test("docs/upgrading-from-2x.md", async ({ page }) => {
 	);
 
 	// the page declares these paths without their locators; its chain shows them
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.list").locator("ul");
 	registry.add("main.list.item").getByRole("listitem");
 	shows(chain(registry.getLocatorSchema("main.list.item").skip("main.list").getNestedLocator())).toBe(
-		"locator('main').getByRole('listitem')",
+		"getByRole('main').getByRole('listitem')",
 	);
 
 	registry.add("table").locator("table");
@@ -840,44 +753,44 @@ test("docs/upgrading-from-2x.md", async ({ page }) => {
 test("internal/resolution.md", async ({ page }) => {
 	type Paths = "main" | "main.section@orders" | "main.section@orders.heading";
 	const { registry } = createRegistryWithAccessors<Paths>(page);
-	registry.add("main").locator("main");
+	registry.add("main").getByRole("main");
 	registry.add("main.section@orders").locator("section").filter({ has: "main.section@orders.heading" });
 	registry.add("main.section@orders.heading").getByRole("heading", { name: "Orders" });
 	shows(chain(registry.getNestedLocator("main.section@orders"))).toBe(
-		"locator('main').locator('section').filter({ has: getByRole('heading', { name: 'Orders' }) })",
+		"getByRole('main').locator('section').filter({ has: getByRole('heading', { name: 'Orders' }) })",
 	);
 	// the heading path resolved alone, as the filter resolves it, and as its chain, which starts at main
 	shows(chain(registry.getLocator("main.section@orders.heading"))).toBe("getByRole('heading', { name: 'Orders' })");
-	shows(chain(registry.getNestedLocator("main.section@orders.heading"))).toMatch(/^locator\('main'\)\./);
+	shows(chain(registry.getNestedLocator("main.section@orders.heading"))).toMatch(/^getByRole\('main'\)\./);
 });
 
 test("README.md", async ({ page }) => {
 	type Paths =
 		| "main"
 		| "main.table@orders"
-		| "main.table@orders.row"
-		| "main.table@orders.row.button@cancel"
-		| "main.table@orders.row.cell@status";
+		| "main.table@orders.rows"
+		| "main.table@orders.rows.button@cancel"
+		| "main.table@orders.rows.cell@status";
 	class OrdersPage extends PageObject<Paths> {
 		constructor(page: Page) {
 			super(page, "https://shop.example", "/orders");
 		}
 		protected defineLocators(): void {
-			this.add("main").locator("main");
+			this.add("main").getByRole("main");
 			this.add("main.table@orders").getByRole("table", { name: "Orders" });
-			this.add("main.table@orders.row").getByRole("row");
-			this.add("main.table@orders.row.button@cancel").getByRole("button", { name: "Cancel" });
-			this.add("main.table@orders.row.cell@status").getByTestId("order-status");
+			this.add("main.table@orders.rows").getByRole("row");
+			this.add("main.table@orders.rows.button@cancel").getByRole("button", { name: "Cancel" });
+			this.add("main.table@orders.rows.cell@status").getByTestId("order-status");
 		}
 		cancelButton(order: string) {
-			return this.getLocatorSchema("main.table@orders.row.button@cancel")
-				.filter("main.table@orders.row", { hasText: order })
+			return this.getLocatorSchema("main.table@orders.rows.button@cancel")
+				.filter("main.table@orders.rows", { hasText: order })
 				.getNestedLocator();
 		}
 	}
 	const cancel = new OrdersPage(page).cancelButton("ORD-1042");
 	shows(chain(cancel)).toBe(
-		"locator('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })",
+		"getByRole('main').getByRole('table', { name: 'Orders' }).getByRole('row').filter({ hasText: 'ORD-1042' }).getByRole('button', { name: 'Cancel' })",
 	);
-	shows(cancel.description()).toBe("main.table@orders.row.button@cancel");
+	shows(cancel.description()).toBe("main.table@orders.rows.button@cancel");
 });

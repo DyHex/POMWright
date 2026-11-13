@@ -27,7 +27,7 @@ export class OrderPage extends PageObject<"main", { urlPathType: RegExp; storage
   }
 
   protected defineLocators(): void {
-    this.add("main").locator("main");
+    this.add("main").getByRole("main");
   }
 }
 ```

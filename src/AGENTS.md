@@ -66,6 +66,8 @@ a file under `src/`; otherwise (the shell, another client), read it before worki
 - Anything a page or doc comment describes (behavior, a message, chain or rendering, a mechanism or a design) and the
   doc comments themselves follow [website/AGENTS.md](../website/AGENTS.md): a change to one updates the pages and doc
   comments that describe it, the Internal pages included.
+- Anything an agent skill in `skills/` describes follows [skills/AGENTS.md](../skills/AGENTS.md): a change to it updates
+  the skill in the same change.
 - A consumer-facing change needs a changeset: [docs/versioning.md](../docs/versioning.md).
 - No new runtime dependencies, and how a dev dependency is added: [docs/repository.md](../docs/repository.md#toolchain).
 - The `log` fixture (`src/fixture/`) and the URLs and navigation of `pageObject.ts` follow [src/helpers/AGENTS.md](helpers/AGENTS.md).

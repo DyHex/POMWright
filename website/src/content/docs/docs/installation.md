@@ -40,6 +40,9 @@ npm install --save-dev pomwright
 
 With pnpm, `pnpm add --save-dev pomwright`; with Yarn, `yarn add --dev pomwright`.
 
+If you work through a coding agent, install the [agent skills](/POMWright/skills/) too: they teach it POMWright as these
+docs describe, and follow the version you installed.
+
 ## Import from the package root
 
 Everything is imported from `pomwright`:

@@ -114,6 +114,7 @@ type Paths = "list" | "list.items";
 export function listItems(page: Page) {
   const { registry, getNestedLocator } = createRegistryWithAccessors<Paths>(page);
   registry.add("list").locator("ul");
+
   registry.add("list.items").getByRole("listitem");
   registry.verify();
   return getNestedLocator("list.items");

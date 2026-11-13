@@ -31,9 +31,11 @@ type Paths =
 declare const registry: LocatorRegistry<Paths>;
 // ---cut---
 registry.add("shared.list.items").getByRole("listitem");
+
 registry.add("shared.error@invalidPassword").getByText("Invalid password");
 
 registry.add("main.list").locator("ul");
+
 registry.add("main.list.item@last", { reuse: "shared.list.items" }).nth("last").describe("Last item");
 // locator('ul').getByRole('listitem').last(), described "Last item"
 
@@ -69,7 +71,9 @@ declare const registry: LocatorRegistry<"table.rows" | "table.row@first" | "tabl
 const row = registry.createReusable.locator("tr");
 
 registry.add("table.rows", { reuse: row }); // locator('tr')
+
 registry.add("table.row@first", { reuse: row.nth(0) }); // locator('tr').first()
+
 registry.add("table.row@last", { reuse: row.nth("last") }); // locator('tr').last()
 ```
 
@@ -137,6 +141,7 @@ export const headingSeed = (registry: LocatorRegistry<Paths>): ReusableLocator<P
 
 export function defineLocators(registry: LocatorRegistry<Paths>) {
   registry.add("card").locator("article");
+
   registry.add("card.heading@summary", { reuse: headingSeed(registry) }).getByRole({ name: "Summary" });
 }
 ```

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Card form</title>
+</head>
+<body>
+  <form aria-label="Card">
+    <label>Card number <input name="card"></label>
+    <button type="submit">Pay</button>
+    <p class="paid" hidden>Payment received</p>
+  </form>
+  <script>
+    document.querySelector("form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      document.querySelector(".paid").hidden = false;
+    });
+  </script>
+</body>
+</html>

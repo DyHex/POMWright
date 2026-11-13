@@ -520,6 +520,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * @example
 	 * ```ts
 	 * registry.add("list").locator("ul");
+	 *
 	 * registry.add("list.items").getByRole("listitem").filter({ has: "list.items.title" });
 	 * registry.verify(); // "list.items": No locator schema registered for path "list.items.title".
 	 * ```
@@ -601,7 +602,7 @@ export class LocatorRegistryInternal<LocatorSchemaPathType extends string> {
 	 * @example
 	 * ```ts
 	 * await registry.getNestedLocator("main.form@login.button@login").click();
-	 * // locator('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
+	 * // getByRole('main').getByRole('form', { name: 'Log in' }).getByRole('button', { name: 'Log in' })
 	 * ```
 	 */
 	getNestedLocator<Path extends LocatorSchemaPathType>(path: LocatorSchemaPathArgument<Path>): Locator {
@@ -754,7 +755,8 @@ export type GetNestedLocatorAccessor<LocatorSchemaPathType extends string> = <Pa
  * @example
  * ```ts
  * export function defineLocators(registry: LocatorRegistry<"main" | "main.button@save">) {
- *   registry.add("main").locator("main");
+ *   registry.add("main").getByRole("main");
+ *
  *   registry.add("main.button@save").getByRole("button", { name: "Save" });
  * }
  * ```
@@ -792,6 +794,7 @@ export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
 	 * @example
 	 * ```ts
 	 * registry.add("main.list.items@open").getByRole("listitem").filter({ hasText: "Open" });
+	 *
 	 * registry.add("main.list.item@lastOpen", { reuse: "main.list.items@open" }).nth("last").describe("Last open item");
 	 * ```
 	 */
@@ -816,7 +819,8 @@ export type LocatorRegistry<LocatorSchemaPathType extends string> = Pick<
  * @example
  * ```ts
  * const { registry, getNestedLocator } = createRegistryWithAccessors<"main" | "main.button@save">(page);
- * registry.add("main").locator("main");
+ * registry.add("main").getByRole("main");
+ *
  * registry.add("main.button@save").getByRole("button", { name: "Save" });
  * registry.verify();
  * await getNestedLocator("main.button@save").click();

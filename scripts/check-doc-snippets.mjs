@@ -18,6 +18,15 @@
 // languages (js, sh, text, …) are not checked. A tsc that fails without reporting a type error (a crash, a missing
 // install) fails the check with what it printed.
 //
+// The agent skills in skills/ are checked as pages too, one project per Markdown file (its path from the root), with
+// three rules of their own, since an agent reads a skill's raw Markdown, where nothing is hidden: no `// ---cut---`
+// (an agent would copy the marker; the setup lines are written out), no `nocheck` (a skill's examples always compile),
+// and code in double quotes, as the repository's code is formatted, so that a single-quoted locator call
+// (`getByRole('button'…`) in a skill is always Playwright's rendering of a chain, which skillsChains.spec.ts rebuilds. The
+// docs' example app is not copied into a skill's project: a skill's examples stand alone or import blocks titled in the
+// same file. Every .ts file under skills/<skill>/assets/ (templates a skill copies into a project) is compiled too, at
+// its path in the skill, so the templates import each other as they will in the project.
+//
 // The doc comments' examples are compiled too, in test/.doc-examples/, a project of their own: every ```ts block after an
 // @example in src/ and index.ts. They are fragments of a consumer's file, so each gets an import of the POMWright exports
 // and Playwright types it names, and context.d.ts declares the instances they assume (page, registry, log, storage, a
@@ -34,6 +43,15 @@ const outDir = path.join(root, "test/.doc-snippets");
 const sharedDir = path.join(root, "website/snippets");
 const shared = fs.existsSync(sharedDir) ? fs.readdirSync(sharedDir).filter((name) => name.endsWith(".ts")) : [];
 const readme = path.join(root, "README.md");
+const skillsDir = path.join(root, "skills");
+/** A locator call written with a single quote: in a skill's code, only Playwright's rendering of a chain looks so. */
+const SINGLE_QUOTED_LOCATOR = /\b(?:locator|getBy[A-Z]\w*|frameLocator)\('/;
+/** The code of a block without its line comments, where a rendering of a chain may stand. */
+const withoutLineComments = (body) =>
+	body
+		.split("\n")
+		.map((line) => line.replace(/(^|\s)\/\/.*$/, "$1"))
+		.join("\n");
 const fence = /^(\s*)(`{3,}|~{3,})(\s*)([^\s`]*)(.*)$/;
 const NOCHECK_PAGE = "docs/upgrading-from-2x";
 
@@ -78,8 +96,10 @@ let checked = 0;
 const skipped = [];
 const rejected = [];
 
-for (const page of [...pages(contentDir), readme]) {
-	const rel = page === readme ? "README" : path.relative(contentDir, page).replace(/\.mdx?$/, "");
+let skillBlocks = 0;
+for (const page of [...pages(contentDir), readme, ...pages(skillsDir)]) {
+	const skill = page.startsWith(`${skillsDir}${path.sep}`);
+	const rel = page === readme ? "README" : path.relative(skill ? root : contentDir, page).replace(/\.mdx?$/, "");
 	const titles = new Set();
 	for (const block of blocks(page)) {
 		const where = `${path.relative(root, page)}:${block.line - 1}`;
@@ -96,13 +116,27 @@ for (const page of [...pages(contentDir), readme]) {
 			continue;
 		}
 		if (/\bnocheck\b/.test(block.meta)) {
-			if (rel !== NOCHECK_PAGE) {
+			if (skill) {
+				rejected.push(`${where}: nocheck is not allowed in a skill; a skill's examples always compile`);
+			} else if (rel !== NOCHECK_PAGE) {
 				rejected.push(
 					`${where}: nocheck is only for the 2.x code of Upgrading from 2.x; make the example compile: // ---cut--- hides the setup lines it needs, and // @ts-expect-error marks a deliberate compile error`,
 				);
 			} else {
 				skipped.push(where);
 			}
+			continue;
+		}
+		if (skill && /^\s*\/\/\s*---cut---\s*$/m.test(block.body)) {
+			rejected.push(
+				`${where}: // ---cut--- hides nothing in a skill, whose Markdown an agent reads raw; write the setup lines out`,
+			);
+			continue;
+		}
+		if (skill && SINGLE_QUOTED_LOCATOR.test(withoutLineComments(block.body))) {
+			rejected.push(
+				`${where}: a locator call in single quotes in a skill's code; write code in double quotes, single quotes are for Playwright's rendering of a chain in a comment or a text block`,
+			);
 			continue;
 		}
 		const title = /title="([^"]+\.ts)"/.exec(block.meta)?.[1];
@@ -114,13 +148,34 @@ for (const page of [...pages(contentDir), readme]) {
 		fs.writeFileSync(target, `${block.body}\n`);
 		origin.set(path.relative(root, target), { page: path.relative(root, page), line: block.line });
 		checked++;
+		if (skill) skillBlocks++;
 	}
+	if (skill) continue;
 	for (const name of shared) {
 		if (titles.has(name)) continue;
 		const target = path.join(outDir, rel, name);
 		fs.mkdirSync(path.dirname(target), { recursive: true });
 		fs.copyFileSync(path.join(sharedDir, name), target);
 	}
+}
+
+// the skills' templates, at their paths in the skill
+const tsFiles = (dir) =>
+	fs.existsSync(dir)
+		? fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+				const full = path.join(dir, entry.name);
+				if (entry.isDirectory()) return tsFiles(full);
+				return entry.name.endsWith(".ts") ? [full] : [];
+			})
+		: [];
+const assets = (fs.existsSync(skillsDir) ? fs.readdirSync(skillsDir, { withFileTypes: true }) : [])
+	.filter((entry) => entry.isDirectory())
+	.flatMap((entry) => tsFiles(path.join(skillsDir, entry.name, "assets")));
+for (const file of assets) {
+	const target = path.join(outDir, path.relative(root, file));
+	fs.mkdirSync(path.dirname(target), { recursive: true });
+	fs.copyFileSync(file, target);
+	origin.set(path.relative(root, target), { page: path.relative(root, file), line: 1 });
 }
 
 fs.writeFileSync(
@@ -371,6 +426,6 @@ if (typeErrors || exampleErrors || rejected.length > 0) {
 	process.exit(1);
 }
 console.log(
-	`doc snippets: ${checked} checked, ${skipped.length} skipped (nocheck), example app: ${shared.length} files; doc comments' examples: ${examplesChecked} checked, ${examplesSkipped.length} skipped (nocheck)`,
+	`doc snippets: ${checked} checked (${skillBlocks} in skills), ${skipped.length} skipped (nocheck), example app: ${shared.length} files, skill templates: ${assets.length} files; doc comments' examples: ${examplesChecked} checked, ${examplesSkipped.length} skipped (nocheck)`,
 );
 for (const where of [...skipped, ...examplesSkipped]) console.log(`  nocheck: ${where}`);
