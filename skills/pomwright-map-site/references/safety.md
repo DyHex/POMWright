@@ -10,11 +10,14 @@ sends data. These rules hold for every route: the shipped `scripts/map.mjs`, `pl
   origin. With `playwright-cli` or MCP, read where a link leads before clicking it, and stop when a page lands on an
   origin not named.
 - **Nothing that sends data.** Every request but `GET` and `HEAD` is aborted while mapping, so a click that would
-  submit, buy, add, delete or send reaches nothing (third-party tracking is aborted with it). `map.mjs` does this in
-  every command and lists what it aborted. With `playwright-cli` or MCP, set the same up before the first click, with
-  the code each can run against the page (`playwright-cli run-code`, MCP's `browser_run_code_unsafe`):
-  `page.route("**/*", (route) => ["GET", "HEAD"].includes(route.request().method()) ? route.continue() : route.abort())`;
-  where it cannot be set up, do not click.
+  submit, buy, add, delete or send reaches nothing (third-party tracking is aborted with it). A WebSocket connects, and
+  what the server sends reaches the page, but nothing the page sends over it reaches the server. `map.mjs` does this in
+  every command and lists what it aborted and what it did not send. With `playwright-cli` or MCP, set the same up
+  before the first click, with the code each can run against the page (`playwright-cli run-code`, MCP's
+  `browser_run_code_unsafe`):
+  `page.route("**/*", (route) => ["GET", "HEAD"].includes(route.request().method()) ? route.continue() : route.abort())`
+  and `page.routeWebSocket(/.*/, (webSocket) => { webSocket.connectToServer(); webSocket.onMessage(() => {}); })`;
+  where they cannot be set up, do not click.
 - **Click only to reveal, and only what the user confirmed.** A menu, a tab, an accordion, "show more", a choice that
   leads to another page (followed, then undone with back), and the cookie dialog with the least-consent button the user
   picks. Never type into a field, submit a form, or click a control whose name says it changes something (buy, add to

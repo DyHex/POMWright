@@ -6,9 +6,10 @@
 //   node <skill>/scripts/map.mjs reveal <url> --click "<role>=<name>" [--click …] [--out <dir>] [--consent "<button>"]
 //
 // Run it from the project's root: it loads @playwright/test from there, and launches chromium headless. In every
-// command, every request but GET and HEAD is aborted, so nothing it does sends data to the site, and no page opens on an
-// origin the user did not name: the start URL's, and each --origin (an identity provider the user named, say), checked
-// before the browser sends the request, a redirect's included. What was aborted and what was not opened are listed.
+// command, nothing it does sends data to the site: every request but GET and HEAD is aborted (a service worker's
+// included), and a WebSocket carries nothing from the page. And no page opens on an origin the user did not name: the
+// start URL's, and each --origin (an identity provider the user named, say), checked before the browser sends the
+// request, a redirect's included. What was aborted, what a WebSocket did not send and what was not opened are listed.
 //
 // - crawl: opens the start page, follows the links on the same origin breadth first, up to --depth link hops and
 //   --limit pages, and prints every page found: its path, its title, and the path pattern it shares with pages whose
@@ -157,6 +158,17 @@ await context.route("**/*", (route) => {
 		}
 	}
 	return route.continue();
+});
+
+// route sees no WebSocket traffic: a WebSocket connects (its handshake is a GET) and what the server sends reaches the
+// page, but what the page sends is dropped, and counted
+const unsent = new Map(); // a WebSocket's URL -> the messages from the page not sent
+await context.routeWebSocket(/.*/, (webSocket) => {
+	webSocket.connectToServer();
+	webSocket.onMessage(() => {
+		const url = webSocket.url().slice(0, 120);
+		unsent.set(url, (unsent.get(url) ?? 0) + 1);
+	});
 });
 
 // and no page opens on an origin the user did not name. Playwright routes a navigation's first request, not the
@@ -371,6 +383,12 @@ try {
 	}
 	if (aborted.length > 0) {
 		console.log(`\n# Aborted (every request but GET and HEAD): ${aborted.length}\n${aborted.slice(0, 20).join("\n")}`);
+	}
+	if (unsent.size > 0) {
+		const sockets = [...unsent].map(([url, count]) => `${url}: ${count} message${count === 1 ? "" : "s"}`);
+		console.log(
+			`\n# Not sent (from the page, over a WebSocket): ${sockets.length}\n${sockets.slice(0, 20).join("\n")}`,
+		);
 	}
 	if (notOpened.length > 0) {
 		console.log(`\n# Not opened: ${notOpened.length}\n${notOpened.slice(0, 20).join("\n")}`);
