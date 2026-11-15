@@ -181,6 +181,10 @@ POMWright as the documentation describes: `pomwright` writes and reviews tests a
 generates page code for a running site, and `pomwright-teach` teaches POMWright over several sessions. They live in
 [`skills/`](./skills/), not in the npm package; `npx skills add DyHex/POMWright` installs them.
 
+## Ecosystem
+
+- **[bdd2pw](https://github.com/javvadivijayprasad/bdd2pw)** — scaffolds runnable Playwright TypeScript tests from Gherkin `.feature` files. Its `--target=pomwright` flag emits POMs that extend `PageObject<Paths>` with hierarchical `LocatorRegistry` paths (e.g. `main.form@login.input@username`) inferred from the scanned DOM, and a companion spec that uses POMWright's `test` fixture and `getNestedLocator(path)`. New-POM scaffold + AUGMENT of existing POMWright POMs; hand-curated registrations and `@step()` methods are preserved verbatim on re-scaffold. The emitted project passes `tsc --noEmit` against `pomwright@^3`. See [`docs/POMWRIGHT_TARGET.md`](https://github.com/javvadivijayprasad/bdd2pw/blob/main/docs/POMWRIGHT_TARGET.md) for the integration contract.
+
 ## Support
 
 If you run into issues or have questions, please use the
