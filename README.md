@@ -1,13 +1,16 @@
 # POMWright
 
-[![CI on main](https://img.shields.io/github/actions/workflow/status/DyHex/POMWright/main.yaml?branch=main&label=CI%20on%20main)](https://github.com/DyHex/POMWright/actions/workflows/main.yaml)
 [![Docs](https://img.shields.io/badge/docs-dyhex.github.io%2FPOMWright-2ea44f)](https://dyhex.github.io/POMWright/)
 [![npm version](https://img.shields.io/npm/v/pomwright)](https://www.npmjs.com/package/pomwright)
-[![npm downloads](https://img.shields.io/npm/d18m/pomwright)](https://www.npmjs.com/package/pomwright)
 [![Playwright peer dependency](https://img.shields.io/npm/dependency-version/pomwright/peer/%40playwright%2Ftest)](https://www.npmjs.com/package/@playwright/test)
 [![Node version](https://img.shields.io/node/v/pomwright)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-%E2%89%A55.0-3178c6)](https://dyhex.github.io/POMWright/docs/installation/#typescript-settings)
 [![License](https://img.shields.io/github/license/DyHex/POMWright)](https://github.com/DyHex/POMWright/blob/main/LICENSE)
+
+[![CI on main](https://img.shields.io/github/actions/workflow/status/DyHex/POMWright/main.yaml?branch=main&label=CI%20on%20main)](https://github.com/DyHex/POMWright/actions/workflows/main.yaml)
+[![Daily PW latest/alpha](https://img.shields.io/github/actions/workflow/status/DyHex/POMWright/daily.yaml?branch=main&event=schedule&label=Daily%20PW%20latest%2Falpha)](https://github.com/DyHex/POMWright/actions/workflows/daily.yaml)
+[![npm monthly downloads](https://img.shields.io/npm/dm/pomwright)](https://www.npmjs.com/package/pomwright)
+[![npm yearly downloads](https://img.shields.io/npm/dy/pomwright)](https://www.npmjs.com/package/pomwright)
 [![Created at ICE](https://img.shields.io/badge/created%40-ICE-ffcd00)](https://www.ice.no/)
 
 POMWright is a TypeScript library for [Playwright Test](https://playwright.dev/) that gives a suite's locators one
