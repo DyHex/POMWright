@@ -187,13 +187,14 @@ generates page code for a running site, and `pomwright-teach` teaches POMWright 
 ## Support
 
 If you run into issues or have questions, please use the
-[GitHub issues page](https://github.com/DyHex/POMWright/issues).
+[GitHub issues page](https://github.com/DyHex/POMWright/issues). Report a security vulnerability privately instead, as
+[SECURITY.md](./SECURITY.md) describes.
 
 ## Contributing
 
 Pull requests are welcome. [AGENTS.md](./AGENTS.md) is the contributor guide: the commands, the rules every change
 keeps, and an index of the files that cover each part of the repository (an `AGENTS.md` in `src/` and its
-`locators/` and `helpers/`, `test/`, `website/` and `.github/`, and the files in [`docs/`](./docs/)).
+`locators/` and `helpers/`, `test/`, `website/`, `skills/` and `.github/`, and the files in [`docs/`](./docs/)).
 
 ## License
 

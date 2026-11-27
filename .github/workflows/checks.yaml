@@ -69,7 +69,8 @@ jobs:
       # locally too
       - name: Lint the workflows
         run: bash scripts/lint-workflows.sh
-      # every relative link and anchor of the contributor guide and the skills (pnpm lint:guide)
+      # every relative link and anchor of the contributor guide, the skills, README.md and SECURITY.md, and their links
+      # to the site outside the skills (pnpm lint:guide)
       - name: Check the guide's links
         run: node scripts/check-guide-links.mjs
       # the agent skills' frontmatter, sizes, contents lists, reference depth and site links (pnpm lint:skills)

@@ -1,8 +1,9 @@
 # Releases
 
-How a release is planned, with a working folder of plans and decisions, and how it is carried out. Read it before
-planning or carrying out a release, writing a plan, or working from a release's working folder. Part of the contributor
-guide that the root [AGENTS.md](../AGENTS.md) indexes; its rules apply here too.
+How a release is planned, with a working folder of plans and decisions, how it is carried out, and how a security fix
+is released. Read it before planning or carrying out a release, writing a plan, working from a release's working
+folder, or answering a vulnerability report. Part of the contributor guide that the root [AGENTS.md](../AGENTS.md)
+indexes; its rules apply here too.
 
 ## Planning
 
@@ -41,7 +42,8 @@ Rules:
    repository outside the folder checks (for the folder's name, `PLAN-`, `DECISIONS`, "decision" with a number, "the
    plan's" and "plan" with a number, reading each hit). Then the folder is deleted.
 
-The rules on commits are in the root AGENTS.md (*How to work*): they hold for every commit.
+The rules on commits are in the root AGENTS.md (*How to work*) and [commits.md](commits.md): they hold for every
+commit.
 
 ### From a review's findings
 
@@ -94,6 +96,30 @@ How Publish and Pages run is in [.github/AGENTS.md](../.github/AGENTS.md).
   Trusted Publisher whose first publish has not succeeded within 2 days, so one is set up, or set up again, right before
   the release it is for. After a release, check its attestation (`npm view pomwright@<version> dist --json`, or
   `https://registry.npmjs.org/-/npm/v1/attestations/pomwright@<version>`); the workflow warns when it finds none.
+  `SECURITY.md`'s *Verifying a release* tells users how releases are published and how to check one, so a change to
+  how they are published updates it in the same change.
+
+## A security fix
+
+`SECURITY.md` asks for vulnerabilities through GitHub's private vulnerability reporting, which is on for the
+repository; a report arrives as a draft advisory under the **Security and quality** tab. What `SECURITY.md` promises
+the reporter is carried out this way:
+
+- Reply in the advisory: confirm the issue, or explain why it is not one and close it.
+- Prepare the fix in the advisory's temporary private fork or locally, with its tests, and a changeset and commits
+  that describe the fix, not how to exploit it ([commits.md](commits.md#types)). CI cannot reach a temporary private
+  fork, so run `pnpm check` locally before the pull request.
+- Merge it through an ordinary pull request into `main`, not the advisory's **Merge pull request(s)** button: GitHub's
+  [*Collaborating in a temporary private fork*](https://docs.github.com/en/code-security/tutorials/fix-reported-vulnerabilities/collaborate-in-a-fork)
+  says that merge runs no status checks and enforces none of the branch's protection rules, so `build` and the
+  *Release window* would not hold it (*The rulesets on `main`* in [.github/AGENTS.md](../.github/AGENTS.md)). The fix
+  is public from the moment its branch is pushed until its version is on npm: open the pull request only when the fix
+  is ready, and merge it and then the Version Packages pull request as soon as each one's `build` passes.
+- Once the version is on npm and its attestation is checked (*Carrying out a release*), fill in the advisory's
+  affected and patched versions, request a CVE through it when the issue warrants one, credit the reporter unless
+  they asked not to be, and publish it.
+- Only the latest major gets the fix (`SECURITY.md`'s *Supported versions*, and
+  [versioning.md](versioning.md#supported-versions)): no release of an older major.
 
 ## Backlog
 

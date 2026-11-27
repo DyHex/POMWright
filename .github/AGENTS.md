@@ -13,7 +13,8 @@ request, GitHub's merge commit): `lint` (biome; then `scripts/lint-workflows.sh`
 locally too: actionlint with ShellCheck for the `run:` scripts, each pinned by version and SHA-256 in the script and
 moved by hand, and that ShellCheck over every shell script the repository tracks, read from `git ls-files`, since
 actionlint sees a script a `run:` block calls as that one line; then `scripts/check-guide-links.mjs`,
-`pnpm lint:guide`, every relative link and anchor of the contributor guide and the skills; then
+`pnpm lint:guide`, every relative link and anchor of the contributor guide, the skills, `README.md` and `SECURITY.md`,
+and their links to the site outside the skills; then
 `scripts/check-skills.mjs`, `pnpm lint:skills`, the skills' frontmatter, sizes, contents lists, reference depth and
 site links; then `scripts/release-check.test.sh`, every
 path of the release checks in throwaway repositories with a fake npm), `package` (unit tests, build and pack once, the
@@ -144,6 +145,11 @@ changeset, waits for the release. When `build` itself is broken and something mu
   and the `consumer` job's checks on [*Internal → Packaging*](../website/src/content/docs/internal/packaging.md). A
   change to a workflow, a job or a script only CI runs updates them in the same change, by
   [website/AGENTS.md](../website/AGENTS.md)'s rule that a change to a mechanism updates the pages that describe it.
+- [docs/commits.md](../docs/commits.md) names the messages of the commits the bots write: the Version Packages commit
+  (`publish.yaml`'s `commit-message`) and Dependabot's (`dependabot.yml`'s `commit-message`). A change to either
+  updates it.
+- `SECURITY.md` tells users how releases are published (`publish.yaml`, Trusted Publishing, provenance) and how to
+  check one, and puts the workflows in its scope: a change to how releases are published updates it in the same change.
 
 ## Do not
 
