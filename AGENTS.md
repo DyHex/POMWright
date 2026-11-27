@@ -59,9 +59,8 @@ review and the guide split by folder and by task.
   notice and do not fix goes at the end of the task, with a suggested remedy, and into the plan's execution notes.
 - **Commits only when asked.** Never commit on your own. When the user asks for one commit per execution step,
   commit exactly those steps, name the plan and step in the message, and leave everything else uncommitted.
-- **A commit an AI wrote or helped write says so.** Its message ends with a `Co-Authored-By:` trailer naming the
-  model, after a blank line, for example `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. This holds for
-  every commit in the repository, not only release work: leaving the trailer out would misstate who wrote the change.
+- **Commit messages follow [docs/commits.md](docs/commits.md)**, the `Co-Authored-By:` trailer on a commit an AI
+  wrote or helped write included.
 
 ## Commands
 
@@ -70,8 +69,8 @@ review and the guide split by folder and by task.
   process `.md`; `test/test-data` and `.pack` are excluded). `pnpm format` (`biome format --write .`) rewrites
   formatting only; import order and lint fixes come from `biome check --write`. `pnpm lint:workflows` runs actionlint
   and ShellCheck over the workflows at CI's pinned versions, `pnpm lint:guide` checks every relative link and
-  anchor of this guide and of the skills, and `pnpm lint:skills` the skills' format
-  ([skills/AGENTS.md](skills/AGENTS.md)); CI's `lint` job runs all three.
+  anchor of this guide, the skills, `README.md` and `SECURITY.md`, and their links to the site outside the skills,
+  and `pnpm lint:skills` the skills' format ([skills/AGENTS.md](skills/AGENTS.md)); CI's `lint` job runs all three.
 - `pnpm build` runs `tsup index.ts --format cjs --dts --clean`, which empties `dist/` first, then
   `scripts/write-esm-entry.mjs`, so a local pack holds exactly what the source produces, as CI's fresh checkout does.
 - `pnpm test:unit` runs the vitest unit tests for the pure helpers in seconds and type-checks the test files and
@@ -85,6 +84,11 @@ review and the guide split by folder and by task.
   Use the line reporter in non-interactive runs, because the local html reporter opens on failure and blocks.
   Playwright's system libraries are a once-per-machine step (`pnpm -C test exec playwright install-deps`, with
   sudo; `install-deps --dry-run` lists what is missing without it).
+- `pnpm check` runs what CI runs, as far as one machine can, in order and stopping at the first failure: a frozen
+  install, the four lints, `scripts/release-check.test.sh`, `pnpm test` (the html report written but never opened,
+  so a failure does not block), `scripts/consumer-check.sh` on the tarball `pnpm test` packed, and `pnpm docs:diagrams`.
+  It leaves out what needs another version (the older Node lines, `consumer-check.sh --node-floor`, the latest
+  Playwright 1.x) and the pull request's *Release window*, and it takes no arguments.
 - The other test commands are in [test/AGENTS.md](test/AGENTS.md), the site's scripts in [website/AGENTS.md](website/AGENTS.md).
 
 ## Do not
@@ -109,7 +113,8 @@ review and the guide split by folder and by task.
 | [skills/AGENTS.md](skills/AGENTS.md) | the agent skills: who reads them, how they are split, their format, examples and chains | in Claude Code, when its Read tool opens a file under `skills/` | changing a skill, or anything a skill describes |
 | [docs/repository.md](docs/repository.md) | the repository map, packaging, the toolchain, how this guide is laid out and loads | no | adding a top-level file or folder; changing the toolchain (the unit tests' `vitest.config.ts` and `tsconfig.vitest.json` among it), a dependency or this guide |
 | [docs/versioning.md](docs/versioning.md) | supported versions, bumps, changesets | no | any consumer-facing change, which needs a changeset; moving a supported version |
-| [docs/releases.md](docs/releases.md) | planning a release, its working folder, carrying it out, the Trusted Publisher, the backlog | no | planning or carrying out a release; writing a plan |
+| [docs/commits.md](docs/commits.md) | commit messages: Conventional Commits, the types, scopes and breaking changes, the `Co-Authored-By:` trailer, the bots' commits | no | writing a commit message |
+| [docs/releases.md](docs/releases.md) | planning a release, its working folder, carrying it out, the Trusted Publisher, a security fix, the backlog | no | planning or carrying out a release; writing a plan; answering a vulnerability report |
 
 - Claude Code loads a folder's `AGENTS.md` when its Read tool opens a file in that folder or below it, in a folder
   under the one the session started in, together with the `AGENTS.md` of every folder above; reading through the shell

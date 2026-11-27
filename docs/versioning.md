@@ -6,6 +6,11 @@ change, which needs a changeset, and before a supported version moves. Part of t
 
 ## Supported versions
 
+- Security fixes go to the latest pomwright major only, and `SECURITY.md` says so. A `patch` or `minor` changeset leaves
+  `SECURITY.md` as it is: its table names majors, and *Verifying a release* covers 3.0.2 and later. The release of a
+  new major updates it: its *Supported versions* table (the new major *Yes*, the previous one joining the older ones
+  as *No*) and the lines under it on moving up from each older major, which link the new major's upgrade page.
+  `docs/repository.md`'s row for it does not change.
 - `@playwright/test` is an exact root dev dependency at the peer floor (1.64.0). The floor moves by decision, in eight
   places together: the peer range in `package.json`, the root dev pin, the harness pin in `test/package.json`, the
   README's requirements line, *Installation*'s list, *Upgrading from 2.x* (its first step and its section on the floor),
@@ -30,8 +35,10 @@ change, which needs a changeset, and before a supported version moves. Part of t
 - Changesets: `pnpm changeset` creates `.changeset/<name>.md`. The `publish.yaml` workflow opens a "Version
   Packages" PR and publishes when it merges. Do not edit `package.json#version` or `CHANGELOG.md` by hand.
 - Call out consumer-facing API or behavior changes in the changeset body, with a migration hint whenever code
-  written against the previous release stops working. *Upgrading from 2.x* always describes the upgrade from 2.x to
-  the latest 3.x: a change that alters what a 2.x project must do updates that page in the same plan.
+  written against the previous release stops working. In a `patch` or `minor` changeset the hint starts with its
+  grade, the one its commit's `Possibly-breaking:` footer gives ([commits.md](commits.md#breaking-changes)):
+  `Possibly breaking (low): <what can break>; <how to update>`. *Upgrading from 2.x* always describes the upgrade
+  from 2.x to the latest 3.x: a change that alters what a 2.x project must do updates that page in the same plan.
 - Bumps: behavior brought in line with what the docs, the doc comments or the contributor guide already promise is a patch; so
   is a type corrected to what the docs promise and the runtime does, even when code that relied on the wrong type stops
   compiling (its changeset gives the migration). Providing what a released version's docs or doc comments promise but

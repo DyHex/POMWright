@@ -1,5 +1,6 @@
 // The documentation site's pages and anchors, for the checks that read links to the site: a module, not a script.
-// check-api-coverage.mjs checks the declarations' URLs with it, and check-skills.mjs the skills'.
+// check-api-coverage.mjs checks the declarations' URLs with it, check-skills.mjs the skills', and check-guide-links.mjs
+// those of the contributor guide, README.md and SECURITY.md.
 
 import fs from "node:fs";
 import path from "node:path";

@@ -55,6 +55,7 @@
 		"bench": "node --expose-gc --max-old-space-size=8192 scripts/benchmark.mjs",
 		"test": "pnpm test:unit && pnpm pack-test",
 		"test:constrained": "taskset -c 0-3 pnpm test --workers=8",
+		"check": "pnpm install --frozen-lockfile && pnpm lint && pnpm lint:workflows && pnpm lint:guide && pnpm lint:skills && bash scripts/release-check.test.sh && PLAYWRIGHT_HTML_OPEN=never pnpm test && bash scripts/consumer-check.sh pomwright-test-build.tgz && pnpm docs:diagrams",
 		"docs:dev": "pnpm -C website install --frozen-lockfile && pnpm -C website dev",
 		"docs:build": "pnpm -C website install --frozen-lockfile && pnpm -C website build",
 		"docs:preview": "pnpm docs:build && pnpm -C website preview",

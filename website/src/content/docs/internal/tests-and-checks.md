@@ -95,8 +95,9 @@ untested merge.
 
 - **lint**: biome over the whole repository, warnings failing; actionlint over the workflows, with shellcheck over
   their scripts and over every shell script the repository tracks, both pinned by version and checksum in `scripts/lint-workflows.sh`,
-  which `pnpm lint:workflows` runs locally too; every relative link and anchor of the contributor guide and of the
-  agent skills (`scripts/check-guide-links.mjs`); the skills' format (`scripts/check-skills.mjs`: frontmatter that every
+  which `pnpm lint:workflows` runs locally too; every relative link and anchor of the contributor guide, of the agent
+  skills, of `README.md` and of `SECURITY.md`, and their links to this site outside the skills
+  (`scripts/check-guide-links.mjs`); the skills' format (`scripts/check-skills.mjs`: frontmatter that every
   agent accepts, the sizes of their files, contents lists, references one level deep and links to this site); then the
   release checks' test (`scripts/release-check.test.sh`), which runs every
   path of a release in throwaway repositories with a fake npm.
@@ -122,6 +123,11 @@ untested merge.
 - **release** (*Release window*, in `pr.yaml` only, for a pull request into `main`): holds the pull request while
   `main`'s version is being published, described below.
 - **build**: the gate job, the check `main` requires.
+
+`pnpm check` runs the same checks on one machine, one after another, stopping at the first failure: the lint job's
+steps, the unit tests, the harness on all three browsers with the test-server check, the consumer checks and the
+site's build and diagrams. It leaves out what needs another version (the older Node lines, the Node 20 loading check
+and the latest 1.x) and the release window, which reads npm and `main` on GitHub.
 
 Publishing waits for `CI` on `main`, so nothing is published past a red run, and `pages.yaml` deploys the site after
 the same green run, while its commit is `main`'s tip (see

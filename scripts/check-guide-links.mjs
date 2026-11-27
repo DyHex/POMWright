@@ -1,13 +1,18 @@
-// Checks that every relative link of the contributor guide and the agent skills resolves: the root AGENTS.md, the
-// AGENTS.md of each folder, docs/*.md, and every Markdown file under skills/. A link's file or folder must exist; an anchor into a Markdown file must name one of its headings, as
-// GitHub makes them (lower case, punctuation but hyphens dropped, spaces as hyphens, a repeated heading with -1, -2,
-// …); a line anchor into another file (#L64, #L64-L70) is GitHub's and is taken as written. Links to a site (http,
-// https, mailto) are not checked here: the site's own links are the site build's.
+// Checks the links of the contributor guide, the agent skills and the two pages GitHub shows at the repository's root:
+// the root AGENTS.md, the AGENTS.md of each folder, docs/*.md, every Markdown file under skills/, README.md and
+// SECURITY.md. Every relative link must resolve: a link's file or folder must exist; an anchor into a Markdown file
+// must name one of its headings, as GitHub makes them (lower case, punctuation but hyphens dropped, spaces as hyphens,
+// a repeated heading with -1, -2, …); a line anchor into another file (#L64, #L64-L70) is GitHub's and is taken as
+// written. Every link to the documentation site (https://dyhex.github.io/POMWright/…), in a code block too, must name
+// one of its pages and, after #, one of that page's headings (site-pages.mjs), except under skills/, whose links to the
+// site check-skills.mjs checks. Other links to a site (http, https, mailto) are not checked: the site's own links are
+// the site build's.
 //
 //   node scripts/check-guide-links.mjs   # pnpm lint:guide; CI's lint job
 
 import fs from "node:fs";
 import path from "node:path";
+import { siteUrlProblem, siteUrlsIn } from "./site-pages.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const SKIP_DIRS = new Set(["node_modules", ".git", ".pack", "dist"]);
@@ -35,8 +40,11 @@ const files = [
 			.filter((name) => name.endsWith(".md"))
 			.map((name) => path.join(root, "docs", name)),
 		...markdownIn(path.join(root, "skills")),
+		path.join(root, "README.md"),
+		path.join(root, "SECURITY.md"),
 	]),
 ];
+const skillsDir = path.join(root, "skills") + path.sep;
 
 const slugs = new Map(); // a Markdown file -> the anchors of its headings
 function anchorsOf(file) {
@@ -65,8 +73,15 @@ const problems = [];
 let checked = 0;
 for (const file of files) {
 	const lines = fs.readFileSync(file, "utf8").split("\n");
+	const siteLinks = !file.startsWith(skillsDir);
 	let fenced = false;
 	for (const [index, line] of lines.entries()) {
+		const where = `${path.relative(root, file)}:${index + 1}`;
+		for (const url of siteLinks ? siteUrlsIn(line) : []) {
+			checked++;
+			const problem = siteUrlProblem(url);
+			if (problem) problems.push(`${where}: ${problem}`);
+		}
 		if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
 		if (fenced) continue;
 		// a link, not an image, outside a code span; the target ends at the first space or closing parenthesis
@@ -74,7 +89,6 @@ for (const file of files) {
 		for (const [, target] of prose.matchAll(/(?<!!)\[[^\]]*\]\(([^)\s]+)\)/g)) {
 			if (/^(https?:|mailto:)/.test(target)) continue;
 			checked++;
-			const where = `${path.relative(root, file)}:${index + 1}`;
 			const [linked, anchor] = target.split("#");
 			const resolved = linked === "" ? file : path.resolve(path.dirname(file), decodeURIComponent(linked));
 			if (!fs.existsSync(resolved)) {

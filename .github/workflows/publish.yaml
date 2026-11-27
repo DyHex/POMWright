@@ -71,6 +71,8 @@ jobs:
         with:
           publish-script: pnpm run release
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          # the commit follows docs/commits.md; the pull request keeps the default title, Version Packages
+          commit-message: "chore(release): version packages"
       # Every version published here should carry a provenance attestation. This warns rather than fails: by the time it
       # runs the version is published, and failing the run would not take it back.
       - name: Check the provenance of what was published

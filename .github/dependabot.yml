@@ -6,13 +6,17 @@
 # month's pull request for the root (test/AGENTS.md). @playwright/test is left alone: its root and test/ pins are the
 # peer floor, which moves only by decision, together with peerDependencies. Held majors: typescript (issue #54: version
 # 7 has no compiler API yet, which the declaration build and two of the doc checks use) and @types/node (it follows the
-# Node line of contributors and CI, 26, and moves with it by hand).
+# Node line of contributors and CI, 26, and moves with it by hand). Commit messages and pull request titles follow
+# docs/commits.md: ci(deps) for the actions, build(deps) or build(deps-dev) for npm.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    commit-message:
+      prefix: ci
+      include: scope
     groups:
       github-actions:
         patterns:
@@ -24,6 +28,9 @@ updates:
     directory: /website
     schedule:
       interval: monthly
+    commit-message:
+      prefix: build
+      include: scope
     groups:
       website:
         patterns:
@@ -35,6 +42,9 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    commit-message:
+      prefix: build
+      include: scope
     ignore:
       - dependency-name: "@playwright/test"
       - dependency-name: typescript # issue #54
